@@ -178,7 +178,13 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Starting Bootstrapper" << std::endl;
 
+    if(argc < 2){
+        exit(1);
+    }
+
+    int view_size = atoi(argv[1]);
+
     const char* ip = "127.0.0.1";
-    std::unique_ptr<Bootstrapper> bootstrapper(new BootstrapperImpl(0, 5, ip, 12345));
+    std::unique_ptr<Bootstrapper> bootstrapper(new BootstrapperImpl(0, view_size, ip, 12345));
     bootstrapper->run();
 };

@@ -9,12 +9,16 @@
 #include "../tcp_client_server_connection/tcp_client_server_connection.h"
 #include "pss.h"
 #include <memory>
+#include <boost/asio/io_service.hpp>
+#include <boost/thread/thread.hpp>
 
 class pss_listener {
 
 private:
     tcp_client_server_connection::tcp_server_connection connection;
     std::atomic<bool> running;
+    boost::asio::io_service ioService;
+    boost::thread_group thread_pool;
     pss* cyclon_ptr;
     const char* ip;
     int port;

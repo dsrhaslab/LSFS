@@ -8,6 +8,8 @@ find_package(CapnProto CONFIG REQUIRED)
 capnp_generate_cpp(packetSources packetHeaders serializer/capnp/packet.capnp)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 
+find_package(Boost COMPONENTS thread REQUIRED)
+
 set(INCLUDE_DIRECTORY include)
 set(INCLUDE_HEADERS ${INCLUDE_DIRECTORY}/ctpl_stl.h)
 
@@ -18,9 +20,10 @@ target_include_directories(bootstrapper PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bootstrapper PRIVATE ${INCLUDE_DIRECTORY})
 
 #add_executable(peer ${packetSources}  tcp_client_server_connection/tcp_client_server_connection.h tcp_client_server_connection/tcp_server_connection.cpp tcp_client_server_connection/tcp_client_connection.cpp core/peer.cpp core/peer.h pss/pss.cpp pss/pss.h)
-add_executable(peer core/peer.cpp ${packetSources} pss/pss.h pss/pss.cpp  tcp_client_server_connection/tcp_client_connection.cpp tcp_client_server_connection/tcp_server_connection.cpp serializer/serializer.h serializer/capnp/capnp_serializer.h serializer/capnp/capnp_serializer.cpp pss/pss_listener.cpp pss/pss_listener.h pss/pss_message.h core/peer_data.h ${INCLUDE_HEADERS})
+add_executable(peer core/peer.cpp ${packetSources} pss/pss.h pss/pss.cpp  tcp_client_server_connection/tcp_client_connection.cpp tcp_client_server_connection/tcp_server_connection.cpp serializer/serializer.h serializer/capnp/capnp_serializer.h serializer/capnp/capnp_serializer.cpp pss/pss_listener.cpp pss/pss_listener.h pss/pss_message.h core/peer_data.h ${INCLUDE_HEADERS} pss/view_logger.h)
 target_link_libraries(peer PRIVATE CapnProto::capnp)
 target_link_libraries(peer PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(peer PRIVATE Boost::thread)
 target_include_directories(peer PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(peer PRIVATE ${INCLUDE_DIRECTORY})
 

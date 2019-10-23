@@ -4,22 +4,26 @@
 
 #include <iostream>
 #include "peer.h"
-#include "../pss/pss_listener.h"
 #include <thread>
 #include <chrono>
+#include <signal.h>
+#include <time.h>
 
+std::shared_ptr<peer> g_peer_impl;
 
 peer::peer(long id, std::string ip, int port, double position):
     id(id), ip(ip), port(port), position(position),
-    cyclon(peer::boot_ip, peer::boot_port, ip, port),
-    listener("127.0.0.1", this->port, &(this->cyclon))
+    cyclon(peer::boot_ip, peer::boot_port, ip, port,2,5,10,3),
+    listener("127.0.0.1", this->port, &(this->cyclon)),
+    v_logger(this->port, &(this->cyclon))
 {
 }
 
-peer::peer(long id, std::string ip, int port, double position, long pss_sleep_interval, long pss_boot_time, int pss_view_size)
-    :   id(id), ip(ip), port(port), position(position),pss_sleep_interval(pss_sleep_interval),
-        pss_boot_time(pss_boot_time), pss_view_size(pss_view_size), cyclon(peer::boot_ip, peer::boot_port, ip, port),
-        listener("127.0.0.1", this->port, &(this->cyclon))
+peer::peer(long id, std::string ip, int port, double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size)
+    :   id(id), ip(ip), port(port), position(position),
+        cyclon(peer::boot_ip, peer::boot_port, ip, port, pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size),
+        listener("127.0.0.1", this->port, &(this->cyclon)),
+        v_logger(this->port, &(this->cyclon))
 {
 }
 
@@ -30,29 +34,46 @@ void peer::print_view() {
 void peer::start() {
     this->pss_th = std::thread (std::ref(this->cyclon));
     this->pss_listener_th = std::thread(std::ref(this->listener));
+    this->v_logger_th = std::thread(std::ref(this->v_logger));
 }
 
 void peer::stop(){
     this->listener.stop_thread();
     this->cyclon.stop_thread();
+    this->v_logger.stop_thread();
     this->pss_listener_th.join();
     this->pss_th.join();
-    this->cyclon.write_view_to_file();
+    this->v_logger_th.join();
 }
+
+void peer::join(){
+    this->pss_listener_th.join();
+    this->pss_th.join();
+    this->v_logger_th.join();
+}
+
+void term_handler(int i){
+    g_peer_impl->stop();
+    std::cout << "Terminating with handler!!" << std::endl;
+    exit(1);
+}
+
 
 int main(int argc, char* argv []){
 
-    if(argc < 3){
+    if(argc < 4){
         exit(1);
     }
 
+    signal(SIGTERM, term_handler);
+
     int port = atoi(argv[1]);
-    int exec_time = atoi(argv[2]);
+    int view_size = atoi(argv[2]);
+    int gossip_size = atoi(argv[3]);
 
     std::cout << "Starting Peer" << std::endl;
-    peer peer_impl(0,"127.0.0.1",port,4);
-    peer_impl.print_view();
-    peer_impl.start();
-    std::this_thread::sleep_for(std::chrono::seconds(exec_time));
-    peer_impl.stop();
+    g_peer_impl = std::make_shared<peer>(0,"127.0.0.1",port,4,2,view_size,10,gossip_size);
+    g_peer_impl->print_view();
+    g_peer_impl->start();
+    g_peer_impl->join();
 }

@@ -48,23 +48,18 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port)
         this->view.insert(std::make_pair(peer.port, std::move(peer)));
     }
 
-
-    this->boot_time = 2;
-    this->view_size = 5;
-    this->sleep_interval = 10;
-    this->gossip_size = 3;
-    this->running = true;
-    this->ip = my_ip;
-    this->port = my_port;
 }
 
 pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, long boot_time, int view_size, int sleep, int gossip_size):
     pss::pss(boot_ip, boot_port, my_ip, my_port)
 {
+    this->running = true;
     this->sleep_interval = sleep;
     this->boot_time = boot_time;
     this->view_size = view_size;
     this->gossip_size = gossip_size;
+    this->ip = my_ip;
+    this->port = my_port;
 }
 
 void pss::complete_view_with_last_sent() {
@@ -180,7 +175,6 @@ void pss::operator()() {
         }
     }
     LOG("END PSS thread")
-    this->write_view_to_file();
 }
 
 void pss::print_view() {
@@ -192,21 +186,21 @@ void pss::print_view() {
     std::cout << "===================" << std::endl;
 }
 
-void pss::write_view_to_file(){
-    std::string filename = "../logging/" + std::to_string(this->port) + ".json";
-    std::ofstream file;
-    file.open(filename);
-    if(file.is_open()){
-        std::vector<int> peers_from_view;
-        for(auto& [port, peer]: this->view)
-            peers_from_view.push_back(port);
-        json j = {};
-        j["peer"] = this->port;
-        j["view"] = peers_from_view;
-        file << j;
-        file.close();
-    }
-}
+//void pss::write_view_to_file(){
+//    std::string filename = "../logging/" + std::to_string(this->port) + ".json";
+//    std::ofstream file;
+//    file.open(filename);
+//    if(file.is_open()){
+//        std::vector<int> peers_from_view;
+//        for(auto& [port, peer]: this->view)
+//            peers_from_view.push_back(port);
+//        json j = {};
+//        j["peer"] = this->port;
+//        j["view"] = peers_from_view;
+//        file << j;
+//        file.close();
+//    }
+//}
 
 void pss::age_view_members() {
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
@@ -304,4 +298,18 @@ void pss::stop_thread() {
     this->incorporate_last_sent_view();
 }
 
+std::vector<int> pss::get_peers_from_view() {
+    std::vector<int> res;
 
+    std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
+    for (auto&[port, peer]: this->view) {
+        res.push_back(port);
+    }
+
+    auto it = this->last_sent_view.begin();
+    while (res.size() < this->view_size && it != this->last_sent_view.end()) {
+        res.push_back(it->port);
+    }
+
+    return std::move(res);
+}

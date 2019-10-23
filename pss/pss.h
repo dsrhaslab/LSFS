@@ -36,6 +36,7 @@ public:
     void process_msg(pss_message& message);
     void write_view_to_file();
     void stop_thread();
+    std::vector<int> get_peers_from_view();
 
 private:
     void age_view_members();

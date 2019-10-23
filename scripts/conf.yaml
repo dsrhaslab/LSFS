@@ -1,0 +1,25 @@
+main_confs:
+  nr_peers: 100
+  view_size: 5
+  gossip_size: 3
+  exec_time_min: 10
+  base_port: 12350
+  peer_instantiation_interval: 0.1
+  draw_graph: True
+  graph_labels: True
+simulation:
+  churn_conf_type: manual_configuration
+  constant:
+    churn_interval_min: 1
+    churn_op_type: add/remove/random/alternate
+    percentage: 10
+    num_target_peers: 5
+  manual_configuration:
+    - time_min: 3
+      churn_op_type: remove
+      percentage: 50
+      # num_target_peers: 50
+    # - time_min: 6
+    #   churn_op_type: add
+    #   # percentage: 10
+    #   num_target_peers: 10

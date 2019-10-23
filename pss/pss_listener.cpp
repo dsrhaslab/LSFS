@@ -5,8 +5,9 @@
 #include "pss_listener.h"
 #include "../serializer/capnp/capnp_serializer.h"
 #include <thread>
-#include <ctpl_stl.h>
-#include <future>
+#include <boost/asio/io_service.hpp>
+#include <boost/bind.hpp>
+#include "../core/peer.h"
 
 #define LOG(X) std::cout << X << std::endl;
 
@@ -32,15 +33,25 @@ pss_listener::pss_listener(const char* ip, int port, pss* pss):
 
 void pss_listener::operator()() {
 
+    int nr_threads = peer::pss_listener_thread_loop_size;
+    boost::asio::io_service::work work(this->ioService);
+    for(int i = 0; i < nr_threads; ++i){
+        this->thread_pool.create_thread(
+                boost::bind(&boost::asio::io_service::run, &(this->ioService))
+        );
+    }
+
     this->running = true;
+
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
 
     while(this->running){
         pss_message recv_pss_msg;
         int peer_socket = this->connection.accept_connection();
-        std::async(std::launch::async, &pss_listener::pss_listener_worker, this, &peer_socket);
-
-//        std::thread worker(&pss_listener::pss_listener_worker,this, &peer_socket);
-//        worker.detach();
+        setsockopt(peer_socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
+        this->ioService.post(boost::bind(&pss_listener::pss_listener_worker, this, &peer_socket));
     }
     LOG("End Listener thread");
 }
@@ -53,4 +64,10 @@ void pss_listener::stop_thread() {
     //creating temporary connection to awake thread on accept
     std::unique_ptr<Capnp_Serializer> capnp_serializer(nullptr);
     tcp_client_server_connection::tcp_client_connection connection(this->ip, this->port, nullptr);
+
+    //terminating ioService processing loop
+    this->ioService.stop();
+    //joining all threads of thread_loop
+    this->thread_pool.join_all();
+    LOG("JOINT ALL THREADS FROM POOL!!!")
 }

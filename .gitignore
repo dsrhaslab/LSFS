@@ -33,4 +33,13 @@
 
 # Logging
 logging/*
+backup/*
 *.json
+
+# Build Directory
+cmake-build-debug/*
+
+# Other Directories
+udp_client_server/*
+.idea/*
+
