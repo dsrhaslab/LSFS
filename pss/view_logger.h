@@ -12,6 +12,9 @@
 #include <fstream>
 #include <sys/stat.h>
 
+#define LOG(X) std::cout << X << std::endl;
+
+
 using json = nlohmann::json;
 
 
@@ -21,15 +24,17 @@ private:
     std::atomic<bool> running;
     pss* cyclon_ptr;
     int port;
+    int logging_interval;
 
 
 public:
 
-    view_logger(int port, pss* pss)
+    view_logger(int port, pss* pss, int logging_interval)
     {
         this->cyclon_ptr = pss;
         this->running = true;
         this->port = port;
+        this->logging_interval = logging_interval;
     }
 
     void operator ()(){
@@ -41,12 +46,15 @@ public:
         std::string base_filename = "../logging/" + std::to_string(this->port) + "/" + std::to_string(this->port) + "_";
         std::string extension = ".json";
 
-        time_t now = time(nullptr) + 1*60;
+        time_t now = time(nullptr);
         struct tm *localTime;
         localTime = localtime(&now);
-        localTime->tm_sec = 0;
         std::time_t tt = std::mktime(localTime);
         std::chrono::system_clock::time_point tp = std::chrono::system_clock::from_time_t (tt);
+        int seconds_to_wait = (this->logging_interval - (localTime->tm_sec % this->logging_interval)) % this->logging_interval;
+        tp += std::chrono::seconds(seconds_to_wait);
+        tt = std::chrono::system_clock::to_time_t(tp);
+        localtime_r(&tt, localTime);
         std::this_thread::sleep_until(tp);
 
         do{
@@ -61,11 +69,12 @@ public:
             }
 
             ++cycles;
-            tp += std::chrono::minutes(1);
+            tp += std::chrono::seconds(this->logging_interval);
             time_t tt = std::chrono::system_clock::to_time_t(tp);
             localtime_r(&tt, localTime);
             std::this_thread::sleep_until(tp);
         }while(running);
+        LOG("END Logger Thread")
     }
 
     void stop_thread() {

@@ -21,13 +21,10 @@ struct Packet {
     }
 
     enum Type {
-        view @0;
-        put @1;
-        get @2;
-        ack @3;
-        announce @4;
-        normal @5;
-        response @6;
+        announce @0;
+        termination @1;
+        normal @2;
+        response @3;
     }
 }
 

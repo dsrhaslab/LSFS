@@ -11,6 +11,9 @@
 #include <algorithm>    // std::random_shuffle
 #include <random>      // std::rand, std::srand
 #include <map>
+#include <unistd.h>
+
+#define LOG(X) std::cout << X << std::endl;
 
 BootstrapperImpl::BootstrapperImpl(long id, int viewsize, const char* ip, int port):
 
@@ -21,6 +24,7 @@ BootstrapperImpl::BootstrapperImpl(long id, int viewsize, const char* ip, int po
     port(port)
 
 {
+    std::cerr << "[bootstrapper] function: constructor [Creating Server Connection]" << std::endl;
     this->initialnodes = 10;
     this->running = true;
 }
@@ -68,41 +72,6 @@ std::vector<peer_data> BootstrapperImpl::get_view() {
     return res;
 }
 
-//std::vector<int> BootstrapperImpl::get_view() {
-////    if(this->fila.empty()){
-////        this->boot_fila();
-////        std::vector<int> to_send = this->fila.pop();
-////    }
-//
-//    std::vector<int> res;
-//    std::vector<int> tmp;
-//    for(int port: this->alivePorts){
-//        tmp.push_back(port);
-//    }
-//    if(tmp.size() <= this->viewsize){
-//        res = tmp;
-//    }else{
-//        auto rng = std::default_random_engine {};
-//        std::shuffle(std::begin(tmp), std::end(tmp), rng);
-//        for(int port: tmp){
-//            res = std::vector<int>(tmp.begin(), tmp.begin() + this->viewsize);
-//        }
-//    }
-//    return res;
-//}
-
-//void BootstrapperImpl::addIP(std::string ip, long id, double pos){
-//    this->aliveIPs.insert(ip);
-//    this->aliveIds.insert(std::make_pair(ip,id));
-//    this->alivePos.insert(std::make_pair(ip,pos));
-//};
-//
-//void BootstrapperImpl::removeIP(std::string ip){
-//    this->aliveIPs.erase(ip);
-//    this->aliveIds.erase(ip);
-//    this->alivePos.erase(ip);
-//};
-
 void BootstrapperImpl::add_peer(std::string ip, int port, long id, double pos){
     std::scoped_lock<std::shared_mutex> lk(this->mutex);
     this->alivePorts.insert(port);
@@ -121,49 +90,43 @@ void BootstrapperImpl::boot_fila() {
 
 }
 
-//void boot_worker(int socket, BootstrapperImpl* boot){
-//
-//    tcp_client_server_connection::tcp_server_connection* connection = boot->get_connection();
-//    int peer_port = connection->recv_identity(socket);
-//    if(peer_port < 0){
-//        return;
-//    }
-//
-//    std::vector<int> view = boot->get_view();
-//    std::unordered_map<int, int> full_data_view;
-//    for(int port: view){
-//        full_data_view.insert(std::make_pair(port, 20));
-//    }
-//
-//    connection->send_view(full_data_view, socket);
-//    // add new peer to alive_peers
-//    boot->add_peer(peer_port,0,0);
-//}
-
 void boot_worker(int* socket, BootstrapperImpl* boot){
-
     tcp_client_server_connection::tcp_server_connection* connection = boot->get_connection();
-    bool recv_annouce_msg = false;
     pss_message recv_pss_msg;
 
-    while (!recv_annouce_msg){
-        connection->recv_pss_msg(socket,recv_pss_msg);
-        if(recv_pss_msg.type == pss_message::Type::Announce)
-            recv_annouce_msg = true;
-    }
+    try {
 
-    pss_message msg_to_send;
-    msg_to_send.view = boot->get_view();
-    msg_to_send.sender_ip = boot->get_ip();
-    msg_to_send.sender_port = boot->get_port();
+        connection->recv_pss_msg(socket, recv_pss_msg);
 
-    connection->send_pss_msg(socket, msg_to_send);
-    boot->add_peer(recv_pss_msg.sender_ip,recv_pss_msg.sender_port,0,0);
+        switch (recv_pss_msg.type){
+            case pss_message::Type::Announce: {
+                pss_message msg_to_send;
+                msg_to_send.view = boot->get_view();
+                msg_to_send.sender_ip = boot->get_ip();
+                msg_to_send.sender_port = boot->get_port();
+                msg_to_send.type = pss_message::Type::Normal;
+
+                connection->send_pss_msg(socket, msg_to_send);
+                boot->add_peer(recv_pss_msg.sender_ip, recv_pss_msg.sender_port, 0, 0);
+                break;
+            }
+            case pss_message::Type::Termination: {
+                boot->remove_peer(recv_pss_msg.sender_port);
+                break;
+            }
+        }
+
+    }catch(...){}
+
+    std::cerr << "[Bootstrap] function: boot_worker [Closing] socket -> " + std::to_string(*socket) << std::endl;
+    close(*socket);
 }
 
 void BootstrapperImpl::run(){
+
     while(this->running){
         int socket = this->connection.accept_connection();
+        std::cerr << "[Bootstrap] function: run [Opening] socket -> " + std::to_string(socket) << std::endl;
         std::thread newThread(boot_worker, &socket, this);
         newThread.detach();
     }

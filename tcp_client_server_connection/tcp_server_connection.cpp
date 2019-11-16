@@ -10,10 +10,14 @@
 #include <iostream>
 #include <unistd.h>
 #include <memory>
+#include <netinet/in.h>
+
+#define LOG(X) std::cout << X << std::endl;
 
 namespace tcp_client_server_connection{
 
     tcp_server_connection::~tcp_server_connection(){
+        std::cerr << "[tcp_server_connection] function: destructor [Closing] server socket -> " + std::to_string(this->f_socket) << std::endl;
         close(this->f_socket);
     }
 
@@ -34,6 +38,8 @@ namespace tcp_client_server_connection{
             exit(1);
         }
 
+        std::cerr << "[tcp_server_connection] function: constructor [Opening] server socket -> " + std::to_string(this->f_socket) << std::endl;
+
         //bind
         int res = bind(this->f_socket, (struct sockaddr*) &this->f_sockaddr_in, sizeof(this->f_sockaddr_in));
         if (res < 0) {
@@ -41,7 +47,7 @@ namespace tcp_client_server_connection{
         }
 
         // closes listen socket at program termination
-        struct linger linger_opt = { 1, 0 }; // Linger active, timeout 0
+        struct linger linger_opt = { 1, 0}; // Linger active, timeout 0
         setsockopt(this->f_socket, SOL_SOCKET, SO_LINGER, &linger_opt, sizeof(linger_opt));
 
         //mark socket for listening SOMAXCONN -> número de conexões máximo
@@ -62,6 +68,7 @@ namespace tcp_client_server_connection{
             if (clientSocket < 0) {
                 perror("Cannot accept");
             }
+
         }
         while(clientSocket < 0);
 
@@ -83,13 +90,6 @@ namespace tcp_client_server_connection{
         return this->f_socket;
     }
 
-//    int tcp_server_connection::recv_identity(int client_socket) {
-//        return this->serializer->recv_identity(client_socket);
-//    }
-//
-//    void tcp_server_connection::send_view(std::unordered_map<int, int>& view, int client_socket) {
-//        return this->serializer->send_view(view, client_socket);
-
     void tcp_server_connection::recv_pss_msg(int* client_socket, pss_message& pss_msg){
         this->serializer->recv_pss_message(client_socket, pss_msg);
     };
@@ -97,9 +97,4 @@ namespace tcp_client_server_connection{
         this->serializer->send_pss_message(client_socket, pss_msg);
     }
 
-//    void tcp_server_connection::close_socket() {
-//        close(this->f_socket);
-//        shutdown(this->f_socket, SHUT_RDWR);
-//        std::cout << "closed socket";
-//    };
 }

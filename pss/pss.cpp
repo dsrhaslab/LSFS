@@ -24,29 +24,37 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port)
 {
     //TODO acrescentar loop para tentar reconexão caso falhe
 
-    std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
-    tcp_client_server_connection::tcp_client_connection connection(boot_ip, boot_port, std::move(capnp_serializer));
 
-    //sending announce msg
-    pss_message pss_announce_msg;
-    pss_announce_msg.sender_ip = my_ip;
-    pss_announce_msg.sender_port = my_port;
-    pss_announce_msg.type = pss_message::Type::Announce;
-    connection.send_pss_msg(pss_announce_msg);
+//    try {
+        std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
+        tcp_client_server_connection::tcp_client_connection connection(boot_ip, boot_port, std::move(capnp_serializer));
 
-    //receiving view from bootstrapper
-    bool view_recv = false;
-    pss_message pss_view_msg_rcv;
-    while(!view_recv){
-        connection.recv_pss_msg(pss_view_msg_rcv);
-        if(pss_view_msg_rcv.type == pss_message::Type::Normal)
-            view_recv = true;
-    }
+        //sending announce msg
+        pss_message pss_announce_msg;
+        pss_announce_msg.sender_ip = my_ip;
+        pss_announce_msg.sender_port = my_port;
+        pss_announce_msg.type = pss_message::Type::Announce;
+        connection.send_pss_msg(pss_announce_msg);
 
-    //process received view
-    for(peer_data& peer : pss_view_msg_rcv.view){
-        this->view.insert(std::make_pair(peer.port, std::move(peer)));
-    }
+        //receiving view from bootstrapper
+        bool view_recv = false;
+        pss_message pss_view_msg_rcv;
+        while (!view_recv) {
+            connection.recv_pss_msg(pss_view_msg_rcv);
+
+            if (pss_view_msg_rcv.type == pss_message::Type::Normal)
+                view_recv = true;
+        }
+
+        //process received view
+        for (peer_data &peer : pss_view_msg_rcv.view) {
+            this->view.insert(std::make_pair(peer.port, std::move(peer)));
+        }
+
+//    }catch(const char* e){
+//        std::cerr << "############################################" <<std::endl;
+//        std::cerr << e << std::endl;
+//    }
 
 }
 
@@ -60,6 +68,8 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, lon
     this->gossip_size = gossip_size;
     this->ip = my_ip;
     this->port = my_port;
+    this->boot_ip = boot_ip;
+    this->boot_port = boot_port;
 }
 
 void pss::complete_view_with_last_sent() {
@@ -111,6 +121,7 @@ std::vector<peer_data> pss::select_view_to_send(int target_port) {
 void pss::send_response_msg(int target_port, std::vector<peer_data>& view_to_send){
     //TODO lidar com o caso de não conseguir conexão
     try {
+        std::cerr << "[pss] function: send_response_msg [Creating Connection]" << std::endl;
         std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
         tcp_client_server_connection::tcp_client_connection connection("127.0.0.1", target_port,
                                                                        std::move(capnp_serializer));
@@ -122,12 +133,13 @@ void pss::send_response_msg(int target_port, std::vector<peer_data>& view_to_sen
         msg_to_send.view = view_to_send;
 
         connection.send_pss_msg(msg_to_send);
-    }catch(...){}
+    }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
 }
 
 void pss::send_normal_msg(int target_port, std::vector<peer_data>& view_to_send){
     //TODO lidar com o caso de não conseguir conexão
     try{
+        std::cerr << "[pss] function: send_normal_msg [Creating Connection]" << std::endl;
         std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
         tcp_client_server_connection::tcp_client_connection connection("127.0.0.1", target_port, std::move(capnp_serializer));
 
@@ -138,7 +150,7 @@ void pss::send_normal_msg(int target_port, std::vector<peer_data>& view_to_send)
         msg_to_send.view = view_to_send;
 
         connection.send_pss_msg(msg_to_send);
-    }catch(...){}
+    }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
 }
 
 void pss::operator()() {
@@ -170,7 +182,6 @@ void pss::operator()() {
                 }
 
                 this->send_normal_msg(target.port, view_to_send);
-                this->print_view();
             }
         }
     }
@@ -178,12 +189,12 @@ void pss::operator()() {
 }
 
 void pss::print_view() {
-    std::cout << "====== My View ====" << std::endl;
+    std::cout << "====== My View[" + std::to_string(this->port) + "] ====" << std::endl;
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(auto const& [key, peer] : this->view){
         std::cout << peer.ip << "(" << peer.port << ") : " << peer.age << std::endl;
     }
-    std::cout << "===================" << std::endl;
+    std::cout << "==========================" << std::endl;
 }
 
 //void pss::write_view_to_file(){
@@ -226,8 +237,9 @@ void pss::process_msg(pss_message& pss_msg){
 
     if(pss_msg.type == pss_message::Type::Normal){
 
-        std::unique_lock<std::recursive_mutex> lk (this->view_mutex);
-
+//        std::unique_lock<std::recursive_mutex> lk (this->view_mutex);
+        std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
+        this->incorporate_last_sent_view();
         //1- seleciona uma vista para enviar (removendo tais nodos da sua vista, isto
         // porque desta forma consegue arranjar espaço para acomodar os nodos que recebeu)
         std::vector<peer_data> view_to_send = this->select_view_to_send(pss_msg.sender_port);
@@ -242,7 +254,7 @@ void pss::process_msg(pss_message& pss_msg){
         this->incorporate_in_view(pss_msg.view);
         this->incorporate_in_view(to_fill_view);
 
-        lk.unlock();
+//        lk.unlock();
 
         //4- envia msg de resposta
         this->send_response_msg(pss_msg.sender_port, view_to_send);
@@ -292,12 +304,6 @@ void pss::incorporate_last_sent_view() {
     }
 }
 
-void pss::stop_thread() {
-    LOG("Stopping PSS thread");
-    this->running = false;
-    this->incorporate_last_sent_view();
-}
-
 std::vector<int> pss::get_peers_from_view() {
     std::vector<int> res;
 
@@ -313,3 +319,29 @@ std::vector<int> pss::get_peers_from_view() {
 
     return std::move(res);
 }
+
+void pss::stop_thread() {
+    LOG("Stopping PSS thread");
+    this->running = false;
+    this->incorporate_last_sent_view();
+}
+
+void pss::bootstrapper_termination_alerting() {
+    try {
+        std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
+        tcp_client_server_connection::tcp_client_connection connection(this->boot_ip, this->boot_port,
+                                                                       std::move(capnp_serializer));
+
+        //sending announce msg
+        pss_message pss_termination_msg;
+        pss_termination_msg.sender_ip = this->ip;
+        pss_termination_msg.sender_port = this->port;
+        pss_termination_msg.type = pss_message::Type::Termination;
+        connection.send_pss_msg(pss_termination_msg);
+    }catch(const char* e){
+        std::cerr << "Erro ao alertar o bootstrapper =========================================================================================================================";
+        LOG(e);
+    }
+}
+
+

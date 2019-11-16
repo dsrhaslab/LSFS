@@ -27,6 +27,8 @@ private:
     std::atomic<bool> running;
     int sleep_interval;
     int gossip_size;
+    const char* boot_ip;
+    int boot_port;
 
 public:
     pss(const char* boot_ip, int boot_port,  std::string my_ip, int my_port);
@@ -37,6 +39,8 @@ public:
     void write_view_to_file();
     void stop_thread();
     std::vector<int> get_peers_from_view();
+
+    void bootstrapper_termination_alerting();
 
 private:
     void age_view_members();

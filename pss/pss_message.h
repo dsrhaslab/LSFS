@@ -13,7 +13,8 @@ struct pss_message {
     enum Type {
         Normal,
         Response,
-        Announce
+        Announce,
+        Termination
     };
 
     Type type;

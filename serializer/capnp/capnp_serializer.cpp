@@ -5,7 +5,10 @@
 #include "capnp_serializer.h"
 #include "../../pss/pss_message.h"
 #include <iostream>
-#include <unordered_map>
+
+#include <netinet/in.h>
+#include "../../tcp_client_server_connection/tcp_client_server_connection.h"
+
 
 #define LOG(X) std::cout << X << std::endl;
 
@@ -13,6 +16,25 @@
 
 void Capnp_Serializer::recv_pss_message(int* socket, pss_message& pss_msg){
     try {
+        // Setting timeout for receiving data
+        fd_set set;
+        FD_ZERO(&set);
+        FD_SET(*socket, &set);
+
+        struct timeval timeout;
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
+
+        int rv = select(*socket + 1, &set, NULL, NULL, &timeout);
+        if (rv == -1) // In case of Error on Socket
+        {
+            throw "Socket Error";
+        }
+        else if (rv == 0)  // In case of Timeout
+        {
+            throw "Timeout Error";
+        }
+
         ::capnp::PackedFdMessageReader message(*socket);
         auto packet = message.getRoot<packet::Packet>();
         bool has_view = true;
@@ -30,6 +52,10 @@ void Capnp_Serializer::recv_pss_message(int* socket, pss_message& pss_msg){
             case packet::Packet::Type::ANNOUNCE:
                 has_view = false;
                 pss_msg.type = pss_message::Type::Announce;
+                break;
+            case packet::Packet::Type::TERMINATION:
+                has_view = false;
+                pss_msg.type = pss_message::Type::Termination;
                 break;
         }
 
@@ -63,6 +89,10 @@ void Capnp_Serializer::send_pss_message(int* socket, pss_message& pss_msg){
             packet.getPayload().setNothing();
             has_view = false;
             break;
+        case pss_message::Type::Termination:
+            packet.setType(::packet::Packet::Type::TERMINATION);
+            packet.getPayload().setNothing();
+            has_view = false;
     }
 
     if(has_view){
@@ -86,84 +116,3 @@ void Capnp_Serializer::send_pss_message(int* socket, pss_message& pss_msg){
     }
 
 }
-
-
-// OLD CODE
-
-//void Capnp_Serializer::recv_view(std::unordered_map<int, int>& map, int *socket) {
-//
-//    bool recv_view = false;
-//
-//    while(!recv_view) {
-//        ::capnp::PackedFdMessageReader message(*socket);
-//        auto packet = message.getRoot<packet::Packet>();
-//
-//        if (packet.getType() == packet::Packet::Type::VIEW) {
-//            recv_view = true;
-//            auto view = packet.getPayload().getView();
-//
-//            for (auto peer: view) {
-//                map.insert(std::make_pair(peer.getPort(), peer.getAge()));
-//            }
-//
-//        }
-//    }
-//}
-//
-//int Capnp_Serializer::recv_identity(int socket) {
-//    bool recv_identity = false;
-//
-//    int identity = -1;
-//
-//    while(!recv_identity) {
-//        ::capnp::PackedFdMessageReader message(socket);
-//        auto packet = message.getRoot<packet::Packet>();
-//
-//        if (packet.getType() == packet::Packet::Type::ANNOUNCE) {
-//            recv_identity = true;
-//            identity = packet.getSender();
-//        }
-//    }
-//
-//    return identity;
-//}
-//
-//void Capnp_Serializer::send_view(std::unordered_map<int,int>& view, int socket) {
-//    ::capnp::MallocMessageBuilder message;
-//    ::packet::Packet::Builder packet = message.initRoot<packet::Packet>();
-//    packet.setSender(12345);
-//    packet.setType(packet::Packet::Type::VIEW);
-//
-//    ::capnp::List<::packet::Peer>::Builder payload = packet.getPayload().initView(view.size());
-//
-//    int peer_idx = 0;
-//    for(auto const& [port, age] : view){
-//        ::packet::Peer::Builder p1 = payload[peer_idx];
-//        p1.setHost("127.0.0.1");
-//        p1.setPort(port);
-//        p1.setAge(age);
-//        peer_idx++;
-//    }
-//
-//    try{
-//        ::capnp::writePackedMessageToFd(socket,message);
-//
-//    }catch (kj::Exception e){
-//        std::cerr << "Unable to satisfy request";
-//    }
-//}
-//
-//void Capnp_Serializer::send_identity(int port, int socket){
-//    ::capnp::MallocMessageBuilder message;
-//    ::packet::Packet::Builder packet = message.initRoot<packet::Packet>();
-//    packet.setType(packet::Packet::Type::ANNOUNCE);
-//    packet.setSender(port);
-//    packet.getPayload().setNothing();
-//
-//    try{
-//    ::capnp::writePackedMessageToFd(socket,message);
-//
-//    }catch (kj::Exception e){
-//        std::cerr << "Unable to satisfy request";
-//    }
-//}

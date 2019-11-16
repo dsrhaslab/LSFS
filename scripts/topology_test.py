@@ -16,6 +16,7 @@ import random
 import shutil
 import argparse
 import yaml
+import time
 
 ####### EXECUTION ########
 
@@ -25,10 +26,13 @@ with open("conf.yaml", 'r') as stream:
 nr_peers = conf['main_confs']['nr_peers']
 view_size = conf['main_confs']['view_size']
 gossip_size = conf['main_confs']['gossip_size']
-current_port = conf['main_confs']['base_port']
-peer_instantiation_interval = conf['main_confs']['peer_instantiation_interval']
+base_port = current_port = conf['main_confs']['base_port']
+peer_instantiation_interval_sec = conf['main_confs']['peer_instantiation_interval_sec']
+log_interval = conf['main_confs']['log_interval_sec']
+message_passing_interval_sec = conf['main_confs']['message_passing_interval_sec']
 draw_graph = conf['main_confs']['draw_graph']
 graph_labels = conf['main_confs']['graph_labels']
+nr_peers_known_to_torecover = view_size / 2
 
 bootstrapping = '../cmake-build-debug/./bootstrapper'
 peer_program = '../cmake-build-debug/./peer' 
@@ -55,10 +59,12 @@ def connected_directed(G):
 
 def get_number_connected_components(peer_view_map):
    G = nx.DiGraph() #.Graph for undirected graphs
-   G.add_nodes_from(peer_view_map.keys())
+   online_nodes = list(peer_view_map.keys())
+   G.add_nodes_from(online_nodes)
    for peer, view in peer_view_map.items():
       for peer2 in view:
-         G.add_edge(str(peer), str(peer2))
+         if str(peer2) in online_nodes:
+            G.add_edge(str(peer), str(peer2))
    if draw_graph:
       nx.draw(G, pos = nx.spring_layout(G), with_labels = graph_labels)
       plt.show()
@@ -73,6 +79,28 @@ def plot_graph(connected_components_data):
    plt.xticks(rotation=90)
    plt.show()
 
+def time_to_sec_diff(start_time, time_list):
+   (st_h_str, st_m_str, st_s_str) = tuple(start_time.split(':'))
+   (st_h, st_m, st_s) = (int(st_h_str), int(st_m_str), int(st_s_str))
+   res = []
+
+   for time in time_list:
+      (t_h_str, t_m_str, t_s_str) = tuple(time.split(':'))
+      (t_h, t_m, t_s) = (int(t_h_str), int(t_m_str), int(t_s_str))
+      sec_diff = int((t_h - st_h) * 3600 + (t_m - st_m) * 60 + (t_s - st_s))
+      res.append(sec_diff)
+
+   return res
+
+def time_diff_sec(start_time, time):
+   (st_h_str, st_m_str, st_s_str) = tuple(start_time.split(':'))
+   (st_h, st_m, st_s) = (int(st_h_str), int(st_m_str), int(st_s_str))
+
+   (t_h_str, t_m_str, t_s_str) = tuple(time.split(':'))
+   (t_h, t_m, t_s) = (int(t_h_str), int(t_m_str), int(t_s_str))
+
+   return int((t_h - st_h) * 3600 + (t_m - st_m) * 60 + (t_s - st_s))
+
 def remove_all_previous_logs():
    logging_content = [os.path.join(logging_directory, o) for o in os.listdir(logging_directory)]
    for content in logging_content:
@@ -81,113 +109,211 @@ def remove_all_previous_logs():
       else:
          os.remove(content)
 
-def sleep_and_churn_num_peers(time_to_sleep_min, num_peers, op_type, procs):
+def add_peer_instances(num_peers, procs):
    global current_port
-   time.sleep(time_to_sleep_min * 60)
 
-   if(op_type == 'random'):
-      options = ['add', 'remove']
-      op_type = random.choice(options)
+   peer_commands = [[peer_program, str(port), str(view_size), str(gossip_size), str(message_passing_interval_sec), str(log_interval)] for port in range(current_port, current_port + num_peers)]
+   current_port += num_peers
 
-   if(op_type == 'remove'):
-      if num_peers <= len(procs): 
-         num_peers = num_peers 
-      else: 
-         num_peers = len(procs)
+   for command in peer_commands:
+      print(peer_instantiation_interval_sec)
+      time.sleep(peer_instantiation_interval_sec)
+      procs.append(Popen(command))
+
+def remove_peer_instances(num_peers, procs):
+   if num_peers <= len(procs): 
+      num_peers = num_peers 
+   else: 
+      num_peers = len(procs)
          
-      selected_procs_indexes = random.sample(range(len(procs)), num_peers)
-      selected_procs_indexes = sorted(selected_procs_indexes, reverse=True) #we must pop in inverse order
-      for proc_idx in selected_procs_indexes:
-         proc = procs.pop(proc_idx)
-         proc.terminate()
-   elif(op_type == 'add'):
-      peer_commands = [[peer_program, str(port), str(view_size), str(gossip_size)] for port in range(current_port, current_port + num_peers)]
-      current_port += num_peers
+   selected_procs_indexes = random.sample(range(len(procs)), num_peers)
+   selected_procs_indexes = sorted(selected_procs_indexes, reverse=True) #we must pop in inverse order
+   for proc_idx in selected_procs_indexes:
+      proc = procs.pop(proc_idx)
+      proc.terminate()
 
-      for command in peer_commands:
-         time.sleep(peer_instantiation_interval)
-         procs.append(Popen(command))
+def introduce_onetime_churn(churn_op_type, num_peers, procs):
 
-def sleep_and_churn_percentage(time_to_sleep_min, percentage, op_type, procs):
-   nr_active_procs = len(procs)
-   nr_target_peers = round(nr_active_procs * percentage)
-   sleep_and_churn_num_peers(time_to_sleep_min=time_to_sleep_min, num_peers=nr_target_peers
-                              , op_type=op_type, procs=procs)
+   if churn_op_type == 'random':
+         options = ['add', 'remove']
+         churn_op_type = random.choice(options)
+
+   if churn_op_type == 'add':
+      add_peer_instances(num_peers, procs)
+   elif churn_op_type == 'remove':
+      remove_peer_instances(num_peers, procs)
+   elif churn_op_type == 'substitute':
+      remove_peer_instances(num_peers, procs)
+      add_peer_instances(num_peers, procs)
+
+def introduce_constant_churn_percentage(duration_sec, time_interval_sec, churn_op_type, percentage, procs):
+   time_passed_sec = 0
+
+   op_type = churn_op_type
+   while time_passed_sec + time_interval_sec < duration_sec:
+
+      nr_active_procs = len(procs)
+      nr_target_peers = round(nr_active_procs * percentage)
+
+      if churn_op_type == 'alternate':
+         if op_type != 'add': 
+            op_type = 'add' 
+         else: 
+            op_type = 'remove'
+
+      introduce_onetime_churn(churn_op_type=op_type, num_peers=nr_target_peers, procs=procs)
+
+      time.sleep(time_interval_sec)
+      time_passed_sec += time_interval_sec
+
+def introduce_constant_churn_num_peers(duration_sec, time_interval_sec, churn_op_type, num_peers, procs):
+   time_passed_sec = 0
+
+   op_type = churn_op_type
+   while time_passed_sec + time_interval_sec < duration_sec:
+
+      if churn_op_type == 'alternate':
+         if op_type != 'add': 
+            op_type = 'add' 
+         else: 
+            op_type = 'remove'
+
+      introduce_onetime_churn(churn_op_type=op_type, num_peers=num_peers, procs=procs)
+
+      time.sleep(time_interval_sec)
+      time_passed_sec += time_interval_sec
+
+def calculate_mean_recover_time(graph_data):
+   #graph_data : {time => {node => [node viz]}}
+   initial_nodes = [port for port in range(base_port, base_port + nr_peers)]
+   new_nodes_recover_time = {}
+   final_recover_time = {}
+   ended_without_recover = {}
+
+   for time in sorted(list(graph_data.keys())):
+      time_data = graph_data[time]
+      new_nodes_known_to = defaultdict(int)
+
+      # remoção dos nodos que são deitados a baixo
+      toDelete = []
+      for node in new_nodes_recover_time:
+         if node not in time_data:
+            ended_without_recover[node] = new_nodes_recover_time[node]
+            toDelete.append(node)
+      for node in toDelete:
+         del new_nodes_recover_time[node]
+
+      # add new nodes
+      for node in time_data.keys():
+         if node not in initial_nodes:
+            initial_nodes.append(node)
+            new_nodes_recover_time[node] = 0
+
+      # calculate for each node alive number of nodes known to
+      for node, node_time_view in time_data.items():
+         for node2 in node_time_view:
+            if str(node2) in new_nodes_recover_time:
+               new_nodes_known_to[str(node2)] += 1
+
+      # increase time to active nodes
+      for node in list(new_nodes_recover_time.keys()):
+         new_nodes_recover_time[node] += log_interval
+
+      for node, nr_known_to in new_nodes_known_to.items():
+         if nr_known_to >= nr_peers_known_to_torecover:
+            final_recover_time[node] = new_nodes_recover_time[node]
+            del new_nodes_recover_time[node]
+
+   times_final_recover = list(final_recover_time.values())
+   if (times_final_recover != 0):
+      mean_time_to_recover = sum(times_final_recover) / len(times_final_recover)
+   else: 
+      mean_time_to_recover = "No peers have recovered!"
+
+   nr_peers_ended_no_recover = len(ended_without_recover)
+   if (nr_peers_ended_no_recover != 0):
+      avg_time_peers_ended_no_recover = sum(list(ended_without_recover.values())) / nr_peers_ended_no_recover
+   else:
+      avg_time_peers_ended_no_recover = "Every peer who ended have recovered!"
+
+   print(new_nodes_recover_time)
+   print(final_recover_time)
+   print(ended_without_recover)
+
+   print("Mean time to recover: " + str(mean_time_to_recover))
+   print("Nr peers who ended without recovering: " + str(nr_peers_ended_no_recover))
+   print("Avg time lived peers ended without recovering: " + str(avg_time_peers_ended_no_recover))
+         
 
 ################################# Execution ########################################
 if args.get("e") == True:
 
    remove_all_previous_logs()
 
-   peer_commands = [[peer_program, str(port), str(view_size), str(gossip_size)] for port in range(current_port, current_port + nr_peers)]
-   current_port += nr_peers
+   boot_cmd = [bootstrapping, str(view_size)]
+   boot_proc = Popen(boot_cmd)
 
-   boot_proc = Popen(bootstrapping)
+   #recording start time
+   start_time = time.strftime("%H:%M:%S")
+   start_file = open(logging_directory + "start_time", 'w')
+   start_file.write(start_time)
+   start_file.close()
 
    procs = []
-   for command in peer_commands:
-      time.sleep(peer_instantiation_interval)
-      procs.append(Popen(command))
+   add_peer_instances(nr_peers, procs)
 
    ###### Introducing Churn ####
-   exec_time_min = conf['main_confs']['exec_time_min']
-   time_passed_min = 0
+   exec_time_sec = conf['main_confs']['exec_time_sec']
+   time_passed_sec = 0
 
-   churn_conf_type = conf['simulation']['churn_conf_type']
-   if churn_conf_type == 'constant':
-      const_churn_data = conf['simulation']['constant']
-      churn_interval_min = const_churn_data['churn_interval_min']
-      op_type = churn_op_type = const_churn_data['churn_op_type']
-      last_op_type = 'add' # for the alternate case
-      while time_passed_min + churn_interval_min < exec_time_min:
-         if churn_op_type == 'alternate':
-            if last_op_type == 'add': 
-               op_type = 'remove' 
-            else: 
-               op_type = 'add'
-            last_op_type = op_type
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print(op_type)
+   churn_data = conf['simulation']['configuration']
+   if churn_data != None:
+      for churn_block in churn_data:
+         time_start_sec = churn_block['time_start_sec']
 
-         if 'percentage' in const_churn_data:
-            percentage = const_churn_data['percentage'] / 100
-            sleep_and_churn_percentage(time_to_sleep_min=churn_interval_min, percentage=percentage, op_type=op_type, procs=procs)
-         elif 'num_target_peers' in const_churn_data:
-            num_target_peers = const_churn_data['num_target_peers']
-            sleep_and_churn_num_peers(time_to_sleep_min=churn_interval_min, num_peers=num_peers, op_type=op_type, procs=procs)
-         time_passed_min += churn_interval_min
-            
-      # if 'percentage' in const_churn_data:
-      #    percentage = const_churn_data['percentage'] / 100
-      #    while time_passed_min + churn_interval_min < exec_time_min:
-      #       sleep_and_churn_percentage(time_to_sleep_min=churn_interval_min, percentage=percentage, churn_op_type=churn_op_type, procs=procs)
-      #       time_passed_min += churn_interval_min
-      # elif 'num_target_peers' in const_churn_data:
-      #    num_target_peers = const_churn_data['num_target_peers']
-      #    while time_passed_min + churn_interval_min < exec_time_min:
-      #       sleep_and_churn_num_peers(time_to_sleep_min=churn_interval_min, num_peers=num_peers, churn_op_type=churn_op_type, procs=procs)
-      #       time_passed_min += churn_interval_min
-   elif churn_conf_type == 'manual_configuration':
-      manual_churn_data = conf['simulation']['manual_configuration']
-      for churn_op in manual_churn_data:
-         op_type = churn_op['churn_op_type']
-         time_to_sleep_min =  churn_op['time_min'] - time_passed_min
-
-         if time_passed_min + time_to_sleep_min < exec_time_min:
-            if 'percentage' in churn_op:
-               percentage = churn_op['percentage'] / 100
-               sleep_and_churn_percentage(time_to_sleep_min=time_to_sleep_min, percentage=percentage, op_type=op_type, procs=procs)
-            elif 'num_target_peers' in churn_op:
-               num_peers = churn_op['num_target_peers']
-               sleep_and_churn_num_peers(time_to_sleep_min=time_to_sleep_min, num_peers=num_peers, op_type=op_type, procs=procs)
-            time_passed_min += time_to_sleep_min
-         else:
+         if(time_start_sec >= exec_time_sec ):
             break
+         else:
+            time.sleep(time_start_sec - time_passed_sec)
+            time_passed_sec = time_start_sec
+         
+
+         if churn_block['execution_type'] == 'constant':
+            time_end_sec = churn_block['time_end_sec']
+            time_interval_sec = churn_block['time_interval_sec']
+            churn_op_type = churn_block['churn_op_type']
+
+            if(time_end_sec > exec_time_sec):
+               time_end_sec = exec_time_sec
+            
+            duration_sec = time_end_sec-time_start_sec
+
+            if 'percentage' in churn_block:
+               percentage = churn_block['percentage'] / 100
+               introduce_constant_churn_percentage(duration_sec=duration_sec, time_interval_sec=time_interval_sec, churn_op_type=churn_op_type, percentage=percentage, procs=procs)
+            elif 'num_target_peers' in churn_op:
+               num_peers = churn_block['num_target_peers']
+               introduce_constant_churn_num_peers(duration_sec=duration_sec, time_interval_sec=time_interval_sec, churn_op_type=churn_op_type, num_peers=num_peers, procs=procs)
+
+            time_passed_sec += duration_sec
+         elif churn_block['execution_type'] == 'one-time':
+            churn_op_type = churn_block['churn_op_type']
+
+            nr_target_peers = 0
+            if 'percentage' in churn_block:
+               percentage = churn_block['percentage'] / 100
+               nr_active_procs = len(procs)
+               nr_target_peers = round(nr_active_procs * percentage)
+            else:
+               nr_target_peers = churn_block['num_target_peers']
+            print("#########################################################################################################################################################################################")
+            introduce_onetime_churn(churn_op_type=churn_op_type, num_peers=nr_target_peers, procs=procs)
 
    #sleep rest of time
-   time_to_sleep_min = exec_time_min - time_passed_min
-   if time_to_sleep_min > 0:
-      time.sleep(time_to_sleep_min * 60)
+   print("Estou aqui")
+   time_to_sleep_sec = exec_time_sec - time_passed_sec
+   if time_to_sleep_sec > 0:
+      time.sleep(time_to_sleep_sec)
 
    #############################
 
@@ -208,7 +334,13 @@ if args.get("a") == True:
    dirs = [os.path.join(logging_directory, o) for o in os.listdir(logging_directory) 
                      if os.path.isdir(os.path.join(logging_directory,o))]
 
+   # reading start time
+   start_file = open(logging_directory + "start_time", 'r')
+   start_time = start_file.readline()
+   start_file.close()
+
    for directory in dirs:
+      print(directory)
       peer = (re.findall(r'\d+$', directory))[0]
       filenames = [os.path.join(directory, o) for o in os.listdir(directory)]
       for filename in filenames:
@@ -218,13 +350,20 @@ if args.get("a") == True:
             # h,m,s = data['time'].split(':')
             # time = datetime.timedelta(hours=int(h),minutes=int(m),seconds=int(s))
             time = data['time']
-            graph_data[time][peer] = view
+            time_sec = time_diff_sec(start_time, time)
+            graph_data[time_sec][peer] = view
+
+   calculate_mean_recover_time(graph_data)
 
    connected_components_data = {}
 
-   times = sorted(list(graph_data.keys()))
-   
-   for time in times:
+   #times = sorted(list(graph_data.keys()))
+   #time_list = list(graph_data.keys())
+   #times_in_secs = sorted(time_to_sec_diff(start_time, time_list))
+
+   times_in_secs = sorted(list(graph_data.keys()))
+
+   for time in times_in_secs:
       connected_components_data[time] = get_number_connected_components(graph_data[time])
 
    plot_graph(connected_components_data)

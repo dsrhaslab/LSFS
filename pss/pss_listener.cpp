@@ -18,12 +18,20 @@ void pss_listener::pss_listener_worker (int* socket){
         pss_message pss_msg;
         this->connection.recv_pss_msg(socket, pss_msg);
         this->cyclon_ptr->process_msg(pss_msg);
-    }catch(...){}
+    }
+    catch(const char* e){
+        std::cerr << e << std::endl;
+    }
+    catch(...){}
+
+    std::cerr << "[pss_listener] function: pss_listener_worker [Closing] client socket -> " + std::to_string(*socket) << std::endl;
+    close(*socket);
 }
 
 pss_listener::pss_listener(const char* ip, int port, pss* pss):
         connection(tcp_client_server_connection::tcp_server_connection(ip, port, std::unique_ptr<Serializer>(new Capnp_Serializer)))
 {
+    std::cerr << "[pss_listener] function: constructor [Creating Server Connection]" << std::endl;
     this->cyclon_ptr = pss;
     this->running = true;
     this->ip = ip;
@@ -43,14 +51,14 @@ void pss_listener::operator()() {
 
     this->running = true;
 
-    struct timeval timeout;
-    timeout.tv_sec = 1;
-    timeout.tv_usec = 0;
+    struct timeval* timeout = (struct timeval*) malloc(sizeof(struct timeval));
+    timeout->tv_sec = 1;
+    timeout->tv_usec = 0;
 
     while(this->running){
         pss_message recv_pss_msg;
         int peer_socket = this->connection.accept_connection();
-        setsockopt(peer_socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
+        std::cerr << "[pss_listener] function: operator [Opening] client socket -> " + std::to_string(peer_socket) << std::endl;
         this->ioService.post(boost::bind(&pss_listener::pss_listener_worker, this, &peer_socket));
     }
     LOG("End Listener thread");
@@ -59,10 +67,11 @@ void pss_listener::operator()() {
 void pss_listener::stop_thread() {
     LOG("Stopping Listener thread");
     this->running = false;
-    //this->connection.close_socket();
 
     //creating temporary connection to awake thread on accept
     std::unique_ptr<Capnp_Serializer> capnp_serializer(nullptr);
+
+    std::cerr << "[pss_listener] function: stop_thread [Creating Connection]" << std::endl;
     tcp_client_server_connection::tcp_client_connection connection(this->ip, this->port, nullptr);
 
     //terminating ioService processing loop

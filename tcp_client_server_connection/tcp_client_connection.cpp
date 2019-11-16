@@ -9,14 +9,10 @@
 #include <string>
 #include "tcp_client_server_connection.h"
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <capnp/serialize-packed.h>
-#include <iostream>
 #include "serializer/capnp/packet.capnp.h"
 #include <unistd.h>
 #include <memory>
 #include <utility>
-#include <bits/unordered_map.h>
 
 #define LOG(X) std::cout << X << std::endl;
 
@@ -24,6 +20,7 @@ namespace tcp_client_server_connection{
 
     tcp_client_connection::~tcp_client_connection(){
         close(this->f_socket);
+        std::cerr << "[tcp_client_connection] function: constructor [Closing] client socket -> " + std::to_string(this->f_socket) << std::endl;
     }
 
     tcp_client_connection::tcp_client_connection(const char* peer_addr, int peer_port, std::unique_ptr<Serializer> serializer):
@@ -38,6 +35,9 @@ namespace tcp_client_server_connection{
             perror("Cannot create a socket");
             exit(1);
         }
+
+        std::cerr << "[tcp_client_connection] function: constructor [Opening] client socket -> " + std::to_string(this->f_socket) << std::endl;
+
 
         // Fill in the address of server
         memset(&(this->f_peer_sockaddr_in), 0, sizeof(this->f_peer_sockaddr_in));
@@ -59,6 +59,12 @@ namespace tcp_client_server_connection{
         if (res < 0) {
             throw "Cannot Connect";
         }
+
+//        struct timeval timeout;
+//        timeout.tv_sec = 1;
+//        timeout.tv_usec = 0;
+//
+//        setsockopt (this->f_socket, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout));
     }
 
     std::string tcp_client_connection::get_addr() const {
@@ -72,26 +78,6 @@ namespace tcp_client_server_connection{
     int tcp_client_connection::get_socket() const {
         return this->f_socket;
     }
-
-//    void tcp_client_connection::send_packet(::capnp::MessageBuilder& message) {
-//        try{
-//            ::capnp::writePackedMessageToFd(this->f_socket,message);
-//        }catch (kj::Exception e){
-//            std::cerr << "Unable to satisfy request";
-//        }
-//    }
-//
-//    void tcp_client_connection::recv_view(std::unordered_map<int, int> &map) {
-//        this->serializer->recv_view(map, &(this->f_socket));
-//    }
-//
-//    void tcp_client_connection::send_identity(int port) {
-//        this->serializer->send_identity(port, this->f_socket);
-//    }
-//
-//    void tcp_client_connection::send_view(std::unordered_map<int, int> &view) {
-//        return this->serializer->send_view(view, this->f_socket);
-//    }
 
     void tcp_client_connection::recv_pss_msg(pss_message& pss_msg){
         this->serializer->recv_pss_message(&(this->f_socket), pss_msg);
