@@ -85,7 +85,7 @@ private:
 
     void handle_receive(shared_session session, const boost::system::error_code& ec, std::size_t /*bytes_transferred*/) {
         // now, handle the current session on any available pool thread
-        socket_.get_executor().context().post(bind(&udp_session::handle_request, session, ec));
+        post(socket_.get_executor(),bind(&udp_session::handle_request, session, ec));
 
         // immediately accept new datagrams
         receive_session();
