@@ -1,25 +1,31 @@
 main_confs:
-  nr_peers: 100
-  view_size: 5
-  gossip_size: 3
-  exec_time_min: 10
+  nr_peers: 10
+  view_size: 8
+  gossip_size: 7
+  message_passing_interval_sec: 10
+  exec_time_sec: 100
   base_port: 12350
-  peer_instantiation_interval: 0.1
-  draw_graph: True
-  graph_labels: True
+  peer_instantiation_interval_sec: 0.1
+  log_interval_sec: 5
+  draw_graph: False
+  graph_labels: False
 simulation:
-  churn_conf_type: manual_configuration
-  constant:
-    churn_interval_min: 1
-    churn_op_type: add/remove/random/alternate
-    percentage: 10
-    num_target_peers: 5
-  manual_configuration:
-    - time_min: 3
-      churn_op_type: remove
-      percentage: 50
-      # num_target_peers: 50
-    # - time_min: 6
-    #   churn_op_type: add
-    #   # percentage: 10
-    #   num_target_peers: 10
+  configuration:
+    - execution_type: constant
+      time_start_sec: 30
+      time_end_sec: 60
+      time_interval_sec: 10
+      churn_op_type: substitute
+      percentage: 5
+    # - execution_type: constant
+    #   time_start_sec: 800
+    #   time_end_sec: 1100
+    #   time_interval_sec: 10
+    #   churn_op_type: substitute
+    #   percentage: 10
+    # - execution_type: constant
+    #   time_start_sec: 1100
+    #   time_end_sec: 1500
+    #   time_interval_sec: 10
+    #   churn_op_type: substitute
+    #   percentage: 30
