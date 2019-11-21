@@ -7,12 +7,15 @@
 #include "pss.h"
 #include "../tcp_client_server_connection/tcp_client_server_connection.h"
 #include "../serializer/capnp/capnp_serializer.h"
+#include "pss_message.pb.h"
 #include <thread>
 #include <chrono>         // std::chrono::seconds
 #include <algorithm>    // std::random_shuffle
 #include <random>      // std::rand, std::srand
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 using json = nlohmann::json;
 #define LOG(X) std::cout << X << std::endl;
@@ -118,38 +121,36 @@ std::vector<peer_data> pss::select_view_to_send(int target_port) {
     return res;
 }
 
-void pss::send_response_msg(int target_port, std::vector<peer_data>& view_to_send){
+void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, proto::pss_message_Type msg_type){
     //TODO lidar com o caso de não conseguir conexão
     try {
         std::cerr << "[pss] function: send_response_msg [Creating Connection]" << std::endl;
-        std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
-        tcp_client_server_connection::tcp_client_connection connection("127.0.0.1", target_port,
-                                                                       std::move(capnp_serializer));
 
-        pss_message msg_to_send;
-        msg_to_send.type = pss_message::Type::Response;
-        msg_to_send.sender_ip = this->ip;
-        msg_to_send.sender_port = this->port;
-        msg_to_send.view = view_to_send;
+        struct sockaddr_in serverAddr;
+        socklen_t addr_size;
+        int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+        memset(&serverAddr, '\0', sizeof(serverAddr));
 
-        connection.send_pss_msg(msg_to_send);
-    }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
-}
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(target_port);
+        serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-void pss::send_normal_msg(int target_port, std::vector<peer_data>& view_to_send){
-    //TODO lidar com o caso de não conseguir conexão
-    try{
-        std::cerr << "[pss] function: send_normal_msg [Creating Connection]" << std::endl;
-        std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
-        tcp_client_server_connection::tcp_client_connection connection("127.0.0.1", target_port, std::move(capnp_serializer));
+        proto::pss_message pss_message;
+        pss_message.set_sender_ip(this->ip);
+        pss_message.set_sender_port(this->port);
+        pss_message.set_type(msg_type);
 
-        pss_message msg_to_send;
-        msg_to_send.type = pss_message::Type::Normal;
-        msg_to_send.sender_ip = this->ip;
-        msg_to_send.sender_port = this->port;
-        msg_to_send.view = view_to_send;
+        for(auto& peer: view_to_send){
+            proto::peer_data* peer_data = pss_message.add_view();
+            peer_data->set_ip(peer.ip);
+            peer_data->set_port(peer.port);
+            peer_data->set_age(peer.age);
+        }
 
-        connection.send_pss_msg(msg_to_send);
+        std::string buf;
+        pss_message.SerializeToString(&buf);
+
+        sendto(sockfd, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
     }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
 }
 
@@ -181,7 +182,7 @@ void pss::operator()() {
                         this->last_sent_view.push_back(peer);
                 }
 
-                this->send_normal_msg(target.port, view_to_send);
+                this->send_pss_msg(target.port, view_to_send, proto::pss_message_Type::pss_message_Type_NORMAL);
             }
         }
     }
@@ -233,16 +234,23 @@ peer_data* pss::get_older_from_view() {
     return older_peer;
 }
 
-void pss::process_msg(pss_message& pss_msg){
+void pss::process_msg(proto::pss_message pss_msg){
 
-    if(pss_msg.type == pss_message::Type::Normal){
+    std::vector<peer_data> recv_view;
+    for(auto& peer: pss_msg.view()){
+        peer_data peer_data;
+        peer_data.ip = peer.ip();
+        peer_data.port = peer.port();
+        peer_data.age = peer.age();
+        recv_view.push_back(peer_data);
+    }
 
-//        std::unique_lock<std::recursive_mutex> lk (this->view_mutex);
+    if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_NORMAL){
         std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
         this->incorporate_last_sent_view();
         //1- seleciona uma vista para enviar (removendo tais nodos da sua vista, isto
         // porque desta forma consegue arranjar espaço para acomodar os nodos que recebeu)
-        std::vector<peer_data> view_to_send = this->select_view_to_send(pss_msg.sender_port);
+        std::vector<peer_data> view_to_send = this->select_view_to_send(pss_msg.sender_port());
         //2- desses nodos que selecionou para enviar armazena os diferentes do proprio porque pode ser necessário
         //completar a vista, dado que pode ter recebido menos nodos dos que enviou
         std::vector<peer_data> to_fill_view;
@@ -251,19 +259,19 @@ void pss::process_msg(pss_message& pss_msg){
                 to_fill_view.push_back(peer);
         }
         //3- insere as vistas, começando pela que recebeu primeiro
-        this->incorporate_in_view(pss_msg.view);
+        this->incorporate_in_view(recv_view);
         this->incorporate_in_view(to_fill_view);
 
 //        lk.unlock();
 
         //4- envia msg de resposta
-        this->send_response_msg(pss_msg.sender_port, view_to_send);
+        this->send_pss_msg(pss_msg.sender_port(), view_to_send, proto::pss_message_Type::pss_message_Type_RESPONSE);
         this->print_view();
 
-    }else if (pss_msg.type == pss_message::Type::Response){
+    }else if (pss_msg.type() == proto::pss_message_Type::pss_message_Type_RESPONSE){
         std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
 
-        this->incorporate_in_view(pss_msg.view);
+        this->incorporate_in_view(recv_view);
         this->incorporate_last_sent_view();
         this->print_view();
 

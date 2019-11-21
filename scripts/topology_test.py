@@ -18,9 +18,23 @@ import argparse
 import yaml
 import time
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-e', help="Include Execution",
+                    action='store_true')
+parser.add_argument('-a', help="Include Analisis",
+                    action='store_true')
+parser.add_argument('-r', help="Remote Execution",
+                    action='store_true')
+parser.add_argument('-d', help="Draw final graph",
+                    action='store_true')
+parser.add_argument("-c", "--config", help="config file to use (conf.yaml default)", default="conf.yaml")
+args = vars(parser.parse_args())
+
 ####### EXECUTION ########
 
-with open("conf.yaml", 'r') as stream:
+
+
+with open(args['config'], 'r') as stream:
     conf = yaml.safe_load(stream)
 
 nr_peers = conf['main_confs']['nr_peers']
@@ -33,17 +47,16 @@ message_passing_interval_sec = conf['main_confs']['message_passing_interval_sec'
 draw_graph = conf['main_confs']['draw_graph']
 graph_labels = conf['main_confs']['graph_labels']
 nr_peers_known_to_torecover = view_size / 2
+draw_final_graph = args.get("d")
 
-bootstrapping = '../cmake-build-debug/./bootstrapper'
-peer_program = '../cmake-build-debug/./peer' 
 logging_directory = '../logging/'
-
-parser = argparse.ArgumentParser()
-parser.add_argument('-e', help="Include Execution",
-                    action='store_true')
-parser.add_argument('-a', help="Include Analisis",
-                    action='store_true')
-args = vars(parser.parse_args())
+results_directory = '../results/'
+if(args.get('remote')):
+   bootstrapping = '.././bootstrapper_exe'
+   peer_program = '.././peer_exe' 
+else:
+   bootstrapping = '../cmake-build-debug/./bootstrapper_exe'
+   peer_program = '../cmake-build-debug/./peer_exe' 
 
 ################################# Functions ########################################
 
@@ -77,7 +90,13 @@ def plot_graph(connected_components_data):
    connected_components = [connected_components_data[time] for time in times]
    plt.plot(times, connected_components)
    plt.xticks(rotation=90)
-   plt.show()
+
+   ensure_dir(results_directory)
+   filename_no_extension = os.path.splitext(args['config'])[0]
+   ensure_dir(results_directory + filename_no_extension + '/')
+   plt.savefig(results_directory + filename_no_extension + '/graph.pdf')
+   if draw_final_graph:
+      plt.show()
 
 def time_to_sec_diff(start_time, time_list):
    (st_h_str, st_m_str, st_s_str) = tuple(start_time.split(':'))
@@ -108,6 +127,11 @@ def remove_all_previous_logs():
          shutil.rmtree(content)
       else:
          os.remove(content)
+
+def ensure_dir(file_path):
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 def add_peer_instances(num_peers, procs):
    global current_port
@@ -236,13 +260,19 @@ def calculate_mean_recover_time(graph_data):
    else:
       avg_time_peers_ended_no_recover = "Every peer who ended have recovered!"
 
-   print(new_nodes_recover_time)
-   print(final_recover_time)
-   print(ended_without_recover)
+   # logging results
+   ensure_dir(results_directory)
+   filename_no_extension = os.path.splitext(args['config'])[0]
+   ensure_dir(results_directory + filename_no_extension + '/')
 
-   print("Mean time to recover: " + str(mean_time_to_recover))
-   print("Nr peers who ended without recovering: " + str(nr_peers_ended_no_recover))
-   print("Avg time lived peers ended without recovering: " + str(avg_time_peers_ended_no_recover))
+   results_txt_file = open(results_directory + filename_no_extension + "/results.txt", 'w')
+   results_txt_file.write(json.dumps(new_nodes_recover_time) + '\n')
+   results_txt_file.write(json.dumps(final_recover_time) + '\n')
+   results_txt_file.write(json.dumps(ended_without_recover) + '\n')
+   results_txt_file.write("Mean time to recover: " + str(mean_time_to_recover) + '\n')
+   results_txt_file.write("Nr peers who ended without recovering: " + str(nr_peers_ended_no_recover) + '\n')
+   results_txt_file.write("Avg time lived peers ended without recovering: " + str(avg_time_peers_ended_no_recover) + '\n')
+   results_txt_file.close()
          
 
 ################################# Execution ########################################
@@ -306,11 +336,9 @@ if args.get("e") == True:
                nr_target_peers = round(nr_active_procs * percentage)
             else:
                nr_target_peers = churn_block['num_target_peers']
-            print("#########################################################################################################################################################################################")
             introduce_onetime_churn(churn_op_type=churn_op_type, num_peers=nr_target_peers, procs=procs)
 
    #sleep rest of time
-   print("Estou aqui")
    time_to_sleep_sec = exec_time_sec - time_passed_sec
    if time_to_sleep_sec > 0:
       time.sleep(time_to_sleep_sec)

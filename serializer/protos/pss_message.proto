@@ -1,0 +1,19 @@
+package proto;
+
+message peer_data {
+  required string ip = 1;
+  required int32 port = 2;
+  required int32 age = 3;
+}
+
+message pss_message {
+  enum Type {
+    NORMAL = 0;
+    RESPONSE = 1;
+  }
+
+  required Type type = 1;
+  required string sender_ip = 2;
+  required int32 sender_port = 3;
+  repeated peer_data view = 4;
+}
