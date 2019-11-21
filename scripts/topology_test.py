@@ -121,6 +121,7 @@ def time_diff_sec(start_time, time):
    return int((t_h - st_h) * 3600 + (t_m - st_m) * 60 + (t_s - st_s))
 
 def remove_all_previous_logs():
+   ensure_dir(logging_directory)
    logging_content = [os.path.join(logging_directory, o) for o in os.listdir(logging_directory)]
    for content in logging_content:
       if os.path.isdir(content):
