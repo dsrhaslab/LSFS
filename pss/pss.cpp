@@ -110,7 +110,7 @@ std::vector<peer_data> pss::select_view_to_send(int target_port) {
 void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, proto::pss_message_Type msg_type){
     //TODO lidar com o caso de não conseguir conexão
     try {
-        std::cerr << "[pss] function: send_response_msg [Creating Connection]" << std::endl;
+//        std::cerr << "[pss] function: send_response_msg [Creating Connection]" << std::endl;
 
         struct sockaddr_in serverAddr;
         socklen_t addr_size;

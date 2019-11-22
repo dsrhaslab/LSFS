@@ -20,7 +20,7 @@ namespace tcp_client_server_connection{
 
     tcp_client_connection::~tcp_client_connection(){
         close(this->f_socket);
-        std::cerr << "[tcp_client_connection] function: constructor [Closing] client socket -> " + std::to_string(this->f_socket) << std::endl;
+//        std::cerr << "[tcp_client_connection] function: constructor [Closing] client socket -> " + std::to_string(this->f_socket) << std::endl;
     }
 
     tcp_client_connection::tcp_client_connection(const char* peer_addr, int peer_port, std::unique_ptr<Serializer> serializer):
@@ -36,7 +36,7 @@ namespace tcp_client_server_connection{
             exit(1);
         }
 
-        std::cerr << "[tcp_client_connection] function: constructor [Opening] client socket -> " + std::to_string(this->f_socket) << std::endl;
+//        std::cerr << "[tcp_client_connection] function: constructor [Opening] client socket -> " + std::to_string(this->f_socket) << std::endl;
 
 
         // Fill in the address of server

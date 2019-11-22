@@ -108,7 +108,7 @@ void udp_session::handle_request(const boost::system::error_code& error)
 
 pss_listener::pss_listener(const char* ip, int port, pss* pss)
 {
-    std::cerr << "[pss_listener] function: constructor [Creating Server Connection]" << std::endl;
+//    std::cerr << "[pss_listener] function: constructor [Creating Server Connection]" << std::endl;
     this->pss_ptr = pss;
     this->ip = ip;
     this->port = port;

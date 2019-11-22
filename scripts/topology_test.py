@@ -125,7 +125,7 @@ def remove_all_previous_logs():
    logging_content = [os.path.join(logging_directory, o) for o in os.listdir(logging_directory)]
    for content in logging_content:
       if os.path.isdir(content):
-         shutil.rmtree(content)
+         shutil.rmtree(content, ignore_errors=True)
       else:
          os.remove(content)
 
