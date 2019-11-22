@@ -307,9 +307,7 @@ void pss::incorporate_last_sent_view() {
     std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
     while(this->view.size() < this->view_size && this->last_sent_view.size() > 0){
         peer_data tmp = this->last_sent_view.front();
-        auto current_it = this->view.find(tmp.port);
-        if(current_it == this->view.end())
-            this->view.insert(std::make_pair(tmp.port, tmp));
+        this->view.insert(std::make_pair(tmp.port, tmp));
         this->last_sent_view.erase(this->last_sent_view.begin());
     }
 }
@@ -325,6 +323,7 @@ std::vector<int> pss::get_peers_from_view() {
     auto it = this->last_sent_view.begin();
     while (res.size() < this->view_size && it != this->last_sent_view.end()) {
         res.push_back(it->port);
+        ++it;
     }
 
     return std::move(res);
