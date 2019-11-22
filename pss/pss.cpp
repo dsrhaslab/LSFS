@@ -75,20 +75,6 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, lon
     this->boot_port = boot_port;
 }
 
-void pss::complete_view_with_last_sent() {
-    //enquanto que a vista não estiver completa e ainda houver elementos na ultima vista enviada
-
-    std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
-    auto it = this->last_sent_view.begin();
-
-    while(this->view.size() < this->view_size && this->last_sent_view.size() > 0){
-
-        this->view.insert(std::make_pair(it->port, *it));
-        it = this->last_sent_view.erase(it);
-    }
-
-}
-
 std::vector<peer_data> pss::select_view_to_send(int target_port) {
     std::vector<peer_data> res;
     peer_data myself = {
@@ -167,7 +153,7 @@ void pss::operator()() {
 
             std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
 
-            this->complete_view_with_last_sent();
+            this->incorporate_last_sent_view();
             this->age_view_members();
             peer_data* target_ptr = this->get_older_from_view(); //pair (port, age)
 
@@ -301,6 +287,20 @@ void pss::incorporate_in_view(std::vector<peer_data>& source) {
             }
         }
     }
+}
+
+void pss::complete_view_with_last_sent() {
+    //enquanto que a vista não estiver completa e ainda houver elementos na ultima vista enviada
+
+    std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
+    auto it = this->last_sent_view.begin();
+
+    while(this->view.size() < this->view_size && this->last_sent_view.size() > 0){
+
+        this->view.insert(std::make_pair(it->port, *it));
+        it = this->last_sent_view.erase(it);
+    }
+
 }
 
 void pss::incorporate_last_sent_view() {
