@@ -27,37 +27,42 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port)
 {
     //TODO acrescentar loop para tentar reconexão caso falhe
 
+    bool recovered = false;
+    std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
 
-//    try {
-        std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
-        tcp_client_server_connection::tcp_client_connection connection(boot_ip, boot_port, std::move(capnp_serializer));
+    while(!recovered){
+        try {
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip, boot_port, std::move(capnp_serializer));
 
-        //sending announce msg
-        pss_message pss_announce_msg;
-        pss_announce_msg.sender_ip = my_ip;
-        pss_announce_msg.sender_port = my_port;
-        pss_announce_msg.type = pss_message::Type::Announce;
-        connection.send_pss_msg(pss_announce_msg);
+            //sending announce msg
+            pss_message pss_announce_msg;
+            pss_announce_msg.sender_ip = my_ip;
+            pss_announce_msg.sender_port = my_port;
+            pss_announce_msg.type = pss_message::Type::Announce;
+            connection.send_pss_msg(pss_announce_msg);
 
-        //receiving view from bootstrapper
-        bool view_recv = false;
-        pss_message pss_view_msg_rcv;
-        while (!view_recv) {
-            connection.recv_pss_msg(pss_view_msg_rcv);
+            //receiving view from bootstrapper
+            bool view_recv = false;
+            pss_message pss_view_msg_rcv;
+            while (!view_recv) {
+                connection.recv_pss_msg(pss_view_msg_rcv);
 
-            if (pss_view_msg_rcv.type == pss_message::Type::Normal)
-                view_recv = true;
+                if (pss_view_msg_rcv.type == pss_message::Type::Normal)
+                    view_recv = true;
+            }
+
+            recovered = true;
+
+            //process received view
+            for (peer_data &peer : pss_view_msg_rcv.view) {
+                this->view.insert(std::make_pair(peer.port, std::move(peer)));
+            }
+
+        }catch(const char* e){
+            std::cerr << "############################################" <<std::endl;
+            std::cerr << e << std::endl;
         }
-
-        //process received view
-        for (peer_data &peer : pss_view_msg_rcv.view) {
-            this->view.insert(std::make_pair(peer.port, std::move(peer)));
-        }
-
-//    }catch(const char* e){
-//        std::cerr << "############################################" <<std::endl;
-//        std::cerr << e << std::endl;
-//    }
+    }
 
 }
 
