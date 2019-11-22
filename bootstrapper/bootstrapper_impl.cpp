@@ -24,7 +24,7 @@ BootstrapperImpl::BootstrapperImpl(long id, int viewsize, const char* ip, int po
     port(port)
 
 {
-    std::cerr << "[bootstrapper] function: constructor [Creating Server Connection]" << std::endl;
+//    std::cerr << "[bootstrapper] function: constructor [Creating Server Connection]" << std::endl;
     this->initialnodes = 10;
     this->running = true;
 }
@@ -118,7 +118,7 @@ void boot_worker(int* socket, BootstrapperImpl* boot){
 
     }catch(...){}
 
-    std::cerr << "[Bootstrap] function: boot_worker [Closing] socket -> " + std::to_string(*socket) << std::endl;
+//    std::cerr << "[Bootstrap] function: boot_worker [Closing] socket -> " + std::to_string(*socket) << std::endl;
     close(*socket);
 }
 
@@ -126,7 +126,7 @@ void BootstrapperImpl::run(){
 
     while(this->running){
         int socket = this->connection.accept_connection();
-        std::cerr << "[Bootstrap] function: run [Opening] socket -> " + std::to_string(socket) << std::endl;
+//        std::cerr << "[Bootstrap] function: run [Opening] socket -> " + std::to_string(socket) << std::endl;
         std::thread newThread(boot_worker, &socket, this);
         newThread.detach();
     }
