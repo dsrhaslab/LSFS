@@ -227,6 +227,7 @@ peer_data* pss::get_older_from_view() {
 
 void pss::process_msg(proto::pss_message pss_msg){
 
+    std::cout << "processing message" << std::endl;
     std::vector<peer_data> recv_view;
     for(auto& peer: pss_msg.view()){
         peer_data peer_data;
@@ -234,6 +235,7 @@ void pss::process_msg(proto::pss_message pss_msg){
         peer_data.port = peer.port();
         peer_data.age = peer.age();
         recv_view.push_back(peer_data);
+        std::cout << peer_data.ip << " " << peer_data.port << std::endl;
     }
 
     if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_NORMAL){
