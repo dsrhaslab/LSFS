@@ -17,6 +17,9 @@
 #include <nlohmann/json.hpp>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <unistd.h>
+#include <memory>
+
 
 using json = nlohmann::json;
 #define LOG(X) std::cout << X << std::endl;
@@ -344,6 +347,7 @@ void pss::stop_thread() {
     LOG("Stopping PSS thread");
     this->running = false;
     this->incorporate_last_sent_view();
+    close(this->socket_send);
 }
 
 void pss::bootstrapper_termination_alerting() {
