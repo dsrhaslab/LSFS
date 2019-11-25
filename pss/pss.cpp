@@ -66,7 +66,7 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port)
         }catch(const char* e){
             std::cerr << "############################################" <<std::endl;
             std::cerr << e << std::endl;
-        }
+        }catch(...){}
     }
 
 }
