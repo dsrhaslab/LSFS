@@ -54,8 +54,14 @@ struct udp_session : enable_shared_from_this<udp_session> {
     udp::endpoint remote_endpoint_;
     enum { max_length = 1024 };
     char recv_buffer_ [max_length];
+    std::size_t bytes_rcv;
     udp_server* server_;
     pss* pss_ptr;
+
+public:
+  void set_bytes_rcv(size_t bytes_rcv){
+      this->bytes_rcv = bytes_rcv;
+  }
 };
 
 class udp_server
@@ -85,8 +91,9 @@ private:
                              boost::asio::placeholders::bytes_transferred)));
     }
 
-    void handle_receive(shared_session session, const boost::system::error_code& ec, std::size_t /*bytes_transferred*/) {
+    void handle_receive(shared_session session, const boost::system::error_code& ec, std::size_t bytes_rcv/*bytes_transferred*/) {
         // now, handle the current session on any available pool thread
+        session->set_bytes_rcv(bytes_rcv);
         post(socket_.get_executor(),bind(&udp_session::handle_request, session, ec));
 
         // immediately accept new datagrams
@@ -104,7 +111,7 @@ void udp_session::handle_request(const boost::system::error_code& error)
 {
     if (!error || error == boost::asio::error::message_size)
     {
-        handle_function(this->recv_buffer_, 1024, this->pss_ptr);
+        handle_function(this->recv_buffer_, this->bytes_rcv, this->pss_ptr);
     }
 }
 
