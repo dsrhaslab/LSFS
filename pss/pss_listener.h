@@ -14,13 +14,17 @@
 
 class pss_listener {
 
-struct ArrayWrapper{
-    char arr[1024];
-};
+// uncomment this for first version
+//struct ArrayWrapper{
+//    char arr[1024];
+//};
 
 private:
-    std::atomic<bool> running{};
-    boost::asio::io_service ioService;
+// uncomment this for first version
+//    std::atomic<bool> running{};
+//    boost::asio::io_service ioService;
+    int nr_worker_threads = 3;
+    boost::asio::io_service io_service;
     boost::thread_group thread_pool;
     pss* pss_ptr;
     const char* ip;
@@ -29,7 +33,8 @@ private:
 public:
     pss_listener(const char*  ip, int port, pss* pss);
     void operator ()();
-    void pss_listener_worker(ArrayWrapper arr, int size);
+// uncomment this for first version
+//    void pss_listener_worker(ArrayWrapper arr, int size);
     void stop_thread();
 };
 
