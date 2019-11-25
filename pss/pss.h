@@ -30,6 +30,7 @@ private:
     int gossip_size;
     const char* boot_ip;
     int boot_port;
+    int socket_send;
 
 public:
     pss(const char* boot_ip, int boot_port,  std::string my_ip, int my_port);

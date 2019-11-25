@@ -2,8 +2,9 @@
 // Created by danielsf97 on 10/8/19.
 //
 
+#include <errno.h>
+#include <string.h>
 #include <iostream>
-#include <fstream>
 #include "pss.h"
 #include "../tcp_client_server_connection/tcp_client_server_connection.h"
 #include "../serializer/capnp/capnp_serializer.h"
@@ -78,6 +79,7 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, lon
     this->port = my_port;
     this->boot_ip = boot_ip;
     this->boot_port = boot_port;
+    this->socket_send = socket(PF_INET, SOCK_DGRAM, 0);
 }
 
 std::vector<peer_data> pss::select_view_to_send(int target_port) {
@@ -119,7 +121,6 @@ void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, pr
 
         struct sockaddr_in serverAddr;
         socklen_t addr_size;
-        int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
@@ -141,7 +142,10 @@ void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, pr
         std::string buf;
         pss_message.SerializeToString(&buf);
 
-        sendto(sockfd, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+        int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+        if (res == -1){
+            std::cerr << "Erro ao enviar: " << strerror(errno) << std::endl;
+        }
     }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
 }
 
