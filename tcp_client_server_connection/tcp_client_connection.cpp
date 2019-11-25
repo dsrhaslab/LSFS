@@ -6,6 +6,8 @@
 // Created by danielsf97 on 10/8/19.
 //
 
+#include <errno.h>
+#include <string.h>
 #include <string>
 #include "tcp_client_server_connection.h"
 #include <netinet/in.h>
@@ -23,10 +25,10 @@ namespace tcp_client_server_connection{
 //        std::cerr << "[tcp_client_connection] function: constructor [Closing] client socket -> " + std::to_string(this->f_socket) << std::endl;
     }
 
-    tcp_client_connection::tcp_client_connection(const char* peer_addr, int peer_port, std::unique_ptr<Serializer> serializer):
+    tcp_client_connection::tcp_client_connection(const char* peer_addr, int peer_port, std::shared_ptr<Serializer> serializer):
             f_peer_addr(peer_addr),
             f_peer_port(peer_port),
-            serializer(std::move(serializer)) //changing ownership of the pointer
+            serializer(serializer)
     {
 
         // Create a socket
@@ -57,6 +59,7 @@ namespace tcp_client_server_connection{
         int res = connect(this->f_socket, (struct sockaddr *) &(this->f_peer_sockaddr_in),
                           sizeof(this->f_peer_sockaddr_in));
         if (res < 0) {
+            std::cerr << strerror(errno) << std::endl;
             throw "Cannot Connect";
         }
 

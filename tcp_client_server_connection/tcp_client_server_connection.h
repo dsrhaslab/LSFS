@@ -29,7 +29,7 @@ namespace tcp_client_server_connection
     {
     public:
 
-        tcp_client_connection(const char* addr, int port, std::unique_ptr<Serializer> serializer);
+        tcp_client_connection(const char* addr, int port, std::shared_ptr<Serializer> serializer);
         ~tcp_client_connection();
 
         int                     get_socket() const;
@@ -50,7 +50,7 @@ namespace tcp_client_server_connection
         int                         f_peer_port;
         std::string                 f_peer_addr;
         struct sockaddr_in          f_peer_sockaddr_in;
-        std::unique_ptr<Serializer> serializer;
+        std::shared_ptr<Serializer> serializer;
     };
 
 

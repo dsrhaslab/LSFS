@@ -33,11 +33,11 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port)
     //TODO acrescentar loop para tentar reconexão caso falhe
 
     bool recovered = false;
-    std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
+    std::shared_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
 
     while(!recovered){
         try {
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip, boot_port, std::move(capnp_serializer));
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip, boot_port, capnp_serializer);
 
             //sending announce msg
             pss_message pss_announce_msg;
@@ -64,7 +64,6 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port)
             }
 
         }catch(const char* e){
-            std::cerr << "############################################" <<std::endl;
             std::cerr << e << std::endl;
         }catch(...){}
     }
