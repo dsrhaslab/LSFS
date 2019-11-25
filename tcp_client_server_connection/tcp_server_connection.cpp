@@ -6,9 +6,11 @@
 #include "tcp_client_server_connection.h"
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <capnp/serialize-packed.h>
+#include <iostream>
 #include <unistd.h>
 #include <memory>
-#include <capnp/serialize-packed.h>
+#include <netinet/in.h>
 
 #define LOG(X) std::cout << X << std::endl;
 

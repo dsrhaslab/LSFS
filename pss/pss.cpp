@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <string.h>
 #include <iostream>
+#include <fstream>
 #include "pss.h"
 #include "../tcp_client_server_connection/tcp_client_server_connection.h"
 #include "../serializer/capnp/capnp_serializer.h"
@@ -124,6 +125,7 @@ void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, pr
 
         struct sockaddr_in serverAddr;
         socklen_t addr_size;
+        //int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
@@ -146,10 +148,9 @@ void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, pr
         pss_message.SerializeToString(&buf);
 
         int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-        if (res == -1){
-            std::cerr << "Erro ao enviar: " << strerror(errno) << std::endl;
-        }
-    }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
+
+        if(res == -1){printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));}  
+     }catch(...){std::cerr <<"=============================== NÂO consegui enviar =================" << std::endl;}
 }
 
 void pss::operator()() {
@@ -171,6 +172,8 @@ void pss::operator()() {
 
             if(target_ptr != nullptr){
                 peer_data target = *target_ptr;
+                if(target.port == 20000)
+                   std::cerr << "sent_to_you" << std::endl;
                 this->view.erase(target.port);
                 std::vector<peer_data> view_to_send = this->select_view_to_send(target.port); //older_member.first = target_port
 
@@ -182,6 +185,7 @@ void pss::operator()() {
 
                 this->send_pss_msg(target.port, view_to_send, proto::pss_message_Type::pss_message_Type_NORMAL);
             }
+            this->print_view();
         }
     }
     LOG("END PSS thread")
