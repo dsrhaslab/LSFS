@@ -14,6 +14,9 @@
 #include "../tcp_client_server_connection/tcp_client_server_connection.h"
 #include <shared_mutex>
 #include <mutex>
+#include <memory>
+#include <boost/asio/io_service.hpp>
+#include <boost/thread/thread.hpp>
 
 class BootstrapperImpl: public Bootstrapper{
 
@@ -26,7 +29,10 @@ private:
 //    std::unordered_map<std::string, double> alivePos;
 //    std::queue<std::vector<std::string>> fila; //era concurrent linked queue
 
-    std::shared_mutex mutex;
+    boost::asio::io_service io_service;
+    boost::thread_group thread_pool;
+    std::shared_mutex alive_ports_mutex;
+    std::recursive_mutex fila_mutex;
     std::unordered_set<int> alivePorts;
     std::unordered_map<int, long> aliveIds;
     std::unordered_map<int, double> alivePos;
@@ -45,8 +51,8 @@ public:
     //void removeIP(std::string ip);
 
     std::vector<peer_data> get_view();
-    
-    
+
+    void boot_worker(int* socket);
     void add_peer(std::string ip,int port, long id, double pos);
     void remove_peer(int port);
 

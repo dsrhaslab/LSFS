@@ -12,6 +12,7 @@
 #include <random>      // std::rand, std::srand
 #include <map>
 #include <unistd.h>
+#include <algorithm>
 
 #define LOG(X) std::cout << X << std::endl;
 
@@ -31,6 +32,10 @@ BootstrapperImpl::BootstrapperImpl(long id, int viewsize, const char* ip, int po
 
 void BootstrapperImpl::stopThread(){
     this->running = false;
+    //terminating ioService processing loop
+    this->io_service.stop();
+    //joining all threads of thread_loop
+    this->thread_pool.join_all();
 }
 
 std::string BootstrapperImpl::get_ip(){
@@ -42,45 +47,40 @@ int BootstrapperImpl::get_port(){
 }
 
 std::vector<peer_data> BootstrapperImpl::get_view() {
-//    if(this->fila.empty()){
-//        this->boot_fila();
-//        std::vector<int> to_send = this->fila.pop();
-//    }
+
+    std::unique_lock<std::recursive_mutex> lk(this->fila_mutex);
+
+    if(this->fila.empty()){
+        this->boot_fila();
+    }
+
+    std::vector<int> to_send = this->fila.front();
+    this->fila.pop();
+
+    lk.unlock();
 
     std::vector<peer_data> res;
-    std::vector<peer_data> tmp;
-    {
-        std::shared_lock<std::shared_mutex> lk (this->mutex);
-        for (int port: this->alivePorts) {
-            peer_data peer;
-            peer.ip = "127.0.0.1";
-            peer.port = port;
-            peer.age = 20;
+    for(int& peer_port: to_send){
+        peer_data peer;
+        peer.ip = "127.0.0.1";
+        peer.port = peer_port;
+        peer.age = 20;
 
-            tmp.push_back(peer);
-        }
+        res.push_back(peer);
     }
-    if(tmp.size() <= this->viewsize){
-        res = tmp;
-    }else{
-        auto rng = std::default_random_engine {};
-        std::shuffle(std::begin(tmp), std::end(tmp), rng);
-        for(peer_data peer: tmp){
-            res = std::vector<peer_data>(tmp.begin(), tmp.begin() + this->viewsize);
-        }
-    }
+
     return res;
 }
 
 void BootstrapperImpl::add_peer(std::string ip, int port, long id, double pos){
-    std::scoped_lock<std::shared_mutex> lk(this->mutex);
+    std::scoped_lock<std::shared_mutex> lk(this->alive_ports_mutex);
     this->alivePorts.insert(port);
     this->aliveIds.insert(std::make_pair(port,id));
     this->alivePos.insert(std::make_pair(port,pos));
 };
 
 void BootstrapperImpl::remove_peer(int port){
-    std::scoped_lock<std::shared_mutex> lk(this->mutex);
+    std::scoped_lock<std::shared_mutex> lk(this->alive_ports_mutex);
     this->alivePorts.erase(port);
     this->aliveIds.erase(port);
     this->alivePos.erase(port);
@@ -88,30 +88,68 @@ void BootstrapperImpl::remove_peer(int port){
 
 void BootstrapperImpl::boot_fila() {
 
+    std::unique_lock<std::recursive_mutex> lk_fila(this->fila_mutex);
+    std::unique_lock<std::shared_mutex> lk(this->alive_ports_mutex);
+
+    std::vector<int> res;
+    if(this->alivePorts.size() <= this->viewsize){
+        for (int peer_port: this->alivePorts){
+            res.push_back(peer_port);
+        }
+        lk.unlock();
+        this->fila.push(res);
+    }
+    if(this->alivePorts.size() < this->viewsize * 10){
+        std::vector<int> tmp;
+        for (int peer_port: this->alivePorts){
+            tmp.push_back(peer_port);
+        }
+        lk.unlock();
+        std::shuffle(std::begin(tmp), std::end(tmp), std::default_random_engine(0));
+        int max_rand = tmp.size() - this->viewsize - 1;
+        for(int i = 0; i < this->initialnodes; i++){
+            int st_index = std::rand() % (max_rand + 1);
+            res = std::vector<int>(std::begin(tmp) + st_index, std::begin(tmp) + st_index + this->viewsize);
+            this->fila.push(res);
+        }
+    }else{
+        for(int i = 0; i < this->initialnodes; i++){
+            std::vector<int> tmp;
+            while(tmp.size() < this->viewsize){
+                int st_index = std::rand() % (this->alivePorts.size());
+                auto it = std::begin(this->alivePorts);
+                std::advance(it, st_index);
+                if(std::find(tmp.begin(), tmp.end(), *it) != tmp.end()) {
+                    tmp.push_back(*it);
+                }
+            }
+            lk.unlock();
+            this->fila.push(res);
+        }
+    }
 }
 
-void boot_worker(int* socket, BootstrapperImpl* boot){
-    tcp_client_server_connection::tcp_server_connection* connection = boot->get_connection();
+void BootstrapperImpl::boot_worker(int* socket){
     pss_message recv_pss_msg;
 
     try {
 
-        connection->recv_pss_msg(socket, recv_pss_msg);
+        this->connection.recv_pss_msg(socket, recv_pss_msg);
 
         switch (recv_pss_msg.type){
             case pss_message::Type::Announce: {
                 pss_message msg_to_send;
-                msg_to_send.view = boot->get_view();
-                msg_to_send.sender_ip = boot->get_ip();
-                msg_to_send.sender_port = boot->get_port();
+                msg_to_send.view = this->get_view();
+                msg_to_send.sender_ip = this->get_ip();
+                msg_to_send.sender_port = this->get_port();
                 msg_to_send.type = pss_message::Type::Normal;
 
-                connection->send_pss_msg(socket, msg_to_send);
-                boot->add_peer(recv_pss_msg.sender_ip, recv_pss_msg.sender_port, 0, 0);
+                this->connection.send_pss_msg(socket, msg_to_send);
+                this->add_peer(recv_pss_msg.sender_ip, recv_pss_msg.sender_port, 0, 0);
                 break;
             }
             case pss_message::Type::Termination: {
-                boot->remove_peer(recv_pss_msg.sender_port);
+                this->remove_peer(recv_pss_msg.sender_port);
                 break;
             }
         }
@@ -124,11 +162,23 @@ void boot_worker(int* socket, BootstrapperImpl* boot){
 
 void BootstrapperImpl::run(){
 
+    int nr_threads = Bootstrapper::bootstrapper_thread_loop_size;
+    boost::asio::io_service::work work(this->io_service);
+    for(int i = 0; i < nr_threads; ++i){
+        this->thread_pool.create_thread(
+                boost::bind(&boost::asio::io_service::run, &(this->io_service))
+        );
+    }
+
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+
     while(this->running){
         int socket = this->connection.accept_connection();
 //        std::cerr << "[Bootstrap] function: run [Opening] socket -> " + std::to_string(socket) << std::endl;
-        std::thread newThread(boot_worker, &socket, this);
-        newThread.detach();
+        setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
+        this->io_service.post(boost::bind(&BootstrapperImpl::boot_worker, this, &socket));
     }
 }
 

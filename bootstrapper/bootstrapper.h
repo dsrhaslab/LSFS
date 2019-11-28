@@ -11,6 +11,9 @@
 
 class Bootstrapper {
 public:
+    inline const static int bootstrapper_thread_loop_size = 4;
+
+public:
     virtual void run() = 0;
     //virtual void addIP(std::string ip, long id, double pos) = 0;
     //virtual void removeIP(std::string ip) = 0;
