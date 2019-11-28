@@ -45,7 +45,7 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port)
             pss_announce_msg.sender_port = my_port;
             pss_announce_msg.type = pss_message::Type::Announce;
             connection.send_pss_msg(pss_announce_msg);
-
+            
             //receiving view from bootstrapper
             bool view_recv = false;
             pss_message pss_view_msg_rcv;
@@ -171,8 +171,6 @@ void pss::operator()() {
 
             if(target_ptr != nullptr){
                 peer_data target = *target_ptr;
-                if(target.port == 20000)
-                   std::cerr << "sent_to_you" << std::endl;
                 this->view.erase(target.port);
                 std::vector<peer_data> view_to_send = this->select_view_to_send(target.port); //older_member.first = target_port
 

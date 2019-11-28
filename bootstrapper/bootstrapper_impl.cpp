@@ -99,7 +99,7 @@ void BootstrapperImpl::boot_fila() {
         lk.unlock();
         this->fila.push(res);
     }
-    if(this->alivePorts.size() < this->viewsize * 10){
+    else if(this->alivePorts.size() < this->viewsize * 10){
         std::vector<int> tmp;
         for (int peer_port: this->alivePorts){
             tmp.push_back(peer_port);
@@ -119,13 +119,13 @@ void BootstrapperImpl::boot_fila() {
                 int st_index = std::rand() % (this->alivePorts.size());
                 auto it = std::begin(this->alivePorts);
                 std::advance(it, st_index);
-                if(std::find(tmp.begin(), tmp.end(), *it) != tmp.end()) {
+                if(std::find(tmp.begin(), tmp.end(), *it) == tmp.end()) {
                     tmp.push_back(*it);
                 }
             }
-            lk.unlock();
-            this->fila.push(res);
+            this->fila.push(tmp);
         }
+        lk.unlock();
     }
 }
 
@@ -170,14 +170,9 @@ void BootstrapperImpl::run(){
         );
     }
 
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
-
     while(this->running){
         int socket = this->connection.accept_connection();
 //        std::cerr << "[Bootstrap] function: run [Opening] socket -> " + std::to_string(socket) << std::endl;
-        setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
         this->io_service.post(boost::bind(&BootstrapperImpl::boot_worker, this, &socket));
     }
 }
@@ -185,6 +180,7 @@ void BootstrapperImpl::run(){
 tcp_client_server_connection::tcp_server_connection* BootstrapperImpl::get_connection() {
     return &(this->connection);
 }
+
 
 
 int main(int argc, char *argv[]) {
