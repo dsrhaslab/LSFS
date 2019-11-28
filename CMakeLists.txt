@@ -28,6 +28,7 @@ add_executable(bootstrapper_exe bootstrapper/bootstrapper_impl.cpp ${packetSourc
 target_link_libraries(bootstrapper_exe PRIVATE CapnProto::capnp)
 target_include_directories(bootstrapper_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bootstrapper_exe PRIVATE ${INCLUDE_DIRECTORY})
+target_link_libraries(bootstrapper_exe PUBLIC ${Boost_LIBRARIES})
 
 #add_executable(peer ${packetSources}  tcp_client_server_connection/tcp_client_server_connection.h tcp_client_server_connection/tcp_server_connection.cpp tcp_client_server_connection/tcp_client_connection.cpp core/peer.cpp core/peer.h pss/pss.cpp pss/pss.h)
 add_executable(peer_exe core/peer.cpp ${packetSources} pss/pss.h pss/pss.cpp  tcp_client_server_connection/tcp_client_connection.cpp tcp_client_server_connection/tcp_server_connection.cpp serializer/serializer.h serializer/capnp/capnp_serializer.h serializer/capnp/capnp_serializer.cpp pss/pss_listener.cpp pss/pss_listener.h pss/pss_message.h core/peer_data.h ${INCLUDE_HEADERS} pss/view_logger.h ${PROTO_SRCS} ${PROTO_HDRS})
