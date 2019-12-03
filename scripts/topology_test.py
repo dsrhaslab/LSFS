@@ -250,9 +250,9 @@ def calculate_mean_recover_time(graph_data):
             final_recover_time[node] = new_nodes_recover_time[node]
             del new_nodes_recover_time[node]
 
-   times_final_recover = list(final_recover_time.values())
-   if (times_final_recover != 0):
-      mean_time_to_recover = sum(times_final_recover) / len(times_final_recover)
+   nr_peers_that_recover = len(final_recover_time)
+   if (nr_peers_that_recover != 0):
+      mean_time_to_recover = sum(list(final_recover_time.values())) / nr_peers_that_recover
    else: 
       mean_time_to_recover = "No peers have recovered!"
 
