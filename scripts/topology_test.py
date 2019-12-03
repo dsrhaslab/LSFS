@@ -138,7 +138,7 @@ def ensure_dir(file_path):
 def add_peer_instances(num_peers, procs):
    global current_port
 
-   peer_commands = [[peer_program, str(port), str(view_size), str(gossip_size), str(message_passing_interval_sec), str(log_interval)] for port in range(current_port, current_port + num_peers)]
+   peer_commands = [[peer_program, str(port), str(view_size), str(gossip_size), str(message_passing_interval_sec), str(log_interval), logging_directory] for port in range(current_port, current_port + num_peers)]
    current_port += num_peers
 
    for command in peer_commands:
