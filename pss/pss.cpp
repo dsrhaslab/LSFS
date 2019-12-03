@@ -64,7 +64,7 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port)
             }
 
         }catch(const char* e){
-            std::cerr << e << std::endl;
+            std::cout << e << std::endl;
         }catch(...){}
     }
 
@@ -149,7 +149,7 @@ void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, pr
         int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
         if(res == -1){printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));}  
-     }catch(...){std::cerr <<"=============================== NÂO consegui enviar =================" << std::endl;}
+     }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
 }
 
 void pss::operator()() {
@@ -182,7 +182,7 @@ void pss::operator()() {
 
                 this->send_pss_msg(target.port, view_to_send, proto::pss_message_Type::pss_message_Type_NORMAL);
             }
-            this->print_view();
+//            this->print_view();
         }
     }
     LOG("END PSS thread")
@@ -235,7 +235,6 @@ peer_data* pss::get_older_from_view() {
 
 void pss::process_msg(proto::pss_message pss_msg){
 
-    std::cout << "processing message" << std::endl;
     std::vector<peer_data> recv_view;
     for(auto& peer: pss_msg.view()){
         peer_data peer_data;
@@ -243,7 +242,6 @@ void pss::process_msg(proto::pss_message pss_msg){
         peer_data.port = peer.port();
         peer_data.age = peer.age();
         recv_view.push_back(peer_data);
-        std::cout << peer_data.ip << " " << peer_data.port << std::endl;
     }
 
     if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_NORMAL){
@@ -267,14 +265,14 @@ void pss::process_msg(proto::pss_message pss_msg){
 
         //4- envia msg de resposta
         this->send_pss_msg(pss_msg.sender_port(), view_to_send, proto::pss_message_Type::pss_message_Type_RESPONSE);
-        this->print_view();
+//        this->print_view();
 
     }else if (pss_msg.type() == proto::pss_message_Type::pss_message_Type_RESPONSE){
         std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
 
         this->incorporate_in_view(recv_view);
         this->incorporate_last_sent_view();
-        this->print_view();
+//        this->print_view();
 
 // penso que é desnecessário
 //        while(this->view.size() > this->view_size){
@@ -365,7 +363,7 @@ void pss::bootstrapper_termination_alerting() {
         pss_termination_msg.type = pss_message::Type::Termination;
         connection.send_pss_msg(pss_termination_msg);
     }catch(const char* e){
-        std::cerr << "Erro ao alertar o bootstrapper =========================================================================================================================";
+        std::cout << "Erro ao alertar o bootstrapper =========================================================================================================================";
         LOG(e);
     }
 }

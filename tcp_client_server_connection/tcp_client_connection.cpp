@@ -59,7 +59,7 @@ namespace tcp_client_server_connection{
         int res = connect(this->f_socket, (struct sockaddr *) &(this->f_peer_sockaddr_in),
                           sizeof(this->f_peer_sockaddr_in));
         if (res < 0) {
-            std::cerr << strerror(errno) << std::endl;
+            std::cout << strerror(errno) << std::endl;
             throw "Cannot Connect";
         }
 

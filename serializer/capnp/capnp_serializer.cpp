@@ -112,7 +112,7 @@ void Capnp_Serializer::send_pss_message(int* socket, pss_message& pss_msg){
         ::capnp::writePackedMessageToFd(*socket,message);
 
     }catch (kj::Exception e){
-        std::cerr << "Unable to satisfy request";
+        std::cout << "Unable to satisfy request";
         throw;
     }
 

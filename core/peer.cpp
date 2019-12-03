@@ -82,7 +82,7 @@ int main(int argc, char* argv []){
     }
 
 
-    std::cout << "Starting Peer" << std::endl;
+//    std::cout << "Starting Peer" << std::endl;
     g_peer_impl = std::make_shared<peer>(0,"127.0.0.1",port,4,2,view_size,sleep_interval,gossip_size, logging_interval, logging_dir);
     g_peer_impl->print_view();
     g_peer_impl->start();

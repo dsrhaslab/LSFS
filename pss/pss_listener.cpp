@@ -38,7 +38,7 @@ void handle_function(const char* data, size_t size, pss* pss_ptr)
         pss_ptr->process_msg(pss_message);
     }
     catch(const char* e){
-        std::cerr << e << std::endl;
+        std::cout << e << std::endl;
     }
     catch(...){}
 }
@@ -133,7 +133,7 @@ void pss_listener::operator()() {
         this->thread_pool.join_all();
     }
     catch (std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        std::cout << e.what() << std::endl;
     }
 }
 

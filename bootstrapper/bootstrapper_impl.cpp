@@ -185,7 +185,7 @@ tcp_client_server_connection::tcp_server_connection* BootstrapperImpl::get_conne
 
 int main(int argc, char *argv[]) {
 
-    std::cout << "Starting Bootstrapper" << std::endl;
+//    std::cout << "Starting Bootstrapper" << std::endl;
 
     if(argc < 2){
         exit(1);
