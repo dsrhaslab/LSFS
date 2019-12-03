@@ -49,12 +49,13 @@ graph_labels = conf['main_confs']['graph_labels']
 nr_peers_known_to_torecover = view_size / 2
 draw_final_graph = args.get("d")
 
-logging_directory = '../logging/'
 results_directory = '../results/'
 if(args.get('remote')):
+   logging_directory = '/mnt/storage/daniel/logging'
    bootstrapping = '.././bootstrapper_exe'
    peer_program = '.././peer_exe' 
 else:
+   logging_directory = '../logging/'
    bootstrapping = '../cmake-build-debug/./bootstrapper_exe'
    peer_program = '../cmake-build-debug/./peer_exe' 
 

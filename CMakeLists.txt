@@ -3,10 +3,10 @@ project(p2pfs)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+set(CMAKE_PREFIX_PATH "/usr/local/lib64/cmake")
 
 find_package(CapnProto CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
-
 find_package(Protobuf REQUIRED)
 find_package(Boost COMPONENTS system thread REQUIRED)
 
@@ -22,6 +22,7 @@ capnp_generate_cpp(packetSources packetHeaders serializer/capnp/packet.capnp)
 
 set(INCLUDE_DIRECTORY include)
 set(INCLUDE_HEADERS ${INCLUDE_DIRECTORY}/ctpl_stl.h)
+
 
 #add_executable(bootstrapper bootstrapper/bootstrapper.h bootstrapper/bootstrapper_impl.h  ${packetSources} bootstrapper/bootstrapper_impl.cpp  tcp_client_server_connection/tcp_client_server_connection.h tcp_client_server_connection/tcp_server_connection.cpp tcp_client_server_connection/tcp_client_connection.cpp)
 add_executable(bootstrapper_exe bootstrapper/bootstrapper_impl.cpp ${packetSources}  tcp_client_server_connection/tcp_server_connection.cpp serializer/serializer.h serializer/capnp/capnp_serializer.h serializer/capnp/capnp_serializer.cpp ${INCLUDE_HEADERS})
