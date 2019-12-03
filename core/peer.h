@@ -31,7 +31,7 @@ private:
 
 public:
     peer(long id, std::string ip, int port, double position);
-    peer(long id, std::string ip, int port, double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size, int logging_interval);
+    peer(long id, std::string ip, int port, double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size, int logging_interval, std::string logging_dir);
     void print_view();
     void start();
 

@@ -25,25 +25,26 @@ private:
     pss* cyclon_ptr;
     int port;
     int logging_interval;
-
+    std::string logging_dir;
 
 public:
 
-    view_logger(int port, pss* pss, int logging_interval)
+    view_logger(int port, pss* pss, int logging_interval, std::string logging_dir)
     {
         this->cyclon_ptr = pss;
         this->running = true;
         this->port = port;
         this->logging_interval = logging_interval;
+        this->logging_dir = logging_dir;
     }
 
     void operator ()(){
         json j = {};
         //j["peer"] = this->port;
         int cycles = 0;
-        std::string folder_to_create = "../logging/" + std::to_string(this->port);
+        std::string folder_to_create = this->logging_dir + std::to_string(this->port);
         mkdir(folder_to_create.c_str() ,0777);
-        std::string base_filename = "../logging/" + std::to_string(this->port) + "/" + std::to_string(this->port) + "_";
+        std::string base_filename = this->logging_dir + std::to_string(this->port) + "/" + std::to_string(this->port) + "_";
         std::string extension = ".json";
 
         time_t now = time(nullptr);

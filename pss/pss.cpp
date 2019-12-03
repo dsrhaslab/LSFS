@@ -349,6 +349,7 @@ void pss::stop_thread() {
     this->running = false;
     this->incorporate_last_sent_view();
     close(this->socket_send);
+    this->bootstrapper_termination_alerting();
 }
 
 void pss::bootstrapper_termination_alerting() {

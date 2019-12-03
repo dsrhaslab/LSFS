@@ -22,7 +22,7 @@ void Capnp_Serializer::recv_pss_message(int* socket, pss_message& pss_msg){
         FD_SET(*socket, &set);
 
         struct timeval timeout;
-        timeout.tv_sec = 1;
+        timeout.tv_sec = 5;
         timeout.tv_usec = 0;
 
         int rv = select(*socket + 1, &set, NULL, NULL, &timeout);
