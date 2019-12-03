@@ -51,7 +51,7 @@ draw_final_graph = args.get("d")
 
 results_directory = '../results/'
 if(args.get('remote')):
-   logging_directory = '/mnt/storage/daniel/logging'
+   logging_directory = '/mnt/storage/daniel/logging/'
    bootstrapping = '.././bootstrapper_exe'
    peer_program = '.././peer_exe' 
 else:
