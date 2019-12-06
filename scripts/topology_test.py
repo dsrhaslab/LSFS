@@ -56,6 +56,7 @@ if(args.get('remote')):
    peer_program = '.././peer_exe' 
 else:
    results_directory = '../results/'
+   print(results_directory)
    logging_directory = '../logging/'
    bootstrapping = '../cmake-build-debug/./bootstrapper_exe'
    peer_program = '../cmake-build-debug/./peer_exe' 
@@ -217,14 +218,21 @@ def calculate_mean_recover_time(graph_data):
    final_recover_time = {}
    ended_without_recover = {}
 
-   for time in sorted(list(graph_data.keys())):
+   ordered_times = sorted(list(graph_data.keys()))
+   ordered_times_len = len(ordered_times)
+
+   for time_idx in range(ordered_times_len):
+      time = ordered_times[time_idx]
       time_data = graph_data[time]
+      time_data_follw = graph_data[ordered_times[time_idx + 1]] if time_idx + 1 < ordered_times_len else None
       new_nodes_known_to = defaultdict(int)
 
       # remoção dos nodos que são deitados a baixo
       toDelete = []
       for node in new_nodes_recover_time:
          if node not in time_data:
+            if time_data_follw and node in time_data_follw:
+               continue
             ended_without_recover[node] = new_nodes_recover_time[node]
             toDelete.append(node)
       for node in toDelete:
@@ -383,15 +391,13 @@ if args.get("a") == True:
          print(filename)
          with open(filename, "r") as file:
             try:
-            	data = json.load(file)
+               data = json.load(file)
+               view = list(data['view'])
+               time = data['time']
+               time_sec = time_diff_sec(start_time, time)
+               graph_data[time_sec][peer] = view
             except Exception:
-                print("LOADING JSON ERROR!")
-            view = list(data['view'])
-            # h,m,s = data['time'].split(':')
-            # time = datetime.timedelta(hours=int(h),minutes=int(m),seconds=int(s))
-            time = data['time']
-            time_sec = time_diff_sec(start_time, time)
-            graph_data[time_sec][peer] = view
+               print("LOADING JSON ERROR!")
 
    calculate_mean_recover_time(graph_data)
 
