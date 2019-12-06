@@ -49,12 +49,13 @@ graph_labels = conf['main_confs']['graph_labels']
 nr_peers_known_to_torecover = view_size / 2
 draw_final_graph = args.get("d")
 
-results_directory = '../results/'
 if(args.get('remote')):
-   logging_directory = '/mnt/storage/daniel/logging/'
+   results_directory = '../results3/'
+   logging_directory = '/mnt/storage/daniel/logging3/'
    bootstrapping = '.././bootstrapper_exe'
    peer_program = '.././peer_exe' 
 else:
+   results_directory = '../results/'
    logging_directory = '../logging/'
    bootstrapping = '../cmake-build-debug/./bootstrapper_exe'
    peer_program = '../cmake-build-debug/./peer_exe' 
@@ -286,13 +287,19 @@ if args.get("e") == True:
    boot_proc = Popen(boot_cmd)
 
    #recording start time
+   #start_time = time.strftime("%H:%M:%S")
+   #start_file = open(logging_directory + "start_time", 'w')
+   #start_file.write(start_time)
+   #start_file.close()
+
+   procs = []
+   add_peer_instances(nr_peers, procs)
+
+   #recording start time
    start_time = time.strftime("%H:%M:%S")
    start_file = open(logging_directory + "start_time", 'w')
    start_file.write(start_time)
    start_file.close()
-
-   procs = []
-   add_peer_instances(nr_peers, procs)
 
    ###### Introducing Churn ####
    exec_time_sec = conf['main_confs']['exec_time_sec']
@@ -370,12 +377,15 @@ if args.get("a") == True:
    start_file.close()
 
    for directory in dirs:
-      print(directory)
       peer = (re.findall(r'\d+$', directory))[0]
       filenames = [os.path.join(directory, o) for o in os.listdir(directory)]
       for filename in filenames:
+         print(filename)
          with open(filename, "r") as file:
-            data = json.load(file)
+            try:
+            	data = json.load(file)
+            except Exception:
+                print("LOADING JSON ERROR!")
             view = list(data['view'])
             # h,m,s = data['time'].split(':')
             # time = datetime.timedelta(hours=int(h),minutes=int(m),seconds=int(s))
