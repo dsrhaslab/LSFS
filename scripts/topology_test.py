@@ -17,6 +17,7 @@ import shutil
 import argparse
 import yaml
 import time
+import pickle
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-e', help="Include Execution",
@@ -174,11 +175,10 @@ def introduce_onetime_churn(churn_op_type, num_peers, procs):
       remove_peer_instances(num_peers, procs)
       add_peer_instances(num_peers, procs)
 
-def introduce_constant_churn_percentage(duration_sec, time_interval_sec, churn_op_type, percentage, procs):
-   time_passed_sec = 0
+def introduce_constant_churn_percentage(time_end, time_interval_sec, churn_op_type, percentage, procs):
 
    op_type = churn_op_type
-   while time_passed_sec + time_interval_sec < duration_sec:
+   while time.time() < time_end:
 
       nr_active_procs = len(procs)
       nr_target_peers = round(nr_active_procs * percentage)
@@ -192,13 +192,12 @@ def introduce_constant_churn_percentage(duration_sec, time_interval_sec, churn_o
       introduce_onetime_churn(churn_op_type=op_type, num_peers=nr_target_peers, procs=procs)
 
       time.sleep(time_interval_sec)
-      time_passed_sec += time_interval_sec
 
-def introduce_constant_churn_num_peers(duration_sec, time_interval_sec, churn_op_type, num_peers, procs):
-   time_passed_sec = 0
+
+def introduce_constant_churn_num_peers(time_end, time_interval_sec, churn_op_type, num_peers, procs):
 
    op_type = churn_op_type
-   while time_passed_sec + time_interval_sec < duration_sec:
+   while time.time() < time_end:
 
       if churn_op_type == 'alternate':
          if op_type != 'add': 
@@ -209,7 +208,6 @@ def introduce_constant_churn_num_peers(duration_sec, time_interval_sec, churn_op
       introduce_onetime_churn(churn_op_type=op_type, num_peers=num_peers, procs=procs)
 
       time.sleep(time_interval_sec)
-      time_passed_sec += time_interval_sec
 
 def calculate_mean_recover_time(graph_data):
    #graph_data : {time => {node => [node viz]}}
@@ -294,55 +292,46 @@ if args.get("e") == True:
    boot_cmd = [bootstrapping, str(view_size)]
    boot_proc = Popen(boot_cmd)
 
-   #recording start time
-   #start_time = time.strftime("%H:%M:%S")
-   #start_file = open(logging_directory + "start_time", 'w')
-   #start_file.write(start_time)
-   #start_file.close()
-
    procs = []
    add_peer_instances(nr_peers, procs)
 
    #recording start time
-   start_time = time.strftime("%H:%M:%S")
+   start_time = time.time()
+   start_time_str = time.strftime("%H:%M:%S",time.localtime(start_time))
    start_file = open(logging_directory + "start_time", 'w')
-   start_file.write(start_time)
+   start_file.write(start_time_str)
    start_file.close()
 
-   ###### Introducing Churn ####
-   exec_time_sec = conf['main_confs']['exec_time_sec']
-   time_passed_sec = 0
+   end_time = start_time + conf['main_confs']['exec_time_sec']
+
+   ###### Introducing Churn ####]
 
    churn_data = conf['simulation']['configuration']
    if churn_data != None:
       for churn_block in churn_data:
-         time_start_sec = churn_block['time_start_sec']
+         time_start = start_time + churn_block['time_start_sec']
 
-         if(time_start_sec >= exec_time_sec ):
+         if(time_start >= end_time ):
             break
          else:
-            time.sleep(time_start_sec - time_passed_sec)
-            time_passed_sec = time_start_sec
+            time.sleep(time_start - time.time())
          
 
          if churn_block['execution_type'] == 'constant':
-            time_end_sec = churn_block['time_end_sec']
+            time_end = start_time + churn_block['time_end_sec']
             time_interval_sec = churn_block['time_interval_sec']
             churn_op_type = churn_block['churn_op_type']
 
-            if(time_end_sec > exec_time_sec):
-               time_end_sec = exec_time_sec
-            
-            duration_sec = time_end_sec-time_start_sec
+            if(time_end > end_time):
+               time_end = end_time
 
             if 'percentage' in churn_block:
                percentage = churn_block['percentage'] / 100
-               introduce_constant_churn_percentage(duration_sec=duration_sec, time_interval_sec=time_interval_sec, churn_op_type=churn_op_type, percentage=percentage, procs=procs)
+               introduce_constant_churn_percentage(time_end=time_end, time_interval_sec=time_interval_sec, churn_op_type=churn_op_type, percentage=percentage, procs=procs)
             elif 'num_target_peers' in churn_op:
                num_peers = churn_block['num_target_peers']
-               introduce_constant_churn_num_peers(duration_sec=duration_sec, time_interval_sec=time_interval_sec, churn_op_type=churn_op_type, num_peers=num_peers, procs=procs)
+               introduce_constant_churn_num_peers(time_end=time_end, time_interval_sec=time_interval_sec, churn_op_type=churn_op_type, num_peers=num_peers, procs=procs)
 
-            time_passed_sec += duration_sec
          elif churn_block['execution_type'] == 'one-time':
             churn_op_type = churn_block['churn_op_type']
 
@@ -356,7 +345,7 @@ if args.get("e") == True:
             introduce_onetime_churn(churn_op_type=churn_op_type, num_peers=nr_target_peers, procs=procs)
 
    #sleep rest of time
-   time_to_sleep_sec = exec_time_sec - time_passed_sec
+   time_to_sleep_sec = end_time - time.time()
    if time_to_sleep_sec > 0:
       time.sleep(time_to_sleep_sec)
 
@@ -365,8 +354,8 @@ if args.get("e") == True:
    for p in procs:
       p.terminate()
 
-   for p in procs:
-      p.wait()
+   # for p in procs:
+   #    p.wait()
 
    boot_proc.terminate()
 
@@ -403,13 +392,11 @@ if args.get("a") == True:
 
    connected_components_data = {}
 
-   #times = sorted(list(graph_data.keys()))
-   #time_list = list(graph_data.keys())
-   #times_in_secs = sorted(time_to_sec_diff(start_time, time_list))
-
    times_in_secs = sorted(list(graph_data.keys()))
 
    for time in times_in_secs:
       connected_components_data[time] = get_number_connected_components(graph_data[time])
+
+   pickle.dump(connected_components_data, open(results_directory + "graph_data.p", "wb"))
 
    plot_graph(connected_components_data)
