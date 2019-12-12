@@ -13,21 +13,19 @@ simulation:
   configuration:
     - execution_type: constant
       time_start_sec: 250
-      time_end_sec: 550
-      time_interval_sec: 50
+      time_end_sec: 1500
+      time_interval_sec: 60
       churn_op_type: substitute
       percentage: 5
-    - execution_type: constant
-      time_start_sec: 800
-      time_end_sec: 1100
-      time_interval_sec: 10
-      churn_op_type: substitute
-      percentage: 10
-    - execution_type: constant
-      time_start_sec: 1100
-      time_end_sec: 1500
-      time_interval_sec: 10
-      churn_op_type: substitute
-      percentage: 30
-
-
+#    - execution_type: constant
+#      time_start_sec: 800
+#      time_end_sec: 1100
+#      time_interval_sec: 10
+#      churn_op_type: substitute
+#      percentage: 10
+#    - execution_type: constant
+#      time_start_sec: 1100
+#      time_end_sec: 1500
+#      time_interval_sec: 10
+#      churn_op_type: substitute
+#      percentage: 30

@@ -51,8 +51,8 @@ nr_peers_known_to_torecover = view_size / 2
 draw_final_graph = args.get("d")
 
 if(args.get('remote')):
-   results_directory = '../results3/'
-   logging_directory = '/mnt/storage/daniel/logging3/'
+   results_directory = '../results_exp1_5_2/'
+   logging_directory = '/mnt/storage/daniel/logging_exp1_5_2/'
    bootstrapping = '.././bootstrapper_exe'
    peer_program = '.././peer_exe' 
 else:
@@ -350,6 +350,9 @@ if args.get("e") == True:
       time.sleep(time_to_sleep_sec)
 
    #############################
+   print("###########################")
+   print("Vou terminar todos os peers")
+   print("###########################")
 
    for p in procs:
       p.terminate()
