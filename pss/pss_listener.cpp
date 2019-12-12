@@ -176,13 +176,13 @@ pss_listener::pss_listener(const char* ip, int port, pss* pss)
 
 void pss_listener::operator()() {
 
-    int nr_threads = peer::pss_listener_thread_loop_size;
-    boost::asio::io_service::work work(this->ioService);
-    for(int i = 0; i < nr_threads; ++i){
-        this->thread_pool.create_thread(
-                boost::bind(&boost::asio::io_service::run, &(this->ioService))
-        );
-    }
+//    int nr_threads = peer::pss_listener_thread_loop_size;
+//    boost::asio::io_service::work work(this->ioService);
+//    for(int i = 0; i < nr_threads; ++i){
+//        this->thread_pool.create_thread(
+//                boost::bind(&boost::asio::io_service::run, &(this->ioService))
+//        );
+//    }
 
     this->running = true;
 
@@ -207,7 +207,9 @@ void pss_listener::operator()() {
         if(this->running) {
             ArrayWrapper temp;
             std::copy(std::begin(buf), std::end(buf), std::begin(temp.arr));
-            this->ioService.post(boost::bind(&pss_listener::pss_listener_worker, this, temp, bytes_rcv));
+            std::thread newThread(&pss_listener::pss_listener_worker, this, temp, bytes_rcv);
+            newThread.detach();
+//            this->ioService.post(boost::bind(&pss_listener::pss_listener_worker, this, temp, bytes_rcv));
         }
     }
     LOG("End Listener thread");
