@@ -15,7 +15,7 @@ class peer {
 public:
     inline const static char* boot_ip = "127.0.0.1";
     inline const static int boot_port = 12345;
-    inline const static int pss_listener_thread_loop_size = 4;
+    inline const static int pss_listener_thread_loop_size = 3;
 
 private:
     long id;

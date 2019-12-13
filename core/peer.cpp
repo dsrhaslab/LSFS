@@ -14,7 +14,7 @@ std::shared_ptr<peer> g_peer_impl;
 peer::peer(long id, std::string ip, int port, double position):
     id(id), ip(ip), port(port), position(position),
     cyclon(peer::boot_ip, peer::boot_port, ip, port,2,5,10,3),
-    listener("127.0.0.1", this->port, &(this->cyclon)),
+    listener("127.0.0.1", this->port, &(this->cyclon), "../logging/"),
     v_logger(this->port, &(this->cyclon),60, "../logging/")
 {
 }
@@ -22,7 +22,7 @@ peer::peer(long id, std::string ip, int port, double position):
 peer::peer(long id, std::string ip, int port, double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size, int logging_interval, std::string logging_dir)
     :   id(id), ip(ip), port(port), position(position),
         cyclon(peer::boot_ip, peer::boot_port, ip, port, pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size),
-        listener("127.0.0.1", this->port, &(this->cyclon)),
+        listener("127.0.0.1", this->port, &(this->cyclon), logging_dir),
         v_logger(this->port, &(this->cyclon), logging_interval, logging_dir)
 {
 }
