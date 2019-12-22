@@ -36,7 +36,7 @@ private:
     int port;
 
 public:
-    pss_listener(const char*  ip, int port, pss* pss, std::string logging_directory);
+    pss_listener(const char*  ip, int port, pss* pss);
     void operator ()();
 // uncomment this for first version
 //    void pss_listener_worker(ArrayWrapper arr, int size);
