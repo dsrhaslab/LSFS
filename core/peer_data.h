@@ -11,6 +11,11 @@ struct peer_data {
     std::string ip;
     int port;
     int age;
+    long id;
+    //group construction
+    int nr_slices;
+    double pos;
+    int slice;
 };
 
 #endif //DATAFLASKSCPP_PEER_DATA_H

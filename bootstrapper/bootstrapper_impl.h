@@ -42,10 +42,9 @@ private:
     int initialnodes;
     int port;
     const char* ip;
-    long id;
 
 public:
-    BootstrapperImpl(long id, int viewsize, const char* ip, int port);
+    BootstrapperImpl(int viewsize, const char* ip, int port);
     void run();
     //void addIP(std::string ip, long id, double pos);
     //void removeIP(std::string ip);

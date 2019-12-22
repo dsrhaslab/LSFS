@@ -8,22 +8,28 @@
 #include <chrono>
 #include <signal.h>
 #include <time.h>
+#include "yaml-cpp/yaml.h"
+#include <fstream>
 
 std::shared_ptr<peer> g_peer_impl;
 
 peer::peer(long id, std::string ip, int port, double position):
     id(id), ip(ip), port(port), position(position),
-    cyclon(peer::boot_ip, peer::boot_port, ip, port,2,5,10,3),
-    listener("127.0.0.1", this->port, &(this->cyclon), "../logging/"),
+    group_c(ip, port, id, position, 5, 10, 40, true, 15),
+    cyclon(peer::boot_ip, peer::boot_port, ip, port,2,8,10,7, &(this->group_c)),
+    listener("127.0.0.1", this->port, &(this->cyclon) ),
     v_logger(this->port, &(this->cyclon),60, "../logging/")
 {
 }
 
-peer::peer(long id, std::string ip, int port, double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size, int logging_interval, std::string logging_dir)
-    :   id(id), ip(ip), port(port), position(position),
-        cyclon(peer::boot_ip, peer::boot_port, ip, port, pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size),
-        listener("127.0.0.1", this->port, &(this->cyclon), logging_dir),
-        v_logger(this->port, &(this->cyclon), logging_interval, logging_dir)
+peer::peer(long id, std::string ip, int port, double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size,
+        int logging_interval, std::string logging_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval)
+    :   id(id), ip(ip), port(port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), local_interval(local_interval),
+        group_c(ip, port, id, position, rep_min, rep_max, max_age,
+                local_message, local_interval),
+        cyclon(peer::boot_ip, peer::boot_port, ip, port, pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
+        listener("127.0.0.1", port, &(this->cyclon)),
+        v_logger(port, &(this->cyclon), logging_interval, logging_dir)
 {
 }
 
@@ -61,30 +67,33 @@ void term_handler(int i){
 
 int main(int argc, char* argv []){
 
-    if(argc < 6){
+    if(argc < 4){
         exit(1);
     }
 
     signal(SIGTERM, term_handler);
 
     int port = atoi(argv[1]);
-    int view_size = atoi(argv[2]);
-    int gossip_size = atoi(argv[3]);
-    int sleep_interval = atoi(argv[4]);
-    int logging_interval = atoi(argv[5]);
-
-    std::string logging_dir;
-
-    if(argc > 6){
-        logging_dir = argv[6];
-    }else{
-        logging_dir = "../logging/";
-    }
+    long id = atol(argv[2]);
+    double pos = atof(argv[3]);
+    const char* conf_filename = argv[4];
 
 
-//    std::cout << "Starting Peer" << std::endl;
-    g_peer_impl = std::make_shared<peer>(0,"127.0.0.1",port,4,2,view_size,sleep_interval,gossip_size, logging_interval, logging_dir);
-//    g_peer_impl->print_view();
+    YAML::Node config = YAML::LoadFile(conf_filename);
+    auto main_confs = config["main_confs"];
+    int view_size = main_confs["view_size"].as<int>();
+    int gossip_size = main_confs["gossip_size"].as<int>();
+    int sleep_interval = main_confs["message_passing_interval_sec"].as<int>();
+    int logging_interval = main_confs["log_interval_sec"].as<int>();
+    std::string logging_dir = main_confs["logging_dir"].as<std::string>();
+    int rep_max = main_confs["rep_max"].as<int>();
+    int rep_min = main_confs["rep_min"].as<int>();
+    int max_age = main_confs["max_age"].as<int>();
+    int local_message = main_confs["local_message"].as<bool>();
+    int local_interval = main_confs["local_interval_sec"].as<int>();
+
+    g_peer_impl = std::make_shared<peer>(id,"127.0.0.1",port,pos,2,view_size,sleep_interval,gossip_size, logging_interval, logging_dir,
+            rep_max, rep_min, max_age, local_message, local_interval);
     g_peer_impl->start();
     g_peer_impl->join();
 }

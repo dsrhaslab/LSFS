@@ -23,20 +23,27 @@ private:
     std::string ip;
     double position;
     pss cyclon;                     //thread functor que envia msgs
+    group_construction group_c;
     pss_listener listener;
     view_logger v_logger;
     std::thread pss_th;
     std::thread pss_listener_th;
     std::thread v_logger_th;
 
+    //GROUP CONSTRUCTION
+    int rep_max;
+    int rep_min;
+    int max_age;
+    bool local_message;
+    int local_interval;
+
 public:
     peer(long id, std::string ip, int port, double position);
-    peer(long id, std::string ip, int port, double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size, int logging_interval, std::string logging_dir);
+    peer(long id, std::string ip, int port, double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size,
+            int logging_interval, std::string logging_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval);
     void print_view();
     void start();
-
     void stop();
-
     void join();
 };
 

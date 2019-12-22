@@ -9,6 +9,7 @@ find_package(CapnProto CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(Boost COMPONENTS system thread REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 # check if protobuf was found
 if(PROTOBUF_FOUND)
@@ -30,11 +31,14 @@ target_link_libraries(bootstrapper_exe PRIVATE CapnProto::capnp)
 target_include_directories(bootstrapper_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bootstrapper_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_link_libraries(bootstrapper_exe PUBLIC ${Boost_LIBRARIES})
+target_link_libraries(bootstrapper_exe PRIVATE yaml-cpp)
+
 
 #add_executable(peer ${packetSources}  tcp_client_server_connection/tcp_client_server_connection.h tcp_client_server_connection/tcp_server_connection.cpp tcp_client_server_connection/tcp_client_connection.cpp core/peer.cpp core/peer.h pss/pss.cpp pss/pss.h)
-add_executable(peer_exe core/peer.cpp ${packetSources} pss/pss.h pss/pss.cpp  tcp_client_server_connection/tcp_client_connection.cpp tcp_client_server_connection/tcp_server_connection.cpp serializer/serializer.h serializer/capnp/capnp_serializer.h serializer/capnp/capnp_serializer.cpp pss/pss_listener.cpp pss/pss_listener.h pss/pss_message.h core/peer_data.h ${INCLUDE_HEADERS} pss/view_logger.h ${PROTO_SRCS} ${PROTO_HDRS})
+add_executable(peer_exe core/peer.cpp ${packetSources} pss/pss.h pss/pss.cpp  tcp_client_server_connection/tcp_client_connection.cpp tcp_client_server_connection/tcp_server_connection.cpp serializer/serializer.h serializer/capnp/capnp_serializer.h serializer/capnp/capnp_serializer.cpp pss/pss_listener.cpp pss/pss_listener.h pss/pss_message.h core/peer_data.h ${INCLUDE_HEADERS} pss/view_logger.h ${PROTO_SRCS} ${PROTO_HDRS} core/group_construction.cpp core/group_construction.h)
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(peer_exe PRIVATE yaml-cpp)
 target_link_libraries(peer_exe PUBLIC ${PROTOBUF_LIBRARIES})
 target_link_libraries(peer_exe PUBLIC ${Boost_LIBRARIES})
 target_include_directories(peer_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

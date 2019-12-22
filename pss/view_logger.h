@@ -65,6 +65,9 @@ public:
             if(file.is_open()){
                 j["time"] = std::to_string(localTime->tm_hour) + ":" + std::to_string(localTime->tm_min) + ":" + std::to_string(localTime->tm_sec);
                 j["view"] = this->cyclon_ptr->get_peers_from_view();
+                j["group"] = this->cyclon_ptr->get_my_group();
+                j["nr_groups"] = this->cyclon_ptr->get_nr_groups();
+                j["position"] = this->cyclon_ptr->get_position();
                 file << j;
                 file.close();
             }
