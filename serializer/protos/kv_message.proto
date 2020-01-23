@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package proto;
+
+message get_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  int64 key = 4;
+  int64 version = 5;
+  string reqid = 6;
+}
+
+message get_reply_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  int64 key = 4;
+  int64 version = 5;
+  string reqid = 6;
+  bytes data = 7;
+}
+
+message put_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  int64 key = 4;
+  int64 version = 5;
+  bytes data = 6;
+}
+
+message put_reply_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  int64 key = 4;
+  int64 version = 5;
+}
+
+message kv_message {
+    oneof msg {
+        get_message         get_msg = 1;
+        get_reply_message   get_reply_msg = 2;
+        put_message         put_msg = 3;
+        put_reply_message   put_reply_msg = 4;
+    }
+}

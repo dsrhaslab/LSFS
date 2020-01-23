@@ -3,117 +3,38 @@
 //
 
 #include "pss_listener.h"
-#include "../serializer/capnp/capnp_serializer.h"
-#include <thread>
 #include <boost/asio/io_service.hpp>
 #include <boost/bind.hpp>
 #include "../core/peer.h"
-#include <cstdlib>
 #include <iostream>
-#include <boost/asio.hpp>
 #include <pss_message.pb.h>
 #include <ctime>
 #include <string>
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/thread.hpp>
+#include "../communication/udp_async_server.h"
+
 
 #define LOG(X) std::cout << X << std::endl;
 
-// async boost server version //problema de para muitoes processos o
-// boost acho que têm shared resources e passa a não receber msgs
-
-using namespace boost;
-using asio::ip::udp;
-using system::error_code;
-
-void handle_function(const char* data, size_t size, pss* pss_ptr)
-{
-
-    try {
-        proto::pss_message pss_message;
-        pss_message.ParseFromArray(data, size);
-
-        pss_ptr->process_msg(pss_message);
-    }
-    catch(const char* e){
-        std::cout << e << std::endl;
-    }
-    catch(...){}
-}
-
-class udp_server; // forward declaration
-
-struct udp_session : enable_shared_from_this<udp_session> {
-
-    udp_session(udp_server* server, pss* pss_ptr) : server_(server), pss_ptr(pss_ptr) {}
-
-    void handle_request(const boost::system::error_code& error);
-
-    udp::endpoint remote_endpoint_;
-    enum { max_length = 1024 };
-    char recv_buffer_ [max_length];
-    std::size_t bytes_rcv;
-    udp_server* server_;
-    pss* pss_ptr;
-
-public:
-    void set_bytes_rcv(size_t bytes_rcv){
-        this->bytes_rcv = bytes_rcv;
-    }
-};
-
-class udp_server
-{
-    typedef boost::shared_ptr<udp_session> shared_session;
-public:
-    udp_server(asio::io_service &io_service, int port, pss *pss_ptr)
-            : socket_(io_service, udp::endpoint(udp::v4(), port)),
-              strand_(io_service), pss_ptr(pss_ptr)
-    {
-        receive_session();
-    }
-
+class pss_listener_worker : public udp_handler{
 private:
-    void receive_session()
-    {
-        // our session to hold the buffer + endpoint
-        auto session = boost::make_shared<udp_session>(this, this->pss_ptr);
-
-        socket_.async_receive_from(
-                boost::asio::buffer(session->recv_buffer_),
-                session->remote_endpoint_,
-                strand_.wrap(
-                        bind(&udp_server::handle_receive, this,
-                             session, // keep-alive of buffer/endpoint
-                             boost::asio::placeholders::error,
-                             boost::asio::placeholders::bytes_transferred)));
-    }
-
-    void handle_receive(shared_session session, const boost::system::error_code& ec, std::size_t bytes_rcv/*bytes_transferred*/) {
-        // now, handle the current session on any available pool thread
-        session->set_bytes_rcv(bytes_rcv);
-        post(socket_.get_executor(),bind(&udp_session::handle_request, session, ec));
-
-        // immediately accept new datagrams
-        receive_session();
-    }
-
-    udp::socket  socket_;
-    boost::asio::io_service::strand strand_;
     pss* pss_ptr;
 
-    friend struct udp_session;
-};
+public:
+    pss_listener_worker(pss* pss): pss_ptr(pss){}
 
-void udp_session::handle_request(const boost::system::error_code& error)
-{
-    if (!error || error == boost::asio::error::message_size)
-    {
-        handle_function(this->recv_buffer_, this->bytes_rcv, this->pss_ptr);
+    void handle_function(const char *data, size_t size) override {
+        try {
+            proto::pss_message pss_message;
+            pss_message.ParseFromArray(data, size);
+
+            this->pss_ptr->process_msg(pss_message);
+        }
+        catch(const char* e){
+            std::cout << e << std::endl;
+        }
+        catch(...){}
     }
-}
+};
 
 pss_listener::pss_listener(const char* ip, int port, pss* pss)
 {
@@ -125,7 +46,8 @@ pss_listener::pss_listener(const char* ip, int port, pss* pss)
 
 void pss_listener::operator()() {
     try {
-        udp_server server(this->io_service, this->port, this->pss_ptr);
+        pss_listener_worker worker(this->pss_ptr);
+        udp_async_server server(this->io_service, this->port, &worker);
 
         for (unsigned i = 0; i < this->nr_worker_threads; ++i)
             this->thread_pool.create_thread(bind(&asio::io_service::run, ref(this->io_service)));
@@ -146,6 +68,153 @@ void pss_listener::stop_thread() {
     this->thread_pool.join_all();
     LOG("JOINT ALL THREADS FROM POOL!!!")
 }
+
+//second version
+
+//#include "pss_listener.h"
+//#include "../serializer/capnp/capnp_serializer.h"
+//#include <thread>
+//#include <boost/asio/io_service.hpp>
+//#include <boost/bind.hpp>
+//#include "../core/peer.h"
+//#include <cstdlib>
+//#include <iostream>
+//#include <boost/asio.hpp>
+//#include <pss_message.pb.h>
+//#include <ctime>
+//#include <string>
+//#include <boost/shared_ptr.hpp>
+//#include <boost/enable_shared_from_this.hpp>
+//#include <boost/make_shared.hpp>
+//#include <boost/thread.hpp>
+//
+//#define LOG(X) std::cout << X << std::endl;
+//
+//// async boost server version //problema de para muitoes processos o
+//// boost acho que têm shared resources e passa a não receber msgs
+//
+//using namespace boost;
+//using asio::ip::udp;
+//using system::error_code;
+//
+//void handle_function(const char* data, size_t size, pss* pss_ptr)
+//{
+//
+//    try {
+//        proto::pss_message pss_message;
+//        pss_message.ParseFromArray(data, size);
+//
+//        pss_ptr->process_msg(pss_message);
+//    }
+//    catch(const char* e){
+//        std::cout << e << std::endl;
+//    }
+//    catch(...){}
+//}
+//
+//class udp_server; // forward declaration
+//
+//struct udp_session : enable_shared_from_this<udp_session> {
+//
+//    udp_session(udp_server* server, pss* pss_ptr) : server_(server), pss_ptr(pss_ptr) {}
+//
+//    void handle_request(const boost::system::error_code& error);
+//
+//    udp::endpoint remote_endpoint_;
+//    enum { max_length = 1024 };
+//    char recv_buffer_ [max_length];
+//    std::size_t bytes_rcv;
+//    udp_server* server_;
+//    pss* pss_ptr;
+//
+//public:
+//    void set_bytes_rcv(size_t bytes_rcv){
+//        this->bytes_rcv = bytes_rcv;
+//    }
+//};
+//
+//class udp_server
+//{
+//    typedef boost::shared_ptr<udp_session> shared_session;
+//public:
+//    udp_server(asio::io_service &io_service, int port, pss *pss_ptr)
+//            : socket_(io_service, udp::endpoint(udp::v4(), port)),
+//              strand_(io_service), pss_ptr(pss_ptr)
+//    {
+//        receive_session();
+//    }
+//
+//private:
+//    void receive_session()
+//    {
+//        // our session to hold the buffer + endpoint
+//        auto session = boost::make_shared<udp_session>(this, this->pss_ptr);
+//
+//        socket_.async_receive_from(
+//                boost::asio::buffer(session->recv_buffer_),
+//                session->remote_endpoint_,
+//                strand_.wrap(
+//                        bind(&udp_server::handle_receive, this,
+//                             session, // keep-alive of buffer/endpoint
+//                             boost::asio::placeholders::error,
+//                             boost::asio::placeholders::bytes_transferred)));
+//    }
+//
+//    void handle_receive(shared_session session, const boost::system::error_code& ec, std::size_t bytes_rcv/*bytes_transferred*/) {
+//        // now, handle the current session on any available pool thread
+//        session->set_bytes_rcv(bytes_rcv);
+//        post(socket_.get_executor(),bind(&udp_session::handle_request, session, ec));
+//
+//        // immediately accept new datagrams
+//        receive_session();
+//    }
+//
+//    udp::socket  socket_;
+//    boost::asio::io_service::strand strand_;
+//    pss* pss_ptr;
+//
+//    friend struct udp_session;
+//};
+//
+//void udp_session::handle_request(const boost::system::error_code& error)
+//{
+//    if (!error || error == boost::asio::error::message_size)
+//    {
+//        handle_function(this->recv_buffer_, this->bytes_rcv, this->pss_ptr);
+//    }
+//}
+//
+//pss_listener::pss_listener(const char* ip, int port, pss* pss)
+//{
+////    std::cerr << "[pss_listener] function: constructor [Creating Server Connection]" << std::endl;
+//    this->pss_ptr = pss;
+//    this->ip = ip;
+//    this->port = port;
+//}
+//
+//void pss_listener::operator()() {
+//    try {
+//        udp_server server(this->io_service, this->port, this->pss_ptr);
+//
+//        for (unsigned i = 0; i < this->nr_worker_threads; ++i)
+//            this->thread_pool.create_thread(bind(&asio::io_service::run, ref(this->io_service)));
+//
+//        this->thread_pool.join_all();
+//    }
+//    catch (std::exception& e) {
+//        std::cout << e.what() << std::endl;
+//    }
+//}
+//
+//void pss_listener::stop_thread() {
+//    LOG("Stopping Listener thread");
+//
+//    //terminating ioService processing loop
+//    this->io_service.stop();
+//    //joining all threads of thread_loop
+//    this->thread_pool.join_all();
+//    LOG("JOINT ALL THREADS FROM POOL!!!")
+//}
 
 
 

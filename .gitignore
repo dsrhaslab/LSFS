@@ -32,14 +32,28 @@
 *.app
 
 # Logging
-logging/*
+logging*
 backup/*
 *.json
 
 # Build Directory
 cmake-build-debug/*
+*.cmake
+Makefile
+CMakeFiles/*
+CMakeCache*
+*.cbp
 
 # Other Directories
 udp_client_server/*
 .idea/*
+*exe
+*null*
+results*
+technical_stuff/*
 
+# Capnp auto-generated files
+*.capnp.*
+
+# Protobuf auto-generated files
+*.pb.*

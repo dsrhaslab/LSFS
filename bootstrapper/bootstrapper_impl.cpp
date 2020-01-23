@@ -199,8 +199,6 @@ int main(int argc, char *argv[]) {
     auto main_confs = config["main_confs"];
     int view_size = main_confs["view_size"].as<int>();
 
-    std::cout << view_size << std::endl;
-
     const char* ip = "127.0.0.1";
     std::unique_ptr<Bootstrapper> bootstrapper(new BootstrapperImpl(view_size, ip, 12345));
     bootstrapper->run();

@@ -48,6 +48,8 @@ draw_graph = conf['main_confs']['draw_graph']
 graph_labels = conf['main_confs']['graph_labels']
 results_directory = conf['main_confs']['results_dir']
 logging_directory = conf['main_confs']['logging_dir']
+rep_min = conf['main_confs']['rep_min']
+rep_max = conf['main_confs']['rep_max']
 nr_peers_known_to_torecover = view_size / 2
 draw_final_graph = args.get("d")
 
@@ -73,11 +75,12 @@ def connected_directed(G):
 
    return res
 
-def get_number_connected_components(peer_view_map):
+def get_number_connected_components(peers_data_in_specific_time_map):
    G = nx.DiGraph() #.Graph for undirected graphs
-   online_nodes = list(peer_view_map.keys())
+   online_nodes = list(peers_data_in_specific_time_map.keys())
    G.add_nodes_from(online_nodes)
-   for peer, view in peer_view_map.items():
+   for peer, peer_data in peers_data_in_specific_time_map.items():
+      view = peer_data['view']
       for peer2 in view:
          if str(peer2) in online_nodes:
             G.add_edge(str(peer), str(peer2))
@@ -86,6 +89,29 @@ def get_number_connected_components(peer_view_map):
       plt.show()
 
    return nx.number_strongly_connected_components(G)
+
+def get_peer_percent_nr_groups_deviation(peers_data_in_specific_time_map):
+   nr_peers = len(peers_data_in_specific_time_map)
+   nr_groups_max = float(nr_peers) / rep_min
+   if(nr_groups_max < 1): nr_groups_max = 1
+   nr_groups_min = float(nr_peers) / rep_max
+   if(nr_groups_min < 1): nr_groups_min = 1
+
+   i = 0
+   while 2**i < nr_groups_min: # 2**i = 2^i
+      i+=1
+
+   correct_nr_groups = 2**i
+   if correct_nr_groups > nr_groups_max:
+      print("ERROR found: nr_peers= " + str(nr_peers) + ", nr_groups_min=" + str(nr_groups_min) + ", nr_groups_max=" + str(nr_groups_max))
+
+   nr_peers_with_wrong_estimation = 0 
+   for peer, peer_data in peers_data_in_specific_time_map.items():
+      nr_groups = peer_data['nr_groups']
+      if nr_groups != correct_nr_groups:
+         nr_peers_with_wrong_estimation+=1
+
+   return nr_peers_with_wrong_estimation/nr_peers*100
 
 def plot_graph(connected_components_data):
    times = list(connected_components_data.keys())
@@ -100,6 +126,22 @@ def plot_graph(connected_components_data):
    plt.savefig(results_directory + filename_no_extension + '/graph.pdf')
    if draw_final_graph:
       plt.show()
+   plt.close()
+
+def plot_nr_groups_divergence(peer_percent_nr_groups_estimation_deviation):
+   times = list(peer_percent_nr_groups_estimation_deviation.keys())
+   times = sorted(times)
+   percents = [peer_percent_nr_groups_estimation_deviation[time] for time in times]
+   plt.plot(times, percents)
+   plt.xticks(rotation=90)
+
+   ensure_dir(results_directory)
+   filename_no_extension = os.path.splitext(args['config'])[0]
+   ensure_dir(results_directory + filename_no_extension + '/')
+   plt.savefig(results_directory + filename_no_extension + '/groups.pdf')
+   if draw_final_graph:
+      plt.show()   
+   plt.close()
 
 def time_to_sec_diff(start_time, time_list):
    (st_h_str, st_m_str, st_s_str) = tuple(start_time.split(':'))
@@ -225,7 +267,7 @@ def introduce_constant_churn_num_peers(time_end, time_interval_sec, churn_op_typ
       time.sleep(time_interval_sec)
 
 def calculate_mean_recover_time(graph_data):
-   #graph_data : {time => {node => [node viz]}}
+   #graph_data : {time => {node => {'view' => [node viz]}}}
    initial_nodes = [port for port in range(base_port, base_port + nr_peers)]
    new_nodes_recover_time = {}
    final_recover_time = {}
@@ -258,7 +300,8 @@ def calculate_mean_recover_time(graph_data):
             new_nodes_recover_time[node] = 0
 
       # calculate for each node alive number of nodes known to
-      for node, node_time_view in time_data.items():
+      for node, node_time_data in time_data.items():
+         node_time_view = node_time_data['view']
          for node2 in node_time_view:
             if str(node2) in new_nodes_recover_time:
                new_nodes_known_to[str(node2)] += 1
@@ -381,7 +424,7 @@ if args.get("e") == True:
 
 if args.get("a") == True:
 
-   graph_data = defaultdict(dict)
+   graph_data = defaultdict(lambda: defaultdict(dict))
 
    dirs = [os.path.join(logging_directory, o) for o in os.listdir(logging_directory) 
                      if os.path.isdir(os.path.join(logging_directory,o))]
@@ -402,19 +445,24 @@ if args.get("a") == True:
                view = list(data['view'])
                time = data['time']
                time_sec = time_diff_sec(start_time, time)
-               graph_data[time_sec][peer] = view
+               nr_groups = data['nr_groups']
+               graph_data[time_sec][peer]['view'] = view
+               graph_data[time_sec][peer]['nr_groups'] = nr_groups
             except Exception:
                print("LOADING JSON ERROR!")
 
    calculate_mean_recover_time(graph_data)
 
    connected_components_data = {}
+   peer_percent_nr_groups_estimation_deviation = {}
 
    times_in_secs = sorted(list(graph_data.keys()))
 
    for time in times_in_secs:
       connected_components_data[time] = get_number_connected_components(graph_data[time])
+      peer_percent_nr_groups_estimation_deviation[time] = get_peer_percent_nr_groups_deviation(graph_data[time])
 
    pickle.dump(connected_components_data, open(results_directory + "graph_data.p", "wb"))
 
    plot_graph(connected_components_data)
+   plot_nr_groups_divergence(peer_percent_nr_groups_estimation_deviation)
