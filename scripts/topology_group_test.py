@@ -7,6 +7,7 @@ import numpy as np
 from collections import defaultdict
 from subprocess import Popen
 from string import Template
+from math import floor
 import json 
 import time
 import os
@@ -211,9 +212,22 @@ def remove_peer_instances(num_peers, procs):
       num_peers = num_peers 
    else: 
       num_peers = len(procs)
-         
-   selected_procs_indexes = random.sample(range(len(procs)), num_peers)
-   selected_procs_indexes = sorted(selected_procs_indexes, reverse=True) #we must pop in inverse order
+
+   ### Random Remove      
+   #selected_procs_indexes = random.sample(range(len(procs)), num_peers)
+   #selected_procs_indexes = sorted(selected_procs_indexes, reverse=True) #we must pop in inverse order
+   
+   ### Uniform Remove
+   interval = len(procs) / (num_peers-1)
+   selected_procs_indexes = []
+   idx = 0
+   while len(selected_procs_indexes) < num_peers:
+      selected_procs_indexes.append(floor(idx))
+      idx += interval
+   if(selected_procs_indexes[-1] > (len(procs) - 1)):
+      selected_procs_indexes[-1] -= 1
+   selected_procs_indexes = sorted(selected_procs_indexes, reverse=True)
+   
    for proc_idx in selected_procs_indexes:
       proc = procs.pop(proc_idx)
       proc.terminate()
