@@ -14,7 +14,7 @@
 //ou tem de se esperar mais tempo ou o numero de grupos n está a ser calculado corretamente
 
 group_construction::group_construction(std::string ip,int port, long id, double position, int replication_factor_min,
-        int replication_factor_max, int max_age, bool local, int local_interval){
+        int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store> store){
     this->first_message = true;
     this->id = id;
     this->position = position;
@@ -28,6 +28,7 @@ group_construction::group_construction(std::string ip,int port, long id, double 
     this->cycle = 1;
     this->ip = ip;
     this->port = port;
+    this->store = std::move(store);
 
     if ((this->sender_socket = socket(PF_INET, SOCK_DGRAM, 0)) == 0)
     {
@@ -188,7 +189,7 @@ void group_construction::receive_message(std::vector<peer_data> received) {
         this->first_message = false;
     }
     this->set_my_group(group(this->position));
-    //this.store.updatePartition(this.group, this.ngroups);
+    this->store->update_partition(this->my_group, this->nr_groups);
 
     //SEND LOCAL VIEW TO NEIGHBORS
     if(this->local && (this->cycle % this->local_interval == 0)){

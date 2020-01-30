@@ -8,6 +8,7 @@
 #include "../pss/pss.h"
 #include "../pss/pss_listener.h"
 #include "../pss/view_logger.h"
+#include "../data_handlers/data_handler_listener.h"
 #include <memory>
 #include <thread>
 
@@ -19,9 +20,11 @@ public:
 
 private:
     long id;
-    int port;
+    int pss_port;
+    int data_port;
     std::string ip;
     double position;
+    std::shared_ptr<kv_store> store;
     pss cyclon;                     //thread functor que envia msgs
     group_construction group_c;
     pss_listener listener;
@@ -37,10 +40,16 @@ private:
     bool local_message;
     int local_interval;
 
+    //Data Threads
+    float reply_chance;
+    data_handler_listener data_handler;
+    std::thread data_handler_th;
+
+
 public:
-    peer(long id, std::string ip, int port, double position);
-    peer(long id, std::string ip, int port, double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size,
-            int logging_interval, std::string logging_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval);
+    peer(long id, std::string ip, int pss_port, int data_port, double position);
+    peer(long id, std::string ip, int pss_port, int data_port, double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size,
+            int logging_interval, std::string logging_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval, float reply_chance, bool smart);
     void print_view();
     void start();
     void stop();

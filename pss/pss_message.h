@@ -14,7 +14,8 @@ struct pss_message {
         Normal,
         Response,
         Announce,
-        Termination
+        Termination,
+        GetView
     };
 
     Type type;

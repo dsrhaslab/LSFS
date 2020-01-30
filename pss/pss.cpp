@@ -122,6 +122,31 @@ std::vector<peer_data> pss::select_view_to_send(int target_port) {
     return res;
 }
 
+std::vector<peer_data> pss::have_peer_from_slice(int slice){
+    std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
+
+    std::vector<peer_data> res;
+    for(auto& [port, peer]: this->view){
+        if(this->group_c->group(peer.pos) == slice){
+            res.push_back(peer);
+        }
+    }
+    return res;
+}
+
+std::vector<peer_data> pss::get_view(){
+    std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
+
+    std::vector<peer_data> res;
+    for(auto& [port, peer]: this->view){
+        res.push_back(peer);
+    }
+    for(auto& peer: this->last_sent_view){
+        res.push_back(peer);
+    }
+    return res;
+}
+
 void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, proto::pss_message_Type msg_type){
     //TODO lidar com o caso de não conseguir conexão
     try {
@@ -129,7 +154,6 @@ void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, pr
 
         struct sockaddr_in serverAddr;
         socklen_t addr_size;
-        //int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
@@ -256,6 +280,8 @@ peer_data* pss::get_older_from_view() {
 
 void pss::process_msg(proto::pss_message pss_msg){
 
+    std::cout << "received message pss: " << pss_msg.sender_ip() << ":" << pss_msg.sender_port() << ":" << pss_msg.type() << std::endl;
+
     std::vector<peer_data> recv_view;
     for(auto& peer: pss_msg.view()){
         peer_data peer_data;
@@ -271,6 +297,9 @@ void pss::process_msg(proto::pss_message pss_msg){
 
     if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_LOCAL){
         this->group_c->receive_local_message(recv_view);
+    }else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_LOADBALANCE){
+        std::vector<peer_data> current_view = this->get_view();
+        this->send_pss_msg(pss_msg.sender_port(), current_view, proto::pss_message_Type::pss_message_Type_LOADBALANCE);
     }
     else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_NORMAL){
         std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);

@@ -154,6 +154,16 @@ void BootstrapperImpl::boot_worker(int* socket){
                 this->remove_peer(recv_pss_msg.sender_port);
                 break;
             }
+            case pss_message::Type::GetView: {
+                pss_message msg_to_send;
+                msg_to_send.view = this->get_view();
+                msg_to_send.sender_ip = this->get_ip();
+                msg_to_send.sender_port = this->get_port();
+                msg_to_send.type = pss_message::Type::Normal;
+
+                this->connection.send_pss_msg(socket, msg_to_send);
+                break;
+            }
         }
 
     }catch(...){}

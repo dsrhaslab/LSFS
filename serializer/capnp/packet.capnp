@@ -25,6 +25,7 @@ struct Packet {
         termination @1;
         normal @2;
         response @3;
+        getview @4;
     }
 }
 

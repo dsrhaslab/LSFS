@@ -12,6 +12,7 @@
 #include <vector>
 #include <atomic>
 #include <pss_message.pb.h>
+#include <store/kv_store.h>
 #include "peer_data.h"
 
 class group_construction {
@@ -32,10 +33,11 @@ private:
     int local_interval; //interval of local messages if enable (de quantos em quantos ciclos)
     std::atomic<bool> first_message; //se estamos a iniciar o protocolo de group construction
     int sender_socket;
+    std::shared_ptr<kv_store> store;
 
 public:
     group_construction(std::string ip, int port, long id, double position, int replication_factor_min,
-                       int replication_factor_max, int max_age, bool local, int local_interval);
+                       int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store> store);
 
     std::vector<peer_data> get_local_view();
 

@@ -57,6 +57,10 @@ void Capnp_Serializer::recv_pss_message(int* socket, pss_message& pss_msg){
                 has_view = false;
                 pss_msg.type = pss_message::Type::Termination;
                 break;
+            case packet::Packet::Type::GETVIEW:
+                has_view = false;
+                pss_msg.type = pss_message::Type::GetView;
+                break;
         }
 
         if (has_view) {
@@ -93,6 +97,12 @@ void Capnp_Serializer::send_pss_message(int* socket, pss_message& pss_msg){
             packet.setType(::packet::Packet::Type::TERMINATION);
             packet.getPayload().setNothing();
             has_view = false;
+            break;
+        case pss_message::Type::GetView:
+            packet.setType(::packet::Packet::Type::GETVIEW);
+            packet.getPayload().setNothing();
+            has_view = false;
+            break;
     }
 
     if(has_view){

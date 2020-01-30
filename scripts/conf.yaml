@@ -1,22 +1,34 @@
 main_confs:
-  nr_peers: 10000
+  nr_peers: 100
   view_size: 8
   gossip_size: 7
   message_passing_interval_sec: 10
-  exec_time_sec: 1800
+  exec_time_sec: 500
   base_port: 12350
   peer_instantiation_interval_sec: 0.01
   log_interval_sec: 5
+  logging_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/logging_extra5/
+  results_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/results_extra5/
+  rep_max: 10
+  rep_min: 5
+  max_age: 40
+  local_message: true
+  local_interval_sec: 15
+  reply_chance: 1
+  smart: true
+  nr_puts_required: 1
+  client_wait_timeout: 5
+  lb_interval: 5
   draw_graph: False
   graph_labels: False
 simulation:
   configuration:
-    - execution_type: constant
-      time_start_sec: 250
-      time_end_sec: 1500
-      time_interval_sec: 60
-      churn_op_type: substitute
-      percentage: 5
+          #    - execution_type: one-time
+          #      time_start_sec: 200
+          #      # time_end_sec: 60
+          #      # time_interval_sec: 10
+          #      churn_op_type: remove
+          #      percentage: 50
 #    - execution_type: constant
 #      time_start_sec: 800
 #      time_end_sec: 1100

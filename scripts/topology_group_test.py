@@ -188,9 +188,9 @@ def add_peer_instances(num_peers, procs, initial_nodes = False):
       step = 1 / num_peers
       positions = list(numpy.arange(0,1,step))
       ids = range(0, num_peers)
-      ports = range(current_port, current_port + num_peers)
+      ports = range(current_port, current_port + (2 * num_peers))
 
-      peer_commands = [[peer_program, str(ports[i]), str(ids[i]), str(positions[i]), args['config']] for i in range(0, num_peers)]
+      peer_commands = [[peer_program, str(ports[2*i]), str(ports[2*i + 1]), str(ids[i]), str(positions[i]), args['config']] for i in range(0, num_peers)]
       print(peer_commands)
 
    else:
@@ -200,7 +200,7 @@ def add_peer_instances(num_peers, procs, initial_nodes = False):
 
       peer_commands = [[peer_program, str(ports[i]), str(ids[i]), str(positions[i]), args['config']] for i in range(0, num_peers)]
    
-   current_port += num_peers
+   current_port += (2 * num_peers)
    last_id += num_peers
 
    for command in peer_commands:
