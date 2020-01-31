@@ -26,6 +26,8 @@ public:
     virtual void set_nr_slices(int nr_slices) = 0;
     virtual bool in_log(std::string req_id) = 0;
     virtual void log_req(std::string req_id) = 0;
+    virtual bool in_anti_entropy_log(std::string req_id) = 0;
+    virtual void log_anti_entropy_req(std::string req_id) = 0;
     virtual void print_store() = 0;
 };
 

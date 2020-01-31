@@ -174,18 +174,21 @@ void kv_store_memory::set_nr_slices(int nr_slices) {
 }
 
 bool kv_store_memory::in_log(std::string req_id) {
-    std::cout << "IN_LOG" << std::endl;
-
-    this->print_store();
     std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
     return !(this->request_log.find(req_id) == this->request_log.end());
 }
 
 void kv_store_memory::log_req(std::string req_id) {
-    std::cout << "LOG_REQ" << std::endl;
-    this->print_store();
-
     std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
     this->request_log.insert_or_assign(req_id, true);
-    this->print_store();
+}
+
+bool kv_store_memory::in_anti_entropy_log(std::string req_id) {
+    std::scoped_lock<std::recursive_mutex> lk(this->anti_entropy_log_mutex);
+    return !(this->anti_entropy_log.find(req_id) == this->anti_entropy_log.end());
+}
+
+void kv_store_memory::log_anti_entropy_req(std::string req_id) {
+    std::scoped_lock<std::recursive_mutex> lk(this->anti_entropy_log_mutex);
+    this->anti_entropy_log.insert_or_assign(req_id, true);
 }

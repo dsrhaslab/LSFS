@@ -17,6 +17,7 @@
 //TODO Se calhar preciso de sincronizar o socket send
 
 class data_handler_listener_worker : public udp_handler{
+    //Esta classe é partilhada por todas as threads
 private:
     std::string ip;
     int port;
@@ -26,10 +27,12 @@ private:
     float chance;
     int socket_send;
     bool smart_forward;
+    std::atomic<long> anti_entropy_req_count = 0;
 
 public:
     data_handler_listener_worker(std::string ip, int port, long id,std::shared_ptr<kv_store> store, pss *pssPtr, float chance, int socket_send, bool smart_forward)
-        : ip(std::move(ip)), port(port), id(id), chance(chance), pss_ptr(pssPtr), store(std::move(store)), socket_send(socket_send), smart_forward(smart_forward) {
+        : ip(std::move(ip)), port(port), id(id), chance(chance), pss_ptr(pssPtr), store(std::move(store)), socket_send(socket_send), smart_forward(smart_forward)
+    {
         srand (static_cast <unsigned> (time(nullptr))); //random seed
     }
 
@@ -51,8 +54,10 @@ public:
                 std::cout << "IS A PUT MESSAGE" << std::endl;
                 this->process_put_message(msg);
             }else if(msg.has_put_reply_msg()){
-                std::cout << "IS A PUT REPLY MESSAGE" << std::endl;
-                this->process_put_reply_message(msg);
+                //Este caso não vai acontecer porque os peers não deveriam receber mensagens de reply a um put
+            }else if(msg.has_anti_entropy_msg()){
+                std::cout << "IS A ANTI ENTROPY MESSAGE" << std::endl;
+                this->process_anti_entropy_message(msg);
             }
 
         }
@@ -226,7 +231,28 @@ private:
         }else{
             //caso seja um get interno (antientropy)
             if(req_id.rfind("intern", 0) == 0){
-                //TODO Tratar dos pedidos de anti entropia
+                if(!this->store->in_anti_entropy_log(req_id)){
+                    this->store->log_anti_entropy_req(req_id);
+                    data = this->store->get({key, version});
+                    if(data != nullptr){
+                        proto::kv_message reply_message;
+                        auto* message_content = new proto::get_reply_message();
+                        message_content->set_ip(this->ip);
+                        message_content->set_port(this->port);
+                        message_content->set_id(this->id);
+                        message_content->set_key(key);
+                        message_content->set_version(version);
+                        message_content->set_reqid(req_id);
+                        message_content->set_data(data.get());
+                        reply_message.set_allocated_get_reply_msg(message_content);
+
+                        this->reply_client(reply_message, sender_ip, sender_port);
+                    }else{
+                        //se não possuo o valor da chave, fazer forward
+                        std::vector<peer_data> view = this->pss_ptr->get_view();
+                        this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                    }
+                }
             }
         }
 
@@ -313,8 +339,39 @@ private:
         }
     }
 
-    void process_put_reply_message(const proto::kv_message &msg) {
-        //Este caso não vai acontecer porque os peers não deveriam receber mensagens de reply a um put
+    long get_anti_entropy_req_count(){
+        return this->anti_entropy_req_count += 1;
+    }
+
+    void process_anti_entropy_message(const proto::kv_message &msg) {
+        proto::anti_entropy_message message = msg.anti_entropy_msg();
+        std::unordered_set<kv_store_key> keys = this->store->get_keys();
+
+        std::unordered_set<kv_store_key> keys_to_request;
+        for(auto& key : message.keys()){
+            kv_store_key kv_key = {key.key(), key.version()};
+            if(keys.find(kv_key) == keys.end()){
+                // não possuimos a chave
+                if(this->store->get_slice_for_key(kv_key.key) == this->store->get_slice()){
+                    //se a chave pertence à minha slice
+                    keys_to_request.insert(kv_key);
+                }
+            }
+        }
+
+        for(auto& key: keys_to_request){
+            proto::kv_message get_msg;
+            auto* message_content = new proto::get_message();
+            message_content->set_ip(this->ip);
+            message_content->set_port(this->port);
+            message_content->set_id(this->id);
+            message_content->set_key(key.key);
+            message_content->set_version(key.version);
+            message_content->set_reqid("intern" + to_string(this->id) + ":" + to_string(this->get_anti_entropy_req_count()));
+            get_msg.set_allocated_get_msg(message_content);
+
+            this->reply_client(get_msg, message.ip(), message.port());
+        }
     }
 };
 

@@ -431,4 +431,8 @@ double pss::get_position() {
     return this->group_c->get_position();
 }
 
+std::vector<peer_data> pss::get_slice_local_view() {
+    return std::move(this->group_c->get_local_view());
+}
+
 

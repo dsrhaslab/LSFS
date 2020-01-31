@@ -67,7 +67,7 @@ add_executable( peer_exe
         store/kv_store.h store/kv_store_key.h
         store/kv_store_memory.cpp
         store/kv_store_memory.h
-)
+        data_handlers/anti_entropy.cpp data_handlers/anti_entropy.h)
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)

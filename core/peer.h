@@ -11,6 +11,7 @@
 #include "../data_handlers/data_handler_listener.h"
 #include <memory>
 #include <thread>
+#include <data_handlers/anti_entropy.h>
 
 class peer {
 public:
@@ -45,11 +46,15 @@ private:
     data_handler_listener data_handler;
     std::thread data_handler_th;
 
+    //Anti Entropy Thread
+    anti_entropy anti_ent;
+    std::thread anti_ent_th;
+
 
 public:
     peer(long id, std::string ip, int pss_port, int data_port, double position);
     peer(long id, std::string ip, int pss_port, int data_port, double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size,
-            int logging_interval, std::string logging_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval, float reply_chance, bool smart);
+            int logging_interval, int anti_entropy_interval, std::string logging_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval, float reply_chance, bool smart);
     void print_view();
     void start();
     void stop();

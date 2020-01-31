@@ -41,8 +41,8 @@ int main(int argc, char **argv) {
     std::thread lb_th = std::thread (std::ref(lb));
 
     client cli = client(ip, id, kv_port, &lb, nr_puts_required, wait_timeout);
-
-    cli.put(1,1,"KV ALMOST FINISHED");
+//
+//    cli.put(1,1,"KV ALMOST FINISHED");
 //    cli.put(2,1,"KV ALMOST FINISHED");
 //    cli.put(3,1,"KV ALMOST FINISHED");
 //    cli.put(4,1,"KV ALMOST FINISHED");

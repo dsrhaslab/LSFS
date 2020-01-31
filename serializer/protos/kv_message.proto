@@ -38,11 +38,24 @@ message put_reply_message {
   int64 version = 5;
 }
 
+message kv_store_key {
+  int64 key = 1;
+  int64 version = 2;
+}
+
+message anti_entropy_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  repeated kv_store_key keys = 4;
+}
+
 message kv_message {
     oneof msg {
-        get_message         get_msg = 1;
-        get_reply_message   get_reply_msg = 2;
-        put_message         put_msg = 3;
-        put_reply_message   put_reply_msg = 4;
+        get_message          get_msg = 1;
+        get_reply_message    get_reply_msg = 2;
+        put_message          put_msg = 3;
+        put_reply_message    put_reply_msg = 4;
+        anti_entropy_message anti_entropy_msg = 5;
     }
 }

@@ -49,6 +49,7 @@ public:
     double get_position();
     std::vector<peer_data> have_peer_from_slice(int slice);
     std::vector<peer_data> get_view();
+    std::vector<peer_data> get_slice_local_view();
 
 private:
     void age_view_members();

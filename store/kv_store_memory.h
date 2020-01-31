@@ -21,9 +21,11 @@ private:
     std::atomic<int> nr_slices = 1;
     std::unordered_map<kv_store_key, bool> seen;
     std::unordered_map<std::string, bool> request_log;
+    std::unordered_map<std::string, bool> anti_entropy_log;
     std::recursive_mutex seen_mutex;
     std::recursive_mutex store_mutex;
     std::recursive_mutex req_log_mutex;
+    std::recursive_mutex anti_entropy_log_mutex;
 
 public:
     int get_slice_for_key(long key) override;
@@ -40,6 +42,8 @@ public:
     void set_nr_slices(int nr_slices) override;
     bool in_log(std::string req_id);
     void log_req(std::string req_id);
+    bool in_anti_entropy_log(std::string req_id);
+    void log_anti_entropy_req(std::string req_id);
     void print_store();
 };
 

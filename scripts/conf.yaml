@@ -14,6 +14,7 @@ main_confs:
   max_age: 40
   local_message: true
   local_interval_sec: 15
+  anti_entropy_interval_sec: 20
   reply_chance: 1
   smart: true
   nr_puts_required: 1
