@@ -30,10 +30,10 @@ void client_reply_handler::operator()() {
     si_me.sin_addr.s_addr = inet_addr(this->ip.c_str());
 
     bind(this->socket_rcv, (struct sockaddr*)&si_me, sizeof(si_me));
-    char buf [1024];
+    char buf [65500];
 
     while(this->running){
-        int bytes_rcv = recvfrom(this->socket_rcv, buf, 1024, 0, (struct sockaddr*)& si_other, &addr_size);
+        int bytes_rcv = recvfrom(this->socket_rcv, buf, 65500, 0, (struct sockaddr*)& si_other, &addr_size);
         std::cout << "Received NEW KV Message" << std::endl;
 
         if(this->running){

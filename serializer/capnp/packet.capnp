@@ -7,6 +7,8 @@ struct Peer {
     host @0 :Text;
     port @1 :Int32;
     age  @2 :Int32;
+    id   @3 :Int64;
+    pos  @4 :Float64;
 }
 
 struct Packet {

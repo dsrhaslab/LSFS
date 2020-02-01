@@ -18,7 +18,7 @@ peer::peer(long id, std::string ip, int pss_port, int data_port, double position
     id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position),
     store(std::make_shared<kv_store_memory>()),
     group_c(ip, pss_port, id, position, 5, 10, 40, true, 15, this->store),
-    cyclon(peer::boot_ip, peer::boot_port, ip, pss_port,2,8,10,7, &(this->group_c)),
+    cyclon(peer::boot_ip, peer::boot_port, ip, pss_port, id, position,2,8,10,7, &(this->group_c)),
     listener("127.0.0.1", this->pss_port, &(this->cyclon) ),
     v_logger(this->pss_port, &(this->cyclon),60, "../logging/"),
     data_handler(ip, data_port, id, 1, &(this->cyclon), this->store, false),
@@ -35,7 +35,7 @@ peer::peer(long id, std::string ip, int pss_port, int data_port,double position,
         anti_ent(ip, data_port, id, &(this->cyclon), this->store, anti_entropy_interval),
         group_c(ip, pss_port, id, position, rep_min, rep_max, max_age,
                 local_message, local_interval, this->store),
-        cyclon(peer::boot_ip, peer::boot_port, ip, pss_port, pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
+        cyclon(peer::boot_ip, peer::boot_port, ip, pss_port, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
         listener("127.0.0.1", pss_port, &(this->cyclon)),
         v_logger(pss_port, &(this->cyclon), logging_interval, logging_dir)
 {}

@@ -25,10 +25,9 @@
 using json = nlohmann::json;
 #define LOG(X) std::cout << X << std::endl;
 
-
 //my_port é necessário para poder enviar a nossa identidade (que é a porta)
 //no futuro, com endereços, não será necessário.
-pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port)
+pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, long my_id, double my_pos)
 {
     //TODO acrescentar loop para tentar reconexão caso falhe
 
@@ -44,8 +43,17 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port)
             pss_announce_msg.sender_ip = my_ip;
             pss_announce_msg.sender_port = my_port;
             pss_announce_msg.type = pss_message::Type::Announce;
+            pss_announce_msg.view.push_back({
+                my_ip,
+                my_port,
+                0,
+                my_id,
+                0,
+                my_pos,
+                0
+            });
             connection.send_pss_msg(pss_announce_msg);
-            
+
             //receiving view from bootstrapper
             bool view_recv = false;
             pss_message pss_view_msg_rcv;
@@ -70,8 +78,8 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port)
 
 }
 
-pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, long boot_time, int view_size, int sleep, int gossip_size, group_construction* group_c):
-    pss::pss(boot_ip, boot_port, my_ip, my_port)
+pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, long id, double pos, long boot_time, int view_size, int sleep, int gossip_size, group_construction* group_c):
+    pss::pss(boot_ip, boot_port, my_ip, my_port, id, pos)
 {
     this->running = true;
     this->sleep_interval = sleep;
@@ -80,6 +88,8 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, lon
     this->gossip_size = gossip_size;
     this->ip = my_ip;
     this->port = my_port;
+    this->id = id;
+    this->pos = pos;
     this->boot_ip = boot_ip;
     this->boot_port = boot_port;
     this->socket_send = socket(PF_INET, SOCK_DGRAM, 0);
@@ -179,9 +189,10 @@ void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, pr
         std::string buf;
         pss_message.SerializeToString(&buf);
 
+        //socket synchronization
+        std::scoped_lock<std::recursive_mutex> lk (this->socket_send_mutex);
         int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-
-        if(res == -1){printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));}  
+        if(res == -1){printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));}
      }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
 }
 
@@ -198,7 +209,6 @@ void pss::operator()() {
             time = time + this->sleep_interval;
             cycles = cycles + 1;
             this->group_c->set_cycle(cycles);
-            std::cout << this->group_c->get_my_group() << std::endl;
 
             std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
 
@@ -279,8 +289,6 @@ peer_data* pss::get_older_from_view() {
 }
 
 void pss::process_msg(proto::pss_message pss_msg){
-
-    std::cout << "received message pss: " << pss_msg.sender_ip() << ":" << pss_msg.sender_port() << ":" << pss_msg.type() << std::endl;
 
     std::vector<peer_data> recv_view;
     for(auto& peer: pss_msg.view()){

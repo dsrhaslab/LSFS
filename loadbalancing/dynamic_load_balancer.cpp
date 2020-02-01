@@ -92,8 +92,6 @@ void dynamic_load_balancer::send_msg(peer_data& target_peer, proto::pss_message&
         std::string buf;
         msg.SerializeToString(&buf);
 
-        std::cout << "sending message pss: " << msg.sender_ip() << ":" << msg.sender_port() << ":" << msg.type() << std::endl;
-
         int res = sendto(this->sender_socket, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
         if(res == -1){printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));}
@@ -113,9 +111,7 @@ void dynamic_load_balancer::operator()() {
             pss_message.set_sender_ip(this->ip);
             pss_message.set_sender_port(this->port);
             pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE);
-            std::cout << "sending message" << std::endl;
             this->send_msg(target_peer, pss_message);
-            std::cout << "message sent" << std::endl;
         }
     }
 

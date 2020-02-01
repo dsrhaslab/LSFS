@@ -3,7 +3,7 @@ main_confs:
   view_size: 8
   gossip_size: 7
   message_passing_interval_sec: 10
-  exec_time_sec: 500
+  exec_time_sec: 2000
   base_port: 12350
   peer_instantiation_interval_sec: 0.01
   log_interval_sec: 5

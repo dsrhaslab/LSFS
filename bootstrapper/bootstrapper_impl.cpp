@@ -66,6 +66,8 @@ std::vector<peer_data> BootstrapperImpl::get_view() {
         peer.ip = "127.0.0.1";
         peer.port = peer_port;
         peer.age = 20;
+        peer.id = aliveIds[peer_port];
+        peer.pos = alivePos[peer_port];
 
         res.push_back(peer);
     }
@@ -147,7 +149,9 @@ void BootstrapperImpl::boot_worker(int* socket){
                 msg_to_send.type = pss_message::Type::Normal;
 
                 this->connection.send_pss_msg(socket, msg_to_send);
-                this->add_peer(recv_pss_msg.sender_ip, recv_pss_msg.sender_port, 0, 0);
+
+                std::cout << recv_pss_msg.view[0].pos << std::endl;
+                this->add_peer(recv_pss_msg.sender_ip, recv_pss_msg.sender_port, recv_pss_msg.view[0].id, recv_pss_msg.view[0].pos);
                 break;
             }
             case pss_message::Type::Termination: {

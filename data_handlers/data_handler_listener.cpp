@@ -26,37 +26,31 @@ private:
     pss* pss_ptr;
     float chance;
     int socket_send;
+    std::recursive_mutex socket_send_mutex;
     bool smart_forward;
     std::atomic<long> anti_entropy_req_count = 0;
 
 public:
-    data_handler_listener_worker(std::string ip, int port, long id,std::shared_ptr<kv_store> store, pss *pssPtr, float chance, int socket_send, bool smart_forward)
-        : ip(std::move(ip)), port(port), id(id), chance(chance), pss_ptr(pssPtr), store(std::move(store)), socket_send(socket_send), smart_forward(smart_forward)
+    data_handler_listener_worker(std::string ip, int port, long id,std::shared_ptr<kv_store> store, pss *pssPtr, float chance, bool smart_forward)
+        : ip(std::move(ip)), port(port), id(id), chance(chance), pss_ptr(pssPtr), store(std::move(store)), socket_send(socket(PF_INET, SOCK_DGRAM, 0)), smart_forward(smart_forward)
     {
         srand (static_cast <unsigned> (time(nullptr))); //random seed
     }
 
     void handle_function(const char *data, size_t size) override {
         try {
-            std::cout << "Received KV store request" << std::endl;
-            this->store->print_store();
-
             proto::kv_message msg;
             msg.ParseFromArray(data, size);
 
             if(msg.has_get_msg()){
-                std::cout << "IS A GET MESSAGE" << std::endl;
                 this->process_get_message(msg);
             }else if(msg.has_get_reply_msg()){
-                std::cout << "IS A GET REPLY MESSAGE" << std::endl;
                 this->process_get_reply_message(msg);
             }else if(msg.has_put_msg()){
-                std::cout << "IS A PUT MESSAGE" << std::endl;
                 this->process_put_message(msg);
             }else if(msg.has_put_reply_msg()){
                 //Este caso não vai acontecer porque os peers não deveriam receber mensagens de reply a um put
             }else if(msg.has_anti_entropy_msg()){
-                std::cout << "IS A ANTI ENTROPY MESSAGE" << std::endl;
                 this->process_anti_entropy_message(msg);
             }
 
@@ -81,14 +75,9 @@ private:
             std::string buf;
             message.SerializeToString(&buf);
 
-            std::cout << "BUFFER SIZE " << buf.size() << std::endl;
-
+            std::scoped_lock<std::recursive_mutex> lk (socket_send_mutex);
             int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-
             if(res == -1){printf("Oh dear, something went wrong with send()! %s\n", strerror(errno));}
-            else{
-                std::cout << "Reply sucessfully sent to " << sender_port << std::endl;
-            }
         }catch(...){std::cout <<"=============================== Não consegui enviar =================" << std::endl;}
 
     }
@@ -106,8 +95,9 @@ private:
                 std::string buf;
                 message.SerializeToString(&buf);
 
+                std::cout << "Forwarding message to " << std::to_string(peer.port + 1) << std::endl;
+                std::scoped_lock<std::recursive_mutex> lk (socket_send_mutex);
                 int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-
                 if(res == -1){printf("Oh dear, something went wrong with send()! %s\n", strerror(errno));}
             }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
         }
@@ -175,6 +165,7 @@ private:
 //    }
 
     void process_get_message(const proto::kv_message &msg) {
+        std::cout << std::to_string(this->port) << " received get" << std::endl;
         proto::get_message message = msg.get_msg();
         std::string sender_ip = message.ip();
         int sender_port = message.port();
@@ -203,11 +194,10 @@ private:
                     message_content->set_data(data.get());
                     reply_message.set_allocated_get_reply_msg(message_content);
 
-                    std::cout << "sending " << data.get() << " to client" << std::endl;
-
                     this->reply_client(reply_message, sender_ip, sender_port);
                 }else{
                     //a probabilidade ditou para fazer forward da mensagem
+                    this->pss_ptr->print_view();
                     int obj_slice = this->store->get_slice_for_key(key);
                     std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
                     if(!slice_peers.empty() && this->smart_forward){
@@ -268,7 +258,6 @@ private:
     }
 
     void process_put_message(const proto::kv_message &msg) {
-        std::cout << "Processing Put Message" << std::endl;
         proto::put_message message = msg.put_msg();
         std::string sender_ip = message.ip();
         int sender_port = message.port();
@@ -276,15 +265,11 @@ private:
         long version = message.version();
         const char *data = message.data().c_str();
 
-        std::cout << data << std::endl;
-
         if (!this->store->have_seen(key, version)) {
-            std::cout << "Store haven't seen this key-version" << std::endl;
             bool stored = this->store->put(key, version, data);
             if (stored) {
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                 std::vector<peer_data> view = this->pss_ptr->get_view();
-                std::cout << "checking if " << achance << "<=" << this->chance << std::endl;
                 if (achance <= this->chance) {
                     proto::kv_message reply_message;
                     auto *message_content = new proto::put_reply_message();
@@ -294,7 +279,6 @@ private:
                     message_content->set_key(key);
                     message_content->set_version(version);
                     reply_message.set_allocated_put_reply_msg(message_content);
-                    std::cout << "Replying Client" << std::endl;
 
                     this->reply_client(reply_message, sender_ip, sender_port);
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
@@ -317,7 +301,6 @@ private:
                 }
             }
         } else {
-            std::cout << "Store have seen this key-version - discarding put" << std::endl;
             //Worker ignored put operation for key
             //#############################################################################################
             //TODO Remover só para um cliente não encravar no put caso a chave já exista
@@ -331,7 +314,6 @@ private:
                 message_content->set_key(key);
                 message_content->set_version(version);
                 reply_message.set_allocated_put_reply_msg(message_content);
-                std::cout << "Replying Client" << std::endl;
 
                 this->reply_client(reply_message, sender_ip, sender_port);
             }
@@ -376,14 +358,12 @@ private:
 };
 
 data_handler_listener::data_handler_listener(std::string ip, int port, long id, float chance, pss *pss, std::shared_ptr<kv_store> store, bool smart)
-    : ip(std::move(ip)), port(port), id(id), chance(chance), pss_ptr(pss), store(std::move(store)), socket_send(socket(PF_INET, SOCK_DGRAM, 0)), smart(smart) {}
+    : ip(std::move(ip)), port(port), id(id), chance(chance), pss_ptr(pss), store(std::move(store)), smart(smart) {}
 
 void data_handler_listener::operator()() {
     try {
-        data_handler_listener_worker worker(this->ip, this->port, this->id, this->store, this->pss_ptr, this->chance, this->socket_send, this->smart);
+        data_handler_listener_worker worker(this->ip, this->port, this->id, this->store, this->pss_ptr, this->chance, this->smart);
         udp_async_server server(this->io_service, this->port, (udp_handler*) &worker);
-
-        std::cout << "Waiting for KV store requests" << std::endl;
 
         for (unsigned i = 0; i < this->nr_worker_threads; ++i)
             this->thread_pool.create_thread(bind(&asio::io_service::run, ref(this->io_service)));

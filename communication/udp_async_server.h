@@ -39,7 +39,7 @@ struct udp_session : enable_shared_from_this<udp_session> {
     void handle_request(const boost::system::error_code& error);
 
     udp::endpoint remote_endpoint_;
-    enum { max_length = 1024 };
+    enum { max_length = 65500 };
     char recv_buffer_ [max_length];
     std::size_t bytes_rcv;
     udp_async_server* server_;

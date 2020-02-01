@@ -22,7 +22,6 @@ private:
     std::string ip;
     int port;
     float chance;
-    int socket_send;
     bool smart;
 
 public:

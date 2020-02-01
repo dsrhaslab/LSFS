@@ -19,24 +19,26 @@ class pss {
 private:
     std::recursive_mutex view_mutex;
     std::recursive_mutex last_view_mutex;
+    std::recursive_mutex socket_send_mutex;
     std::unordered_map<int, peer_data> view; //port -> age
     std::vector<peer_data> last_sent_view;
-    int port;
-    int view_size;
+    int port{};
+    int view_size{};
     std::string ip;
-    long id;
-    long boot_time;
-    std::atomic<bool> running;
-    int sleep_interval;
-    int gossip_size;
-    const char* boot_ip;
-    int boot_port;
-    int socket_send;
-    group_construction* group_c;
+    long id{};
+    double pos{};
+    long boot_time{};
+    std::atomic<bool> running{};
+    int sleep_interval{};
+    int gossip_size{};
+    const char* boot_ip{};
+    int boot_port{};
+    int socket_send{};
+    group_construction* group_c{};
 
 public:
-    pss(const char* boot_ip, int boot_port,  std::string my_ip, int my_port);
-    pss(const char* boot_ip, int boot_port, std::string my_ip, int my_port, long boot_time, int view_size, int sleep, int gossip_size, group_construction* group_c);
+    pss(const char* boot_ip, int boot_port,  std::string my_ip, int my_port, long id, double pos);
+    pss(const char* boot_ip, int boot_port, std::string my_ip,int my_port, long id, double pos, long boot_time, int view_size, int sleep, int gossip_size, group_construction* group_c);
     void operator()();
     void print_view();
     void process_msg(proto::pss_message message);

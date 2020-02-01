@@ -77,15 +77,11 @@ int group_construction::get_my_group() {
 
 
 void group_construction::set_my_group(int group) {
-    std::cout << "Setting Group " << group << std::endl;
     this->my_group = group;
 }
 
 int group_construction::group(double peer_pos){
-    std::cout << "My position " << peer_pos << std::endl;
-    std::cout << "Nr groups " << this->nr_groups << std::endl;
     int temp = (int) ceil((static_cast<double>(this->get_nr_groups()))*peer_pos);
-    std::cout << "Temp " << temp << std::endl;
     if(temp == 0){
         temp = 1;
     }
@@ -112,7 +108,7 @@ void group_construction::print_view() {
     std::cout << "====== My View[" + std::to_string(this->port) + "] ====" << std::endl;
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(auto const& [key, peer] : this->local_view){
-        std::cout << peer.ip << "(" << peer.port << ") : " << peer.age << std::endl;
+        std::cout << peer.ip << "(" << peer.port << ") : " << peer.age  << " -> " << peer.pos << ":" << group(peer.pos) << std::endl;
     }
     std::cout << "==========================" << std::endl;
 }
@@ -136,7 +132,7 @@ void group_construction::receive_message(std::vector<peer_data> received) {
                 nr_groups_from_peers = peer.nr_slices;
             }
         }
-        if(group(peer.pos) == this->my_group && !(peer.id == this->id)){
+        if(group(peer.pos) == this->my_group && peer.id != this->id){
             auto current_it = this->local_view.find(peer.port);
             if(current_it != this->local_view.end()){ //o elemento existe no mapa
                 int current_age = current_it->second.age;
@@ -165,26 +161,19 @@ void group_construction::receive_message(std::vector<peer_data> received) {
         this->local_view.erase(port);
     }
 
-    this->print_view();
-
     //SEARCH FOR VIOLATIONS
     int estimation = this->local_view.size(); //countEqual();
-    std::cout << "Estimation " << estimation << std::endl;
-    std::cout << "replication factor min " << this->replication_factor_min << std::endl;
-    std::cout << "replication factor max " << this->replication_factor_max << std::endl;
 
     if((estimation + 1) < this->replication_factor_min){
-        std::cout << "Entrei 1" << std::endl;
         if(this->nr_groups > 1){
             this->set_nr_groups(this->nr_groups/2);
         }
     }
     if((estimation + 1) > this->replication_factor_max){
-        std::cout << "Entrei 2" << std::endl;
+        if(this->nr_groups*2 > 16) this->print_view();
         this->set_nr_groups(this->nr_groups*2);
     }
     if(this->first_message){
-        std::cout << "Entrei 3" << std::endl;
         this->set_nr_groups(nr_groups_from_peers);
         this->first_message = false;
     }

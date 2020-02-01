@@ -40,6 +40,7 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
         std::string buf;
         msg.SerializeToString(&buf);
 
+        std::cout << "Size of buffer: " << buf.size() << std::endl;
         int res = sendto(this->sender_socket, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
         if(res == -1){printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));}
@@ -60,7 +61,7 @@ int client::send_get(peer_data &peer, long key, long version, std::string req_id
     message_content->set_reqid(req_id);
     msg.set_allocated_get_msg(message_content);
 
-    std::cout << "Sending get to " << std::to_string(peer.port) << " " << peer.pos << " " ;
+    std::cout << "Sending get to " << std::to_string(peer.port) << " " << peer.pos ;
 
     return send_msg(peer, msg);
 }
@@ -84,12 +85,9 @@ std::set<long> client::put(long key, long version, const char *data) {
    std::unique_ptr<std::set<long>> res = nullptr;
    while(res == nullptr || res->size() < this->nr_puts_required){
        peer_data peer = this->lb->get_random_peer();
-       std::cout << peer.port << std::endl;
        int status = this->send_put(peer, key, version, data);
        if(status == 0){
-           std::cout << "Put sucessfully sent!!" << std::endl;
            res = this->handler.wait_for_put(key);
-           if(res != nullptr) std::cout << res->size() << std::endl;
        }
    }
    return *res;

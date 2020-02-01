@@ -50,7 +50,6 @@ void Capnp_Serializer::recv_pss_message(int* socket, pss_message& pss_msg){
                 pss_msg.type = pss_message::Type::Response;
                 break;
             case packet::Packet::Type::ANNOUNCE:
-                has_view = false;
                 pss_msg.type = pss_message::Type::Announce;
                 break;
             case packet::Packet::Type::TERMINATION:
@@ -66,7 +65,7 @@ void Capnp_Serializer::recv_pss_message(int* socket, pss_message& pss_msg){
         if (has_view) {
             auto view = packet.getPayload().getView();
             for (auto peer: view) {
-                pss_msg.view.push_back({std::string(peer.getHost().cStr()), peer.getPort(), peer.getAge()});
+                pss_msg.view.push_back({std::string(peer.getHost().cStr()), peer.getPort(), peer.getAge(), peer.getId(), 0, peer.getPos(), 0});
             }
         }
     }catch(...){throw;}
@@ -91,7 +90,6 @@ void Capnp_Serializer::send_pss_message(int* socket, pss_message& pss_msg){
         case pss_message::Type::Announce:
             packet.setType(::packet::Packet::Type::ANNOUNCE);
             packet.getPayload().setNothing();
-            has_view = false;
             break;
         case pss_message::Type::Termination:
             packet.setType(::packet::Packet::Type::TERMINATION);
@@ -114,6 +112,8 @@ void Capnp_Serializer::send_pss_message(int* socket, pss_message& pss_msg){
             peer_builder.setHost(peer.ip);
             peer_builder.setPort(peer.port);
             peer_builder.setAge(peer.age);
+            peer_builder.setId(peer.id);
+            peer_builder.setPos(peer.pos);
             peer_idx++;
         }
     }
