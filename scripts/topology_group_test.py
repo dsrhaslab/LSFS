@@ -91,7 +91,7 @@ def get_number_connected_components(peers_data_in_specific_time_map):
 
    return nx.number_strongly_connected_components(G)
 
-def get_peer_percent_nr_groups_deviation(peers_data_in_specific_time_map):
+def get_peer_percent_nr_groups_deviation(peers_data_in_specific_time_map, time):
    nr_peers = len(peers_data_in_specific_time_map)
    nr_groups_max = float(nr_peers) / rep_min
    if(nr_groups_max < 1): nr_groups_max = 1
@@ -110,6 +110,7 @@ def get_peer_percent_nr_groups_deviation(peers_data_in_specific_time_map):
    for peer, peer_data in peers_data_in_specific_time_map.items():
       nr_groups = peer_data['nr_groups']
       if nr_groups != correct_nr_groups:
+         print("Bad estimation peer(" + str(time) + "): " + str(peer) + ", correct: " + str(correct_nr_groups) + ", estimation: " + str(nr_groups))
          nr_peers_with_wrong_estimation+=1
 
    return nr_peers_with_wrong_estimation/nr_peers*100
@@ -474,7 +475,7 @@ if args.get("a") == True:
 
    for time in times_in_secs:
       connected_components_data[time] = get_number_connected_components(graph_data[time])
-      peer_percent_nr_groups_estimation_deviation[time] = get_peer_percent_nr_groups_deviation(graph_data[time])
+      peer_percent_nr_groups_estimation_deviation[time] = get_peer_percent_nr_groups_deviation(graph_data[time], time)
 
    pickle.dump(connected_components_data, open(results_directory + "graph_data.p", "wb"))
 

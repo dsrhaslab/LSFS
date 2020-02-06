@@ -18,21 +18,21 @@ else()
     message (FATAL_ERROR "Cannot find Protobuf")
 endif()
 
-PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS serializer/protos/pss_message.proto serializer/protos/kv_message.proto)
-capnp_generate_cpp(packetSources packetHeaders serializer/capnp/packet.capnp)
+PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS df_serializer/protos/pss_message.proto df_serializer/protos/kv_message.proto)
+capnp_generate_cpp(packetSources packetHeaders df_serializer/capnp/packet.capnp)
 
 set(INCLUDE_DIRECTORY include)
 set(INCLUDE_HEADERS ${INCLUDE_DIRECTORY}/ctpl_stl.h)
 
 add_executable(bootstrapper_exe
-        bootstrapper/bootstrapper_impl.cpp
+        df_bootstrapper/bootstrapper_impl.cpp
         ${packetSources}
-        tcp_client_server_connection/tcp_server_connection.cpp
-        serializer/serializer.h
-        serializer/capnp/capnp_serializer.h
-        serializer/capnp/capnp_serializer.cpp
+        df_tcp_client_server_connection/tcp_server_connection.cpp
+        df_serializer/serializer.h
+        df_serializer/capnp/capnp_serializer.h
+        df_serializer/capnp/capnp_serializer.cpp
         ${INCLUDE_HEADERS}
-        communication/udp_async_server.h
+        df_communication/udp_async_server.h
         )
 target_link_libraries(bootstrapper_exe PRIVATE CapnProto::capnp)
 target_include_directories(bootstrapper_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
@@ -41,33 +41,33 @@ target_link_libraries(bootstrapper_exe PUBLIC ${Boost_LIBRARIES})
 target_link_libraries(bootstrapper_exe PRIVATE yaml-cpp)
 
 add_executable( peer_exe
-        core/peer.cpp
+        df_core/peer.cpp
         ${packetSources}
-        pss/pss.h
-        pss/pss.cpp
-        tcp_client_server_connection/tcp_client_connection.cpp
-        tcp_client_server_connection/tcp_server_connection.cpp
-        serializer/serializer.h
-        serializer/capnp/capnp_serializer.h
-        serializer/capnp/capnp_serializer.cpp
-        pss/pss_listener.cpp
-        pss/pss_listener.h
-        pss/pss_message.h
-        core/peer_data.h
+        df_pss/pss.h
+        df_pss/pss.cpp
+        df_tcp_client_server_connection/tcp_client_connection.cpp
+        df_tcp_client_server_connection/tcp_server_connection.cpp
+        df_serializer/serializer.h
+        df_serializer/capnp/capnp_serializer.h
+        df_serializer/capnp/capnp_serializer.cpp
+        df_pss/pss_listener.cpp
+        df_pss/pss_listener.h
+        df_pss/pss_message.h
+        df_core/peer_data.h
         ${INCLUDE_HEADERS}
-        pss/view_logger.h
+        df_pss/view_logger.h
         ${PROTO_SRCS}
         ${PROTO_HDRS}
-        communication/udp_async_server.h
-        communication/udp_async_server.cpp
-        core/group_construction.cpp
-        core/group_construction.h
-        data_handlers/data_handler_listener.cpp
-        data_handlers/data_handler_listener.h
-        store/kv_store.h store/kv_store_key.h
-        store/kv_store_memory.cpp
-        store/kv_store_memory.h
-        data_handlers/anti_entropy.cpp data_handlers/anti_entropy.h)
+        df_communication/udp_async_server.h
+        df_communication/udp_async_server.cpp
+        df_core/group_construction.cpp
+        df_core/group_construction.h
+        df_data_handlers/data_handler_listener.cpp
+        df_data_handlers/data_handler_listener.h
+        df_store/kv_store.h df_store/kv_store_key.h
+        df_store/kv_store_memory.cpp
+        df_store/kv_store_memory.h
+        df_data_handlers/anti_entropy.cpp df_data_handlers/anti_entropy.h)
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)
@@ -79,28 +79,28 @@ target_include_directories(peer_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURR
 
 add_executable( client_exe
         ${packetSources}
-        tcp_client_server_connection/tcp_client_connection.cpp
-        tcp_client_server_connection/tcp_server_connection.cpp
-        serializer/serializer.h
-        serializer/capnp/capnp_serializer.h
-        serializer/capnp/capnp_serializer.cpp
-        pss/pss_message.h
-        core/peer_data.h
+        df_tcp_client_server_connection/tcp_client_connection.cpp
+        df_tcp_client_server_connection/tcp_server_connection.cpp
+        df_serializer/serializer.h
+        df_serializer/capnp/capnp_serializer.h
+        df_serializer/capnp/capnp_serializer.cpp
+        df_pss/pss_message.h
+        df_core/peer_data.h
         ${INCLUDE_HEADERS}
         ${PROTO_SRCS}
         ${PROTO_HDRS}
-        communication/udp_async_server.h
-        communication/udp_async_server.cpp
-        loadbalancing/load_balancer.h
-        loadbalancing/dynamic_load_balancer.cpp
-        loadbalancing/dynamic_load_balancer.h
-        loadbalancing/load_balancer_listener.cpp
-        loadbalancing/load_balancer_listener.h
-        client/client.cpp
-        client/client.h
-        client/client_reply_handler.cpp
-        client/client_reply_handler.h
-        client/main.cpp)
+        df_communication/udp_async_server.h
+        df_communication/udp_async_server.cpp
+        df_loadbalancing/load_balancer.h
+        df_loadbalancing/dynamic_load_balancer.cpp
+        df_loadbalancing/dynamic_load_balancer.h
+        df_loadbalancing/load_balancer_listener.cpp
+        df_loadbalancing/load_balancer_listener.h
+        df_client/client.cpp
+        df_client/client.h
+        df_client/client_reply_handler.cpp
+        df_client/client_reply_handler.h
+        df_client/main.cpp)
 
 target_link_libraries(client_exe PRIVATE CapnProto::capnp)
 target_link_libraries(client_exe PRIVATE nlohmann_json::nlohmann_json)
@@ -112,3 +112,22 @@ target_include_directories(client_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(client_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 
 
+add_executable( lsfs_exe
+        fuse/fuse.cpp
+        fuse/fuse.h
+        fuse/lsfs_impl.cpp
+        fuse/lsfs_impl.h
+        fuse/lsfs.cpp
+        fuse/fuse_ram_fs/inode.cpp
+        fuse/fuse_ram_fs/inode.h
+        fuse/fuse_ram_fs/directory.cpp
+        fuse/fuse_ram_fs/directory.h
+        fuse/fuse_ram_fs/file.cpp
+        fuse/fuse_ram_fs/file.h
+        fuse/fuse_ram_fs/special_inode.cpp
+        fuse/fuse_ram_fs/special_inode.h
+        fuse/fuse_ram_fs/symlink.cpp
+        fuse/fuse_ram_fs/symlink.h)
+
+target_compile_definitions(lsfs_exe PRIVATE FUSE_USE_VERSION=35 _FILE_OFFSET_BITS=64)
+target_link_libraries(lsfs_exe fuse)
