@@ -449,14 +449,19 @@ if args.get("a") == True:
    start_time = start_file.readline()
    start_file.close()
 
-   for directory in dirs:
-      peer = (re.findall(r'\d+$', directory))[0]
-      filenames = [os.path.join(directory, o) for o in os.listdir(directory)]
-      for filename in filenames:
-         print(filename)
-         with open(filename, "r") as file:
+   log_files =  [os.path.join(logging_directory, o) for o in os.listdir(logging_directory)
+                     if( not re.match(r'start_time', o)) ]
+
+   for filename in log_files:
+      peer = (re.findall(r'(\d+).txt$', filename))[0]
+      print(filename)
+      print(peer)
+      with open(filename, "r") as file:
+         line = file.readline()
+         while(line):
+
             try:
-               data = json.load(file)
+               data = json.loads(line)
                view = list(data['view'])
                time = data['time']
                time_sec = time_diff_sec(start_time, time)
@@ -465,6 +470,26 @@ if args.get("a") == True:
                graph_data[time_sec][peer]['nr_groups'] = nr_groups
             except Exception:
                print("LOADING JSON ERROR!")
+            line = file.readline()
+
+   print(graph_data)         
+   #
+   # for directory in dirs:
+   #    peer = (re.findall(r'\d+$', directory))[0]
+   #    filenames = [os.path.join(directory, o) for o in os.listdir(directory)]
+   #    for filename in filenames:
+   #       print(filename)
+   #       with open(filename, "r") as file:
+   #          try:
+   #             data = json.load(file)
+   #             view = list(data['view'])
+   #             time = data['time']
+   #             time_sec = time_diff_sec(start_time, time)
+   #             nr_groups = data['nr_groups']
+   #             graph_data[time_sec][peer]['view'] = view
+   #             graph_data[time_sec][peer]['nr_groups'] = nr_groups
+   #          except Exception:
+   #             print("LOADING JSON ERROR!")
 
    calculate_mean_recover_time(graph_data)
 

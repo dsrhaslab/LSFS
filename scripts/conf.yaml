@@ -7,8 +7,8 @@ main_confs:
   base_port: 12350
   peer_instantiation_interval_sec: 0.01
   log_interval_sec: 5
-  logging_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/logging_extra15/
-  results_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/results_extra15/
+  logging_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/logging/logging_extra16/
+  results_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/results/results_extra16/
   rep_max: 10
   rep_min: 5
   max_age: 25
