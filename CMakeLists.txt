@@ -10,6 +10,7 @@ find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(Boost COMPONENTS system thread REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(spdlog REQUIRED)
 
 # check if protobuf was found
 if(PROTOBUF_FOUND)
@@ -76,6 +77,7 @@ target_link_libraries(peer_exe PUBLIC ${Boost_LIBRARIES})
 target_include_directories(peer_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(peer_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(peer_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(peer_exe PRIVATE spdlog::spdlog)
 
 add_executable( client_exe
         ${packetSources}
@@ -118,16 +120,46 @@ add_executable( lsfs_exe
         fuse/lsfs_impl.cpp
         fuse/lsfs_impl.h
         fuse/lsfs.cpp
-        fuse/fuse_ram_fs/inode.cpp
-        fuse/fuse_ram_fs/inode.h
-        fuse/fuse_ram_fs/directory.cpp
-        fuse/fuse_ram_fs/directory.h
-        fuse/fuse_ram_fs/file.cpp
-        fuse/fuse_ram_fs/file.h
-        fuse/fuse_ram_fs/special_inode.cpp
-        fuse/fuse_ram_fs/special_inode.h
-        fuse/fuse_ram_fs/symlink.cpp
-        fuse/fuse_ram_fs/symlink.h)
+#        fuse/fuse_ram_fs/inode.cpp
+#        fuse/fuse_ram_fs/inode.h
+#        fuse/fuse_ram_fs/directory.cpp
+#        fuse/fuse_ram_fs/directory.h
+#        fuse/fuse_ram_fs/file.cpp
+#        fuse/fuse_ram_fs/file.h
+#        fuse/fuse_ram_fs/special_inode.cpp
+#        fuse/fuse_ram_fs/special_inode.h
+#        fuse/fuse_ram_fs/symlink.cpp
+#        fuse/fuse_ram_fs/symlink.h
+        fuse/passthrough_helpers.h)
 
 target_compile_definitions(lsfs_exe PRIVATE FUSE_USE_VERSION=35 _FILE_OFFSET_BITS=64)
 target_link_libraries(lsfs_exe fuse)
+
+add_executable( lsfs_haslab_exe
+        fuse/passthrough_haslab/main.cpp
+        fuse/passthrough_haslab/fuse31.h
+        fuse/passthrough_haslab/ops.h
+        fuse/passthrough_haslab/ops.cpp
+        fuse/passthrough_haslab/ops_createdelete.h
+        fuse/passthrough_haslab/ops_createdelete.cpp
+        fuse/passthrough_haslab/ops_dir.h
+        fuse/passthrough_haslab/ops_dir.cpp
+        fuse/passthrough_haslab/ops_file.h
+        fuse/passthrough_haslab/ops_file.cpp
+        fuse/passthrough_haslab/ops_filesystem.h
+        fuse/passthrough_haslab/ops_filesystem.cpp
+        fuse/passthrough_haslab/ops_initdestroy.h
+        fuse/passthrough_haslab/ops_initdestroy.cpp
+        fuse/passthrough_haslab/ops_metadata.h
+        fuse/passthrough_haslab/ops_metadata.cpp
+        fuse/passthrough_haslab/ops_symlink.h
+        fuse/passthrough_haslab/ops_symlink.cpp
+        fuse/passthrough_haslab/ops_xattr.h
+        fuse/passthrough_haslab/ops_xattr.cpp
+        fuse/passthrough_haslab/static_checks.cpp
+        fuse/passthrough_haslab/util.h
+        fuse/passthrough_haslab/util.cpp
+        )
+
+target_compile_definitions(lsfs_haslab_exe PRIVATE FUSE_USE_VERSION=35 _FILE_OFFSET_BITS=64)
+target_link_libraries(lsfs_haslab_exe fuse3)

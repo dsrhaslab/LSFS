@@ -13,6 +13,7 @@
 #include <atomic>
 #include <pss_message.pb.h>
 #include <df_store/kv_store.h>
+#include <spdlog/logger.h>
 #include "peer_data.h"
 
 class group_construction {
@@ -34,10 +35,11 @@ private:
     std::atomic<bool> first_message; //se estamos a iniciar o protocolo de group construction
     int sender_socket;
     std::shared_ptr<kv_store> store;
+    std::shared_ptr<spdlog::logger> logger;
 
 public:
     group_construction(std::string ip, int port, long id, double position, int replication_factor_min,
-                       int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store> store);
+                       int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store> store, std::shared_ptr<spdlog::logger> logger);
 
     std::vector<peer_data> get_local_view();
 
