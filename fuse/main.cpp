@@ -4,6 +4,8 @@
 
 #include "lsfs_impl.h"
 
+// sudo ./lsfs_exe /home/danielsf97/Desktop/Tese/P2P-Filesystem/Teste/InnerFolder/ /home/danielsf97/Desktop/Tese/P2P-Filesystem/Teste/InnerFolder2/
+
 int main(int argc, char *argv[])
 {
 

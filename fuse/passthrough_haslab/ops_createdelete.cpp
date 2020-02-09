@@ -8,14 +8,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "ops_createdelete.h"
-
-#include "fuse31.h"
 #include "util.h"
+#include "../lsfs_impl.h"
 
 /* -------------------------------------------------------------------------- */
 
-int fuse_high_pt_ops_mknod(
+int lsfs_impl::_mknod(
     const char *path, mode_t mode, dev_t rdev
     )
 {
@@ -29,21 +27,21 @@ int fuse_high_pt_ops_mknod(
     return return_value;
 }
 
-int fuse_high_pt_ops_link(
+int lsfs_impl::_link(
     const char *from, const char *to
     )
 {
     return (link(from, to) == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_unlink(
+int lsfs_impl::_unlink(
     const char *path
     )
 {
     return (unlink(path) == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_rename(
+int lsfs_impl::_rename(
     const char *from, const char *to, unsigned int flags
     )
 {
@@ -53,7 +51,7 @@ int fuse_high_pt_ops_rename(
     return (rename(from, to) == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_mkdir(
+int lsfs_impl::_mkdir(
     const char *path, mode_t mode
     )
 {
@@ -67,7 +65,7 @@ int fuse_high_pt_ops_mkdir(
     return return_value;
 }
 
-int fuse_high_pt_ops_rmdir(
+int lsfs_impl::_rmdir(
     const char *path
     )
 {

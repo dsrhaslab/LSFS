@@ -11,10 +11,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "ops_file.h"
-
-#include "fuse31.h"
 #include "util.h"
+#include "../lsfs_impl.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -52,7 +50,7 @@ static int create_or_open(
 
 /* -------------------------------------------------------------------------- */
 
-int fuse_high_pt_ops_create(
+int lsfs_impl::_create(
     const char *path, mode_t mode,
     struct fuse_file_info *fi
     )
@@ -67,7 +65,7 @@ int fuse_high_pt_ops_create(
     return return_value;
 }
 
-int fuse_high_pt_ops_open(
+int lsfs_impl::_open(
     const char *path,
     struct fuse_file_info *fi
     )
@@ -75,7 +73,7 @@ int fuse_high_pt_ops_open(
     return create_or_open(false, path, 0, fi);
 }
 
-int fuse_high_pt_ops_release(
+int lsfs_impl::_release(
     const char *path,
     struct fuse_file_info *fi
     )
@@ -85,7 +83,7 @@ int fuse_high_pt_ops_release(
     return (close((int)fi->fh) == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_fsync(
+int lsfs_impl::_fsync(
     const char *path, int isdatasync,
     struct fuse_file_info *fi
     )
@@ -99,7 +97,7 @@ int fuse_high_pt_ops_fsync(
     return (result == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_read(
+int lsfs_impl::_read(
     const char *path, char *buf, size_t size, off_t offset,
     struct fuse_file_info *fi
     )
@@ -114,7 +112,7 @@ int fuse_high_pt_ops_read(
     return result;
 }
 
-int fuse_high_pt_ops_write(
+int lsfs_impl::_write(
     const char *path, const char *buf, size_t size, off_t offset,
     struct fuse_file_info *fi
     )
@@ -129,7 +127,7 @@ int fuse_high_pt_ops_write(
     return result;
 }
 
-int fuse_high_pt_ops_read_buf(
+int lsfs_impl::_read_buf(
     const char *path, struct fuse_bufvec **bufp, size_t size, off_t offset,
     struct fuse_file_info *fi
     )
@@ -152,7 +150,7 @@ int fuse_high_pt_ops_read_buf(
     return 0;
 }
 
-int fuse_high_pt_ops_write_buf(
+int lsfs_impl::_write_buf(
     const char *path, struct fuse_bufvec *buf, off_t offset,
     struct fuse_file_info *fi
     )

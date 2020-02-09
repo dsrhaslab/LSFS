@@ -3,14 +3,12 @@
 #include <errno.h>
 #include <sys/statvfs.h>
 
-#include "ops_filesystem.h"
-
-#include "fuse31.h"
 #include "util.h"
+#include "../lsfs_impl.h"
 
 /* -------------------------------------------------------------------------- */
 
-int fuse_high_pt_ops_statfs(
+int lsfs_impl::_statfs(
     const char *path, struct statvfs *stbuf
     )
 {

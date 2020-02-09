@@ -9,14 +9,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "ops_metadata.h"
-
-#include "fuse31.h"
 #include "util.h"
+#include "../lsfs_impl.h"
 
 /* -------------------------------------------------------------------------- */
 
-int fuse_high_pt_ops_getattr(
+int lsfs_impl::_getattr(
     const char *path, struct stat *stbuf,
     struct fuse_file_info *fi
     )
@@ -26,7 +24,7 @@ int fuse_high_pt_ops_getattr(
     return (result == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_chmod(
+int lsfs_impl::_chmod(
     const char *path, mode_t mode,
     struct fuse_file_info *fi
     )
@@ -36,7 +34,7 @@ int fuse_high_pt_ops_chmod(
     return (result == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_chown(
+int lsfs_impl::_chown(
     const char *path, uid_t uid, gid_t gid,
     struct fuse_file_info *fi
     )
@@ -49,7 +47,7 @@ int fuse_high_pt_ops_chown(
     return (result == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_utimens(
+int lsfs_impl::_utimens(
     const char *path, const struct timespec ts[2],
     struct fuse_file_info *fi
     )
@@ -64,7 +62,7 @@ int fuse_high_pt_ops_utimens(
     return (result == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_truncate(
+int lsfs_impl::_truncate(
     const char *path, off_t size,
     struct fuse_file_info *fi
     )
@@ -74,7 +72,7 @@ int fuse_high_pt_ops_truncate(
     return (result == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_fallocate(
+int lsfs_impl::_fallocate(
     const char *path, int mode, off_t offset, off_t length,
     struct fuse_file_info *fi
     )

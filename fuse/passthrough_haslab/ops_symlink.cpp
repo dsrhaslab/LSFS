@@ -5,14 +5,12 @@
 #include <stddef.h>
 #include <unistd.h>
 
-#include "ops_symlink.h"
-
-#include "fuse31.h"
 #include "util.h"
+#include "../lsfs_impl.h"
 
 /* -------------------------------------------------------------------------- */
 
-int fuse_high_pt_ops_symlink(
+int lsfs_impl::_symlink(
     const char *from, const char *to
     )
 {
@@ -26,7 +24,7 @@ int fuse_high_pt_ops_symlink(
     return return_value;
 }
 
-int fuse_high_pt_ops_readlink(
+int lsfs_impl::_readlink(
     const char *path, char *buf, size_t size
     )
 {

@@ -9,10 +9,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "ops_initdestroy.h"
-
-#include "fuse31.h"
 #include "util.h"
+#include "../lsfs_impl.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -27,7 +25,7 @@ static void change_root(const char *new_root)
 
 /* -------------------------------------------------------------------------- */
 
-void *fuse_high_pt_ops_init(
+void*  lsfs_impl::_init(
     struct fuse_conn_info *conn,
     struct fuse_config *cfg
     )
@@ -70,7 +68,7 @@ void *fuse_high_pt_ops_init(
     return NULL;
 }
 
-void fuse_high_pt_ops_destroy(
+void lsfs_impl::_destroy(
     void *private_data
     )
 {

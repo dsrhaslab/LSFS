@@ -16,10 +16,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "ops_dir.h"
-
-#include "fuse31.h"
 #include "util.h"
+#include "../lsfs_impl.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -37,7 +35,7 @@ inline static struct dir_handle *get_dir_handle(struct fuse_file_info *fi)
 
 /* -------------------------------------------------------------------------- */
 
-int fuse_high_pt_ops_opendir(
+int lsfs_impl::_opendir(
     const char *path,
     struct fuse_file_info *fi
     )
@@ -71,7 +69,7 @@ int fuse_high_pt_ops_opendir(
     return 0;
 }
 
-int fuse_high_pt_ops_releasedir(
+int lsfs_impl::_releasedir(
     const char *path,
     struct fuse_file_info *fi
     )
@@ -88,7 +86,7 @@ int fuse_high_pt_ops_releasedir(
     return 0;
 }
 
-int fuse_high_pt_ops_fsyncdir(
+int lsfs_impl::_fsyncdir(
     const char *path, int isdatasync,
     struct fuse_file_info *fi
     )
@@ -102,11 +100,10 @@ int fuse_high_pt_ops_fsyncdir(
     return (result == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_readdir(
-    const char *path, void *buf, fuse_fill_dir_t filler,
-    off_t offset, struct fuse_file_info *fi,
-    enum fuse_readdir_flags flags
-    )
+int lsfs_impl::_readdir(
+        const char *path, void *buf, fuse_fill_dir_t filler,
+        off_t offset, struct fuse_file_info *fi,
+        enum fuse_readdir_flags flags)
 {
     (void)path;
 

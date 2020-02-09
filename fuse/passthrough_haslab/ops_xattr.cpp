@@ -5,14 +5,12 @@
 #include <sys/types.h>
 #include <sys/xattr.h>
 
-#include "ops_xattr.h"
-
-#include "fuse31.h"
 #include "util.h"
+#include "../lsfs_impl.h"
 
 /* -------------------------------------------------------------------------- */
 
-int fuse_high_pt_ops_getxattr(
+int lsfs_impl::_getxattr(
     const char *path,
     const char *name, char *value, size_t size
     )
@@ -20,7 +18,7 @@ int fuse_high_pt_ops_getxattr(
     return (lgetxattr(path, name, value, size) == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_setxattr(
+int lsfs_impl::_setxattr(
     const char *path,
     const char *name, const char *value, size_t size,
     int flags
@@ -29,7 +27,7 @@ int fuse_high_pt_ops_setxattr(
     return (lsetxattr(path, name, value, size, flags) == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_listxattr(
+int lsfs_impl::_listxattr(
     const char *path,
     char *list, size_t size
     )
@@ -37,7 +35,7 @@ int fuse_high_pt_ops_listxattr(
     return (llistxattr(path, list, size) == 0) ? 0 : -errno;
 }
 
-int fuse_high_pt_ops_removexattr(
+int lsfs_impl::_removexattr(
     const char *path,
     const char *name
     )
