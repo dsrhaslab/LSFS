@@ -7,12 +7,13 @@
 
 
 #include <string>
-#include <df_loadbalancing/load_balancer.h>
 #include <thread>
 #include <atomic>
-#include <kv_message.pb.h>
-#include <df_core/peer_data.h>
 #include "client_reply_handler.h"
+#include "../df_loadbalancing/dynamic_load_balancer.h"
+#include "../df_loadbalancing/load_balancer_listener.h"
+#include "../kv_message.pb.h"
+#include "../df_core/peer_data.h"
 
 class client {
 private:
@@ -20,14 +21,20 @@ private:
     long id;
     int port;
     int sender_socket;
-    load_balancer* lb;
     std::atomic<long> request_count;
     int nr_puts_required;
-    client_reply_handler handler;
+
+    std::shared_ptr<dynamic_load_balancer> lb;
+    std::thread lb_th;
+
+    std::shared_ptr<load_balancer_listener> lb_listener;
+    std::thread lb_listener_th;
+
+    std::shared_ptr<client_reply_handler> handler;
     std::thread handler_th;
 
 public:
-    client(std::string ip, long id, int port, load_balancer* lb, int nr_puts_required, long wait_timeout);
+    client(std::string ip, long id, int port, int lb_port);
     void stop();
     std::set<long> put(long key, long version, const char* data);
     std::shared_ptr<const char []> get(long node_id, long key, long version);

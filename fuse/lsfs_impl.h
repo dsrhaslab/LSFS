@@ -9,6 +9,7 @@
 #include <queue>
 #include "fuse_wrapper.h"
 #include "fuse_wrapper.cpp"
+#include "../df_client/client.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -16,11 +17,17 @@
 #include <unistd.h>
 #include <cstddef>
 #include <sys/statvfs.h>
+#include <spdlog/logger.h>
+
+extern std::mutex fhs_mutex;
+extern std::unordered_map<int, std::string> file_handlers;
+extern std::unique_ptr<client> df_client;
+extern std::shared_ptr<spdlog::logger> logger;
 
 class lsfs_impl : public fuse_wrapper::fuse<lsfs_impl>{
 
 public:
-    lsfs_impl() = default;
+    lsfs_impl();
     ~lsfs_impl() = default;
 
     /* ---------------------------- ops_createdelete.cpp ----------------------*/
@@ -108,15 +115,15 @@ public:
             struct fuse_file_info *fi
     );
 
-    static int _read_buf(
-            const char *path, struct fuse_bufvec **bufp, size_t size, off_t offset,
-            struct fuse_file_info *fi
-    );
-
-    static int _write_buf(
-            const char *path, struct fuse_bufvec *buf, off_t offset,
-            struct fuse_file_info *fi
-    );
+//    static int _read_buf(
+//            const char *path, struct fuse_bufvec **bufp, size_t size, off_t offset,
+//            struct fuse_file_info *fi
+//    );
+//
+//    static int _write_buf(
+//            const char *path, struct fuse_bufvec *buf, off_t offset,
+//            struct fuse_file_info *fi
+//    );
 
 /* -------------------------------------------------------------------------- */
 

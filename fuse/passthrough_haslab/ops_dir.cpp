@@ -40,6 +40,9 @@ int lsfs_impl::_opendir(
     struct fuse_file_info *fi
     )
 {
+//    logger->info("OPENDIR " + std::string(path));
+//    logger->flush();
+
     // allocate dir_handle
 
     struct dir_handle *const dir = static_cast<dir_handle *const>(malloc(sizeof(struct dir_handle)));
@@ -74,6 +77,9 @@ int lsfs_impl::_releasedir(
     struct fuse_file_info *fi
     )
 {
+//    logger->info("RELEASEDIR ");
+//    logger->flush();
+
     (void)path;
 
     struct dir_handle *const dir = get_dir_handle(fi);
@@ -91,6 +97,9 @@ int lsfs_impl::_fsyncdir(
     struct fuse_file_info *fi
     )
 {
+//    logger->info("FSYNCDIR ");
+//    logger->flush();
+
     (void)path;
 
     const int fd = dirfd(get_dir_handle(fi)->dir_ptr);
@@ -105,6 +114,9 @@ int lsfs_impl::_readdir(
         off_t offset, struct fuse_file_info *fi,
         enum fuse_readdir_flags flags)
 {
+//    logger->info("READDIR ");
+//    logger->flush();
+
     (void)path;
 
     struct dir_handle *const dir = get_dir_handle(fi);

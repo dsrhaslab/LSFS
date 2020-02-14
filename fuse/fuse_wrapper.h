@@ -5,6 +5,8 @@
 #ifndef P2PFS_FUSE_WRAPPER_H
 #define P2PFS_FUSE_WRAPPER_H
 
+#define FUSE_PASSTHROUGH_DEBUG
+
 #ifndef FUSE_USE_VERSION
 #define FUSE_USE_VERSION 35
 #endif
@@ -109,10 +111,10 @@ namespace fuse_wrapper
             add_fuse_arg(&args, "-oallow_other");
             add_fuse_arg(&args, "-odefault_permissions");
 
-        //#ifdef FUSE_PASSTHROUGH_DEBUG
+        #ifdef FUSE_PASSTHROUGH_DEBUG
             add_fuse_arg(&args, "-f");
             add_fuse_arg(&args, "-d");
-        //#endif
+        #endif
 
             return args;
         }

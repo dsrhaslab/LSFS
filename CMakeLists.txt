@@ -115,6 +115,29 @@ target_include_directories(client_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CU
 
 
 add_executable( lsfs_exe
+        ${packetSources}
+        df_tcp_client_server_connection/tcp_client_connection.cpp
+        df_tcp_client_server_connection/tcp_server_connection.cpp
+        df_serializer/serializer.h
+        df_serializer/capnp/capnp_serializer.h
+        df_serializer/capnp/capnp_serializer.cpp
+        df_pss/pss_message.h
+        df_core/peer_data.h
+        ${INCLUDE_HEADERS}
+        ${PROTO_SRCS}
+        ${PROTO_HDRS}
+        df_communication/udp_async_server.h
+        df_communication/udp_async_server.cpp
+        df_loadbalancing/load_balancer.h
+        df_loadbalancing/dynamic_load_balancer.cpp
+        df_loadbalancing/dynamic_load_balancer.h
+        df_loadbalancing/load_balancer_listener.cpp
+        df_loadbalancing/load_balancer_listener.h
+        df_client/client.cpp
+        df_client/client.h
+        df_client/client_reply_handler.cpp
+        df_client/client_reply_handler.h
+
         fuse/fuse_wrapper.cpp
         fuse/fuse_wrapper.h
         fuse/lsfs_impl.h
@@ -130,7 +153,17 @@ add_executable( lsfs_exe
         fuse/passthrough_haslab/static_checks.cpp
         fuse/passthrough_haslab/util.h
         fuse/passthrough_haslab/util.cpp
-        fuse/passthrough_haslab/fuse35.h)
+        fuse/passthrough_haslab/fuse35.h fuse/lsfs_impl.cpp
+        )
 
+target_link_libraries(lsfs_exe PRIVATE CapnProto::capnp)
+target_link_libraries(lsfs_exe PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(lsfs_exe PRIVATE yaml-cpp)
+target_link_libraries(lsfs_exe PUBLIC ${PROTOBUF_LIBRARIES})
+target_link_libraries(lsfs_exe PUBLIC ${Boost_LIBRARIES})
+target_link_libraries(lsfs_exe PRIVATE spdlog::spdlog)
+target_link_libraries(lsfs_exe PUBLIC fuse3)
+target_include_directories(lsfs_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(lsfs_exe PRIVATE ${INCLUDE_DIRECTORY})
+target_include_directories(lsfs_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(lsfs_exe PRIVATE FUSE_USE_VERSION=35 _FILE_OFFSET_BITS=64)
-target_link_libraries(lsfs_exe fuse3)

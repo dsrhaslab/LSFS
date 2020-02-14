@@ -30,6 +30,10 @@ void*  lsfs_impl::_init(
     struct fuse_config *cfg
     )
 {
+
+    logger->info("INIT");
+    logger->flush();
+
     // clear umask
 
     umask(0);
@@ -40,15 +44,15 @@ void*  lsfs_impl::_init(
 
     // configure fuse
 
-    conn->want |= FUSE_CAP_WRITEBACK_CACHE;
+//    conn->want |= FUSE_CAP_WRITEBACK_CACHE;
+//
+//    conn->want |= FUSE_CAP_SPLICE_MOVE;
+//    conn->want |= FUSE_CAP_SPLICE_READ;
+//    conn->want |= FUSE_CAP_SPLICE_WRITE;
 
-    conn->want |= FUSE_CAP_SPLICE_MOVE;
-    conn->want |= FUSE_CAP_SPLICE_READ;
-    conn->want |= FUSE_CAP_SPLICE_WRITE;
-
-    cfg->direct_io    = 1; // to avoid double-caching
-    cfg->kernel_cache = 1;
-    cfg->nullpath_ok  = 1;
+//    cfg->direct_io    = 1; // to avoid double-caching
+//    cfg->kernel_cache = 1; //supostamente tem de estar disable para filesystems cujos dados podem mudar externamente (network file systems)
+//    cfg->nullpath_ok  = 1;
     cfg->use_ino      = 1;
 
     cfg->entry_timeout    = DBL_MAX;
@@ -72,6 +76,9 @@ void lsfs_impl::_destroy(
     void *private_data
     )
 {
+    logger->info("Destroy");
+    logger->flush();
+
     (void)private_data;
 }
 

@@ -8,8 +8,9 @@
 
 #include <vector>
 #include <atomic>
-#include <pss_message.pb.h>
 #include "load_balancer.h"
+#include "../df_core/peer_data.h"
+#include "../pss_message.pb.h"
 
 class dynamic_load_balancer: public load_balancer {
 private:

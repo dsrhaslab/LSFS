@@ -8,17 +8,46 @@
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
-#include <kv_message.pb.h>
+#include <memory>
+#include "yaml-cpp/yaml.h"
+#include "../df_core/peer.h"
 
-client::client(std::string ip, long id, int port, load_balancer* lb, int nr_puts_required, long wait_timeout):
-    ip(ip), id(id), port(port), nr_puts_required(nr_puts_required), sender_socket(socket(PF_INET, SOCK_DGRAM, 0)),
-    lb(lb), request_count(0), handler(client_reply_handler(ip, port, nr_puts_required, wait_timeout)), handler_th(std::thread (std::ref(this->handler)))
-{}
+client::client(std::string ip, long id, int port, int lb_port):
+    ip(ip), id(id), port(port), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
+    , request_count(0)
+{
+    YAML::Node config = YAML::LoadFile("scripts/conf.yaml");
+    auto main_confs = config["main_confs"];
+    this->nr_puts_required = main_confs["nr_puts_required"].as<int>();
+    std::cout << 1 << std::endl;
+    long wait_timeout = main_confs["client_wait_timeout"].as<long>();
+    std::cout << 2 << std::endl;
+    long lb_interval = main_confs["lb_interval"].as<long>();
+    std::cout << 3 << std::endl;
+
+    this->lb = std::make_shared<dynamic_load_balancer>(peer::boot_ip, peer::boot_port, ip, lb_port, lb_interval);
+    this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip, lb_port);
+
+    this->lb_th = std::thread (std::ref(*this->lb));
+    this->lb_listener_th = std::thread (std::ref(*this->lb_listener));
+
+    this->handler = std::make_shared<client_reply_handler>(ip, port, nr_puts_required, wait_timeout);
+    this->handler_th = std::thread (std::ref(*this->handler));
+}
 
 void client::stop(){
+    lb->stop();
+    std::cout << "stopped load balancer" << std::endl;
+    lb_listener->stop();
+    std::cout << "stopped load balancer listener" << std::endl;
+    lb_th.join();
+    std::cout << "stopped load balancer thread" << std::endl;
+    lb_listener_th.join();
+    std::cout << "stopped load balancer listener thread" << std::endl;
     close(sender_socket);
-    handler.stop();
+    handler->stop();
     handler_th.join();
+    std::cout << "stopped df_client" << std::endl;
 }
 
 long client::inc_and_get_request_count() {
@@ -81,13 +110,15 @@ int client::send_put(peer_data &peer, long key, long version, const char *data) 
 }
 
 std::set<long> client::put(long key, long version, const char *data) {
-   this->handler.register_put(key);
+   this->handler->register_put(key);
    std::unique_ptr<std::set<long>> res = nullptr;
    while(res == nullptr || res->size() < this->nr_puts_required){
+       std::cout << "WAITING FOR PUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT" << std::endl;
        peer_data peer = this->lb->get_random_peer();
        int status = this->send_put(peer, key, version, data);
        if(status == 0){
-           res = this->handler.wait_for_put(key);
+           res = this->handler->wait_for_put(key);
+//           std::cout << "SIZE: " << res->size() << std::endl;
        }
    }
    return *res;
@@ -96,13 +127,13 @@ std::set<long> client::put(long key, long version, const char *data) {
 std::shared_ptr<const char []> client::get(long node_id, long key, long version) {
     long req_id = this->inc_and_get_request_count();
     std::string req_id_str = std::to_string(this->id) +":" + this->ip + ":" + std::to_string(this->port) + ":" + std::to_string(req_id);
-    this->handler.register_get(req_id_str);
+    this->handler->register_get(req_id_str);
     std::shared_ptr<const char []> res (nullptr);
     while(res == nullptr){
         peer_data peer = this->lb->get_random_peer();
         int status = this->send_get(peer, key, version, req_id_str);
         if(status == 0){
-            res = this->handler.wait_for_get(req_id_str);
+            res = this->handler->wait_for_get(req_id_str);
         }
     }
     return res;

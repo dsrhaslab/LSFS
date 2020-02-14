@@ -11,10 +11,8 @@
 #include <stdexcept>
 #include "../df_serializer/serializer.h"
 #include <memory>
-#include "df_serializer/capnp/packet.capnp.h"
 #include <unordered_map>
 #include <vector>
-#include <df_pss/pss_message.h>
 
 namespace tcp_client_server_connection
 {

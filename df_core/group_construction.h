@@ -11,10 +11,9 @@
 #include <unordered_map>
 #include <vector>
 #include <atomic>
-#include <pss_message.pb.h>
-#include <df_store/kv_store.h>
 #include <spdlog/logger.h>
 #include "peer_data.h"
+#include "../df_store/kv_store.h"
 
 class group_construction {
 private:

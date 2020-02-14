@@ -15,6 +15,9 @@ int lsfs_impl::_getxattr(
     const char *name, char *value, size_t size
     )
 {
+    logger->info("GETXATTR " + std::string(path));
+    logger->flush();
+
     return (lgetxattr(path, name, value, size) == 0) ? 0 : -errno;
 }
 
@@ -24,6 +27,9 @@ int lsfs_impl::_setxattr(
     int flags
     )
 {
+    logger->info("SETXATTR " + std::string(path));
+    logger->flush();
+
     return (lsetxattr(path, name, value, size, flags) == 0) ? 0 : -errno;
 }
 
@@ -32,6 +38,9 @@ int lsfs_impl::_listxattr(
     char *list, size_t size
     )
 {
+    logger->info("LISTXATTR " + std::string(path));
+    logger->flush();
+
     return (llistxattr(path, list, size) == 0) ? 0 : -errno;
 }
 
@@ -40,6 +49,9 @@ int lsfs_impl::_removexattr(
     const char *name
     )
 {
+    logger->info("REMOVEXATTR " + std::string(path));
+    logger->flush();
+
     return (lremovexattr(path, name) == 0) ? 0 : -errno;
 }
 

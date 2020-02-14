@@ -19,7 +19,18 @@ int lsfs_impl::_getattr(
     struct fuse_file_info *fi
     )
 {
+    if (strcmp(path, "/") != 0) {
+        logger->info("GETATTR " + std::string(path));
+        logger->flush();
+
+        const int result = fi ? fstat((int)fi->fh, stbuf) : lstat(path, stbuf);
+
+        return (result == 0) ? 0 : -errno;
+    }
+
     const int result = fi ? fstat((int)fi->fh, stbuf) : lstat(path, stbuf);
+
+
 
     return (result == 0) ? 0 : -errno;
 }
@@ -29,6 +40,14 @@ int lsfs_impl::_chmod(
     struct fuse_file_info *fi
     )
 {
+    if (path){
+        logger->info("CHMOD " + std::string(path));
+        logger->flush();
+    }else{
+        logger->info("CHMOD");
+        logger->flush();
+    }
+
     const int result = fi ? fchmod((int)fi->fh, mode) : chmod(path, mode);
 
     return (result == 0) ? 0 : -errno;
@@ -39,6 +58,14 @@ int lsfs_impl::_chown(
     struct fuse_file_info *fi
     )
 {
+    if (path){
+        logger->info("CHOWN " + std::string(path));
+        logger->flush();
+    }else{
+        logger->info("CHOWN");
+        logger->flush();
+    }
+
     const int result =
         fi ?
         fchown((int)fi->fh, uid, gid) :
@@ -52,6 +79,14 @@ int lsfs_impl::_utimens(
     struct fuse_file_info *fi
     )
 {
+    if (path){
+        logger->info("UTIMENS " + std::string(path));
+        logger->flush();
+    }else{
+        logger->info("UTIMENS");
+        logger->flush();
+    }
+
     int result;
 
     if (fi)
@@ -67,6 +102,14 @@ int lsfs_impl::_truncate(
     struct fuse_file_info *fi
     )
 {
+    if (path){
+        logger->info("TRUNCATE " + std::string(path) + " SIZE" + std::to_string(size));
+        logger->flush();
+    }else{
+        logger->info("TRUNCATE SIZE" + std::to_string(size));
+        logger->flush();
+    }
+
     const int result = fi ? ftruncate((int)fi->fh, size) : truncate(path, size);
 
     return (result == 0) ? 0 : -errno;
@@ -77,6 +120,14 @@ int lsfs_impl::_fallocate(
     struct fuse_file_info *fi
     )
 {
+    if (path){
+        logger->info("FALLOCATE " + std::string(path) + " LENGTH:" + std::to_string(length) + " OFFSET:" + std::to_string(offset));
+        logger->flush();
+    }else{
+        logger->info("FALLOCATE LENGTH:" + std::to_string(length) + " OFFSET:" + std::to_string(offset));
+        logger->flush();
+    }
+
     (void)path;
 
     return (fallocate((int)fi->fh, mode, offset, length) == 0) ? 0 : -errno;

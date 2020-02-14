@@ -10,14 +10,14 @@
 
 class load_balancer_listener {
 private:
-    dynamic_load_balancer* dlb;
+    std::shared_ptr<load_balancer> lb;
     int socket_rcv;
     std::atomic<bool> running;
     std::string ip;
     int port;
 
 public:
-    load_balancer_listener(dynamic_load_balancer* dlb, std::string ip, int port);
+    load_balancer_listener(std::shared_ptr<load_balancer> lb, std::string ip, int port);
     ~load_balancer_listener();
     void stop();
     void operator()();

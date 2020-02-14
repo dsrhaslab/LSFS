@@ -430,8 +430,8 @@ if args.get("e") == True:
    for p in procs:
       p.terminate()
 
-   # for p in procs:
-   #    p.wait()
+   for p in procs:
+      p.wait()
 
    boot_proc.terminate()
 

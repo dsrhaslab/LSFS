@@ -153,3 +153,8 @@ void print_error_errno_and_fail(const char *fmt, ...)
 }
 
 /* -------------------------------------------------------------------------- */
+
+bool is_temp_file(std::string path){
+    std::smatch match;
+    return std::regex_search(path, match, temp_extensions);
+}

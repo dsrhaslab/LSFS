@@ -3,10 +3,11 @@
 //
 
 #include "client_reply_handler.h"
+#include "../kv_message.pb.h"
 #include <netinet/in.h>
 #include <unistd.h>
-#include <kv_message.pb.h>
 #include <arpa/inet.h>
+#include <iostream>
 
 client_reply_handler::client_reply_handler(std::string ip, int port, int nr_puts_required, long wait_timeout):
     ip(ip), port(port), nr_puts_required(nr_puts_required), wait_timeout(wait_timeout), socket_rcv(socket(PF_INET, SOCK_DGRAM, 0))
@@ -111,6 +112,7 @@ std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(long key){
         //se existe entrada para a chave
         std::cout << "Checking if size of list match nr_puts_required" << std::endl;
         if(it->second.size() >= this->nr_puts_required){
+            std::cout << "Check -> Erasing ###########################" << std::endl;
             res = std::make_unique<std::set<long>>(it->second);
             this->put_replies.erase(it);
         }
