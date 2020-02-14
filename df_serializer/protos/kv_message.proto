@@ -6,7 +6,7 @@ message get_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  int64 key = 4;
+  string key = 4;
   int64 version = 5;
   string reqid = 6;
 }
@@ -15,7 +15,7 @@ message get_reply_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  int64 key = 4;
+  string key = 4;
   int64 version = 5;
   string reqid = 6;
   bytes data = 7;
@@ -25,7 +25,7 @@ message put_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  int64 key = 4;
+  string key = 4;
   int64 version = 5;
   bytes data = 6;
 }
@@ -34,12 +34,12 @@ message put_reply_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  int64 key = 4;
+  string key = 4;
   int64 version = 5;
 }
 
 message kv_store_key {
-  int64 key = 1;
+  string key = 1;
   int64 version = 2;
 }
 

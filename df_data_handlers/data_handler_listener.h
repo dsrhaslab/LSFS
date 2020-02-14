@@ -16,7 +16,7 @@ private:
     int nr_worker_threads = 3;
     boost::asio::io_service io_service;
     boost::thread_group thread_pool;
-    std::shared_ptr<kv_store> store;
+    std::shared_ptr<kv_store<std::string>> store;
     pss* pss_ptr;
     long id;
     std::string ip;
@@ -25,7 +25,7 @@ private:
     bool smart;
 
 public:
-    data_handler_listener(std::string ip, int port, long id, float chance, pss* pss, std::shared_ptr<kv_store> store, bool smart);
+    data_handler_listener(std::string ip, int port, long id, float chance, pss* pss, std::shared_ptr<kv_store<std::string>> store, bool smart);
     void stop_thread();
     void operator()();
 };

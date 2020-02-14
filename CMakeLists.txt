@@ -42,7 +42,6 @@ target_link_libraries(bootstrapper_exe PUBLIC ${Boost_LIBRARIES})
 target_link_libraries(bootstrapper_exe PRIVATE yaml-cpp)
 
 add_executable( peer_exe
-        df_core/peer.cpp
         ${packetSources}
         df_pss/pss.h
         df_pss/pss.cpp
@@ -66,9 +65,12 @@ add_executable( peer_exe
         df_data_handlers/data_handler_listener.cpp
         df_data_handlers/data_handler_listener.h
         df_store/kv_store.h df_store/kv_store_key.h
-        df_store/kv_store_memory.cpp
         df_store/kv_store_memory.h
-        df_data_handlers/anti_entropy.cpp df_data_handlers/anti_entropy.h)
+        df_data_handlers/anti_entropy.cpp
+        df_data_handlers/anti_entropy.h
+        df_core/peer.h
+        df_core/peer.cpp
+        )
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)

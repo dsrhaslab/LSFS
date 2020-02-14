@@ -14,7 +14,7 @@
 //ou tem de se esperar mais tempo ou o numero de grupos n está a ser calculado corretamente
 
 group_construction::group_construction(std::string ip,int port, long id, double position, int replication_factor_min,
-        int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store> store, std::shared_ptr<spdlog::logger> logger){
+        int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store<std::string>> store, std::shared_ptr<spdlog::logger> logger){
     this->first_message = true;
     this->id = id;
     this->position = position;

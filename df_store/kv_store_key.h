@@ -5,14 +5,14 @@
 #ifndef P2PFS_KV_STORE_KEY_H
 #define P2PFS_KV_STORE_KEY_H
 
+template <typename T>
 struct kv_store_key {
-    long key;
+    T key;
     long version;
 
     inline bool operator==(const kv_store_key& other) const
     {
-        if (this->key == other.key && this->version == other.version) return true;
-        else return false;
+        return this->key == other.key && this->version == other.version;
     }
 
     inline bool operator<(const kv_store_key& other) const
@@ -27,10 +27,10 @@ struct kv_store_key {
 
 namespace std {
 
-    template <>
-    struct hash<kv_store_key>
+    template <typename T>
+    struct hash<kv_store_key<T>>
     {
-        std::size_t operator()(const kv_store_key& k) const
+        std::size_t operator()(const kv_store_key<T>& k) const
         {
             using std::size_t;
             using std::hash;
@@ -40,7 +40,7 @@ namespace std {
             // second and third and combine them using XOR
             // and bit shifting:
 
-            return ((hash<long>()(k.key)
+            return ((hash<T>()(k.key)
                      ^ (hash<long>()(k.version) << 1)) >> 1);
         }
     };

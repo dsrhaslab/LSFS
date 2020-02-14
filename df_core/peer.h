@@ -28,7 +28,7 @@ private:
     int data_port;
     std::string ip;
     double position;
-    std::shared_ptr<kv_store> store;
+    std::shared_ptr<kv_store<std::string>> store;
     pss cyclon;                     //thread functor que envia msgs
     group_construction group_c;
     pss_listener listener;

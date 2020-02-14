@@ -22,7 +22,7 @@ private:
     std::string ip;
     int port;
     long id;
-    std::shared_ptr<kv_store> store;
+    std::shared_ptr<kv_store<std::string>> store;
     pss* pss_ptr;
     float chance;
     int socket_send;
@@ -31,7 +31,7 @@ private:
     std::atomic<long> anti_entropy_req_count = 0;
 
 public:
-    data_handler_listener_worker(std::string ip, int port, long id,std::shared_ptr<kv_store> store, pss *pssPtr, float chance, bool smart_forward)
+    data_handler_listener_worker(std::string ip, int port, long id,std::shared_ptr<kv_store<std::string>> store, pss *pssPtr, float chance, bool smart_forward)
         : ip(std::move(ip)), port(port), id(id), chance(chance), pss_ptr(pssPtr), store(std::move(store)), socket_send(socket(PF_INET, SOCK_DGRAM, 0)), smart_forward(smart_forward)
     {
         srand (static_cast <unsigned> (time(nullptr))); //random seed
@@ -169,7 +169,7 @@ private:
         proto::get_message message = msg.get_msg();
         std::string sender_ip = message.ip();
         int sender_port = message.port();
-        long key = message.key();
+        std::string key = message.key();
         long version = message.version();
         std::string req_id = message.reqid();
         std::shared_ptr<const char[]> data(nullptr); //*data = undefined
@@ -250,7 +250,7 @@ private:
 
     void process_get_reply_message(const proto::kv_message &msg) {
         proto::get_reply_message message = msg.get_reply_msg();
-        long key = message.key();
+        std::string key = message.key();
         long version = message.version();
         if(!this->store->have_seen(key, version)){
             this->store->put(key, version, message.data().c_str());
@@ -261,7 +261,7 @@ private:
         proto::put_message message = msg.put_msg();
         std::string sender_ip = message.ip();
         int sender_port = message.port();
-        long key = message.key();
+        std::string key = message.key();
         long version = message.version();
         const char *data = message.data().c_str();
 
@@ -327,11 +327,11 @@ private:
 
     void process_anti_entropy_message(const proto::kv_message &msg) {
         proto::anti_entropy_message message = msg.anti_entropy_msg();
-        std::unordered_set<kv_store_key> keys = this->store->get_keys();
+        std::unordered_set<kv_store_key<std::string>> keys = this->store->get_keys();
 
-        std::unordered_set<kv_store_key> keys_to_request;
+        std::unordered_set<kv_store_key<std::string>> keys_to_request;
         for(auto& key : message.keys()){
-            kv_store_key kv_key = {key.key(), key.version()};
+            kv_store_key<std::string> kv_key = {key.key(), key.version()};
             if(keys.find(kv_key) == keys.end()){
                 // não possuimos a chave
                 if(this->store->get_slice_for_key(kv_key.key) == this->store->get_slice()){
@@ -357,7 +357,7 @@ private:
     }
 };
 
-data_handler_listener::data_handler_listener(std::string ip, int port, long id, float chance, pss *pss, std::shared_ptr<kv_store> store, bool smart)
+data_handler_listener::data_handler_listener(std::string ip, int port, long id, float chance, pss *pss, std::shared_ptr<kv_store<std::string>> store, bool smart)
     : ip(std::move(ip)), port(port), id(id), chance(chance), pss_ptr(pss), store(std::move(store)), smart(smart) {}
 
 void data_handler_listener::operator()() {

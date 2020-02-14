@@ -192,7 +192,7 @@ int lsfs_impl::_write(
         logger->flush();
 
         //dataflasks send
-        df_client->put(1, 1, buf);
+        df_client->put(path, 1, buf);
 
         return size;
     }

@@ -12,7 +12,7 @@
 #include "anti_entropy.h"
 
 anti_entropy::anti_entropy(std::string ip, int respond_to_port, long id, pss *pss_ptr,
-        std::shared_ptr<kv_store> store, long sleep_interval): ip(std::move(ip)), respond_to_port(respond_to_port), id(id), pss_ptr(pss_ptr),
+        std::shared_ptr<kv_store<std::string>> store, long sleep_interval): ip(std::move(ip)), respond_to_port(respond_to_port), id(id), pss_ptr(pss_ptr),
         store(std::move(store)), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {}
 

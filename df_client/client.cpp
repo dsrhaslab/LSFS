@@ -79,7 +79,7 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
     return 1;
 }
 
-int client::send_get(peer_data &peer, long key, long version, std::string req_id) {
+int client::send_get(peer_data &peer, std::string key, long version, std::string req_id) {
     proto::kv_message msg;
     auto* message_content = new proto::get_message();
     message_content->set_ip(this->ip);
@@ -95,7 +95,7 @@ int client::send_get(peer_data &peer, long key, long version, std::string req_id
     return send_msg(peer, msg);
 }
 
-int client::send_put(peer_data &peer, long key, long version, const char *data) {
+int client::send_put(peer_data &peer, std::string key, long version, const char *data) {
     proto::kv_message msg;
     auto* message_content = new proto::put_message();
     message_content->set_ip(this->ip);
@@ -109,7 +109,7 @@ int client::send_put(peer_data &peer, long key, long version, const char *data) 
     return send_msg(peer, msg);
 }
 
-std::set<long> client::put(long key, long version, const char *data) {
+std::set<long> client::put(std::string key, long version, const char *data) {
    this->handler->register_put(key);
    std::unique_ptr<std::set<long>> res = nullptr;
    while(res == nullptr || res->size() < this->nr_puts_required){
@@ -124,7 +124,7 @@ std::set<long> client::put(long key, long version, const char *data) {
    return *res;
 }
 
-std::shared_ptr<const char []> client::get(long node_id, long key, long version) {
+std::shared_ptr<const char []> client::get(long node_id, std::string key, long version) {
     long req_id = this->inc_and_get_request_count();
     std::string req_id_str = std::to_string(this->id) +":" + this->ip + ":" + std::to_string(this->port) + ":" + std::to_string(req_id);
     this->handler->register_get(req_id_str);

@@ -14,7 +14,7 @@
 class anti_entropy{
 private:
     pss* pss_ptr;
-    std::shared_ptr<kv_store> store;
+    std::shared_ptr<kv_store<std::string>> store;
     std::atomic<bool> running;
     long sleep_interval;
     int sender_socket;
@@ -23,7 +23,7 @@ private:
     long id;
 
 public:
-    anti_entropy(std::string ip, int respond_to_port, long id, pss* pss_ptr, std::shared_ptr<kv_store> store, long sleep_interval);
+    anti_entropy(std::string ip, int respond_to_port, long id, pss* pss_ptr, std::shared_ptr<kv_store<std::string>> store, long sleep_interval);
     void operator()();
     void stop_thread();
 

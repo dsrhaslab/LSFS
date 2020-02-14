@@ -65,7 +65,7 @@ void client_reply_handler::operator()() {
                     std::cout << "IS A PUT REPLY MESSAGE" << std::endl;
 
                     const proto::put_reply_message& msg = message.put_reply_msg();
-                    long key = msg.key();
+                    std::string key = msg.key();
                     long replier_id = msg.id();
 
                     std::unique_lock<std::mutex> lock(this->put_mutex);
@@ -91,7 +91,7 @@ void client_reply_handler::operator()() {
     }
 }
 
-void client_reply_handler::register_put(long key) {
+void client_reply_handler::register_put(std::string key) {
     std::unique_lock<std::mutex> lock(this->put_mutex);
     auto it = this->put_replies.find(key);
     if(it == this->put_replies.end()){
@@ -101,7 +101,7 @@ void client_reply_handler::register_put(long key) {
     }
 }
 
-std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(long key){
+std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(std::string key){
     std::unique_ptr<std::set<long>> res = nullptr;
 
     std::unique_lock<std::mutex> lock(this->put_mutex);
