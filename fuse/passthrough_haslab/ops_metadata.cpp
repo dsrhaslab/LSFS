@@ -19,18 +19,24 @@ int lsfs_impl::_getattr(
     struct fuse_file_info *fi
     )
 {
+    const int result = fi ? fstat((int)fi->fh, stbuf) : lstat(path, stbuf);
+
     if (strcmp(path, "/") != 0) {
         logger->info("GETATTR " + std::string(path));
         logger->flush();
 
-        const int result = fi ? fstat((int)fi->fh, stbuf) : lstat(path, stbuf);
+        if(!is_temp_file(path)){
+            logger->info("GETATTR - Não é temporário");
+            logger->flush();
 
-        return (result == 0) ? 0 : -errno;
+            size_t size_non_temp;
+            const int result_non_temp = open_and_read_size(path, &size_non_temp);
+
+            if(result_non_temp == 0){
+                stbuf->st_size = size_non_temp;
+            }
+        }
     }
-
-    const int result = fi ? fstat((int)fi->fh, stbuf) : lstat(path, stbuf);
-
-
 
     return (result == 0) ? 0 : -errno;
 }

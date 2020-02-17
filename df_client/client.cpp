@@ -90,7 +90,7 @@ int client::send_get(peer_data &peer, std::string key, long version, std::string
     message_content->set_reqid(req_id);
     msg.set_allocated_get_msg(message_content);
 
-    std::cout << "Sending get to " << std::to_string(peer.port) << " " << peer.pos ;
+    std::cout << "Sending get " << key << "to " << std::to_string(peer.port) << " " << peer.pos ;
 
     return send_msg(peer, msg);
 }

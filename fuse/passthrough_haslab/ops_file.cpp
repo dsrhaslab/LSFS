@@ -45,11 +45,6 @@ static int create_or_open(
 
     fi->fh = (uint64_t)result;
 
-    {
-        std::scoped_lock<std::mutex> lk (fhs_mutex);
-        file_handlers.emplace(result , std::string(path));
-    }
-
     return 0;
 }
 
@@ -109,11 +104,6 @@ int lsfs_impl::_release(
 {
     const int fd = (int)fi->fh;
 
-    {
-        std::scoped_lock<std::mutex> lk (fhs_mutex);
-        file_handlers.erase(fd);
-    }
-
     if (path){
         logger->info("RELEASE " + std::string(path) + " FD:" + std::to_string(fd));
         logger->flush();
@@ -164,12 +154,42 @@ int lsfs_impl::_read(
 
     (void)path;
 
-    const int result = pread((int)fi->fh, buf, size, offset);
 
-    if (result == -1)
-        return -errno;
+    size_t actual_size = size;
+    if(!is_temp_file(path)){
+        logger->info("READ - Não é temporário");
+        logger->flush();
 
-    return result;
+        const int result_non_temp = open_and_read_size(path, &actual_size);
+
+        if(result_non_temp == 0){
+            //dataflasks get
+            long version = get_version(path);
+            std::shared_ptr<const char[]> data = df_client->get(1, path, version);
+            strncpy(buf, data.get(), actual_size);
+            return strlen(buf);
+        }
+    }
+
+
+//    if(!is_temp_file(path)){
+//        logger->info("READ - Não é temporário");
+//        logger->flush();
+//
+//        //dataflasks get
+//        long version = get_version(path);
+//        std::shared_ptr<const char[]> data = df_client->get(1, path, version);
+//        strncpy(buf, data.get(), size);
+//        return strlen(buf);
+//
+//    }else{
+        const int result = pread((int)fi->fh, buf, size, offset);
+
+        if (result == -1)
+            return -errno;
+
+        return result;
+//    }
 }
 
 int lsfs_impl::_write(
@@ -187,17 +207,25 @@ int lsfs_impl::_write(
 
     (void)path;
 
+    char** write_buf = const_cast<char **>(&buf);
+
+    char size_attr [20];
+    char* size_ptr = size_attr;
+    sprintf(size_attr, "%lu", size);
+    int result;
     if(!is_temp_file(path)){
         logger->info("WRITE - Não é temporário");
         logger->flush();
 
         //dataflasks send
-        df_client->put(path, 1, buf);
-
-        return size;
+        long version = increment_version_and_get(path);
+        df_client->put(path, version, buf);
+        write_buf = &size_ptr;
+        pwrite((int)fi->fh, *write_buf, strlen(size_ptr) + 1, offset);
+        result = size; // tem sempre de se retornar o size suposto senão eram realizados mais pedidos
+    }else{
+        result = pwrite((int)fi->fh, *write_buf, size, offset);
     }
-
-    const int result = pwrite((int)fi->fh, buf, size, offset);
 
     if (result == -1)
         return -errno;

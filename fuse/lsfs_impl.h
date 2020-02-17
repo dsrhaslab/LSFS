@@ -19,10 +19,14 @@
 #include <sys/statvfs.h>
 #include <spdlog/logger.h>
 
-extern std::mutex fhs_mutex;
-extern std::unordered_map<int, std::string> file_handlers;
+extern std::mutex version_tracker_mutex;
+extern std::unordered_map<std::string, long> version_tracker; // path => version
 extern std::unique_ptr<client> df_client;
 extern std::shared_ptr<spdlog::logger> logger;
+
+long increment_version_and_get(std::string path);
+long get_version(std::string path);
+int open_and_read_size(const char *path, size_t* size);
 
 class lsfs_impl : public fuse_wrapper::fuse<lsfs_impl>{
 
@@ -196,26 +200,26 @@ public:
 
 /* ------------------------------ ops_xattr --------------------------------- */
 
-    static int _getxattr(
-            const char *path,
-            const char *name, char *value, size_t size
-    );
-
-    static int _setxattr(
-            const char *path,
-            const char *name, const char *value, size_t size,
-            int flags
-    );
-
-    static int _listxattr(
-            const char *path,
-            char *list, size_t size
-    );
-
-    static int _removexattr(
-            const char *path,
-            const char *name
-    );
+//    static int _getxattr(
+//            const char *path,
+//            const char *name, char *value, size_t size
+//    );
+//
+//    static int _setxattr(
+//            const char *path,
+//            const char *name, const char *value, size_t size,
+//            int flags
+//    );
+//
+//    static int _listxattr(
+//            const char *path,
+//            char *list, size_t size
+//    );
+//
+//    static int _removexattr(
+//            const char *path,
+//            const char *name
+//    );
 
 /* -------------------------------------------------------------------------- */
 };
