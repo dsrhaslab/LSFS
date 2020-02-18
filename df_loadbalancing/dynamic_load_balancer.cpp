@@ -57,7 +57,9 @@ dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, int boot_port,
 peer_data dynamic_load_balancer::get_random_peer() {
 
     std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
-    int random_int = rand()%(this->view.size());
+    int view_size = this->view.size();
+    if(view_size == 0) throw "Empty View Received";
+    int random_int = rand()%(view_size);
     return this->view.at(random_int);
 }
 
@@ -76,7 +78,9 @@ void dynamic_load_balancer::process_msg(proto::pss_message &pss_msg) {
     }
 
     std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
-    this->view = std::move(recv_view);
+    if(recv_view.size() != 0) {
+        this->view = std::move(recv_view);
+    }
 }
 
 void dynamic_load_balancer::send_msg(peer_data& target_peer, proto::pss_message& msg){
@@ -104,14 +108,17 @@ void dynamic_load_balancer::operator()() {
     while(this->running){
         std::this_thread::sleep_for (std::chrono::seconds(this->sleep_interval));
         if(this->running){
+            try{
+                peer_data target_peer = this->get_random_peer(); //pair (port, age)
 
-            peer_data target_peer = this->get_random_peer(); //pair (port, age)
-
-            proto::pss_message pss_message;
-            pss_message.set_sender_ip(this->ip);
-            pss_message.set_sender_port(this->port);
-            pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE);
-            this->send_msg(target_peer, pss_message);
+                proto::pss_message pss_message;
+                pss_message.set_sender_ip(this->ip);
+                pss_message.set_sender_port(this->port);
+                pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE);
+                this->send_msg(target_peer, pss_message);
+            }catch(const char* msg){
+                // empty view -> nothing to do
+            }
         }
     }
 

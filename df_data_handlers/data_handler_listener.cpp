@@ -263,7 +263,12 @@ private:
         int sender_port = message.port();
         std::string key = message.key();
         long version = message.version();
-        const char *data = message.data().c_str();
+        std::string data_s = message.data();
+        int i = data_s.size();
+        const char *data = data_s.c_str();
+
+        std::cout << std::to_string(this->port) << " received put " << data << std::endl;
+
 
         if (!this->store->have_seen(key, version)) {
             bool stored = this->store->put(key, version, data);

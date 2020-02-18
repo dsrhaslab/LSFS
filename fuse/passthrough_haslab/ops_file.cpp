@@ -198,7 +198,7 @@ int lsfs_impl::_write(
     )
 {
     if (path){
-        logger->info("WRITE " + std::string(path) + " SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset));
+        logger->info("WRITE " + std::string(path) + " SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset) + " BUF:" + buf);
         logger->flush();
     }else{
         logger->info("WRITE SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset));
@@ -213,18 +213,24 @@ int lsfs_impl::_write(
     char* size_ptr = size_attr;
     sprintf(size_attr, "%lu", size);
     int result;
-    if(!is_temp_file(path)){
-        logger->info("WRITE - Não é temporário");
-        logger->flush();
+    try {
+        if (!is_temp_file(path)) {
+            logger->info("WRITE - Não é temporário");
+            logger->flush();
 
-        //dataflasks send
-        long version = increment_version_and_get(path);
-        df_client->put(path, version, buf);
-        write_buf = &size_ptr;
-        pwrite((int)fi->fh, *write_buf, strlen(size_ptr) + 1, offset);
-        result = size; // tem sempre de se retornar o size suposto senão eram realizados mais pedidos
-    }else{
-        result = pwrite((int)fi->fh, *write_buf, size, offset);
+            //dataflasks send
+            long version = increment_version_and_get(path);
+            df_client->put(path, version, buf, size);
+            write_buf = &size_ptr;
+            pwrite((int) fi->fh, *write_buf, strlen(size_ptr) + 1, offset);
+            result = size; // tem sempre de se retornar o size suposto senão eram realizados mais pedidos
+        } else {
+            result = pwrite((int) fi->fh, *write_buf, size, offset);
+        }
+    }catch(const char* msg){
+        // empty view -> nothing to do
+        errno = EAGAIN; //resource unavailable
+        return -errno;
     }
 
     if (result == -1)

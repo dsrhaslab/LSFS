@@ -95,7 +95,7 @@ int client::send_get(peer_data &peer, std::string key, long version, std::string
     return send_msg(peer, msg);
 }
 
-int client::send_put(peer_data &peer, std::string key, long version, const char *data) {
+int client::send_put(peer_data &peer, std::string key, long version, const char *data, size_t size) {
     proto::kv_message msg;
     auto* message_content = new proto::put_message();
     message_content->set_ip(this->ip);
@@ -103,19 +103,19 @@ int client::send_put(peer_data &peer, std::string key, long version, const char 
     message_content->set_id(this->id);
     message_content->set_key(key);
     message_content->set_version(version);
-    message_content->set_data(data);
+    message_content->set_data(data, size);
     msg.set_allocated_put_msg(message_content);
 
     return send_msg(peer, msg);
 }
 
-std::set<long> client::put(std::string key, long version, const char *data) {
+std::set<long> client::put(std::string key, long version, const char *data, size_t size) {
    this->handler->register_put(key);
    std::unique_ptr<std::set<long>> res = nullptr;
    while(res == nullptr || res->size() < this->nr_puts_required){
        std::cout << "WAITING FOR PUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT" << std::endl;
-       peer_data peer = this->lb->get_random_peer();
-       int status = this->send_put(peer, key, version, data);
+       peer_data peer = this->lb->get_random_peer(); //throw exception
+       int status = this->send_put(peer, key, version, data, size);
        if(status == 0){
            res = this->handler->wait_for_put(key);
 //           std::cout << "SIZE: " << res->size() << std::endl;
@@ -130,7 +130,7 @@ std::shared_ptr<const char []> client::get(long node_id, std::string key, long v
     this->handler->register_get(req_id_str);
     std::shared_ptr<const char []> res (nullptr);
     while(res == nullptr){
-        peer_data peer = this->lb->get_random_peer();
+        peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get(peer, key, version, req_id_str);
         if(status == 0){
             res = this->handler->wait_for_get(req_id_str);

@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
 //    cli.put(2,1,"KV ALMOST FINISHED");
 //    cli.put(3,1,"KV ALMOST FINISHED");
 //    cli.put(4,1,"KV ALMOST FINISHED");
-    std::shared_ptr<const char []> data = cli.get(id,"/eu2.txt",2);
+    std::shared_ptr<const char []> data = cli.get(id,"/bigfileset/00000001/00000001",1);
     std::cout << data.get() << std::endl;
 
     std::cout << "PUT DONE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;

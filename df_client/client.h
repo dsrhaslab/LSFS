@@ -36,14 +36,14 @@ private:
 public:
     client(std::string ip, long id, int port, int lb_port);
     void stop();
-    std::set<long> put(std::string key, long version, const char* data);
+    std::set<long> put(std::string key, long version, const char* data, size_t size);
     std::shared_ptr<const char[]> get(long node_id, std::string key, long version);
 
 private:
     long inc_and_get_request_count();
     int send_msg(peer_data& target_peer, proto::kv_message& msg);
     int send_get(peer_data &peer, std::string key, long version, std::string req_id);
-    int send_put(peer_data& peer, std::string key, long version, const char* data);
+    int send_put(peer_data& peer, std::string key, long version, const char* data, size_t size);
 };
 
 
