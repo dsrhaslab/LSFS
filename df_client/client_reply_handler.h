@@ -18,7 +18,7 @@ private:
     int socket_rcv;
     int port;
     std::string ip;
-    std::unordered_map<std::string, std::shared_ptr<const char[]>> get_replies;
+    std::unordered_map<std::string, std::shared_ptr<std::string>> get_replies;
     std::unordered_map<std::string, std::set<long>> put_replies;
     int nr_puts_required;
     long wait_timeout;
@@ -34,7 +34,7 @@ public:
     void register_put(std::string key);
     std::unique_ptr<std::set<long>> wait_for_put(std::string key);
     void register_get(std::string req_id);
-    std::shared_ptr<const char[]> wait_for_get(std::string req_id);
+    std::shared_ptr<std::string> wait_for_get(std::string req_id);
     void stop();
 };
 

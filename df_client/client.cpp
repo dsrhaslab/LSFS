@@ -124,11 +124,11 @@ std::set<long> client::put(std::string key, long version, const char *data, size
    return *res;
 }
 
-std::shared_ptr<const char []> client::get(long node_id, std::string key, long version) {
+std::shared_ptr<std::string> client::get(long node_id, std::string key, long version) {
     long req_id = this->inc_and_get_request_count();
     std::string req_id_str = std::to_string(this->id) +":" + this->ip + ":" + std::to_string(this->port) + ":" + std::to_string(req_id);
     this->handler->register_get(req_id_str);
-    std::shared_ptr<const char []> res (nullptr);
+    std::shared_ptr<std::string> res (nullptr);
     while(res == nullptr){
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get(peer, key, version, req_id_str);

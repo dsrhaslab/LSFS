@@ -37,7 +37,7 @@ public:
     client(std::string ip, long id, int port, int lb_port);
     void stop();
     std::set<long> put(std::string key, long version, const char* data, size_t size);
-    std::shared_ptr<const char[]> get(long node_id, std::string key, long version);
+    std::shared_ptr<std::string> get(long node_id, std::string key, long version);
 
 private:
     long inc_and_get_request_count();

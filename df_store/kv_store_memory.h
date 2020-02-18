@@ -20,7 +20,7 @@
 template <typename T>
 class kv_store_memory: public kv_store<T>{
 private:
-    std::unordered_map<kv_store_key<T>, std::shared_ptr<const char []>> store;
+    std::unordered_map<kv_store_key<T>, std::shared_ptr<std::string>> store;
     std::atomic<int> slice = 1; //[1, nr_slices]
     std::atomic<int> nr_slices = 1;
     std::unordered_map<kv_store_key<T>, bool> seen;
@@ -37,9 +37,9 @@ public:
     std::unordered_set<kv_store_key<T>> get_keys() override;
     bool have_seen(T key, long version) override;
     void seen_it(T key, long version) override;
-    bool put(T key, long version, const char* bytes) override; // use string.c_str() to convert string to const char*
-    std::shared_ptr<const char []> get(kv_store_key<T> key) override;
-    std::shared_ptr<const char []> remove(kv_store_key<T> key) override;
+    bool put(T key, long version, std::string bytes) override; // use string.c_str() to convert string to const char*
+    std::shared_ptr<std::string> get(kv_store_key<T> key) override;
+    std::shared_ptr<std::string> remove(kv_store_key<T> key) override;
     int get_slice() override;
     void set_slice(int slice) override;
     int get_nr_slices() override;
@@ -145,17 +145,15 @@ void kv_store_memory<T>::seen_it(T key, long version) {
 }
 
 template <typename T>
-bool kv_store_memory<T>::put(T key, long version, const char *bytes) {
+bool kv_store_memory<T>::put(T key, long version, std::string bytes) {
     kv_store_key<T> key_to_insert({key, version});
     this->seen_it(key, version);
     int k_slice = this->get_slice_for_key(key);
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     if(this->slice == k_slice){
-        auto data_size = strlen(bytes);
-        char *buffer = new char[data_size + 1];
-        strncpy(buffer, bytes, data_size + 1); //buffer[len] = 0 std::make_shared<const char*>(buffer)
-        this->store.insert_or_assign(std::move(key_to_insert), std::shared_ptr<const char[]>(buffer, [](const char* p){delete[] p;}));
+        auto data_size = bytes.size();
+        this->store.insert_or_assign(std::move(key_to_insert), std::make_shared<std::string>(bytes));
         return true;
     }else{
         //Object received but does not belong to this df_store.
@@ -174,7 +172,7 @@ void kv_store_memory<T>::print_store(){
 }
 
 template <typename T>
-std::shared_ptr<const char []> kv_store_memory<T>::get(kv_store_key<T> key) {
+std::shared_ptr<std::string> kv_store_memory<T>::get(kv_store_key<T> key) {
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     const auto& it = this->store.find(key);
     if(it == this->store.end()){// a chave não existe
@@ -185,14 +183,14 @@ std::shared_ptr<const char []> kv_store_memory<T>::get(kv_store_key<T> key) {
 }
 
 template <typename T>
-std::shared_ptr<const char []> kv_store_memory<T>::remove(kv_store_key<T> key) {
+std::shared_ptr<std::string> kv_store_memory<T>::remove(kv_store_key<T> key) {
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
 
     const auto& it = this->store.find(key);
     if(it == this->store.end()){// a chave não existe
         return nullptr;
     }else{
-        std::shared_ptr<const char []> res = it->second;
+        std::shared_ptr<std::string> res = it->second;
         this->store.erase(it);
         return res;
     }

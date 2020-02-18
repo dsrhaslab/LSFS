@@ -47,16 +47,13 @@ void client_reply_handler::operator()() {
                     const proto::get_reply_message& msg = message.get_reply_msg();
                     std::string req_id = msg.reqid();
                     long replier_id = msg.id();
-                    const char* data = msg.data().c_str();
+                    std::string data = msg.data();
 
                     std::unique_lock<std::mutex> lock(this->get_mutex);
 
                     if(this->get_replies.find(req_id) != this->get_replies.end()){
                         // a chave existe
-                        auto data_size = strlen(data);
-                        char *buffer = new char[data_size + 1];
-                        strncpy(buffer, data, data_size + 1); //buffer[len] = 0 std::make_shared<const char*>(buffer)
-                        this->get_replies.insert_or_assign(req_id, std::shared_ptr<const char[]>(buffer, [](const char* p){delete[] p;}));
+                        this->get_replies.insert_or_assign(req_id, std::make_shared<std::string>(data));
                         this->get_cond_var.notify_all();
                     }else{
                         std::cout << "GET REPLY IGNORED - NON EXISTENT KEY" << std::endl;
@@ -125,14 +122,12 @@ void client_reply_handler::register_get(std::string req_id) {
     auto it = this->get_replies.find(req_id);
     if(it == this->get_replies.end()){
         // a chave não existe
-        char *buffer = new char[1];
-        buffer[0] = '\0';
-        get_replies.emplace(req_id, std::shared_ptr<const char[]>(buffer, [](const char* p){delete[] p;}));
+        get_replies.emplace(req_id, std::make_shared<std::string>(std::to_string('\0')));
     }
 }
 
-std::shared_ptr<const char []> client_reply_handler::wait_for_get(std::string req_id) {
-    std::shared_ptr<const char[]> res (nullptr);
+std::shared_ptr<std::string> client_reply_handler::wait_for_get(std::string req_id) {
+    std::shared_ptr<std::string> res (nullptr);
 
     std::unique_lock<std::mutex> lock(this->get_mutex);
     this->get_cond_var.wait_for(lock, std::chrono::seconds(this->wait_timeout));
@@ -140,7 +135,7 @@ std::shared_ptr<const char []> client_reply_handler::wait_for_get(std::string re
     auto it = this->get_replies.find(req_id);
     if(it != this->get_replies.end()){
         //se existe entrada para a chave
-        if(strcmp(it->second.get(), "\0") != 0){
+        if(*(it->second) != "\0"){
             res = it->second;
             this->get_replies.erase(it);
         }

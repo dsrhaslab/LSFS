@@ -172,7 +172,7 @@ private:
         std::string key = message.key();
         long version = message.version();
         std::string req_id = message.reqid();
-        std::shared_ptr<const char[]> data(nullptr); //*data = undefined
+        std::shared_ptr<std::string> data(nullptr); //*data = undefined
 
         //se o pedido ainda não foi processado e não é um pedido interno (não começa com intern)
         if(!this->store->in_log(req_id) && req_id.rfind("intern", 0) != 0){
@@ -180,6 +180,9 @@ private:
             data = this->store->get({key, version});
             if(data != nullptr){
                 //se tenho o conteudo da chave
+                auto data_size = data->size();
+                char buf[data_size];
+                data->copy(buf, data_size);
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                 if(achance <= this->chance){
                     //a probabilidade ditou para responder à mensagem com o conteudo para a chave
@@ -191,7 +194,7 @@ private:
                     message_content->set_key(key);
                     message_content->set_version(version);
                     message_content->set_reqid(req_id);
-                    message_content->set_data(data.get());
+                    message_content->set_data(buf, data_size);
                     reply_message.set_allocated_get_reply_msg(message_content);
 
                     this->reply_client(reply_message, sender_ip, sender_port);
@@ -233,7 +236,7 @@ private:
                         message_content->set_key(key);
                         message_content->set_version(version);
                         message_content->set_reqid(req_id);
-                        message_content->set_data(data.get());
+                        message_content->set_data(*data);
                         reply_message.set_allocated_get_reply_msg(message_content);
 
                         this->reply_client(reply_message, sender_ip, sender_port);
@@ -263,9 +266,7 @@ private:
         int sender_port = message.port();
         std::string key = message.key();
         long version = message.version();
-        std::string data_s = message.data();
-        int i = data_s.size();
-        const char *data = data_s.c_str();
+        std::string data = message.data();
 
         std::cout << std::to_string(this->port) << " received put " << data << std::endl;
 

@@ -18,9 +18,9 @@ public:
     virtual std::unordered_set<kv_store_key<T>> get_keys() = 0;
     virtual bool have_seen(T key, long version) = 0;
     virtual void seen_it(T key, long version) = 0;
-    virtual bool put(T key, long version, const char* bytes) = 0; // use string.c_str() to convert string to const char*
-    virtual std::shared_ptr<const char []> get(kv_store_key<T> key) = 0;
-    virtual std::shared_ptr<const char []> remove(kv_store_key<T> key) = 0;
+    virtual bool put(T key, long version, std::string bytes) = 0; // use string.c_str() to convert string to const char*
+    virtual std::shared_ptr<std::string> get(kv_store_key<T> key) = 0;
+    virtual std::shared_ptr<std::string> remove(kv_store_key<T> key) = 0;
     virtual int get_slice() = 0;
     virtual void set_slice(int slice) = 0;
     virtual int get_nr_slices() = 0;
