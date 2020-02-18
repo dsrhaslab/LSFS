@@ -26,8 +26,6 @@ int lsfs_impl::_getattr(
         logger->flush();
 
         if(!is_temp_file(path)){
-            logger->info("GETATTR - Não é temporário");
-            logger->flush();
 
             size_t size_non_temp;
             const int result_non_temp = open_and_read_size(path, &size_non_temp);
@@ -35,6 +33,9 @@ int lsfs_impl::_getattr(
             if(result_non_temp == 0){
                 stbuf->st_size = size_non_temp;
             }
+
+            logger->info("GETATTR - Não é temporário " + std::to_string(stbuf->st_size));
+            logger->flush();
         }
     }
 

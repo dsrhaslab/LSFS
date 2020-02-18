@@ -55,9 +55,9 @@ void*  lsfs_impl::_init(
 //    cfg->nullpath_ok  = 1;
     cfg->use_ino      = 1;
 
-    cfg->entry_timeout    = DBL_MAX;
-    cfg->attr_timeout     = DBL_MAX;
-    cfg->negative_timeout = DBL_MAX;
+    cfg->entry_timeout    = 0;
+    cfg->attr_timeout     = 0;
+    cfg->negative_timeout = 0;
 
     // log stuff
 
