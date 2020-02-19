@@ -80,6 +80,7 @@ def get_number_connected_components(peers_data_in_specific_time_map):
    G = nx.DiGraph() #.Graph for undirected graphs
    online_nodes = list(peers_data_in_specific_time_map.keys())
    G.add_nodes_from(online_nodes)
+   print(len(peers_data_in_specific_time_map))
    for peer, peer_data in peers_data_in_specific_time_map.items():
       view = peer_data['view']
       for peer2 in view:
@@ -197,9 +198,8 @@ def add_peer_instances(num_peers, procs, initial_nodes = False):
    else:
       positions = [random.random() for i in range(0, num_peers)]
       ids = range(last_id, last_id + num_peers)
-      ports = range(current_port, current_port + num_peers)
-
-      peer_commands = [[peer_program, str(ports[i]), str(ids[i]), str(positions[i]), args['config']] for i in range(0, num_peers)]
+      ports = range(current_port, current_port + (2 * num_peers))
+      peer_commands = [[peer_program, str(ports[2*i]), str(ports[2*i + 1]), str(ids[i]), str(positions[i]), args['config']] for i in range(0, num_peers)]
    
    current_port += (2 * num_peers)
    last_id += num_peers
