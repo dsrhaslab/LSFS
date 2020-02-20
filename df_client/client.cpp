@@ -129,10 +129,13 @@ std::shared_ptr<std::string> client::get(long node_id, std::string key, long ver
     std::string req_id_str = std::to_string(this->id) +":" + this->ip + ":" + std::to_string(this->port) + ":" + std::to_string(req_id);
     this->handler->register_get(req_id_str);
     std::shared_ptr<std::string> res (nullptr);
-    while(res == nullptr){
+
+    int max_timeouts = 4;
+    while(res == nullptr && max_timeouts-- > 0){
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
+        std::cout << "########### " << max_timeouts << " #############" << std::endl;
         int status = this->send_get(peer, key, version, req_id_str);
-        if(status == 0){
+        if (status == 0) {
             res = this->handler->wait_for_get(req_id_str);
         }
     }

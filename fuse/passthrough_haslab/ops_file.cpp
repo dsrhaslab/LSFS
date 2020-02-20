@@ -166,6 +166,13 @@ int lsfs_impl::_read(
             //dataflasks get
             long version = get_version(path);
             std::shared_ptr<std::string> data = df_client->get(1, path, version);
+
+            if (data == nullptr){
+                errno = EHOSTUNREACH; // Not Reachable Host
+//                errno = ENOENT; // Not Such File or Directory
+                return -errno;
+            }
+
             data->copy(buf, actual_size);
             return actual_size;
         }

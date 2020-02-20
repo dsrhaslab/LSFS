@@ -15,7 +15,7 @@ std::unordered_map<std::string, long> version_tracker; // path => version
 
 lsfs_impl::lsfs_impl(){
 
-    df_client = std::make_unique<client>("127.0.0.1", 0, 12551 /*kv_port*/, 12550 /*lb_port*/);
+    df_client = std::make_unique<client>("127.0.0.1", 0, 1235 /*kv_port*/, 1234 /*lb_port*/);
 
     try
     {

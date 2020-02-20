@@ -122,7 +122,7 @@ void client_reply_handler::register_get(std::string req_id) {
     auto it = this->get_replies.find(req_id);
     if(it == this->get_replies.end()){
         // a chave não existe
-        get_replies.emplace(req_id, std::make_shared<std::string>(std::to_string('\0')));
+        get_replies.emplace(req_id, std::shared_ptr<std::string>(nullptr));
     }
 }
 
@@ -135,7 +135,7 @@ std::shared_ptr<std::string> client_reply_handler::wait_for_get(std::string req_
     auto it = this->get_replies.find(req_id);
     if(it != this->get_replies.end()){
         //se existe entrada para a chave
-        if(*(it->second) != "\0"){
+        if(it->second != nullptr){
             res = it->second;
             this->get_replies.erase(it);
         }
