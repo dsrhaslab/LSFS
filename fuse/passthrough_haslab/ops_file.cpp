@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "../../exceptions/custom_exceptions.h"
 
 #include "util.h"
 #include "../lsfs_impl.h"
@@ -234,9 +235,15 @@ int lsfs_impl::_write(
         } else {
             result = pwrite((int) fi->fh, *write_buf, size, offset);
         }
-    }catch(const char* msg){
+    }catch(EmptyViewException& e){
         // empty view -> nothing to do
+        e.what();
         errno = EAGAIN; //resource unavailable
+        return -errno;
+    }catch(ConcurrentWritesSameKeyException& e){
+        // empty view -> nothing to do
+        e.what();
+        errno = EPERM; //operation not permitted
         return -errno;
     }
 

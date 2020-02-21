@@ -81,13 +81,21 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
 
 int client::send_get(peer_data &peer, std::string key, long version, std::string req_id) {
     proto::kv_message msg;
+    std::cout << "Allocating msg" << std::endl;
     auto* message_content = new proto::get_message();
+    std::cout << "Setting IP" << std::endl;
     message_content->set_ip(this->ip);
+    std::cout << "Setting Port" << std::endl;
     message_content->set_port(this->port);
+    std::cout << "Setting ID" << std::endl;
     message_content->set_id(this->id);
+    std::cout << "Setting KEY" << std::endl;
     message_content->set_key(key);
+    std::cout << "Setting VERSION" << std::endl;
     message_content->set_version(version);
+    std::cout << "Setting REQID" << std::endl;
     message_content->set_reqid(req_id);
+    std::cout << "Setting MESSAGE CONTENT" << std::endl;
     msg.set_allocated_get_msg(message_content);
 
     std::cout << "Sending get " << key << "to " << std::to_string(peer.port) << " " << peer.pos ;
@@ -106,22 +114,32 @@ int client::send_put(peer_data &peer, std::string key, long version, const char 
     message_content->set_data(data, size);
     msg.set_allocated_put_msg(message_content);
 
-    return send_msg(peer, msg);
+    int res = send_msg(peer, msg);
+    std::cout << "SENT PUTTTTTT INNER FUNCTION" << std::endl;
+    return res;
 }
 
 std::set<long> client::put(std::string key, long version, const char *data, size_t size) {
-   this->handler->register_put(key);
+   this->handler->register_put(key); // throw const char* (Escritas concorrentes sobre a mesma chave)
    std::unique_ptr<std::set<long>> res = nullptr;
    while(res == nullptr || res->size() < this->nr_puts_required){
        std::cout << "WAITING FOR PUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT" << std::endl;
        peer_data peer = this->lb->get_random_peer(); //throw exception
+       std::cout << "GOT RANDOM PEER" << std::endl;
        int status = this->send_put(peer, key, version, data, size);
+       std::cout << "SENT PUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT" << std::endl;
        if(status == 0){
+           std::cout << "GONA WAIT FOR PUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT RESPONSE" << std::endl;
            res = this->handler->wait_for_put(key);
+           std::cout << "ENDED WAIT fo PUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT RESPONSE" << std::endl;
 //           std::cout << "SIZE: " << res->size() << std::endl;
        }
    }
-   return *res;
+   std::cout << "GONA INSPECT RESULT" << std::endl;
+   if(res == nullptr) std::cout << "Result is NULL" << std::endl;
+   std::set<long> ok = *res;
+   std::cout << "RESULT was copyed -> returning" << std::endl;
+   return ok;
 }
 
 std::shared_ptr<std::string> client::get(long node_id, std::string key, long version) {
@@ -135,8 +153,11 @@ std::shared_ptr<std::string> client::get(long node_id, std::string key, long ver
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         std::cout << "########### " << max_timeouts << " #############" << std::endl;
         int status = this->send_get(peer, key, version, req_id_str);
+        std::cout << "GET SENT" << std::endl;
         if (status == 0) {
+            std::cout << "Gonna wait for get" << std::endl;
             res = this->handler->wait_for_get(req_id_str);
+            std::cout << "Ended waiting for get" << std::endl;
         }
     }
     return res;

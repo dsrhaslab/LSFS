@@ -11,6 +11,7 @@
 #include <set>
 #include <mutex>
 #include <condition_variable>
+#include <map>
 
 class client_reply_handler {
 private:
@@ -22,10 +23,11 @@ private:
     std::unordered_map<std::string, std::set<long>> put_replies;
     int nr_puts_required;
     long wait_timeout;
-    std::mutex get_mutex;
-    std::condition_variable get_cond_var;
-    std::mutex put_mutex;
-    std::condition_variable put_cond_var;
+    std::mutex get_global_mutex;
+    std::map<std::string, std::pair<std::unique_ptr<std::mutex>, std::unique_ptr<std::condition_variable>>> get_mutexes;
+    std::mutex put_global_mutex;
+    std::map<std::string, std::pair<std::unique_ptr<std::mutex>, std::unique_ptr<std::condition_variable>>> put_mutexes;
+
 
 public:
     client_reply_handler(std::string ip, int port, int nr_puts_required, long wait_timeout);

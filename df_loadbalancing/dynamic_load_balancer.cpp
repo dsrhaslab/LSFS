@@ -60,7 +60,9 @@ peer_data dynamic_load_balancer::get_random_peer() {
     int view_size = this->view.size();
     if(view_size == 0) throw "Empty View Received";
     int random_int = rand()%(view_size);
-    return this->view.at(random_int);
+    peer_data peer = this->view.at(random_int);
+    std::cout << "Just Copied peer from Random" << std::endl;
+    return peer;
 }
 
 void dynamic_load_balancer::process_msg(proto::pss_message &pss_msg) {
