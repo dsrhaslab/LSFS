@@ -148,6 +148,19 @@ std::vector<peer_data> pss::get_view(){
     std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
 
     std::vector<peer_data> res;
+
+    peer_data myself = {
+            this->ip,
+            this->port,
+            0,
+            this->id,
+            this->group_c->get_nr_groups(),
+            this->group_c->get_position(),
+            this->group_c->get_my_group()
+    };
+
+    res.push_back(std::move(myself));
+
     for(auto& [port, peer]: this->view){
         res.push_back(peer);
     }

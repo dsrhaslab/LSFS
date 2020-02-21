@@ -227,7 +227,12 @@ private:
                 if(!this->store->in_anti_entropy_log(req_id)){
                     this->store->log_anti_entropy_req(req_id);
                     data = this->store->get({key, version});
+
                     if(data != nullptr){
+                        auto data_size = data->size();
+                        char buf[data_size];
+                        data->copy(buf, data_size);
+
                         proto::kv_message reply_message;
                         auto* message_content = new proto::get_reply_message();
                         message_content->set_ip(this->ip);
@@ -236,7 +241,7 @@ private:
                         message_content->set_key(key);
                         message_content->set_version(version);
                         message_content->set_reqid(req_id);
-                        message_content->set_data(*data);
+                        message_content->set_data(buf, data_size);
                         reply_message.set_allocated_get_reply_msg(message_content);
 
                         this->reply_client(reply_message, sender_ip, sender_port);
@@ -255,8 +260,10 @@ private:
         proto::get_reply_message message = msg.get_reply_msg();
         std::string key = message.key();
         long version = message.version();
-        if(!this->store->have_seen(key, version)){
-            this->store->put(key, version, message.data().c_str());
+        std::string data = message.data();
+
+        if (!this->store->have_seen(key, version)) {
+            bool stored = this->store->put(key, version, data);
         }
     }
 

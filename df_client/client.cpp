@@ -19,11 +19,8 @@ client::client(std::string ip, long id, int port, int lb_port):
     YAML::Node config = YAML::LoadFile("scripts/conf.yaml");
     auto main_confs = config["main_confs"];
     this->nr_puts_required = main_confs["nr_puts_required"].as<int>();
-    std::cout << 1 << std::endl;
     long wait_timeout = main_confs["client_wait_timeout"].as<long>();
-    std::cout << 2 << std::endl;
     long lb_interval = main_confs["lb_interval"].as<long>();
-    std::cout << 3 << std::endl;
 
     this->lb = std::make_shared<dynamic_load_balancer>(peer::boot_ip, peer::boot_port, ip, lb_port, lb_interval);
     this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip, lb_port);
