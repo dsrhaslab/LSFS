@@ -40,8 +40,13 @@ int lsfs_impl::_opendir(
     struct fuse_file_info *fi
     )
 {
-//    logger->info("OPENDIR " + std::string(path));
-//    logger->flush();
+    if (path){
+        logger->info("OPENDIR " + std::string(path));
+        logger->flush();
+    }else{
+        logger->info("OPENDIR");
+        logger->flush();
+    }
 
     // allocate dir_handle
 
@@ -77,8 +82,13 @@ int lsfs_impl::_releasedir(
     struct fuse_file_info *fi
     )
 {
-//    logger->info("RELEASEDIR ");
-//    logger->flush();
+    if (path){
+        logger->info("RELEASEDIR " + std::string(path));
+        logger->flush();
+    }else{
+        logger->info("RELEASEDIR");
+        logger->flush();
+    }
 
     (void)path;
 
@@ -114,8 +124,13 @@ int lsfs_impl::_readdir(
         off_t offset, struct fuse_file_info *fi,
         enum fuse_readdir_flags flags)
 {
-//    logger->info("READDIR ");
-//    logger->flush();
+    if (path){
+        logger->info("READDIR " + std::string(path));
+        logger->flush();
+    }else{
+        logger->info("READDIR");
+        logger->flush();
+    }
 
     (void)path;
 

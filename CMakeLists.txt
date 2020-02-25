@@ -70,7 +70,7 @@ add_executable( peer_exe
         df_data_handlers/anti_entropy.h
         df_core/peer.h
         df_core/peer.cpp
-        )
+        df_store/kv_store_wiredtiger.h)
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)
@@ -80,6 +80,8 @@ target_include_directories(peer_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(peer_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(peer_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(peer_exe PRIVATE spdlog::spdlog)
+target_link_libraries(peer_exe PUBLIC wiredtiger)
+target_link_libraries(peer_exe PUBLIC stdc++fs) # for creating directories
 
 add_executable( client_exe
         ${packetSources}

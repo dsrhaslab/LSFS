@@ -32,6 +32,8 @@ private:
     std::recursive_mutex anti_entropy_log_mutex;
 
 public:
+    int init(void*, long id) override ;
+    void close() override;
     int get_slice_for_key(T key) override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<T>> get_keys() override;
@@ -50,6 +52,12 @@ public:
     void log_anti_entropy_req(std::string req_id);
     void print_store();
 };
+
+template <typename T>
+int kv_store_memory<T>::init(void*, long id) { return 0;}
+
+template <typename T>
+void kv_store_memory<T>::close() {}
 
 template <typename T>
 int kv_store_memory<T>::get_slice_for_key(T key) {
