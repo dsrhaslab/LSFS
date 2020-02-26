@@ -166,6 +166,10 @@ int lsfs_impl::_read(
         if(result_non_temp == 0){
             //dataflasks get
             long version = get_version(path);
+            if (version == -1){
+                errno = ENOENT;
+                return -errno;
+            }
             std::shared_ptr<std::string> data = df_client->get(1, path, version);
 
             if (data == nullptr){

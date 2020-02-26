@@ -35,7 +35,6 @@ private:
     std::unordered_map<std::string, bool> request_log;
     std::unordered_map<std::string, bool> anti_entropy_log;
     std::recursive_mutex seen_mutex;
-    std::recursive_mutex store_mutex;
     std::recursive_mutex req_log_mutex;
     std::recursive_mutex anti_entropy_log_mutex;
 
@@ -160,7 +159,7 @@ void kv_store_wiredtiger::update_partition(int p, int np) {
         this->nr_slices = np;
         this->slice = p;
         //clear memory to allow new keys to be stored
-        std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->seen_mutex, this->store_mutex);
+        std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
         std::string table_name = "table:" + std::to_string(this->id);
         session->open_cursor(session, table_name.c_str(), NULL, NULL, &cursor);
 
@@ -183,7 +182,6 @@ std::unordered_set<kv_store_key<std::string>> kv_store_wiredtiger::get_keys() {
     uint32_t version;
 
     std::unordered_set<kv_store_key<std::string>> keys;
-    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
     session->open_cursor(session, table_name.c_str(), NULL, NULL, &cursor);
 
@@ -222,10 +220,10 @@ bool kv_store_wiredtiger::put(std::string key, long version, std::string bytes) 
     this->seen_it(key, version);
     int k_slice = this->get_slice_for_key(key);
 
-    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     if(this->slice == k_slice){
         std::string table_name = "table:" + std::to_string(this->id);
         session->open_cursor(session, table_name.c_str(), NULL, "overwrite=true", &cursor);
+        session->begin_transaction(session, NULL);
         cursor->set_key(cursor, key.c_str(), version);
         auto data_size = bytes.size();
         char buf[data_size];
@@ -233,9 +231,14 @@ bool kv_store_wiredtiger::put(std::string key, long version, std::string bytes) 
         item.data = buf;
         item.size = data_size;
         cursor->set_value(cursor, &item);
-        cursor->insert(cursor);
+        int ret = cursor->insert(cursor);
+        if(ret == 0){
+            ret = session->commit_transaction(session, NULL);
+        }else{
+            session->rollback_transaction(session, NULL);
+        }
         cursor->close(cursor);
-        return true;
+        return (ret == 0);
     }else{
         //Object received but does not belong to this df_store.
         return false;
@@ -247,7 +250,6 @@ void kv_store_wiredtiger::print_store(){
     char *key;
     uint32_t version;
 
-    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
     session->open_cursor(session, table_name.c_str(), NULL, NULL, &cursor);
 
@@ -265,7 +267,6 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string> 
     WT_CURSOR *cursor;
     WT_ITEM value;
 
-    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
     session->open_cursor(session, table_name.c_str(), NULL, NULL, &cursor);
     cursor->set_key(cursor, key.key.c_str(), key.version);
@@ -283,17 +284,22 @@ std::shared_ptr<std::string> kv_store_wiredtiger::remove(kv_store_key<std::strin
     WT_ITEM value;
     std::shared_ptr<std::string> ret = nullptr;
 
-    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
     session->open_cursor(session,table_name.c_str(), NULL, NULL, &cursor);
-    cursor->set_key(cursor, key.key.c_str(), key.version);
 
+    session->begin_transaction(session, NULL);
+    cursor->set_key(cursor, key.key.c_str(), key.version);
 
     int res = cursor->search(cursor);
     if(res == 0){
         cursor->get_value(cursor, &value);
         ret = std::make_shared<std::string>(std::string((char*) value.data, value.size));
-        cursor->remove(cursor);
+        res = cursor->remove(cursor);
+        if(res == 0){
+            session->commit_transaction(session, NULL);
+        }else{
+            session->rollback_transaction(session, NULL);
+        }
     }
 
     return ret;
