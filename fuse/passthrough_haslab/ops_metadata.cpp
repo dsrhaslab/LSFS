@@ -8,9 +8,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <exceptions/custom_exceptions.h>
 
 #include "util.h"
 #include "../lsfs_impl.h"
+#include "metadata.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -19,24 +21,39 @@ int lsfs_impl::_getattr(
     struct fuse_file_info *fi
     )
 {
-    const int result = fi ? fstat((int)fi->fh, stbuf) : lstat(path, stbuf);
-
+    int result;
     if (strcmp(path, "/") != 0) {
         logger->info("GETATTR " + std::string(path));
         logger->flush();
 
         if(!is_temp_file(path)){
 
-            size_t size_non_temp;
-            const int result_non_temp = open_and_read_size(path, &size_non_temp);
+            long version = get_version(path);
+            if(version == -1){
+                errno = ENOENT;
+                return -errno;
+            }else{
+                //Fazer um get de metadados ao dataflasks
+                std::shared_ptr<std::string> data = df_client->get(1, path, version);
 
-            if(result_non_temp == 0){
-                stbuf->st_size = size_non_temp;
+                if (data == nullptr){
+                    errno = EHOSTUNREACH; // Not Reachable Host
+                    return -errno;
+                }
+
+                // reconstruir a struct stat com o resultado
+                metadata recv = metadata::deserialize_from_string(*data);
+                // copy metadata received to struct stat
+                memcpy(stbuf, &recv.stbuf, sizeof(struct stat));
+                std::cout << recv.stbuf.st_size << std::endl;
+                result = 0;
             }
 
             logger->info("GETATTR - Não é temporário " + std::to_string(stbuf->st_size));
             logger->flush();
         }
+    }else{
+        result = fi ? fstat((int)fi->fh, stbuf) : lstat(path, stbuf);
     }
 
     return (result == 0) ? 0 : -errno;
@@ -117,7 +134,46 @@ int lsfs_impl::_truncate(
         logger->flush();
     }
 
-    const int result = fi ? ftruncate((int)fi->fh, size) : truncate(path, size);
+    int result;
+    
+    if(!is_temp_file(path)) {
+        
+        // get file info
+        struct stat stbuf;
+        int res = lsfs_impl::_getattr(path, &stbuf,NULL);
+        if(res != 0){
+            return -errno; //res = -errno
+        }
+
+        int nr_b_blks = size / BLK_SIZE;
+        size_t off_blk = size % BLK_SIZE;
+        
+        
+        stbuf.st_size = size;
+        stbuf.st_blocks = (off_blk != 0) ? (nr_b_blks + 1) : nr_b_blks;
+        clock_gettime(CLOCK_REALTIME, &(stbuf.st_ctim));
+        stbuf.st_mtim = stbuf.st_ctim;
+        metadata to_send(stbuf);
+        // serialize metadata object
+        std::string metadata_str = metadata::serialize_to_string(to_send);
+        //dataflasks send
+        long version = increment_version_and_get(path);
+        try{
+            df_client->put(path, version, metadata_str.data(), metadata_str.size());
+            result = 0;
+        }catch(EmptyViewException& e){
+            // empty view -> nothing to do
+            e.what();
+            errno = EAGAIN; //resource unavailable
+            result = -errno;
+        }catch(ConcurrentWritesSameKeyException& e){
+            e.what();
+            errno = EPERM; //operation not permitted
+            result = -errno;
+        }
+    }else{
+        result = fi ? ftruncate((int)fi->fh, size) : truncate(path, size);
+    }
 
     return (result == 0) ? 0 : -errno;
 }

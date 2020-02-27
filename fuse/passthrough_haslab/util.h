@@ -13,7 +13,7 @@
 
 /* -------------------------------------------------------------------------- */
 
-static std::regex temp_extensions("(\\.swx$|\\.swp$|\\.inf$|/\\.)");
+static std::regex temp_extensions("(\\.swx$|\\.swp$|\\.inf$|/\\.|~$)");
 
 int fuse_pt_is_super_user(void);
 void fuse_pt_assert_super_user(void);

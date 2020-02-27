@@ -19,6 +19,12 @@
 #include <sys/statvfs.h>
 #include <spdlog/logger.h>
 
+/* ================ MACROS ==================*/
+
+#define BLK_SIZE (size_t) 4096
+
+/* ==========================================*/
+
 extern std::mutex version_tracker_mutex;
 extern std::unordered_map<std::string, long> version_tracker; // path => version
 extern std::unique_ptr<client> df_client;

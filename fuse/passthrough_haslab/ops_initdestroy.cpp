@@ -53,7 +53,7 @@ void*  lsfs_impl::_init(
 //    cfg->direct_io    = 1; // to avoid double-caching
 //    cfg->kernel_cache = 1; //supostamente tem de estar disable para filesystems cujos dados podem mudar externamente (network file systems)
 //    cfg->nullpath_ok  = 1;
-    cfg->use_ino      = 1;
+//    cfg->use_ino      = 1;
 
     cfg->entry_timeout    = 0;
     cfg->attr_timeout     = 0;

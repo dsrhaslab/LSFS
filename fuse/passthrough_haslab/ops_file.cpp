@@ -14,6 +14,7 @@
 
 #include "util.h"
 #include "../lsfs_impl.h"
+#include "metadata.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -51,6 +52,20 @@ static int create_or_open(
 
 /* -------------------------------------------------------------------------- */
 
+void initialize_new_file_metadata(struct stat* stbuf, mode_t mode, nlink_t nlink, gid_t gid, uid_t uid){
+    memset(stbuf, 0, sizeof(struct stat));
+    stbuf->st_mode = mode;
+    stbuf->st_gid = gid;
+    stbuf->st_uid = uid;
+    stbuf->st_nlink = 1;
+    timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    stbuf->st_atim = ts;
+    stbuf->st_ctim = ts;
+    stbuf->st_mtim = ts;
+    stbuf->st_blksize = 4096;
+}
+
 int lsfs_impl::_create(
     const char *path, mode_t mode,
     struct fuse_file_info *fi
@@ -59,15 +74,41 @@ int lsfs_impl::_create(
     if (!fuse_pt_impersonate_calling_process_highlevel(&mode))
         return -errno;
 
-    const int return_value = create_or_open(true, path, mode, fi);
+    int return_value;
 
-    const int fd = (int)fi->fh;
+    if(!is_temp_file(path)) {
+        const struct fuse_context* ctx = fuse_get_context();
+        struct stat stbuf;
+        // init file stat
+        initialize_new_file_metadata(&stbuf, mode, 1, ctx->gid, ctx->uid);
+        // create metadata object
+        metadata to_send(stbuf);
+        // serialize metadata object
+        std::string metadata_str = metadata::serialize_to_string(to_send);
+        //dataflasks send
+        long version = increment_version_and_get(path);
+        try{
+            df_client->put(path, version, metadata_str.data(), metadata_str.size());
+            return_value = 0;
+        }catch(EmptyViewException& e){
+            // empty view -> nothing to do
+            e.what();
+            errno = EAGAIN; //resource unavailable
+            return_value = -errno;
+        }catch(ConcurrentWritesSameKeyException& e){
+            e.what();
+            errno = EPERM; //operation not permitted
+            return_value = -errno;
+        }
+    }else{
+        return_value = create_or_open(true, path, mode, fi);
+    }
 
     if (path){
-        logger->info("CREATE " + std::string(path) + " FD:" + std::to_string(fd));
+        logger->info("CREATE " + std::string(path));
         logger->flush();
     }else{
-        logger->info("CREATE FD:" + std::to_string(fd));
+        logger->info("CREATE FD:");
         logger->flush();
     }
 
@@ -81,21 +122,31 @@ int lsfs_impl::_open(
     struct fuse_file_info *fi
     )
 {
-    const int return_value = create_or_open(false, path, 0, fi);
 
-    const int fd = (int)fi->fh;
+    int return_value;
+
+    if(!is_temp_file(path)) {
+        long version = get_version(path);
+        if(version == -1){
+            errno = ENOENT;
+            return_value = -errno;
+        }
+        else{
+            return_value = 0;
+        }
+    }else{
+        return_value = create_or_open(false, path, 0, fi);
+    }
 
     if (path){
-        logger->info("OPEN " + std::string(path) + " FD:" + std::to_string(fd));
+        logger->info("OPEN " + std::string(path));
         logger->flush();
     }else{
-        logger->info("OPEN FD:" + std::to_string(fd));
+        logger->info("OPEN");
         logger->flush();
     }
 
     return return_value;
-
-    return 0;
 }
 
 int lsfs_impl::_release(
@@ -115,7 +166,11 @@ int lsfs_impl::_release(
 
     (void)path;
 
-    return (close((int)fi->fh) == 0) ? 0 : -errno;
+    if(!is_temp_file(path)) {
+        return 0;
+    }else{
+        return (close((int)fi->fh) == 0) ? 0 : -errno;
+    }
 }
 
 int lsfs_impl::_fsync(
@@ -135,7 +190,17 @@ int lsfs_impl::_fsync(
 
     (void)path;
 
-    const int result = isdatasync ? fdatasync(fd) : fsync(fd);
+    int result;
+
+    if(!is_temp_file(path)) {
+        struct stat stbuf;
+        result = lsfs_impl::_getattr(path, &stbuf,NULL);
+        if(result != 0){
+            return -errno; //res = -errno
+        }
+    }else{
+        result = isdatasync ? fdatasync(fd) : fsync(fd);
+    }
 
     return (result == 0) ? 0 : -errno;
 }
@@ -155,53 +220,79 @@ int lsfs_impl::_read(
 
     (void)path;
 
+    size_t bytes_count;
 
-    size_t actual_size = size;
-    if(!is_temp_file(path)){
-        logger->info("READ - Não é temporário");
-        logger->flush();
+    if (!is_temp_file(path)) {
 
-        const int result_non_temp = open_and_read_size(path, &actual_size);
+        //TODO fazer caching com stack de getattr's
 
-        if(result_non_temp == 0){
-            //dataflasks get
-            long version = get_version(path);
-            if (version == -1){
-                errno = ENOENT;
-                return -errno;
-            }
-            std::shared_ptr<std::string> data = df_client->get(1, path, version);
-
-            if (data == nullptr){
-                errno = EHOSTUNREACH; // Not Reachable Host
-//                errno = ENOENT; // Not Such File or Directory
-                return -errno;
-            }
-
-            data->copy(buf, actual_size);
-            return actual_size;
+        // get file info
+        struct stat stbuf;
+        int res = lsfs_impl::_getattr(path, &stbuf,NULL);
+        if(res != 0){
+            return -errno; //res = -errno
         }
+        size_t file_size = stbuf.st_size;
+
+        //Verificar em que bloco se posiciona o offset
+        // -> caso coincida no meio de um bloco escrito
+        // -> ver a versão desse bloco e ir busca-lo
+        int nr_b_blks = offset / BLK_SIZE;
+        size_t off_blk = offset % BLK_SIZE;
+        bytes_count = 0;
+        int current_blk = nr_b_blks - 1;
+
+        try {
+            if (off_blk != 0) {
+                //middle of block -> i doubt ever happen
+                size_t off_ini_blk = nr_b_blks * BLK_SIZE;
+                char ini_buf [BLK_SIZE];
+                int bytes_read = lsfs_impl::_read(path, ini_buf, BLK_SIZE, off_ini_blk, NULL);
+                if (res < 0) return -errno;
+                else {
+                    size_t ini_size = (size > bytes_read)? bytes_read : size;
+                    memcpy(&buf[bytes_count], &ini_buf[off_blk], ini_size * sizeof(char));
+                    bytes_count += ini_size;
+                }
+
+            }
+
+            while (bytes_count < size && bytes_count < (file_size - offset)) {
+                current_blk++;
+                std::string blk_path = std::string(path) + ":" + std::to_string(current_blk);
+                long version = get_version(blk_path);
+                if (version == -1){
+                    errno = ENOENT;
+                    return -errno;
+                }
+                std::shared_ptr<std::string> data = df_client->get(1, blk_path, version);
+
+                if (data == nullptr){
+                    errno = EHOSTUNREACH; // Not Reachable Host
+                    return -errno;
+                }
+
+                size_t max_read = (bytes_count + BLK_SIZE) > size ? (size - bytes_count) : BLK_SIZE;
+                size_t actually_read = (file_size - offset) > max_read ? max_read : (file_size - offset);
+
+                data->copy(&buf[bytes_count], actually_read);
+                bytes_count += actually_read;
+            }
+
+        } catch (EmptyViewException &e) {
+            // empty view -> nothing to do
+            e.what();
+            errno = EAGAIN; //resource unavailable
+            return -errno;
+        }
+    }else{
+        bytes_count = pread((int)fi->fh, buf, size, offset);
     }
 
+    if (bytes_count == -1)
+        return -errno;
 
-//    if(!is_temp_file(path)){
-//        logger->info("READ - Não é temporário");
-//        logger->flush();
-//
-//        //dataflasks get
-//        long version = get_version(path);
-//        std::shared_ptr<const char[]> data = df_client->get(1, path, version);
-//        strncpy(buf, data.get(), size);
-//        return strlen(buf);
-//
-//    }else{
-        const int result = pread((int)fi->fh, buf, size, offset);
-
-        if (result == -1)
-            return -errno;
-
-        return result;
-//    }
+    return bytes_count;
 }
 
 int lsfs_impl::_write(
@@ -218,37 +309,91 @@ int lsfs_impl::_write(
     }
 
     (void)path;
-
-    char** write_buf = const_cast<char **>(&buf);
-
-    char size_attr [20];
-    char* size_ptr = size_attr;
-    sprintf(size_attr, "%lu", size);
     int result;
-    try {
-        if (!is_temp_file(path)) {
-            logger->info("WRITE - Não é temporário");
-            logger->flush();
 
+    if (!is_temp_file(path)) {
+
+        //TODO fazer caching com stack de getattr's
+
+        // get file info
+        struct stat stbuf;
+        int res = lsfs_impl::_getattr(path, &stbuf,NULL);
+        if(res != 0){
+            return -errno; //res = -errno
+        }
+
+        size_t current_size = stbuf.st_size;
+        size_t next_size = current_size > (offset + size)? current_size : (offset + size);
+
+        //Verificar em que bloco se posiciona o offset
+        // -> caso coincida no meio de um bloco escrito
+        // -> ver a versão desse bloco e ir busca-lo
+        int nr_b_blks = offset / BLK_SIZE;
+        size_t off_blk = offset % BLK_SIZE;
+        size_t read_off = 0;
+        int current_blk = nr_b_blks - 1;
+
+        char put_buf [BLK_SIZE];
+
+        try {
+            if (off_blk != 0) {
+                //middle of block -> i doubt ever happen
+                size_t off_ini_blk = nr_b_blks * BLK_SIZE;
+                if (offset <= current_size) {
+                    // read current block from the start (off_ini_blk)
+                    size_t bytes_read = lsfs_impl::_read(path, put_buf, BLK_SIZE, off_ini_blk, NULL);
+                    if (bytes_read < 0) return -errno;
+                    else {
+                        //preencher o resto do bloco (a partir do off_blk)
+                        size_t first_block_size = (size > BLK_SIZE)? BLK_SIZE : size;
+                        memcpy(&put_buf[off_blk], &buf[read_off], (first_block_size - off_blk) * sizeof(char));
+                        read_off += (first_block_size - off_blk);
+                        current_blk++;
+                        std::string blk_path = std::string(path) + ":" + std::to_string(current_blk);
+                        long version = increment_version_and_get(blk_path);
+                        df_client->put(blk_path, version, buf, size);
+                    }
+                } else {
+                    errno = EPERM;
+                    return -errno;
+                }
+            }
+
+            while (read_off < size) {
+                size_t write_size = (read_off + BLK_SIZE) > size ? (size - read_off) : BLK_SIZE;
+                current_blk++;
+                std::string blk_path = std::string(path) + ":" + std::to_string(current_blk);
+                long version = increment_version_and_get(blk_path);
+                df_client->put(blk_path, version, &buf[read_off], write_size);
+                read_off += BLK_SIZE;
+            }
+
+            //TODO SET NEW GETATTR
+            stbuf.st_size = next_size;
+            stbuf.st_blocks = current_blk + 1;
+            clock_gettime(CLOCK_REALTIME, &(stbuf.st_ctim));
+            stbuf.st_mtim = stbuf.st_ctim;
+            metadata to_send(stbuf);
+            // serialize metadata object
+            std::string metadata_str = metadata::serialize_to_string(to_send);
             //dataflasks send
             long version = increment_version_and_get(path);
-            df_client->put(path, version, buf, size);
-            write_buf = &size_ptr;
-            pwrite((int) fi->fh, *write_buf, strlen(size_ptr) + 1, offset);
-            result = size; // tem sempre de se retornar o size suposto senão eram realizados mais pedidos
-        } else {
-            result = pwrite((int) fi->fh, *write_buf, size, offset);
+            df_client->put(path, version, metadata_str.data(), metadata_str.size());
+
+            result = size;
+        } catch (EmptyViewException &e) {
+            // empty view -> nothing to do
+            e.what();
+            errno = EAGAIN; //resource unavailable
+            return -errno;
+        } catch (ConcurrentWritesSameKeyException &e) {
+            // empty view -> nothing to do
+            e.what();
+            errno = EPERM; //operation not permitted
+            return -errno;
         }
-    }catch(EmptyViewException& e){
-        // empty view -> nothing to do
-        e.what();
-        errno = EAGAIN; //resource unavailable
-        return -errno;
-    }catch(ConcurrentWritesSameKeyException& e){
-        // empty view -> nothing to do
-        e.what();
-        errno = EPERM; //operation not permitted
-        return -errno;
+    }else{
+        result = pwrite((int) fi->fh, buf, size, offset);
     }
 
     if (result == -1)

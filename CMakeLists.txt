@@ -8,7 +8,7 @@ set(CMAKE_PREFIX_PATH "/usr/local/lib64/cmake")
 find_package(CapnProto CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(Protobuf REQUIRED)
-find_package(Boost COMPONENTS system thread REQUIRED)
+find_package(Boost COMPONENTS system thread serialization REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(spdlog REQUIRED)
 
@@ -141,7 +141,6 @@ add_executable( lsfs_exe
         df_client/client.h
         df_client/client_reply_handler.cpp
         df_client/client_reply_handler.h
-
         fuse/fuse_wrapper.cpp
         fuse/fuse_wrapper.h
         fuse/lsfs_impl.h
@@ -158,7 +157,10 @@ add_executable( lsfs_exe
         fuse/passthrough_haslab/util.h
         fuse/passthrough_haslab/util.cpp
         fuse/passthrough_haslab/fuse35.h fuse/lsfs_impl.cpp
-        exceptions/empty_view_exception.h exceptions/concurrent_writes_same_key.h exceptions/custom_exceptions.h)
+        exceptions/empty_view_exception.h
+        exceptions/concurrent_writes_same_key.h
+        exceptions/custom_exceptions.h
+        fuse/passthrough_haslab/metadata.h fuse/passthrough_haslab/metadata.cpp)
 
 target_link_libraries(lsfs_exe PRIVATE CapnProto::capnp)
 target_link_libraries(lsfs_exe PRIVATE nlohmann_json::nlohmann_json)
@@ -167,6 +169,7 @@ target_link_libraries(lsfs_exe PUBLIC ${PROTOBUF_LIBRARIES})
 target_link_libraries(lsfs_exe PUBLIC ${Boost_LIBRARIES})
 target_link_libraries(lsfs_exe PRIVATE spdlog::spdlog)
 target_link_libraries(lsfs_exe PUBLIC fuse3)
+target_link_libraries(lsfs_exe PUBLIC ${Boost_LIBRARIES})
 target_include_directories(lsfs_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(lsfs_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(lsfs_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
