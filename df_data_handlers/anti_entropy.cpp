@@ -47,18 +47,22 @@ void anti_entropy::operator()() {
         if(this->running){
             std::vector<peer_data> slice_view = pss_ptr->get_slice_local_view();
 
-            proto::kv_message message;
-            auto *message_content = new proto::anti_entropy_message();
-            message_content->set_ip(this->ip);
-            message_content->set_port(this->respond_to_port);
-            message_content->set_id(this->id);
-            for(auto& key : this->store->get_keys()){
-                proto::kv_store_key* kv_key = message_content->add_keys();
-                kv_key->set_key(key.key);
-                kv_key->set_version(key.version);
+            try {
+                proto::kv_message message;
+                auto *message_content = new proto::anti_entropy_message();
+                message_content->set_ip(this->ip);
+                message_content->set_port(this->respond_to_port);
+                message_content->set_id(this->id);
+                for (auto &key : this->store->get_keys()) {
+                    proto::kv_store_key *kv_key = message_content->add_keys();
+                    kv_key->set_key(key.key);
+                    kv_key->set_version(key.version);
+                }
+                message.set_allocated_anti_entropy_msg(message_content);
+                this->send_peer_keys(slice_view, message);
+            }catch (std::exception e){
+                // Unable to get Keys -> Do nothing
             }
-            message.set_allocated_anti_entropy_msg(message_content);
-            this->send_peer_keys(slice_view, message);
         }
     }
 

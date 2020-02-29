@@ -263,7 +263,9 @@ private:
         std::string data = message.data();
 
         if (!this->store->have_seen(key, version)) {
-            bool stored = this->store->put(key, version, data);
+            try {
+                bool stored = this->store->put(key, version, data);
+            }catch(std::exception e){}
         }
     }
 
@@ -279,7 +281,12 @@ private:
 
 
         if (!this->store->have_seen(key, version)) {
-            bool stored = this->store->put(key, version, data);
+            bool stored;
+            try {
+                stored = this->store->put(key, version, data);
+            }catch(std::exception){
+                stored = false;
+            }
             if (stored) {
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                 std::vector<peer_data> view = this->pss_ptr->get_view();
@@ -340,32 +347,40 @@ private:
 
     void process_anti_entropy_message(const proto::kv_message &msg) {
         proto::anti_entropy_message message = msg.anti_entropy_msg();
-        std::unordered_set<kv_store_key<std::string>> keys = this->store->get_keys();
 
-        std::unordered_set<kv_store_key<std::string>> keys_to_request;
-        for(auto& key : message.keys()){
-            kv_store_key<std::string> kv_key = {key.key(), key.version()};
-            if(keys.find(kv_key) == keys.end()){
-                // não possuimos a chave
-                if(this->store->get_slice_for_key(kv_key.key) == this->store->get_slice()){
-                    //se a chave pertence à minha slice
-                    keys_to_request.insert(kv_key);
+
+        try {
+            std::unordered_set<kv_store_key<std::string>> keys = this->store->get_keys();
+
+            std::unordered_set<kv_store_key<std::string>> keys_to_request;
+            for (auto &key : message.keys()) {
+                kv_store_key<std::string> kv_key = {key.key(), key.version()};
+                if (keys.find(kv_key) == keys.end()) {
+                    // não possuimos a chave
+                    if (this->store->get_slice_for_key(kv_key.key) == this->store->get_slice()) {
+                        //se a chave pertence à minha slice
+                        keys_to_request.insert(kv_key);
+                    }
                 }
             }
-        }
 
-        for(auto& key: keys_to_request){
-            proto::kv_message get_msg;
-            auto* message_content = new proto::get_message();
-            message_content->set_ip(this->ip);
-            message_content->set_port(this->port);
-            message_content->set_id(this->id);
-            message_content->set_key(key.key);
-            message_content->set_version(key.version);
-            message_content->set_reqid("intern" + to_string(this->id) + ":" + to_string(this->get_anti_entropy_req_count()));
-            get_msg.set_allocated_get_msg(message_content);
+            for (auto &key: keys_to_request) {
+                proto::kv_message get_msg;
+                auto *message_content = new proto::get_message();
+                message_content->set_ip(this->ip);
+                message_content->set_port(this->port);
+                message_content->set_id(this->id);
+                message_content->set_key(key.key);
+                message_content->set_version(key.version);
+                message_content->set_reqid(
+                        "intern" + to_string(this->id) + ":" + to_string(this->get_anti_entropy_req_count()));
+                get_msg.set_allocated_get_msg(message_content);
 
-            this->reply_client(get_msg, message.ip(), message.port());
+                this->reply_client(get_msg, message.ip(), message.port());
+            }
+        }catch (std::exception e){
+            // Unable to Get Keys
+            return;
         }
     }
 };

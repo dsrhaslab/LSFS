@@ -65,6 +65,43 @@ int lsfs_impl::_rename(
     return (rename(from, to) == 0) ? 0 : -errno;
 }
 
+/*
+ *
+ * Historically, the first Unix filesystem created two entries in every
+ * directory: . pointing to the directory itself, and .. pointing to its parent.
+ * This provided an easy way to traverse the filesystem, both for applications
+ * and for the OS itself.
+ *
+ * Thus each directory has a link count of 2+n where n is the number of subdirectories.
+ * The links are the entry for that directory in its parent, the directory's 
+ * own . entry, and the .. entry in each subdirectory. For example, suppose this is
+ * the content of the subtree rooted at /parent, all directories:
+ *
+ * /parent
+ * /parent/dir
+ * /parent/dir/sub1
+ * /parent/dir/sub2
+ * /parent/dir/sub3
+ *
+ * Then dir has a link count of 5: the dir entry in /parent, the . entry in /parent/dir,
+ * and the three .. entries in each of /parent/dir/sub1, /parent/dir/sub2 and /parent/dir/sub3.
+ * Since /parent/dir/sub1 has no subdirectory, its link count is 2 (the sub1 entry in
+ * /parent/dir and the . entry in /parent/dir/sub1).
+ *
+ * To minimize the amount of special-casing for the root directory, which doesn't have a
+ * “proper” parent, the root directory contains a .. entry pointing to itself. This way it,
+ * too, has a link count of 2 plus the number of subdirectories, the 2 being /. and /...
+ *
+ * Later filesystems have tended to keep track of parent directories in memory and usually
+ * don't need . and .. to exist as actual entries; typical modern unix systems treat . and ..
+ * as special values as part of the filesystem-type-independent filesystem code. Some
+ * filesystems still include . and .. entries, or pretend to even though nothing appears on the disk.
+ *
+ * Most filesystems still report a link count of 2+n for directories regardless of
+ * whether . and .. entries exist, but there are exceptions, for example btrfs doesn't do this.
+ *
+ * */
+
 int lsfs_impl::_mkdir(
     const char *path, mode_t mode
     )

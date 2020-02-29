@@ -70,7 +70,7 @@ add_executable( peer_exe
         df_data_handlers/anti_entropy.h
         df_core/peer.h
         df_core/peer.cpp
-        df_store/kv_store_wiredtiger.h)
+        df_store/kv_store_wiredtiger.h exceptions/wiredtiger_error.h)
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)

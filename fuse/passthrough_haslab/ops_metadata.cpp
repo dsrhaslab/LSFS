@@ -27,7 +27,6 @@ int lsfs_impl::_getattr(
         logger->flush();
 
         if(!is_temp_file(path)){
-
             long version = get_version(path);
             if(version == -1){
                 errno = ENOENT;
