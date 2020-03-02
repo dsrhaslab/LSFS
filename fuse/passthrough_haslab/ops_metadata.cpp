@@ -44,7 +44,7 @@ int lsfs_impl::_getattr(
                 metadata recv = metadata::deserialize_from_string(*data);
                 // copy metadata received to struct stat
                 memcpy(stbuf, &recv.stbuf, sizeof(struct stat));
-                std::cout << recv.stbuf.st_size << std::endl;
+
                 result = 0;
             }
 

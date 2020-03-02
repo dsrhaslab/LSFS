@@ -6,6 +6,7 @@
 #define P2PFS_KV_STORE_WIREDTIGER_H
 
 #include <wiredtiger.h>
+#include "../exceptions/custom_exceptions.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <atomic>
@@ -29,6 +30,7 @@ private:
     WT_CONNECTION *conn;
     WT_SESSION *session;
     long id;
+    std::string path;
     std::atomic<int> slice = 1; //[1, nr_slices]
     std::atomic<int> nr_slices = 1;
     std::unordered_map<kv_store_key<std::string>, bool> seen;
@@ -38,6 +40,9 @@ private:
     std::recursive_mutex store_mutex;
     std::recursive_mutex req_log_mutex;
     std::recursive_mutex anti_entropy_log_mutex;
+
+private:
+    void error_check(int call);
 
 public:
     ~kv_store_wiredtiger();
@@ -72,8 +77,45 @@ void kv_store_wiredtiger::close() {
     conn->close(conn, NULL);
 }
 
+void kv_store_wiredtiger::error_check(int call){
+    int res;
+    if ((res = (call)) != 0 && res != ENOTSUP){
+        std::string err;
+        switch (res) {
+            case WT_ROLLBACK:
+                err = "WT_ROLLBACK";
+                break;
+            case WT_DUPLICATE_KEY:
+                err = "WT_DUPLICATE_KEY";
+                break;
+            case WT_ERROR:
+                err = "WT_ERROR";
+                break;
+            case WT_NOTFOUND:
+                err = "WT_NOTFOUND";
+                break;
+            case WT_PANIC:
+                err = "WT_PANIC";
+                this->close();
+                this->init((void *) this->path.c_str(), this->id);
+                break;
+            case WT_RUN_RECOVERY:
+                err = "WT_RUN_RECOVERY";
+                break;
+            default:
+                err = "DEFAULT";
+                break;
+        }
+        std::cout << "\033[1;31mERROR WIREDTIGER: \033[0m" << err << std::endl;
+        throw WiredTigerException();
+    }else{
+        std::cout << "\033[1;31mAll Good\033[0m" << std::endl;
+    }
+}
+
 int kv_store_wiredtiger::init(void* path, long id){
     this->id = id;
+    this->path = std::string((char*) path);
     std::string database_path = (char*) path +  std::to_string(id);
     try{
         std::filesystem::create_directories(database_path.c_str());
@@ -144,16 +186,19 @@ void kv_store_wiredtiger::update_partition(int p, int np) {
         std::string table_name = "table:" + std::to_string(this->id);
         session->open_cursor(session, table_name.c_str(), NULL, NULL, &cursor);
 
-        for(const auto& seen_pair: this->seen){
-            cursor->set_key(cursor, seen_pair.first.key.c_str(), seen_pair.first.version);
-            int res = cursor->search(cursor);
+        try {
+            error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor));
+            for(const auto& seen_pair: this->seen){
+                cursor->set_key(cursor, seen_pair.first.key.c_str(), seen_pair.first.version);
+                int res = cursor->search(cursor);
 
-            if(res != 0) { // a chave não existe
-                this->seen.insert_or_assign(seen_pair.first, false);
+                if(res != 0) { // a chave não existe
+                    this->seen.insert_or_assign(seen_pair.first, false);
+                }
+                cursor->reset(cursor);
             }
-            cursor->reset(cursor);
-        }
-        cursor->close(cursor);
+            cursor->close(cursor);
+        }catch(WiredTigerException e){}
     }
 }
 
@@ -165,7 +210,7 @@ std::unordered_set<kv_store_key<std::string>> kv_store_wiredtiger::get_keys() {
     std::unordered_set<kv_store_key<std::string>> keys;
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
-    session->open_cursor(session, table_name.c_str(), NULL, NULL, &cursor);
+    error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor)); //throw exception
 
     int i;
     while ((i = cursor->next(cursor)) == 0) {
@@ -205,7 +250,7 @@ bool kv_store_wiredtiger::put(std::string key, long version, std::string bytes) 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     if(this->slice == k_slice){
         std::string table_name = "table:" + std::to_string(this->id);
-        session->open_cursor(session, table_name.c_str(), NULL, "overwrite=true", &cursor);
+        error_check(session->open_cursor(session, table_name.c_str(), nullptr, "overwrite=true", &cursor)); //throw exception
         cursor->set_key(cursor, key.c_str(), version);
         auto data_size = bytes.size();
         char buf[data_size];
@@ -229,16 +274,18 @@ void kv_store_wiredtiger::print_store(){
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
-    session->open_cursor(session, table_name.c_str(), NULL, NULL, &cursor);
+    try {
+        error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor));
 
-    std::cout << "================= MY STORE =============" << std::endl;
-    int i;
-    while ((i = cursor->next(cursor)) == 0) {
-        cursor->get_key(cursor, &key, &version);
-        std::cout << std::string(key) << ": " << (long) version << std::endl;
-    }
-    std::cout << "========================================" << std::endl;
-    cursor->close(cursor);
+        std::cout << "================= MY STORE =============" << std::endl;
+        int i;
+        while ((i = cursor->next(cursor)) == 0) {
+            cursor->get_key(cursor, &key, &version);
+            std::cout << std::string(key) << ": " << (long) version << std::endl;
+        }
+        std::cout << "========================================" << std::endl;
+        cursor->close(cursor);
+    }catch(WiredTigerException e){}
 }
 
 std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string> key) {
@@ -247,7 +294,11 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string> 
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
-    session->open_cursor(session, table_name.c_str(), NULL, NULL, &cursor);
+    try {
+        error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor));
+    }catch(WiredTigerException e){
+        return nullptr;
+    }
     cursor->set_key(cursor, key.key.c_str(), key.version);
     int res = cursor->search(cursor);
     if(res == 0){
@@ -267,7 +318,7 @@ std::shared_ptr<std::string> kv_store_wiredtiger::remove(kv_store_key<std::strin
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
-    session->open_cursor(session,table_name.c_str(), NULL, NULL, &cursor);
+    error_check(session->open_cursor(session,table_name.c_str(), nullptr, nullptr, &cursor));
     cursor->set_key(cursor, key.key.c_str(), key.version);
 
 

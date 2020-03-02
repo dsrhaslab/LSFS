@@ -52,20 +52,6 @@ static int create_or_open(
 
 /* -------------------------------------------------------------------------- */
 
-void initialize_new_file_metadata(struct stat* stbuf, mode_t mode, nlink_t nlink, gid_t gid, uid_t uid){
-    memset(stbuf, 0, sizeof(struct stat));
-    stbuf->st_mode = mode;
-    stbuf->st_gid = gid;
-    stbuf->st_uid = uid;
-    stbuf->st_nlink = nlink;
-    timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    stbuf->st_atim = ts;
-    stbuf->st_ctim = ts;
-    stbuf->st_mtim = ts;
-    stbuf->st_blksize = BLK_SIZE;
-}
-
 int lsfs_impl::_create(
     const char *path, mode_t mode,
     struct fuse_file_info *fi
@@ -80,7 +66,7 @@ int lsfs_impl::_create(
         const struct fuse_context* ctx = fuse_get_context();
         struct stat stbuf;
         // init file stat
-        initialize_new_file_metadata(&stbuf, mode, 1, ctx->gid, ctx->uid);
+        metadata::initialize_metadata(&stbuf, mode, 1, ctx->gid, ctx->uid);
         // create metadata object
         metadata to_send(stbuf);
         // serialize metadata object

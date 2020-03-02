@@ -31,6 +31,7 @@ public:
     metadata() = default;
     static std::string serialize_to_string(metadata& met);
     static metadata deserialize_from_string(std::string& string_serial);
+    static void initialize_metadata(struct stat* stbuf, mode_t mode, nlink_t nlink, gid_t gid, uid_t uid);
 //    void add_child(std::string path, kv_store_key<std::string> key);
 };
 
