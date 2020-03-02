@@ -110,8 +110,6 @@ int lsfs_impl::_mkdir(
 {
     logger->info("MKDIR " + std::string(path));
     logger->flush();
-
-    int return_value;
     
     if (!fuse_pt_impersonate_calling_process_highlevel(&mode))
         return -errno;
@@ -122,29 +120,21 @@ int lsfs_impl::_mkdir(
     metadata::initialize_metadata(&stbuf, S_IFDIR | mode, 2, ctx->gid, ctx->uid);
     // create metadata object
     metadata to_send(stbuf);
-    // serialize metadata object
-    std::string metadata_str = metadata::serialize_to_string(to_send);
-    //dataflasks send
-    long version = increment_version_and_get(path);
-    try{
-        df_client->put(path, version, metadata_str.data(), metadata_str.size());
-        return_value = 0;
-    }catch(EmptyViewException& e){
-        // empty view -> nothing to do
-        e.what();
-        errno = EAGAIN; //resource unavailable
-        return_value = -errno;
-    }catch(ConcurrentWritesSameKeyException& e){
-        e.what();
-        errno = EPERM; //operation not permitted
-        return_value = -errno;
+    // put metadata
+    int res = put_metadata(to_send, path);
+    if(res == -1){
+        return -errno;
     }
-    
+    res = add_child_to_parent_dir(path, true);
+    if(res == -1){
+        return -errno;
+    }
+
 //    const int return_value = (mkdir(path, mode) == 0) ? 0 : -errno;
 
     fuse_pt_unimpersonate();
 
-    return return_value;
+    return 0;
 }
 
 int lsfs_impl::_rmdir(

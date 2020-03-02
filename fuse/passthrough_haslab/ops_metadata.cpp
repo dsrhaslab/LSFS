@@ -27,26 +27,15 @@ int lsfs_impl::_getattr(
         logger->flush();
 
         if(!is_temp_file(path)){
-            long version = get_version(path);
-            if(version == -1){
-                errno = ENOENT;
+            std::unique_ptr<metadata> res = get_metadata(path);
+            if(res == nullptr){
                 return -errno;
-            }else{
-                //Fazer um get de metadados ao dataflasks
-                std::shared_ptr<std::string> data = df_client->get(1, path, version);
-
-                if (data == nullptr){
-                    errno = EHOSTUNREACH; // Not Reachable Host
-                    return -errno;
-                }
-
-                // reconstruir a struct stat com o resultado
-                metadata recv = metadata::deserialize_from_string(*data);
-                // copy metadata received to struct stat
-                memcpy(stbuf, &recv.stbuf, sizeof(struct stat));
-
-                result = 0;
             }
+
+            // copy metadata received to struct stat
+            memcpy(stbuf, &res->stbuf, sizeof(struct stat));
+
+            result = 0;
 
             logger->info("GETATTR - Não é temporário " + std::to_string(stbuf->st_size));
             logger->flush();

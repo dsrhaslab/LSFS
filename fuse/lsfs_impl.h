@@ -10,6 +10,8 @@
 #include "fuse_wrapper.h"
 #include "fuse_wrapper.cpp"
 #include "../df_client/client.h"
+#include "passthrough_haslab/metadata.h"
+#include "exceptions/custom_exceptions.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -33,6 +35,10 @@ extern std::shared_ptr<spdlog::logger> logger;
 long increment_version_and_get(std::string path);
 long get_version(std::string path);
 int open_and_read_size(const char *path, size_t* size);
+int add_child_to_parent_dir(const char *path, bool is_dir);
+int put_metadata(metadata& met, const char* path);
+std::unique_ptr<metadata> get_metadata(const char* path);
+
 
 class lsfs_impl : public fuse_wrapper::fuse<lsfs_impl>{
 

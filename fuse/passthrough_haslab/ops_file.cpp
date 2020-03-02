@@ -70,22 +70,16 @@ int lsfs_impl::_create(
         // create metadata object
         metadata to_send(stbuf);
         // serialize metadata object
-        std::string metadata_str = metadata::serialize_to_string(to_send);
-        //dataflasks send
-        long version = increment_version_and_get(path);
-        try{
-            df_client->put(path, version, metadata_str.data(), metadata_str.size());
-            return_value = 0;
-        }catch(EmptyViewException& e){
-            // empty view -> nothing to do
-            e.what();
-            errno = EAGAIN; //resource unavailable
-            return_value = -errno;
-        }catch(ConcurrentWritesSameKeyException& e){
-            e.what();
-            errno = EPERM; //operation not permitted
-            return_value = -errno;
+        int res = put_metadata(to_send, path);
+        if(res == -1){
+            return -errno;
         }
+        res = add_child_to_parent_dir(path, false);
+        if(res == -1){
+            return -errno;
+        }
+
+        return_value = 0;
     }else{
         return_value = create_or_open(true, path, mode, fi);
     }

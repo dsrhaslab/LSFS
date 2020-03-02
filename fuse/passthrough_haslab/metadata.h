@@ -6,7 +6,8 @@
 #define P2PFS_METADATA_H
 
 #include <boost/serialization/access.hpp>
-#include <boost/serialization/map.hpp>
+//#include <boost/serialization/map.hpp>
+#include <boost/serialization/set.hpp>
 #include <boost/serialization/string.hpp>
 
 #include <boost/iostreams/device/array.hpp>
@@ -23,6 +24,8 @@ private:
 
 public:
     struct stat stbuf;
+    std::set<std::string> childs;
+
 //    std::map<std::string, kv_store_key<std::string>> childs;
 
 public:
@@ -32,6 +35,7 @@ public:
     static std::string serialize_to_string(metadata& met);
     static metadata deserialize_from_string(std::string& string_serial);
     static void initialize_metadata(struct stat* stbuf, mode_t mode, nlink_t nlink, gid_t gid, uid_t uid);
+    void add_child(std::string path);
 //    void add_child(std::string path, kv_store_key<std::string> key);
 };
 
@@ -57,6 +61,7 @@ void metadata::serialize(Archive &ar, const unsigned int version) {
     ar&this->stbuf.__glibc_reserved[0];
     ar&this->stbuf.__glibc_reserved[1];
     ar&this->stbuf.__glibc_reserved[2];
+    ar&this->childs;
 }
 
 #endif //P2PFS_METADATA_H

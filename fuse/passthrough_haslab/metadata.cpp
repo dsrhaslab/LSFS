@@ -7,6 +7,10 @@
 
 metadata::metadata(struct stat& stbuf): stbuf(stbuf){};
 
+void metadata::add_child(std::string path) {
+    this->childs.insert(path);
+}
+
 std::string metadata::serialize_to_string(metadata& met){
     std::string metadata_str;
     boost::iostreams::back_insert_device<std::string> inserter(metadata_str);

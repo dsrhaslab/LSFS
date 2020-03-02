@@ -79,3 +79,85 @@ int open_and_read_size(
 
     return 0;
 }
+
+int put_metadata(metadata& met, const char* path){
+    int return_value;
+
+    // serialize metadata object
+    std::string metadata_str = metadata::serialize_to_string(met);
+
+    long version = increment_version_and_get(path);
+    try{
+        df_client->put(path, version, metadata_str.data(), metadata_str.size());
+        return_value = 0;
+    }catch(EmptyViewException& e){
+        // empty view -> nothing to do
+        e.what();
+        errno = EAGAIN; //resource unavailable
+        return_value = -1;
+    }catch(ConcurrentWritesSameKeyException& e){
+        e.what();
+        errno = EPERM; //operation not permitted
+        return_value = -1;
+    }
+
+    return return_value;
+}
+
+std::unique_ptr<metadata> get_metadata(const char* path){
+    long version = get_version(path);
+    std::unique_ptr<metadata> res = nullptr;
+    if(version == -1){
+        errno = ENOENT;
+    }else{
+        //Fazer um get de metadados ao dataflasks
+        std::shared_ptr<std::string> data = df_client->get(1, path, version);
+
+        if (data == nullptr){
+            errno = EHOSTUNREACH; // Not Reachable Host
+        }
+
+        // reconstruir a struct stat com o resultado
+        res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
+    }
+
+    return res;
+}
+
+int add_child_to_parent_dir(const char *path, bool is_dir) {
+    std::unique_ptr<std::string> parent_path = get_parent_dir(path);
+    if(parent_path != nullptr){
+        // parent is not root directory
+        long version = get_version(parent_path->c_str());
+        if(version == -1){
+            errno = ENOENT;
+            return -errno;
+        }else{
+            //Fazer um get de metadados ao dataflasks
+            std::shared_ptr<std::string> data = df_client->get(1, parent_path->c_str(), version);
+
+            if (data == nullptr){
+                errno = EHOSTUNREACH; // Not Reachable Host
+                return -errno;
+            }
+
+            // reconstruir a struct stat com o resultado
+            metadata met = metadata::deserialize_from_string(*data);
+            // increase parent hard links if its a directory
+            if(is_dir){
+                met.stbuf.st_nlink++;
+            }
+            // add child path to metadata
+            met.add_child(std::string(path));
+            // put metadata
+            int res = put_metadata(met, parent_path->c_str());
+            if(res != 0){
+                return -errno;
+            }
+            return 0;
+        }
+    }
+
+    //TODO handle root directory case
+    return 0;
+}
