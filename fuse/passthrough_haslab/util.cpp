@@ -169,3 +169,14 @@ std::unique_ptr<std::string> get_parent_dir(std::string path){
 
     return nullptr;
 }
+
+std::unique_ptr<std::string> get_child_name(std::string path){
+    std::smatch match;
+    auto res = std::regex_search(path, match, child_name_pattern);
+
+    if(match.size() > 0){
+        return std::make_unique<std::string>(std::string(match[1].str()));
+    }
+
+    return nullptr;
+}

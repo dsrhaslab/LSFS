@@ -15,6 +15,7 @@
 
 static std::regex temp_extensions("(\\.swx$|\\.swp$|\\.inf$|/\\.|~$)");
 static std::regex parent_dir_pattern("(.+)/[^/]+$");
+static std::regex child_name_pattern("/([^/]+)$");
 
 int fuse_pt_is_super_user(void);
 void fuse_pt_assert_super_user(void);
@@ -79,6 +80,7 @@ void print_error_errno_and_fail(const char *fmt, ...);
 
 bool is_temp_file(std::string path);
 std::unique_ptr<std::string> get_parent_dir(std::string path);
+std::unique_ptr<std::string> get_child_name(std::string path);
 
 /* -------------------------------------------------------------------------- */
 #endif /* fuse_pt_header_util_h_ */

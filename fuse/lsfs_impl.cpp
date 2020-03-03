@@ -126,6 +126,7 @@ std::unique_ptr<metadata> get_metadata(const char* path){
 
 int add_child_to_parent_dir(const char *path, bool is_dir) {
     std::unique_ptr<std::string> parent_path = get_parent_dir(path);
+    std::unique_ptr<std::string> child_name = get_child_name(path);
     if(parent_path != nullptr){
         // parent is not root directory
         long version = get_version(parent_path->c_str());
@@ -148,7 +149,7 @@ int add_child_to_parent_dir(const char *path, bool is_dir) {
                 met.stbuf.st_nlink++;
             }
             // add child path to metadata
-            met.add_child(std::string(path));
+            met.add_child(*child_name);
             // put metadata
             int res = put_metadata(met, parent_path->c_str());
             if(res != 0){
