@@ -15,12 +15,14 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include <stdlib.h>
 #include <df_store/kv_store_wiredtiger.h>
+#include <df_store/kv_store_leveldb.h>
 
 std::shared_ptr<peer> g_peer_impl;
 
 peer::peer(long id, std::string ip, int pss_port, int data_port, double position, std::shared_ptr<spdlog::logger> logger):
     id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position), logger(logger),
-    store(std::make_shared<kv_store_wiredtiger>()),
+    store(std::make_shared<kv_store_leveldb>()),
+//    store(std::make_shared<kv_store_wiredtiger>()),
 //    store(std::make_shared<kv_store_memory<std::string>>()),
     group_c(ip, pss_port, id, position, 5, 10, 40, true, 15, this->store, logger),
     cyclon(peer::boot_ip, peer::boot_port, ip, pss_port, id, position,2,8,10,7, &(this->group_c)),
@@ -29,7 +31,8 @@ peer::peer(long id, std::string ip, int pss_port, int data_port, double position
     data_handler(ip, data_port, id, 1, &(this->cyclon), this->store, false),
     anti_ent(ip, data_port, id, &(this->cyclon), this->store, 20)
 {
-    int res = this->store->init((void*) "/home/danielsf97/Desktop/wiredDB/", id);
+//    int res = this->store->init((void*) "/home/danielsf97/Desktop/wiredDB/", id);
+    int res = this->store->init((void*) "/home/danielsf97/Desktop/levelDB/", id);
     if(res != 0){
         exit(1);
     }
@@ -39,7 +42,8 @@ peer::peer(long id, std::string ip, int pss_port, int data_port,double position,
         int logging_interval, int anti_entropy_interval, std::string logging_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval, float reply_chance, bool smart, std::shared_ptr<spdlog::logger> logger)
     :   id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
         local_interval(local_interval), reply_chance(reply_chance),
-        store(std::make_shared<kv_store_wiredtiger>()),
+        store(std::make_shared<kv_store_leveldb>()),
+//        store(std::make_shared<kv_store_wiredtiger>()),
 //        store(std::make_shared<kv_store_memory<std::string>>()),
         data_handler(ip, data_port, id, reply_chance, &(this->cyclon), this->store, smart),
         anti_ent(ip, data_port, id, &(this->cyclon), this->store, anti_entropy_interval),
@@ -48,7 +52,8 @@ peer::peer(long id, std::string ip, int pss_port, int data_port,double position,
         listener("127.0.0.1", pss_port, &(this->cyclon)),
         v_logger(pss_port, &(this->cyclon), logging_interval, logging_dir)
 {
-    int res = this->store->init((void*) "/home/danielsf97/Desktop/wiredDB/", id);
+//    int res = this->store->init((void*) "/home/danielsf97/Desktop/wiredDB/", id);
+    int res = this->store->init((void*) "/home/danielsf97/Desktop/levelDB/", id);
     if(res != 0){
         exit(1);
     }

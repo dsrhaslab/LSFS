@@ -11,6 +11,7 @@ find_package(Protobuf REQUIRED)
 find_package(Boost COMPONENTS system thread serialization REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(leveldb REQUIRED)
 
 # check if protobuf was found
 if(PROTOBUF_FOUND)
@@ -70,7 +71,7 @@ add_executable( peer_exe
         df_data_handlers/anti_entropy.h
         df_core/peer.h
         df_core/peer.cpp
-        df_store/kv_store_wiredtiger.h exceptions/wiredtiger_error.h)
+        df_store/kv_store_wiredtiger.h exceptions/wiredtiger_error.h df_store/kv_store_leveldb.h exceptions/leveldb_error.h df_util/util.cpp df_util/util.h)
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)
@@ -81,6 +82,7 @@ target_include_directories(peer_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(peer_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(peer_exe PRIVATE spdlog::spdlog)
 target_link_libraries(peer_exe PUBLIC wiredtiger)
+target_link_libraries(peer_exe PUBLIC leveldb)
 target_link_libraries(peer_exe PUBLIC stdc++fs) # for creating directories
 
 add_executable( client_exe
