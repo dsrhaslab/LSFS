@@ -14,6 +14,7 @@
 #include "../df_loadbalancing/load_balancer_listener.h"
 #include "../kv_message.pb.h"
 #include "../df_core/peer_data.h"
+#include "client_reply_handler_mt.h"
 
 class client {
 private:
@@ -38,6 +39,7 @@ public:
     void stop();
     std::set<long> put(std::string key, long version, const char* data, size_t size);
     std::shared_ptr<std::string> get(long node_id, std::string key, long version);
+//    long get_latest_version(long node_id, std::string key);
 
 private:
     long inc_and_get_request_count();

@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <iostream>
 #include "../exceptions/custom_exceptions.h"
+#include <regex>
 
 client_reply_handler::client_reply_handler(std::string ip, int port, int nr_puts_required, long wait_timeout):
     ip(ip), port(port), nr_puts_required(nr_puts_required), wait_timeout(wait_timeout), socket_rcv(socket(PF_INET, SOCK_DGRAM, 0))
@@ -50,6 +51,11 @@ void client_reply_handler::operator()() {
 
                     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
+                    std::regex composite_key(".+:(\\d+)$");
+                    std::smatch match;
+                    auto res = std::regex_search(req_id, match, composite_key);
+                    std::cout << "<==============================" << " GET " << std::stol(match[1].str(), nullptr) << std::endl;
+
                     if(this->get_replies.find(req_id) != this->get_replies.end()){
                         // a chave existe
                         auto& sync_pair = this->get_mutexes.find(req_id)->second;
@@ -65,13 +71,18 @@ void client_reply_handler::operator()() {
 
                     const proto::put_reply_message& msg = message.put_reply_msg();
                     std::string key = msg.key();
+                    long version = msg.version();
+                    kv_store_key<std::string> comp_key = {key, version};
                     long replier_id = msg.id();
 
                     std::unique_lock<std::mutex> lock(this->put_global_mutex);
-                    auto it = this->put_replies.find(key);
+
+                    std::cout << "<==============================" << " PUT " << key << " : " << version << std::endl;
+
+                    auto it = this->put_replies.find(comp_key);
                     if(it != this->put_replies.end()){
                         // a chave existe
-                        auto& sync_pair = this->put_mutexes.find(key)->second;
+                        auto& sync_pair = this->put_mutexes.find(comp_key)->second;
                         std::unique_lock<std::mutex> key_lock(*sync_pair.first);
 
                         lock.unlock(); //free global put lock
@@ -92,23 +103,26 @@ void client_reply_handler::operator()() {
     }
 }
 
-void client_reply_handler::register_put(std::string key) {
+long client_reply_handler::register_put(std::string key, long version) {
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
 
-    auto it = this->put_replies.find(key);
+    kv_store_key<std::string> comp_key = {key, version};
+
+    auto it = this->put_replies.find(comp_key);
     if(it == this->put_replies.end()){
         // a chave não existe
         std::set<long> temp;
-        this->put_replies.emplace(key, temp);
-        this->put_mutexes.emplace(key, std::make_pair(std::make_unique<std::mutex>(), std::make_unique<std::condition_variable>()));
+        this->put_replies.emplace(comp_key, temp);
+        this->put_mutexes.emplace(std::move(comp_key), std::make_pair(std::make_unique<std::mutex>(), std::make_unique<std::condition_variable>()));
     }else{
         throw ConcurrentWritesSameKeyException();
     }
 
     lock.unlock();
+    return version;
 }
 
-std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(std::string key){
+std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(kv_store_key<std::string> key){
     std::unique_ptr<std::set<long>> res = nullptr;
 
     std::unique_lock<std::mutex> lock(this->put_global_mutex);

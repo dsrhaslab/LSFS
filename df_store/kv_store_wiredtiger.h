@@ -109,7 +109,7 @@ void kv_store_wiredtiger::error_check(int call){
         std::cout << "\033[1;31mERROR WIREDTIGER: \033[0m" << err << std::endl;
         throw WiredTigerException();
     }else{
-        std::cout << "\033[1;31mAll Good\033[0m" << std::endl;
+//        std::cout << "\033[1;31mAll Good\033[0m" << std::endl;
     }
 }
 
@@ -178,7 +178,7 @@ void kv_store_wiredtiger::update_partition(int p, int np) {
     WT_CURSOR *cursor;
 
     if(np != this->nr_slices){
-        std::cout << "UPDATE_PARTITION " << std::to_string(np) << std::endl;
+//        std::cout << "UPDATE_PARTITION " << std::to_string(np) << std::endl;
         this->nr_slices = np;
         this->slice = p;
         //clear memory to allow new keys to be stored

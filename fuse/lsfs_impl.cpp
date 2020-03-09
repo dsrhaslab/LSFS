@@ -115,10 +115,10 @@ std::unique_ptr<metadata> get_metadata(const char* path){
 
         if (data == nullptr){
             errno = EHOSTUNREACH; // Not Reachable Host
+        }else{
+            // reconstruir a struct stat com o resultado
+            res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
         }
-
-        // reconstruir a struct stat com o resultado
-        res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
     }
 
     return res;

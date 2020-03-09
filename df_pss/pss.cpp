@@ -149,18 +149,6 @@ std::vector<peer_data> pss::get_view(){
 
     std::vector<peer_data> res;
 
-    peer_data myself = {
-            this->ip,
-            this->port,
-            0,
-            this->id,
-            this->group_c->get_nr_groups(),
-            this->group_c->get_position(),
-            this->group_c->get_my_group()
-    };
-
-    res.push_back(std::move(myself));
-
     for(auto& [port, peer]: this->view){
         res.push_back(peer);
     }
@@ -320,6 +308,19 @@ void pss::process_msg(proto::pss_message pss_msg){
         this->group_c->receive_local_message(recv_view);
     }else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_LOADBALANCE){
         std::vector<peer_data> current_view = this->get_view();
+
+        peer_data myself = {
+                this->ip,
+                this->port,
+                0,
+                this->id,
+                this->group_c->get_nr_groups(),
+                this->group_c->get_position(),
+                this->group_c->get_my_group()
+        };
+
+        current_view.push_back(std::move(myself));
+
         this->send_pss_msg(pss_msg.sender_port(), current_view, proto::pss_message_Type::pss_message_Type_LOADBALANCE);
     }
     else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_NORMAL){

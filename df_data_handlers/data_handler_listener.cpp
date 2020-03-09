@@ -34,7 +34,7 @@ public:
     data_handler_listener_worker(std::string ip, int port, long id,std::shared_ptr<kv_store<std::string>> store, pss *pssPtr, float chance, bool smart_forward)
         : ip(std::move(ip)), port(port), id(id), chance(chance), pss_ptr(pssPtr), store(std::move(store)), socket_send(socket(PF_INET, SOCK_DGRAM, 0)), smart_forward(smart_forward)
     {
-        srand (static_cast <unsigned> (time(nullptr))); //random seed
+        srand (static_cast <unsigned int> ((time(nullptr) % 1000))*getpid()); //random seed
     }
 
     void handle_function(const char *data, size_t size) override {
@@ -95,7 +95,6 @@ private:
                 std::string buf;
                 message.SerializeToString(&buf);
 
-                std::cout << "Forwarding message to " << std::to_string(peer.port + 1) << std::endl;
                 std::scoped_lock<std::recursive_mutex> lk (socket_send_mutex);
                 int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
                 if(res == -1){printf("Oh dear, something went wrong with send()! %s\n", strerror(errno));}
@@ -103,69 +102,7 @@ private:
         }
     }
 
-//    void process_get_message(const proto::kv_message &msg) {
-//        proto::get_message message = msg.get_msg();
-//        std::string sender_ip = message.ip();
-//        int sender_port = message.port();
-//        long key = message.key();
-//        long version = message.version();
-//        std::string req_id = message.reqid();
-//        std::unique_ptr<const char*> data(new const char*()); //*data = undefined
-//
-//        //se o pedido ainda não foi processado e não é um pedido interno (não começa com intern)
-//        if(!this->df_store->in_log(req_id) && req_id.rfind("intern", 0) != 0){
-//            this->df_store->log_req(req_id);
-//            *data = this->df_store->get({key, version});
-//            if(*data != nullptr){
-//                //se tenho o conteudo da chave
-//                float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-//                if(achance <= this->chance){
-//                    //a probabilidade ditou para responder à mensagem com o conteudo para a chave
-//                    proto::kv_message reply_message;
-//                    auto* message_content = new proto::get_reply_message();
-//                    message_content->set_ip(this->ip);
-//                    message_content->set_port(this->port);
-//                    message_content->set_id(this->id);
-//                    message_content->set_key(key);
-//                    message_content->set_version(version);
-//                    message_content->set_reqid(req_id);
-//                    message_content->set_data(*data);
-//                    reply_message.set_allocated_get_reply_msg(message_content);
-//
-//                    this->reply_client(reply_message, sender_ip, sender_port);
-//                }else{
-//                    //a probabilidade ditou para fazer forward da mensagem
-//                    int obj_slice = this->df_store->get_slice_for_key(key);
-//                    std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
-//                    if(!slice_peers.empty() && this->smart_forward){
-//                        this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
-//                    }else{
-//                        std::vector<peer_data> view = this->pss_ptr->get_view();
-//                        this->forward_message(view, const_cast<proto::kv_message &>(msg));
-//                    }
-//                }
-//            }else{
-//                //se não tenho o conteudo da chave -> fazer forward
-//                int obj_slice = this->df_store->get_slice_for_key(key);
-//                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
-//                if(!slice_peers.empty() && this->smart_forward){
-//                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
-//                }else{
-//                    std::vector<peer_data> view = this->pss_ptr->get_view();
-//                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
-//                }
-//            }
-//        }else{
-//            //caso seja um get interno (antientropy)
-//            if(req_id.rfind("intern", 0) == 0){
-//                //TODO Tratar dos pedidos de anti entropia
-//            }
-//        }
-//
-//    }
-
     void process_get_message(const proto::kv_message &msg) {
-        std::cout << std::to_string(this->port) << " received get" << std::endl;
         proto::get_message message = msg.get_msg();
         std::string sender_ip = message.ip();
         int sender_port = message.port();
@@ -176,6 +113,8 @@ private:
 
         //se o pedido ainda não foi processado e não é um pedido interno (não começa com intern)
         if(!this->store->in_log(req_id) && req_id.rfind("intern", 0) != 0){
+            std::cout << "<================================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version << std::endl;
+
             this->store->log_req(req_id);
             data = this->store->get({key, version});
             if(data != nullptr){
@@ -184,6 +123,7 @@ private:
                 char buf[data_size];
                 data->copy(buf, data_size);
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+                std::cout << achance << " <= " << chance << std::endl;
                 if(achance <= this->chance){
                     //a probabilidade ditou para responder à mensagem com o conteudo para a chave
                     proto::kv_message reply_message;
@@ -197,10 +137,12 @@ private:
                     message_content->set_data(buf, data_size);
                     reply_message.set_allocated_get_reply_msg(message_content);
 
+                    std::cout << "GET REPLY (\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
+
                     this->reply_client(reply_message, sender_ip, sender_port);
                 }else{
                     //a probabilidade ditou para fazer forward da mensagem
-                    this->pss_ptr->print_view();
+//                    this->pss_ptr->print_view();
                     int obj_slice = this->store->get_slice_for_key(key);
                     std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
                     if(!slice_peers.empty() && this->smart_forward){
@@ -211,6 +153,8 @@ private:
                     }
                 }
             }else{
+                std::cout << "===================== DONT HAVEEEEEE =================" << std::endl;
+
                 //se não tenho o conteudo da chave -> fazer forward
                 int obj_slice = this->store->get_slice_for_key(key);
                 std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
@@ -277,9 +221,6 @@ private:
         long version = message.version();
         std::string data = message.data();
 
-        std::cout << std::to_string(this->port) << " received put " << data << std::endl;
-
-
         if (!this->store->have_seen(key, version)) {
             bool stored;
             try {
@@ -287,9 +228,11 @@ private:
             }catch(std::exception){
                 stored = false;
             }
+            std::cout << "<==========(" << std::to_string(stored) <<")============== " << "PUT (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << std::endl;
             if (stored) {
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                std::vector<peer_data> view = this->pss_ptr->get_view();
+                std::cout << achance << " <= " << chance << std::endl;
+                std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
                 if (achance <= this->chance) {
                     proto::kv_message reply_message;
                     auto *message_content = new proto::put_reply_message();
@@ -300,6 +243,7 @@ private:
                     message_content->set_version(version);
                     reply_message.set_allocated_put_reply_msg(message_content);
 
+                    std::cout << "PUT REPLY (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << " ==================================>" << std::endl;
                     this->reply_client(reply_message, sender_ip, sender_port);
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 } else {
@@ -324,19 +268,19 @@ private:
             //Worker ignored put operation for key
             //#############################################################################################
             //TODO Remover só para um cliente não encravar no put caso a chave já exista
-            float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-            if (achance <= this->chance) {
-                proto::kv_message reply_message;
-                auto *message_content = new proto::put_reply_message();
-                message_content->set_ip(this->ip);
-                message_content->set_port(this->port);
-                message_content->set_id(this->id);
-                message_content->set_key(key);
-                message_content->set_version(version);
-                reply_message.set_allocated_put_reply_msg(message_content);
-
-                this->reply_client(reply_message, sender_ip, sender_port);
-            }
+//            float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+//            if (achance <= this->chance) {
+//                proto::kv_message reply_message;
+//                auto *message_content = new proto::put_reply_message();
+//                message_content->set_ip(this->ip);
+//                message_content->set_port(this->port);
+//                message_content->set_id(this->id);
+//                message_content->set_key(key);
+//                message_content->set_version(version);
+//                reply_message.set_allocated_put_reply_msg(message_content);
+//
+//                this->reply_client(reply_message, sender_ip, sender_port);
+//            }
             //#############################################################################################
         }
     }

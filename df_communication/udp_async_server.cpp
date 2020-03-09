@@ -1,10 +1,10 @@
 #include "udp_async_server.h"
+#include "udp_async_server.h"
 
 void udp_session::handle_request(const boost::system::error_code& error)
 {
     if (!error || error == boost::asio::error::message_size)
     {
-        std::cout << "Bytes Recv: " << this->bytes_rcv << std::endl;
         this->handler->handle_function(this->recv_buffer_, this->bytes_rcv);
     }
 }
