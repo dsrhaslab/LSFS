@@ -108,7 +108,7 @@ add_executable( client_exe
         df_client/client.h
         df_client/client_reply_handler.cpp
         df_client/client_reply_handler.h
-        df_client/main.cpp exceptions/empty_view_exception.h exceptions/concurrent_writes_same_key.h exceptions/custom_exceptions.h df_client/client_reply_handler_mt.cpp df_client/client_reply_handler_mt.h exceptions/key_not_found.h)
+        df_client/main.cpp exceptions/empty_view_exception.h exceptions/concurrent_writes_same_key.h exceptions/custom_exceptions.h df_client/client_reply_handler_mt.cpp df_client/client_reply_handler_mt.h)
 
 target_link_libraries(client_exe PRIVATE CapnProto::capnp)
 target_link_libraries(client_exe PRIVATE nlohmann_json::nlohmann_json)
@@ -166,7 +166,7 @@ add_executable( lsfs_exe
         fuse/passthrough_haslab/metadata.cpp
         df_client/client_reply_handler_mt.cpp
         df_client/client_reply_handler_mt.h
-        exceptions/key_not_found.h)
+        exceptions/timeout_exception.h)
 
 target_link_libraries(lsfs_exe PRIVATE CapnProto::capnp)
 target_link_libraries(lsfs_exe PRIVATE nlohmann_json::nlohmann_json)

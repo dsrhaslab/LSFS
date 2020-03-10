@@ -35,6 +35,7 @@ private:
 public:
     int init(void*, long id) override ;
     void close() override;
+    std::string db_name() const override;
     int get_slice_for_key(T key) override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<T>> get_keys() override;
@@ -61,6 +62,11 @@ int kv_store_memory_v2<T>::init(void*, long id) { return 0;}
 
 template <typename T>
 void kv_store_memory_v2<T>::close() {}
+
+template<typename T>
+std::string kv_store_memory_v2<T>::db_name() const {
+    return "kv_store_memory_v2_db";
+}
 
 template <typename T>
 int kv_store_memory_v2<T>::get_slice_for_key(T key) {

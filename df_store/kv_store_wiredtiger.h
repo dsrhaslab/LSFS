@@ -48,6 +48,7 @@ public:
     ~kv_store_wiredtiger();
     int init(void*, long id) override ;
     void close() override ;
+    std::string db_name() const override;
     int get_slice_for_key(std::string key) override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<std::string>> get_keys() override;
@@ -64,6 +65,8 @@ public:
     void log_req(std::string req_id);
     bool in_anti_entropy_log(std::string req_id);
     void log_anti_entropy_req(std::string req_id);
+    std::shared_ptr<std::string> get_latest(std::string key, long *version);
+    std::unique_ptr<long> get_latest_version(std::string key);
     void print_store();
 };
 
@@ -75,6 +78,10 @@ kv_store_wiredtiger::~kv_store_wiredtiger() {
 void kv_store_wiredtiger::close() {
     std::cout << "closing connection" << std::endl;
     conn->close(conn, NULL);
+}
+
+std::string kv_store_wiredtiger::db_name() const {
+    return "wiredDB";
 }
 
 void kv_store_wiredtiger::error_check(int call){
@@ -212,8 +219,7 @@ std::unordered_set<kv_store_key<std::string>> kv_store_wiredtiger::get_keys() {
     std::string table_name = "table:" + std::to_string(this->id);
     error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor)); //throw exception
 
-    int i;
-    while ((i = cursor->next(cursor)) == 0) {
+    while (cursor->next(cursor) == 0) {
         cursor->get_key(cursor, &key, &version);
         keys.insert({std::string(key), (long) version});
     }
@@ -309,6 +315,83 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string> 
         cursor->close(cursor);
         return nullptr;
     }
+}
+
+std::shared_ptr<std::string> kv_store_wiredtiger::get_latest(std::string key, long *version) {
+    WT_CURSOR *cursor;
+    WT_ITEM value;
+    char *key_it;
+    uint32_t version_it;
+
+    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
+    std::string table_name = "table:" + std::to_string(this->id);
+    try {
+        error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor));
+    }catch(WiredTigerException e){
+        return nullptr;
+    }
+    cursor->set_key(cursor, key.c_str());
+
+    std::string current_key;
+    long current_max_version = LONG_MIN;
+
+    while (cursor->next(cursor) == 0) {
+        cursor->get_key(cursor, &key_it, &version_it);
+        if(version_it >= current_max_version){
+            current_max_version = version_it;
+            current_key = std::string(key_it);
+        }
+    }
+
+    if(!current_key.empty()){
+        *version = current_max_version;
+        cursor->set_key(cursor, key.c_str(), current_max_version);
+
+        int res = cursor->search(cursor);
+        if(res == 0){
+            cursor->get_value(cursor, &value);
+            cursor->close(cursor);
+            return std::make_shared<std::string>(std::string((char*) value.data, value.size));
+        }
+    }
+
+    cursor->close(cursor);
+    return nullptr;
+}
+
+std::unique_ptr<long> kv_store_wiredtiger::get_latest_version(std::string key) {
+    WT_CURSOR *cursor;
+    WT_ITEM value;
+    char *key_it;
+    uint32_t version_it;
+
+    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
+    std::string table_name = "table:" + std::to_string(this->id);
+    try {
+        error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor));
+    }catch(WiredTigerException e){
+        return nullptr;
+    }
+    cursor->set_key(cursor, key.c_str());
+
+    std::string current_key;
+    long current_max_version = LONG_MIN;
+
+    while (cursor->next(cursor) == 0) {
+        cursor->get_key(cursor, &key_it, &version_it);
+        if(version_it >= current_max_version){
+            current_max_version = version_it;
+            current_key = std::string(key_it);
+        }
+    }
+
+    if(!current_key.empty()){
+        cursor->close(cursor);
+        return std::make_unique<long>(current_max_version);
+    }
+
+    cursor->close(cursor);
+    return nullptr;
 }
 
 std::shared_ptr<std::string> kv_store_wiredtiger::remove(kv_store_key<std::string> key) {

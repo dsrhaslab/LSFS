@@ -35,6 +35,7 @@
 logging*
 backup/*
 *.json
+logs*
 
 # Build Directory
 cmake-build-debug/*
@@ -51,6 +52,7 @@ udp_client_server/*
 *null*
 results*
 technical_stuff/*
+scripts/log*
 
 # Capnp auto-generated files
 *.capnp.*

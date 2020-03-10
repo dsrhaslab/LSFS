@@ -9,7 +9,7 @@ int split_composite_key(std::string comp_key, std::string* key, long* version){
     auto res = std::regex_search(comp_key, match, composite_key);
 
     try{
-        if(match.size() > 1){
+        if(match.size() > 2){
             *key = std::string(match[1].str());
             *version = std::stol(match[2].str(), nullptr);
         }

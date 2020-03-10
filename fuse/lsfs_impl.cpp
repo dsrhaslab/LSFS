@@ -86,9 +86,9 @@ int put_metadata(metadata& met, const char* path){
     // serialize metadata object
     std::string metadata_str = metadata::serialize_to_string(met);
 
-    long version = increment_version_and_get(path);
     try{
-        df_client->put(path, version, metadata_str.data(), metadata_str.size());
+        long version = df_client->get_latest_version(path);
+        df_client->put(path, version + 1, metadata_str.data(), metadata_str.size());
         return_value = 0;
     }catch(EmptyViewException& e){
         // empty view -> nothing to do
@@ -99,26 +99,35 @@ int put_metadata(metadata& met, const char* path){
         e.what();
         errno = EPERM; //operation not permitted
         return_value = -1;
+    }catch(TimeoutException& e){
+        e.what();
+        errno = EHOSTUNREACH;
+        return_value = -1;
     }
 
     return return_value;
 }
 
 std::unique_ptr<metadata> get_metadata(const char* path){
-    long version = get_version(path);
+//    long version = get_version(path);
     std::unique_ptr<metadata> res = nullptr;
-    if(version == -1){
-        errno = ENOENT;
-    }else{
-        //Fazer um get de metadados ao dataflasks
-        std::shared_ptr<std::string> data = df_client->get(path, &version);
-
-        if (data == nullptr){
-            errno = EHOSTUNREACH; // Not Reachable Host
+    try{
+        long version = df_client->get_latest_version(path);
+        if(version == -1){
+            errno = ENOENT;
         }else{
-            // reconstruir a struct stat com o resultado
-            res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
+            //Fazer um get de metadados ao dataflasks
+            std::shared_ptr<std::string> data = df_client->get(path, &version);
+
+            if (data == nullptr){
+                errno = EHOSTUNREACH; // Not Reachable Host
+            }else{
+                // reconstruir a struct stat com o resultado
+                res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
+            }
         }
+    }catch(TimeoutException& e){
+        errno = EHOSTUNREACH; // Not Reachable Host
     }
 
     return res;
@@ -129,13 +138,13 @@ int add_child_to_parent_dir(const char *path, bool is_dir) {
     std::unique_ptr<std::string> child_name = get_child_name(path);
     if(parent_path != nullptr){
         // parent is not root directory
-        long version = get_version(parent_path->c_str());
-        if(version == -1){
-            errno = ENOENT;
-            return -errno;
-        }else{
+//        long version = get_version(parent_path->c_str());
+//        if(version == -1){
+//            errno = ENOENT;
+//            return -errno;
+//        }else{
             //Fazer um get de metadados ao dataflasks
-            std::shared_ptr<std::string> data = df_client->get(parent_path->c_str(), &version);
+            std::shared_ptr<std::string> data = df_client->get(parent_path->c_str() /*, &version*/);
 
             if (data == nullptr){
                 errno = EHOSTUNREACH; // Not Reachable Host
@@ -156,7 +165,7 @@ int add_child_to_parent_dir(const char *path, bool is_dir) {
                 return -errno;
             }
             return 0;
-        }
+//        }
     }
 
     //TODO handle root directory case

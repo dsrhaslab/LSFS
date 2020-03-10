@@ -174,7 +174,7 @@ long client::get_latest_version(std::string key, int wait_for) {
     }
 
     if(res == nullptr){
-        throw KeyNotFoundException();
+        throw TimeoutException();
     }
 
     return *res;

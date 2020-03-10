@@ -33,6 +33,7 @@ private:
 
 public:
     int init(void*, long id) override ;
+    std::string db_name() const override;
     void close() override;
     int get_slice_for_key(T key) override;
     void update_partition(int p, int np) override;
@@ -60,6 +61,11 @@ int kv_store_memory<T>::init(void*, long id) { return 0;}
 
 template <typename T>
 void kv_store_memory<T>::close() {}
+
+template<typename T>
+std::string kv_store_memory<T>::db_name() const {
+    return "kv_store_memory_db";
+}
 
 template <typename T>
 int kv_store_memory<T>::get_slice_for_key(T key) {

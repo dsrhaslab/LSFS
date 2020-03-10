@@ -145,9 +145,9 @@ int lsfs_impl::_truncate(
         // serialize metadata object
         std::string metadata_str = metadata::serialize_to_string(to_send);
         //dataflasks send
-        long version = increment_version_and_get(path);
         try{
-            df_client->put(path, version, metadata_str.data(), metadata_str.size());
+            long version = df_client->get_latest_version(path);
+            df_client->put(path, version + 1, metadata_str.data(), metadata_str.size());
             result = 0;
         }catch(EmptyViewException& e){
             // empty view -> nothing to do
@@ -157,6 +157,10 @@ int lsfs_impl::_truncate(
         }catch(ConcurrentWritesSameKeyException& e){
             e.what();
             errno = EPERM; //operation not permitted
+            result = -errno;
+        }catch(TimeoutException& e){
+            e.what();
+            errno = EHOSTUNREACH; //host not reachable
             result = -errno;
         }
     }else{

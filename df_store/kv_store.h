@@ -14,6 +14,7 @@ class kv_store {
 public:
 
     virtual int init(void*, long id) = 0;
+    virtual std::string db_name() const = 0;
     virtual void close() = 0;
     virtual int get_slice_for_key(T key) = 0;
     virtual void update_partition(int p, int np) = 0;

@@ -106,14 +106,21 @@ int lsfs_impl::_open(
     int return_value;
 
     if(!is_temp_file(path)) {
-        long version = get_version(path);
-        if(version == -1){
-            errno = ENOENT;
+//        long version = get_version(path);
+        try{
+            long version = df_client->get_latest_version(path);
+            if(version == -1){
+                errno = ENOENT;
+                return_value = -errno;
+            }
+            else{
+                return_value = 0;
+            }
+        }catch(TimeoutException &e){
+            errno = EHOSTUNREACH;
             return_value = -errno;
         }
-        else{
-            return_value = 0;
-        }
+
     }else{
         return_value = create_or_open(false, path, 0, fi);
     }
@@ -241,12 +248,12 @@ int lsfs_impl::_read(
             while (bytes_count < size && bytes_count < (file_size - offset)) {
                 current_blk++;
                 std::string blk_path = std::string(path) + ":" + std::to_string(current_blk);
-                long version = get_version(blk_path);
-                if (version == -1){
-                    errno = ENOENT;
-                    return -errno;
-                }
-                std::shared_ptr<std::string> data = df_client->get(blk_path, &version);
+//                long version = get_version(blk_path);
+//                if (version == -1){
+//                    errno = ENOENT;
+//                    return -errno;
+//                }
+                std::shared_ptr<std::string> data = df_client->get(blk_path /*, &version*/);
 
                 if (data == nullptr){
                     errno = EHOSTUNREACH; // Not Reachable Host
@@ -331,8 +338,8 @@ int lsfs_impl::_write(
                         read_off += (first_block_size - off_blk);
                         current_blk++;
                         std::string blk_path = std::string(path) + ":" + std::to_string(current_blk);
-                        long version = increment_version_and_get(blk_path);
-                        df_client->put(blk_path, version, buf, size);
+                        long version = df_client->get_latest_version(blk_path);
+                        df_client->put(blk_path, version + 1, buf, size);
                     }
                 } else {
                     errno = EPERM;
@@ -340,12 +347,13 @@ int lsfs_impl::_write(
                 }
             }
 
+
             while (read_off < size) {
                 size_t write_size = (read_off + BLK_SIZE) > size ? (size - read_off) : BLK_SIZE;
                 current_blk++;
                 std::string blk_path = std::string(path) + ":" + std::to_string(current_blk);
-                long version = increment_version_and_get(blk_path);
-                df_client->put(blk_path, version, &buf[read_off], write_size);
+                long version = df_client->get_latest_version(blk_path);
+                df_client->put(blk_path, version + 1, &buf[read_off], write_size);
                 read_off += BLK_SIZE;
             }
 
@@ -358,19 +366,22 @@ int lsfs_impl::_write(
             // serialize metadata object
             std::string metadata_str = metadata::serialize_to_string(to_send);
             //dataflasks send
-            long version = increment_version_and_get(path);
-            df_client->put(path, version, metadata_str.data(), metadata_str.size());
+            long version = df_client->get_latest_version(path);
+            df_client->put(path, version + 1, metadata_str.data(), metadata_str.size());
 
             result = size;
-        } catch (EmptyViewException &e) {
+        } catch (EmptyViewException& e) {
             // empty view -> nothing to do
             e.what();
             errno = EAGAIN; //resource unavailable
             return -errno;
-        } catch (ConcurrentWritesSameKeyException &e) {
+        } catch (ConcurrentWritesSameKeyException& e) {
             // empty view -> nothing to do
             e.what();
             errno = EPERM; //operation not permitted
+            return -errno;
+        } catch(TimeoutException& e){
+            errno = EHOSTUNREACH;
             return -errno;
         }
     }else{

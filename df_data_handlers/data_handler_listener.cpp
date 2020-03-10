@@ -121,7 +121,12 @@ private:
             long version;
             switch (message.version_avail_case()){
                 case proto::get_message::kVersionNone:
-                    data = this->store->get_latest(key, &version);
+                    try{
+                        data = this->store->get_latest(key, &version);
+                    }catch(std::exception& e){
+                        //LevelDBException
+                        e.what();
+                    }
                     break;
                 case proto::get_message::kVersion:
                     version = message.version();
@@ -355,24 +360,23 @@ private:
         //se o pedido ainda não foi processado
         if(!this->store->in_log(req_id)){
             this->store->log_req(req_id);
-            version = this->store->get_latest_version(key);
+            try {
+                version = this->store->get_latest_version(key);
+                //Quando o peer era suposto ter a chave mas não tem, responde com a versão da chave -1
+                //tal impede que quando a chave não existe, se tenha de esperar pelo timeout
+                //(no caso de getattr que são muito frequentes, seria um motivo de mau desempenho)
+                if (version == nullptr && this->store->get_slice_for_key(key) == this->store->get_slice()) {
+                    version = std::make_unique<long>(-1);
+                }
+            }catch(std::exception& e){
+                //LevelDBException
+                e.what();
+            }
             if(version != nullptr){
                 //se tenho alguma versão da chave
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                 if(achance <= this->chance){
-                    //a probabilidade ditou para responder à mensagem com a versão da chave
-                    proto::kv_message reply_message;
-                    auto* message_content = new proto::get_latest_version_reply_message();
-                    message_content->set_ip(this->ip);
-                    message_content->set_port(this->port);
-                    message_content->set_id(this->id);
-                    message_content->set_version(*version);
-                    message_content->set_reqid(req_id);
-                    reply_message.set_allocated_get_latest_version_reply_msg(message_content);
-
-                    this->reply_client(reply_message, sender_ip, sender_port);
-                }else{
-                    //a probabilidade ditou para fazer forward da mensagem
+                    //a probabilidade ditou para fazer forward message
                     int obj_slice = this->store->get_slice_for_key(key);
                     std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
                     if(!slice_peers.empty() && this->smart_forward){
@@ -382,6 +386,19 @@ private:
                         this->forward_message(view, const_cast<proto::kv_message &>(msg));
                     }
                 }
+                
+                //responder à mensagem
+                proto::kv_message reply_message;
+                auto* message_content = new proto::get_latest_version_reply_message();
+                message_content->set_ip(this->ip);
+                message_content->set_port(this->port);
+                message_content->set_id(this->id);
+                message_content->set_version(*version);
+                message_content->set_reqid(req_id);
+                reply_message.set_allocated_get_latest_version_reply_msg(message_content);
+
+                this->reply_client(reply_message, sender_ip, sender_port);
+                
             }else{
                 //se não tenho o conteudo da chave -> fazer forward
                 int obj_slice = this->store->get_slice_for_key(key);

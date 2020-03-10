@@ -45,6 +45,7 @@ public:
     ~kv_store_leveldb();
     int init(void*, long id) override ;
     void close() override ;
+    std::string db_name() const override;
     int get_slice_for_key(std::string key) override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<std::string>> get_keys() override;
@@ -61,6 +62,8 @@ public:
     void log_req(std::string req_id);
     bool in_anti_entropy_log(std::string req_id);
     void log_anti_entropy_req(std::string req_id);
+    std::shared_ptr<std::string> get_latest(std::string key, long *version);
+    std::unique_ptr<long> get_latest_version(std::string key);
     void print_store();
 };
 
@@ -71,6 +74,10 @@ kv_store_leveldb::~kv_store_leveldb() {
 void kv_store_leveldb::close() {
     std::cout << "closing connection" << std::endl;
     delete db;
+}
+
+std::string kv_store_leveldb::db_name() const {
+    return "levelDB";
 }
 
 int kv_store_leveldb::init(void* path, long id){
@@ -210,7 +217,7 @@ bool kv_store_leveldb::put(std::string key, long version, std::string bytes) {
 
     if(this->slice == k_slice){
         leveldb::WriteOptions writeOptions;
-        std::string comp_key = key + ":" + std::to_string(version);
+        std::string comp_key = key + "#" + std::to_string(version);
         db->Put(writeOptions, comp_key, bytes);
         return true;
     }else{
@@ -243,7 +250,7 @@ void kv_store_leveldb::print_store(){
 
 std::shared_ptr<std::string> kv_store_leveldb::get(kv_store_key<std::string> key) {
     std::string value;
-    std::string comp_key = key.key + ":" + std::to_string(key.version);
+    std::string comp_key = key.key + "#" + std::to_string(key.version);
     leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
 
     if (s.ok()){
@@ -253,10 +260,70 @@ std::shared_ptr<std::string> kv_store_leveldb::get(kv_store_key<std::string> key
     }
 }
 
+std::shared_ptr<std::string> kv_store_leveldb::get_latest(std::string key, long *version) {
+    leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+
+    std::string prefix = key + "#";
+    bool exists = false;
+    long current_max_version = LONG_MIN;
+    for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+        std::string comp_key = it->key().ToString();
+        std::string current_key;
+        long current_version;
+        int res = split_composite_key(comp_key, &current_key, &current_version);
+        std::cout << "version: " << current_version << std::endl;
+        if(res == 0 && current_version >= current_max_version){
+            current_max_version = current_version;
+            exists = true;
+        }
+    }
+
+    if(!it->status().ok()){
+        delete it;
+        throw LevelDBException();
+    }else if(exists){
+        delete it;
+        *version = current_max_version;
+        return get({key, current_max_version});
+    }
+
+    delete it;
+    return nullptr;
+}
+
+std::unique_ptr<long> kv_store_leveldb::get_latest_version(std::string key) {
+    leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+
+    std::string prefix = key + "#";
+    bool exists = false;
+    long current_max_version = LONG_MIN;
+    for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+        std::string comp_key = it->key().ToString();
+        std::string current_key;
+        long current_version;
+        int res = split_composite_key(comp_key, &current_key, &current_version);
+        if(res == 0 && current_version >= current_max_version){
+            current_max_version = current_version;
+            exists = true;
+        }
+    }
+
+    if(!it->status().ok()){
+        delete it;
+        throw LevelDBException();
+    }else if(exists){
+        delete it;
+        return std::make_unique<long>(current_max_version);
+    }
+
+    delete it;
+    return nullptr;
+}
+
 std::shared_ptr<std::string> kv_store_leveldb::remove(kv_store_key<std::string> key) {
 
     std::string value;
-    std::string comp_key = key.key + ":" + std::to_string(key.version);
+    std::string comp_key = key.key + "#" + std::to_string(key.version);
     leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
 
     if (s.ok()){

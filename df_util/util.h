@@ -8,7 +8,7 @@
 
 #include <regex>
 
-static std::regex composite_key("(.+):(\\d+)$");
+static std::regex composite_key("(.+)#(\\d+)$");
 
 int split_composite_key(std::string comp_key, std::string* key, long* version);
 
