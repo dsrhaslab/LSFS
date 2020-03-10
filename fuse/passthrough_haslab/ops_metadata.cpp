@@ -101,10 +101,32 @@ int lsfs_impl::_utimens(
 
     int result;
 
-    if (fi)
-        result = futimens((int)fi->fh, ts);
-    else
-        result = utimensat(AT_FDCWD, path, ts, AT_SYMLINK_NOFOLLOW);
+    if(!is_temp_file(path)) {
+
+        // get file info
+        struct stat stbuf;
+        int res = lsfs_impl::_getattr(path, &stbuf, NULL);
+        if (res != 0) {
+            return -errno; //res = -errno
+        }
+
+        stbuf.st_atim = ts[0];
+        stbuf.st_mtim = ts[1];
+
+        metadata to_send(stbuf);
+        // serialize metadata object
+        res = put_metadata(to_send, path);
+        if(res == -1){
+            return -errno;
+        }
+
+        result = 0;
+    }else{
+        if (fi)
+            result = futimens((int)fi->fh, ts);
+        else
+            result = utimensat(AT_FDCWD, path, ts, AT_SYMLINK_NOFOLLOW);
+    }
 
     return (result == 0) ? 0 : -errno;
 }
@@ -143,26 +165,12 @@ int lsfs_impl::_truncate(
         stbuf.st_mtim = stbuf.st_ctim;
         metadata to_send(stbuf);
         // serialize metadata object
-        std::string metadata_str = metadata::serialize_to_string(to_send);
-        //dataflasks send
-        try{
-            long version = df_client->get_latest_version(path);
-            df_client->put(path, version + 1, metadata_str.data(), metadata_str.size());
-            result = 0;
-        }catch(EmptyViewException& e){
-            // empty view -> nothing to do
-            e.what();
-            errno = EAGAIN; //resource unavailable
-            result = -errno;
-        }catch(ConcurrentWritesSameKeyException& e){
-            e.what();
-            errno = EPERM; //operation not permitted
-            result = -errno;
-        }catch(TimeoutException& e){
-            e.what();
-            errno = EHOSTUNREACH; //host not reachable
-            result = -errno;
+        res = put_metadata(to_send, path);
+        if(res == -1){
+            return -errno;
         }
+
+        result = 0;
     }else{
         result = fi ? ftruncate((int)fi->fh, size) : truncate(path, size);
     }
