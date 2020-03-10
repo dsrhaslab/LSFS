@@ -40,7 +40,8 @@ int main(int argc, char **argv) {
 //    cli.put(2,1,"KV ALMOST FINISHED");
 //    cli.put(3,1,"KV ALMOST FINISHED");
 //    cli.put(4,1,"KV ALMOST FINISHED");
-    std::shared_ptr<std::string> data = cli.get(id,"/bigfileset/00000001/00000001",1);
+    long version = 1;
+    std::shared_ptr<std::string> data = cli.get("/bigfileset/00000001/00000001",&version);
     std::string data_s = *data;
     std::cout << data->size() << std::endl;
 

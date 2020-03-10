@@ -19,7 +19,7 @@ lsfs_impl::lsfs_impl(){
 
     try
     {
-        logger =  spdlog::basic_logger_mt("lsfs_logger", "lsfs_logger.txt");
+        logger = spdlog::basic_logger_mt("lsfs_logger", "lsfs_logger.txt");
         logger->set_level(spdlog::level::info);
         logger->set_pattern("%v");
 //            spdlog::flush_every(std::chrono::seconds(5));
@@ -111,7 +111,7 @@ std::unique_ptr<metadata> get_metadata(const char* path){
         errno = ENOENT;
     }else{
         //Fazer um get de metadados ao dataflasks
-        std::shared_ptr<std::string> data = df_client->get(1, path, version);
+        std::shared_ptr<std::string> data = df_client->get(path, &version);
 
         if (data == nullptr){
             errno = EHOSTUNREACH; // Not Reachable Host
@@ -135,7 +135,7 @@ int add_child_to_parent_dir(const char *path, bool is_dir) {
             return -errno;
         }else{
             //Fazer um get de metadados ao dataflasks
-            std::shared_ptr<std::string> data = df_client->get(1, parent_path->c_str(), version);
+            std::shared_ptr<std::string> data = df_client->get(parent_path->c_str(), &version);
 
             if (data == nullptr){
                 errno = EHOSTUNREACH; // Not Reachable Host

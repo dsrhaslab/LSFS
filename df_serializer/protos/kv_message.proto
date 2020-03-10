@@ -2,13 +2,32 @@ syntax = "proto3";
 
 package proto;
 
+message get_latest_version_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string key = 4;
+  string reqid = 5;
+}
+
+message get_latest_version_reply_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string reqid = 4;
+  int64 version = 5;
+}
+
 message get_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
   string key = 4;
-  int64 version = 5;
-  string reqid = 6;
+  oneof version_avail {
+    bool version_none = 5;  // always set this to "true" when null
+    int64 version = 6;
+  }
+  string reqid = 7;
 }
 
 message get_reply_message {
@@ -52,10 +71,12 @@ message anti_entropy_message {
 
 message kv_message {
     oneof msg {
-        get_message          get_msg = 1;
-        get_reply_message    get_reply_msg = 2;
-        put_message          put_msg = 3;
-        put_reply_message    put_reply_msg = 4;
-        anti_entropy_message anti_entropy_msg = 5;
+        get_message                         get_msg = 1;
+        get_reply_message                   get_reply_msg = 2;
+        put_message                         put_msg = 3;
+        put_reply_message                   put_reply_msg = 4;
+        anti_entropy_message                anti_entropy_msg = 5;
+        get_latest_version_message          get_latest_version_msg = 6;
+        get_latest_version_reply_message    get_latest_version_reply_msg = 7;
     }
 }

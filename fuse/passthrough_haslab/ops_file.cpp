@@ -246,7 +246,7 @@ int lsfs_impl::_read(
                     errno = ENOENT;
                     return -errno;
                 }
-                std::shared_ptr<std::string> data = df_client->get(1, blk_path, version);
+                std::shared_ptr<std::string> data = df_client->get(blk_path, &version);
 
                 if (data == nullptr){
                     errno = EHOSTUNREACH; // Not Reachable Host

@@ -12,6 +12,7 @@
 #include "yaml-cpp/yaml.h"
 #include "../df_core/peer.h"
 #include "client_reply_handler_mt.h"
+#include "../exceptions/custom_exceptions.h"
 
 client::client(std::string ip, long id, int port, int lb_port):
     ip(ip), id(id), port(port), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
@@ -77,16 +78,33 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
     return 1;
 }
 
-int client::send_get(peer_data &peer, std::string key, long version, std::string req_id) {
+int client::send_get(peer_data &peer, std::string key, long* version, std::string req_id) {
     proto::kv_message msg;
     auto* message_content = new proto::get_message();
     message_content->set_ip(this->ip);
     message_content->set_port(this->port);
     message_content->set_id(this->id);
     message_content->set_key(key);
-    message_content->set_version(version);
+    if(version != nullptr){
+        message_content->set_version(*version);
+    }else{
+        message_content->set_version_none(true);
+    }
     message_content->set_reqid(req_id);
     msg.set_allocated_get_msg(message_content);
+
+    return send_msg(peer, msg);
+}
+
+int client::send_get_latest_version(peer_data &peer, std::string key, std::string req_id) {
+    proto::kv_message msg;
+    auto* message_content = new proto::get_latest_version_message();
+    message_content->set_ip(this->ip);
+    message_content->set_port(this->port);
+    message_content->set_id(this->id);
+    message_content->set_key(key);
+    message_content->set_reqid(req_id);
+    msg.set_allocated_get_latest_version_msg(message_content);
 
     return send_msg(peer, msg);
 }
@@ -121,7 +139,7 @@ std::set<long> client::put(std::string key, long version, const char *data, size
    return *res;
 }
 
-std::shared_ptr<std::string> client::get(long node_id, std::string key, long version) {
+std::shared_ptr<std::string> client::get(std::string key, long* version_ptr, int wait_for) {
     long req_id = this->inc_and_get_request_count();
     std::string req_id_str = std::to_string(this->id) +":" + this->ip + ":" + std::to_string(this->port) + ":" + std::to_string(req_id);
     this->handler->register_get(req_id_str);
@@ -130,32 +148,38 @@ std::shared_ptr<std::string> client::get(long node_id, std::string key, long ver
     int max_timeouts = 4;
     while(res == nullptr && max_timeouts-- > 0){
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
-        int status = this->send_get(peer, key, version, req_id_str);
+        int status = this->send_get(peer, key, version_ptr, req_id_str);
         if (status == 0) {
             std::cout << "GET " << req_id << " ==================================>" << std::endl;
-            res = this->handler->wait_for_get(req_id_str);
+            res = this->handler->wait_for_get(req_id_str, wait_for);
         }
     }
     return res;
 }
 
-//long client::get_latest_version(long node_id, std::string key) {
-//    long req_id = this->inc_and_get_request_count();
-//    std::string req_id_str = std::to_string(this->id) +":" + this->ip + ":" + std::to_string(this->port) + ":" + std::to_string(req_id);
-//    this->handler->register_get(req_id_str);
-//    std::shared_ptr<std::string> res (nullptr);
-//
-//    int max_timeouts = 4;
-//    while(res == nullptr && max_timeouts-- > 0){
-//        peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
-//        int status = this->send_get(peer, key, version, req_id_str);
-//        if (status == 0) {
-//            std::cout << "GET " << req_id << " ==================================>" << std::endl;
-//            res = this->handler->wait_for_get(req_id_str);
-//        }
-//    }
-//    return res;
-//}
+long client::get_latest_version(std::string key, int wait_for) {
+    long req_id = this->inc_and_get_request_count();
+    std::string req_id_str = std::to_string(this->id) +":" + this->ip + ":" + std::to_string(this->port) + ":" + std::to_string(req_id);
+    this->handler->register_get_latest_version(req_id_str);
+    std::unique_ptr<long> res (nullptr);
+
+    int max_timeouts = 4;
+    while(res == nullptr && max_timeouts-- > 0){
+        peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
+        int status = this->send_get_latest_version(peer, key, req_id_str);
+        if (status == 0) {
+            std::cout << "GET " << req_id << " ==================================>" << std::endl;
+            res = this->handler->wait_for_get_latest_version(req_id_str, wait_for);
+        }
+    }
+
+    if(res == nullptr){
+        throw KeyNotFoundException();
+    }
+
+    return *res;
+}
+
 
 
 

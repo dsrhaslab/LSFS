@@ -9,5 +9,6 @@
 #include "empty_view_exception.h"
 #include "wiredtiger_error.h"
 #include "leveldb_error.h"
+#include "key_not_found.h"
 
 #endif //P2PFS_CUSTOM_EXCEPTIONS_H

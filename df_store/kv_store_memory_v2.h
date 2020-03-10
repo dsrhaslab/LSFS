@@ -1,11 +1,12 @@
 //
-// Created by danielsf97 on 1/9/20.
+// Created by danielsf97 on 3/9/20.
 //
 
-#ifndef P2PFS_KV_STORE_MEMORY_H
-#define P2PFS_KV_STORE_MEMORY_H
+#ifndef P2PFS_KV_STORE_MEMORY_V2_H
+#define P2PFS_KV_STORE_MEMORY_V2_H
 
 #include <unordered_map>
+#include <map>
 #include <unordered_set>
 #include <atomic>
 #include <mutex>
@@ -18,9 +19,9 @@
 #include <functional>
 
 template <typename T>
-class kv_store_memory: public kv_store<T>{
+class kv_store_memory_v2: public kv_store<T>{
 private:
-    std::unordered_map<kv_store_key<T>, std::shared_ptr<std::string>> store;
+    std::unordered_map<T, std::map<long, std::shared_ptr<std::string>>> store;
     std::atomic<int> slice = 1; //[1, nr_slices]
     std::atomic<int> nr_slices = 1;
     std::unordered_map<kv_store_key<T>, bool> seen;
@@ -56,13 +57,13 @@ public:
 };
 
 template <typename T>
-int kv_store_memory<T>::init(void*, long id) { return 0;}
+int kv_store_memory_v2<T>::init(void*, long id) { return 0;}
 
 template <typename T>
-void kv_store_memory<T>::close() {}
+void kv_store_memory_v2<T>::close() {}
 
 template <typename T>
-int kv_store_memory<T>::get_slice_for_key(T key) {
+int kv_store_memory_v2<T>::get_slice_for_key(T key) {
     if(nr_slices == 1) return 1;
 
     size_t max = SIZE_MAX;
@@ -109,7 +110,7 @@ int kv_store_memory<T>::get_slice_for_key(T key) {
 }
 
 template <typename T>
-void kv_store_memory<T>::update_partition(int p, int np) {
+void kv_store_memory_v2<T>::update_partition(int p, int np) {
     if(np != this->nr_slices){
         std::cout << "UPDATE_PARTITION " << std::to_string(np) << std::endl;
         this->nr_slices = np;
@@ -117,7 +118,9 @@ void kv_store_memory<T>::update_partition(int p, int np) {
         //clear memory to allow new keys to be stored
         std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->seen_mutex, this->store_mutex);
         for(const auto& seen_pair: this->seen){
-            if(this->store.find(seen_pair.first) == this->store.end()) { // a chave não existe
+            auto it = this->store.find(seen_pair.first.key);
+            if( it == this->store.end() || it->second.find(seen_pair.first.version) == it->second.end()){
+                // a chave não existe
                 this->seen.insert_or_assign(seen_pair.first, false);
             }
         }
@@ -125,17 +128,19 @@ void kv_store_memory<T>::update_partition(int p, int np) {
 }
 
 template <typename T>
-std::unordered_set<kv_store_key<T>> kv_store_memory<T>::get_keys() {
+std::unordered_set<kv_store_key<T>> kv_store_memory_v2<T>::get_keys() {
     std::unordered_set<kv_store_key<T>> keys;
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
-    for(const auto& store_pair: this->store){
-        keys.insert(store_pair.first);
+    for(const auto& [key, block_versions]: this->store){
+        for(const auto& version_block_pair: block_versions){
+            keys.insert({key, version_block_pair.first});
+        }
     }
     return std::move(keys);
 }
 
 template <typename T>
-bool kv_store_memory<T>::have_seen(T key, long version) {
+bool kv_store_memory_v2<T>::have_seen(T key, long version) {
     kv_store_key<T> key_to_check({key, version});
 
     std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
@@ -148,22 +153,27 @@ bool kv_store_memory<T>::have_seen(T key, long version) {
 }
 
 template <typename T>
-void kv_store_memory<T>::seen_it(T key, long version) {
+void kv_store_memory_v2<T>::seen_it(T key, long version) {
     kv_store_key<T> key_to_insert({key, version});
     std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
     this->seen.insert_or_assign(std::move(key_to_insert), true);
 }
 
 template <typename T>
-bool kv_store_memory<T>::put(T key, long version, std::string bytes) {
-    kv_store_key<T> key_to_insert({key, version});
+bool kv_store_memory_v2<T>::put(T key, long version, std::string bytes) {
     this->seen_it(key, version);
     int k_slice = this->get_slice_for_key(key);
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     if(this->slice == k_slice){
-        auto data_size = bytes.size();
-        this->store.insert_or_assign(std::move(key_to_insert), std::make_shared<std::string>(bytes));
+        auto it = this->store.find(key);
+        if(it == this->store.end()){
+            std::map<long, std::shared_ptr<std::string>> temp;
+            temp.emplace(version, std::make_shared<std::string>(bytes));
+            this->store.emplace(key, std::move(temp));
+        }else{
+            it->second.insert_or_assign(version, std::make_shared<std::string>(bytes));
+        }
         return true;
     }else{
         //Object received but does not belong to this df_store.
@@ -172,113 +182,125 @@ bool kv_store_memory<T>::put(T key, long version, std::string bytes) {
 }
 
 template <typename T>
-void kv_store_memory<T>::print_store(){
+void kv_store_memory_v2<T>::print_store(){
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::cout << "================= MY STORE =============" << std::endl;
-    for(auto& it : this->store)
-        std::cout << it.first.key << ": " << it.second << std::endl;
+    for(const auto& [key, block_versions]: this->store){
+        for(const auto& version_block_pair: block_versions){
+            std::cout << key << ": " << version_block_pair.second << std::endl;
+        }
+    }
     std::cout << "========================================" << std::endl;
 
 }
 
 template <typename T>
-std::shared_ptr<std::string> kv_store_memory<T>::get(kv_store_key<T> key) {
+std::shared_ptr<std::string> kv_store_memory_v2<T>::get(kv_store_key<T> key) {
+    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
+    const auto& it = this->store.find(key.key);
+    if(it != this->store.end()){
+        const auto& version_block_pair = it->second.find(key.version);
+        if(version_block_pair != it->second.end()){
+            // a chave existe
+            return version_block_pair->second;
+        }
+    }
+    return nullptr;
+}
+
+template <typename T>
+std::shared_ptr<std::string> kv_store_memory_v2<T>::get_latest(T key, long* version){
+
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     const auto& it = this->store.find(key);
+    if(it != this->store.end()){
+        const auto& version_block_pair = it->second.rbegin(); //reverse begin give me the biggest version because std::map is ordered
+        *version = version_block_pair->first;
+        return version_block_pair->second;
+    }
+    return nullptr;
+}
+
+template <typename T>
+std::unique_ptr<long> kv_store_memory_v2<T>::get_latest_version(std::string key){
+
+    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
+    const auto& it = this->store.find(key);
+    if(it != this->store.end()){
+        const auto& version_block_pair = it->second.rbegin(); //reverse begin give me the biggest version because std::map is ordered
+        return std::make_unique<long>(version_block_pair->first);
+    }
+    return nullptr;
+}
+
+template <typename T>
+std::shared_ptr<std::string> kv_store_memory_v2<T>::remove(kv_store_key<T> key) {
+    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
+
+    const auto& it = this->store.find(key.key);
     if(it == this->store.end()){// a chave não existe
         return nullptr;
     }else{
-        return it->second;
-    }
-}
-
-template <typename T>
-std::shared_ptr<std::string> kv_store_memory<T>::get_latest(T key, long* version){
-    std::shared_ptr<std::string> res = nullptr;
-    long max_version = LONG_MIN;
-    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
-    for(const auto& store_pair: this->store){
-        if(store_pair.first.key == key && store_pair.first.version >= max_version){
-            max_version = store_pair.first.version;
-            res = store_pair.second;
+        const auto& version_block_pair = it->second.find(key.version);
+        if(version_block_pair == it->second.end()){
+            return nullptr;
+        }else{
+            //a chave existe
+            std::shared_ptr<std::string> res = version_block_pair->second;
+            if(it->second.size() == 1){
+                //se só existia uma versão para a chave elimina a própria chave
+                this->store.erase(it);
+            }else{
+                //senão elimina só a versão
+                it->second.erase(version_block_pair);
+            }
+            return res;
         }
     }
-    *version = max_version;
-    return res;
 }
 
 template <typename T>
-std::unique_ptr<long> kv_store_memory<T>::get_latest_version(std::string key){
-    std::unique_ptr<long> res = nullptr;
-    long max_version = LONG_MIN;
-
-    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
-    for(const auto& store_pair: this->store){
-        if(store_pair.first.key == key && store_pair.first.version >= max_version){
-            max_version = store_pair.first.version;
-            res = std::make_unique<long>(max_version);
-        }
-    }
-
-    return res;
-}
-
-template <typename T>
-std::shared_ptr<std::string> kv_store_memory<T>::remove(kv_store_key<T> key) {
-    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
-
-    const auto& it = this->store.find(key);
-    if(it == this->store.end()){// a chave não existe
-        return nullptr;
-    }else{
-        std::shared_ptr<std::string> res = it->second;
-        this->store.erase(it);
-        return res;
-    }
-}
-
-template <typename T>
-int kv_store_memory<T>::get_slice() {
+int kv_store_memory_v2<T>::get_slice() {
     return this->slice;
 }
 
 template <typename T>
-void kv_store_memory<T>::set_slice(int slice) {
+void kv_store_memory_v2<T>::set_slice(int slice) {
     this->slice = slice;
 }
 
 template <typename T>
-int kv_store_memory<T>::get_nr_slices() {
+int kv_store_memory_v2<T>::get_nr_slices() {
     return this->nr_slices;
 }
 
 template <typename T>
-void kv_store_memory<T>::set_nr_slices(int nr_slices) {
+void kv_store_memory_v2<T>::set_nr_slices(int nr_slices) {
     this->nr_slices = nr_slices;
 }
 
 template <typename T>
-bool kv_store_memory<T>::in_log(std::string req_id) {
+bool kv_store_memory_v2<T>::in_log(std::string req_id) {
     std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
     return !(this->request_log.find(req_id) == this->request_log.end());
 }
 
 template <typename T>
-void kv_store_memory<T>::log_req(std::string req_id) {
+void kv_store_memory_v2<T>::log_req(std::string req_id) {
     std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
     this->request_log.insert_or_assign(req_id, true);
 }
 
 template <typename T>
-bool kv_store_memory<T>::in_anti_entropy_log(std::string req_id) {
+bool kv_store_memory_v2<T>::in_anti_entropy_log(std::string req_id) {
     std::scoped_lock<std::recursive_mutex> lk(this->anti_entropy_log_mutex);
     return !(this->anti_entropy_log.find(req_id) == this->anti_entropy_log.end());
 }
 
 template <typename T>
-void kv_store_memory<T>::log_anti_entropy_req(std::string req_id) {
+void kv_store_memory_v2<T>::log_anti_entropy_req(std::string req_id) {
     std::scoped_lock<std::recursive_mutex> lk(this->anti_entropy_log_mutex);
     this->anti_entropy_log.insert_or_assign(req_id, true);
 }
 
-#endif //P2PFS_KV_STORE_MEMORY_H
+#endif //P2PFS_KV_STORE_MEMORY_V2_H

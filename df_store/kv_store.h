@@ -31,6 +31,8 @@ public:
     virtual void log_req(std::string req_id) = 0;
     virtual bool in_anti_entropy_log(std::string req_id) = 0;
     virtual void log_anti_entropy_req(std::string req_id) = 0;
+    virtual std::shared_ptr<std::string> get_latest(std::string key, long* version) = 0;
+    virtual std::unique_ptr<long> get_latest_version(std::string key) = 0;
     virtual void print_store() = 0;
 };
 

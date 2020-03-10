@@ -52,6 +52,10 @@ public:
                 //Este caso não vai acontecer porque os peers não deveriam receber mensagens de reply a um put
             }else if(msg.has_anti_entropy_msg()){
                 this->process_anti_entropy_message(msg);
+            }else if(msg.has_get_latest_version_msg()){
+                this->process_get_latest_version_msg(msg);
+            }else if(msg.has_get_latest_version_reply_msg()){
+                //Este caso não vai acontecer porque os peers não deveriam receber mensagens de reply a um get version
             }
 
         }
@@ -107,17 +111,27 @@ private:
         std::string sender_ip = message.ip();
         int sender_port = message.port();
         std::string key = message.key();
-        long version = message.version();
         std::string req_id = message.reqid();
         std::shared_ptr<std::string> data(nullptr); //*data = undefined
 
         //se o pedido ainda não foi processado e não é um pedido interno (não começa com intern)
         if(!this->store->in_log(req_id) && req_id.rfind("intern", 0) != 0){
-            std::cout << "<================================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version << std::endl;
-
             this->store->log_req(req_id);
-            data = this->store->get({key, version});
+
+            long version;
+            switch (message.version_avail_case()){
+                case proto::get_message::kVersionNone:
+                    data = this->store->get_latest(key, &version);
+                    break;
+                case proto::get_message::kVersion:
+                    version = message.version();
+                    data = this->store->get({key, version});
+                    break;
+            }
+
             if(data != nullptr){
+                std::cout << "<================================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version << std::endl;
+
                 //se tenho o conteudo da chave
                 auto data_size = data->size();
                 char buf[data_size];
@@ -142,7 +156,6 @@ private:
                     this->reply_client(reply_message, sender_ip, sender_port);
                 }else{
                     //a probabilidade ditou para fazer forward da mensagem
-//                    this->pss_ptr->print_view();
                     int obj_slice = this->store->get_slice_for_key(key);
                     std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
                     if(!slice_peers.empty() && this->smart_forward){
@@ -169,6 +182,8 @@ private:
             //caso seja um get interno (antientropy)
             if(req_id.rfind("intern", 0) == 0){
                 if(!this->store->in_anti_entropy_log(req_id)){
+                    long version = message.version();
+
                     this->store->log_anti_entropy_req(req_id);
                     data = this->store->get({key, version});
 
@@ -325,6 +340,59 @@ private:
         }catch (std::exception e){
             // Unable to Get Keys
             return;
+        }
+    }
+
+    //TODO eu acho que a cena da chance devia ser, se for menor que o this->chance responde e faz forward, se não só responde
+    void process_get_latest_version_msg(proto::kv_message msg) {
+        proto::get_latest_version_message message = msg.get_latest_version_msg();
+        std::string sender_ip = message.ip();
+        int sender_port = message.port();
+        std::string key = message.key();
+        std::string req_id = message.reqid();
+        std::unique_ptr<long> version(nullptr);
+
+        //se o pedido ainda não foi processado
+        if(!this->store->in_log(req_id)){
+            this->store->log_req(req_id);
+            version = this->store->get_latest_version(key);
+            if(version != nullptr){
+                //se tenho alguma versão da chave
+                float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+                if(achance <= this->chance){
+                    //a probabilidade ditou para responder à mensagem com a versão da chave
+                    proto::kv_message reply_message;
+                    auto* message_content = new proto::get_latest_version_reply_message();
+                    message_content->set_ip(this->ip);
+                    message_content->set_port(this->port);
+                    message_content->set_id(this->id);
+                    message_content->set_version(*version);
+                    message_content->set_reqid(req_id);
+                    reply_message.set_allocated_get_latest_version_reply_msg(message_content);
+
+                    this->reply_client(reply_message, sender_ip, sender_port);
+                }else{
+                    //a probabilidade ditou para fazer forward da mensagem
+                    int obj_slice = this->store->get_slice_for_key(key);
+                    std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                    if(!slice_peers.empty() && this->smart_forward){
+                        this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                    }else{
+                        std::vector<peer_data> view = this->pss_ptr->get_view();
+                        this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                    }
+                }
+            }else{
+                //se não tenho o conteudo da chave -> fazer forward
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if(!slice_peers.empty() && this->smart_forward){
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }else{
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                }
+            }
         }
     }
 };

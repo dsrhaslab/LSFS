@@ -1,9 +1,9 @@
 //
-// Created by danielsf97 on 1/27/20.
+// Created by danielsf97 on 3/8/20.
 //
 
-#ifndef P2PFS_CLIENT_REPLY_HANDLER_H
-#define P2PFS_CLIENT_REPLY_HANDLER_H
+#ifndef P2PFS_CLIENT_REPLY_HANDLER_MT_H
+#define P2PFS_CLIENT_REPLY_HANDLER_MT_H
 
 
 #include <string>
@@ -12,17 +12,21 @@
 #include <mutex>
 #include <condition_variable>
 #include <map>
+#include <boost/asio/io_service.hpp>
+#include <boost/thread/thread.hpp>
+#include <kv_message.pb.h>
 #include <df_store/kv_store_key.h>
-#include <vector>
 
-class client_reply_handler {
+class client_reply_handler_mt {
 private:
     int running;
     int socket_rcv;
     int port;
     std::string ip;
-
-    std::unordered_map<std::string, std::vector<std::pair<long, std::shared_ptr<std::string>>>> get_replies; //par versão-valor
+    int nr_worker_threads = 3;
+    boost::asio::io_service io_service;
+    boost::thread_group thread_pool;
+    std::unordered_map<std::string, std::shared_ptr<std::string>> get_replies;
     std::unordered_map<kv_store_key<std::string>, std::set<long>> put_replies;
     int nr_puts_required;
     long wait_timeout;
@@ -33,17 +37,20 @@ private:
 
 
 public:
-    client_reply_handler(std::string ip, int port, int nr_puts_required, long wait_timeout);
-    ~client_reply_handler();
+    client_reply_handler_mt(std::string ip, int port, int nr_puts_required, long wait_timeout);
+    ~client_reply_handler_mt();
     void operator ()();
     long register_put(std::string key, long version);
     std::unique_ptr<std::set<long>> wait_for_put(kv_store_key<std::string> key);
     void register_get(std::string req_id);
-    std::shared_ptr<std::string> wait_for_get(std::string req_id, int wait_for);
-    void register_get_latest_version(std::string req_id);
-    std::unique_ptr<long> wait_for_get_latest_version(std::string req_id, int wait_for);
+    std::shared_ptr<std::string> wait_for_get(std::string req_id);
     void stop();
+
+    void process_get_reply_msg(const proto::get_reply_message &message);
+
+    void process_put_reply_msg(const proto::put_reply_message &message);
 };
 
 
-#endif //P2PFS_CLIENT_REPLY_HANDLER_H
+
+#endif //P2PFS_CLIENT_REPLY_HANDLER_MT_H

@@ -71,7 +71,7 @@ add_executable( peer_exe
         df_data_handlers/anti_entropy.h
         df_core/peer.h
         df_core/peer.cpp
-        df_store/kv_store_wiredtiger.h exceptions/wiredtiger_error.h df_store/kv_store_leveldb.h exceptions/leveldb_error.h df_util/util.cpp df_util/util.h)
+        df_store/kv_store_wiredtiger.h exceptions/wiredtiger_error.h df_store/kv_store_leveldb.h exceptions/leveldb_error.h df_util/util.cpp df_util/util.h df_store/kv_store_memory_v2.h)
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)
@@ -108,7 +108,7 @@ add_executable( client_exe
         df_client/client.h
         df_client/client_reply_handler.cpp
         df_client/client_reply_handler.h
-        df_client/main.cpp exceptions/empty_view_exception.h exceptions/concurrent_writes_same_key.h exceptions/custom_exceptions.h df_client/client_reply_handler_mt.cpp df_client/client_reply_handler_mt.h)
+        df_client/main.cpp exceptions/empty_view_exception.h exceptions/concurrent_writes_same_key.h exceptions/custom_exceptions.h df_client/client_reply_handler_mt.cpp df_client/client_reply_handler_mt.h exceptions/key_not_found.h)
 
 target_link_libraries(client_exe PRIVATE CapnProto::capnp)
 target_link_libraries(client_exe PRIVATE nlohmann_json::nlohmann_json)
@@ -166,7 +166,7 @@ add_executable( lsfs_exe
         fuse/passthrough_haslab/metadata.cpp
         df_client/client_reply_handler_mt.cpp
         df_client/client_reply_handler_mt.h
-        )
+        exceptions/key_not_found.h)
 
 target_link_libraries(lsfs_exe PRIVATE CapnProto::capnp)
 target_link_libraries(lsfs_exe PRIVATE nlohmann_json::nlohmann_json)
