@@ -11,7 +11,8 @@
 #define FUSE_USE_VERSION 35
 #endif
 
-#include "passthrough_haslab/fuse35.h"
+#include "fuse35.h"
+#include "fuse_utils.h"
 #include <cstring>
 #include <iostream>
 #include <cstdio>
@@ -20,7 +21,6 @@
 #include <fcntl.h>
 #include <cstddef>
 #include <cassert>
-#include "passthrough_haslab/util.h"
 
 namespace fuse_wrapper
 {

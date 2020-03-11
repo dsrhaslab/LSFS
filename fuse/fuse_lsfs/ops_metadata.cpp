@@ -11,7 +11,7 @@
 #include <exceptions/custom_exceptions.h>
 
 #include "util.h"
-#include "../lsfs_impl.h"
+#include "fuse/fuse_lsfs/lsfs_impl.h"
 #include "metadata.h"
 
 /* -------------------------------------------------------------------------- */
@@ -27,13 +27,16 @@ int lsfs_impl::_getattr(
         logger->flush();
 
         if(!is_temp_file(path)){
-            std::unique_ptr<metadata> res = get_metadata(path);
-            if(res == nullptr){
-                return -errno;
-            }
 
-            // copy metadata received to struct stat
-            memcpy(stbuf, &res->stbuf, sizeof(struct stat));
+            if(!state->get_metadata_if_file_opened(path, stbuf)){
+                std::unique_ptr<metadata> res = state->get_metadata(path);
+                if(res == nullptr){
+                    return -errno;
+                }
+
+                // copy metadata received to struct stat
+                memcpy(stbuf, &res->stbuf, sizeof(struct stat));
+            }
 
             result = 0;
 
@@ -103,21 +106,24 @@ int lsfs_impl::_utimens(
 
     if(!is_temp_file(path)) {
 
-        // get file info
-        struct stat stbuf;
-        int res = lsfs_impl::_getattr(path, &stbuf, NULL);
-        if (res != 0) {
-            return -errno; //res = -errno
-        }
+        bool updated = state->update_file_time_if_opened(path, ts);
+        if(!updated) {
+            // get file info
+            struct stat stbuf;
+            int res = lsfs_impl::_getattr(path, &stbuf, NULL);
+            if (res != 0) {
+                return -errno; //res = -errno
+            }
 
-        stbuf.st_atim = ts[0];
-        stbuf.st_mtim = ts[1];
+            stbuf.st_atim = ts[0];
+            stbuf.st_mtim = ts[1];
 
-        metadata to_send(stbuf);
-        // serialize metadata object
-        res = put_metadata(to_send, path);
-        if(res == -1){
-            return -errno;
+            metadata to_send(stbuf);
+            // serialize metadata object
+            res = state->put_metadata(to_send, path);
+            if (res == -1) {
+                return -errno;
+            }
         }
 
         result = 0;
@@ -147,27 +153,30 @@ int lsfs_impl::_truncate(
     int result;
     
     if(!is_temp_file(path)) {
-        
-        // get file info
-        struct stat stbuf;
-        int res = lsfs_impl::_getattr(path, &stbuf,NULL);
-        if(res != 0){
-            return -errno; //res = -errno
-        }
 
-        int nr_b_blks = size / BLK_SIZE;
-        size_t off_blk = size % BLK_SIZE;
-        
-        
-        stbuf.st_size = size;
-        stbuf.st_blocks = (off_blk != 0) ? (nr_b_blks + 1) : nr_b_blks;
-        clock_gettime(CLOCK_REALTIME, &(stbuf.st_ctim));
-        stbuf.st_mtim = stbuf.st_ctim;
-        metadata to_send(stbuf);
-        // serialize metadata object
-        res = put_metadata(to_send, path);
-        if(res == -1){
-            return -errno;
+        bool updated = state->update_file_size_if_opened(path, size);
+        if(!updated){
+            // get file info
+            struct stat stbuf;
+            int res = lsfs_impl::_getattr(path, &stbuf,NULL);
+            if(res != 0){
+                return -errno; //res = -errno
+            }
+
+            int nr_b_blks = size / BLK_SIZE;
+            size_t off_blk = size % BLK_SIZE;
+
+
+            stbuf.st_size = size;
+            stbuf.st_blocks = (off_blk != 0) ? (nr_b_blks + 1) : nr_b_blks;
+            clock_gettime(CLOCK_REALTIME, &(stbuf.st_ctim));
+            stbuf.st_mtim = stbuf.st_ctim;
+            metadata to_send(stbuf);
+            // serialize metadata object
+            res = state->put_metadata(to_send, path);
+            if(res == -1){
+                return -errno;
+            }
         }
 
         result = 0;

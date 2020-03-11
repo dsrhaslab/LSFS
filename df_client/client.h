@@ -38,8 +38,8 @@ public:
     client(std::string ip, long id, int port, int lb_port);
     void stop();
     std::set<long> put(std::string key, long version, const char* data, size_t size);
-    std::shared_ptr<std::string> get(std::string key, long* version = nullptr, int wait_for = 1);
-    long get_latest_version(std::string key, int wait_for = 2);
+    std::shared_ptr<std::string> get(std::string key, long* version = nullptr, int wait_for = 3);
+    long get_latest_version(std::string key, int wait_for = 3);
 
 private:
     long inc_and_get_request_count();

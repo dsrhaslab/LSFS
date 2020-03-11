@@ -143,30 +143,30 @@ add_executable( lsfs_exe
         df_client/client.h
         df_client/client_reply_handler.cpp
         df_client/client_reply_handler.h
-        fuse/fuse_wrapper.cpp
-        fuse/fuse_wrapper.h
-        fuse/lsfs_impl.h
+        fuse/fuse_common/fuse_wrapper.cpp
+        fuse/fuse_common/fuse_wrapper.h
+        fuse/fuse_lsfs/lsfs_impl.h
         fuse/main.cpp
-        fuse/passthrough_haslab/ops_createdelete.cpp
-        fuse/passthrough_haslab/ops_dir.cpp
-        fuse/passthrough_haslab/ops_file.cpp
-        fuse/passthrough_haslab/ops_filesystem.cpp
-        fuse/passthrough_haslab/ops_initdestroy.cpp
-        fuse/passthrough_haslab/ops_metadata.cpp
-        fuse/passthrough_haslab/ops_symlink.cpp
-        fuse/passthrough_haslab/ops_xattr.cpp
-        fuse/passthrough_haslab/static_checks.cpp
-        fuse/passthrough_haslab/util.h
-        fuse/passthrough_haslab/util.cpp
-        fuse/passthrough_haslab/fuse35.h fuse/lsfs_impl.cpp
+        fuse/fuse_lsfs/ops_createdelete.cpp
+        fuse/fuse_lsfs/ops_dir.cpp
+        fuse/fuse_lsfs/ops_file.cpp
+        fuse/fuse_lsfs/ops_filesystem.cpp
+        fuse/fuse_lsfs/ops_initdestroy.cpp
+        fuse/fuse_lsfs/ops_metadata.cpp
+        fuse/fuse_lsfs/ops_symlink.cpp
+        fuse/fuse_lsfs/ops_xattr.cpp
+        fuse/fuse_lsfs/static_checks.cpp
+        fuse/fuse_lsfs/util.h
+        fuse/fuse_lsfs/util.cpp
+        fuse/fuse_common/fuse35.h fuse/fuse_lsfs/lsfs_impl.cpp
         exceptions/empty_view_exception.h
         exceptions/concurrent_writes_same_key.h
         exceptions/custom_exceptions.h
-        fuse/passthrough_haslab/metadata.h
-        fuse/passthrough_haslab/metadata.cpp
+        fuse/fuse_lsfs/metadata.h
+        fuse/fuse_lsfs/metadata.cpp
         df_client/client_reply_handler_mt.cpp
         df_client/client_reply_handler_mt.h
-        exceptions/timeout_exception.h)
+        exceptions/timeout_exception.h fuse/fuse_common/fuse_utils.cpp fuse/fuse_common/fuse_utils.h fuse/fuse_lsfs/lsfs_state.cpp fuse/fuse_lsfs/lsfs_state.h)
 
 target_link_libraries(lsfs_exe PRIVATE CapnProto::capnp)
 target_link_libraries(lsfs_exe PRIVATE nlohmann_json::nlohmann_json)

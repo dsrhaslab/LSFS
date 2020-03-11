@@ -17,7 +17,7 @@
 #include <unistd.h>
 
 #include "util.h"
-#include "../lsfs_impl.h"
+#include "fuse/fuse_lsfs/lsfs_impl.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -200,7 +200,7 @@ int lsfs_impl::_readdir(
         filler(buf, ".", NULL, 0, fill_flags); // Current Directory
         filler(buf, "..", NULL, 0, fill_flags); // Parent Directory
 
-        std::unique_ptr<metadata> met = get_metadata(path);
+        std::unique_ptr<metadata> met = state->get_metadata(path);
 
         if(met == nullptr){
             return -errno;

@@ -3,7 +3,7 @@
 //
 
 #include "metadata.h"
-#include "../lsfs_impl.h"
+#include "fuse/fuse_lsfs/lsfs_impl.h"
 
 metadata::metadata(struct stat& stbuf): stbuf(stbuf){};
 

@@ -10,10 +10,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "../../exceptions/custom_exceptions.h"
+#include "exceptions/custom_exceptions.h"
 
 #include "util.h"
-#include "../lsfs_impl.h"
+#include "fuse/fuse_lsfs/lsfs_impl.h"
 #include "metadata.h"
 
 /* -------------------------------------------------------------------------- */
@@ -67,17 +67,20 @@ int lsfs_impl::_create(
         struct stat stbuf;
         // init file stat
         metadata::initialize_metadata(&stbuf, mode, 1, ctx->gid, ctx->uid);
-        // create metadata object
-        metadata to_send(stbuf);
-        // serialize metadata object
-        int res = put_metadata(to_send, path);
-        if(res == -1){
-            return -errno;
-        }
-        res = add_child_to_parent_dir(path, false);
-        if(res == -1){
-            return -errno;
-        }
+
+        state->add_open_file(path, stbuf, FileAccess::CREATED);
+
+//        // create metadata object
+//        metadata to_send(stbuf);
+//        // serialize metadata object
+//        int res = put_metadata(to_send, path);
+//        if(res == -1){
+//            return -errno;
+//        }
+//        res = add_child_to_parent_dir(path, false);
+//        if(res == -1){
+//            return -errno;
+//        }
 
         return_value = 0;
     }else{
@@ -108,14 +111,27 @@ int lsfs_impl::_open(
     if(!is_temp_file(path)) {
 //        long version = get_version(path);
         try{
-            long version = df_client->get_latest_version(path);
-            if(version == -1){
-                errno = ENOENT;
-                return_value = -errno;
+
+//            long version = df_client->get_latest_version(path);
+//            if(version == -1){
+//                errno = ENOENT;
+//                return_value = -errno;
+//            }
+//            else{
+//                return_value = 0;
+//            }
+
+            if(!state->is_file_opened(path)){
+                std::shared_ptr<metadata> met = state->get_metadata(path);
+                if(met == nullptr){
+                    return -errno;
+                }else{
+                    state->add_open_file(path, met->stbuf, FileAccess::ACCESSED);
+                }
             }
-            else{
-                return_value = 0;
-            }
+
+            return_value = 0;
+
         }catch(TimeoutException &e){
             errno = EHOSTUNREACH;
             return_value = -errno;
@@ -154,6 +170,7 @@ int lsfs_impl::_release(
     (void)path;
 
     if(!is_temp_file(path)) {
+        state->flush_and_release_open_file(path);
         return 0;
     }else{
         return (close((int)fi->fh) == 0) ? 0 : -errno;
@@ -185,6 +202,7 @@ int lsfs_impl::_fsync(
 //        if(result != 0){
 //            return -errno; //res = -errno
 //        }
+        state->flush_open_file(path);
         return 0;
     }else{
         result = isdatasync ? fdatasync(fd) : fsync(fd);
@@ -362,12 +380,14 @@ int lsfs_impl::_write(
             stbuf.st_blocks = current_blk + 1;
             clock_gettime(CLOCK_REALTIME, &(stbuf.st_ctim));
             stbuf.st_mtim = stbuf.st_ctim;
-            metadata to_send(stbuf);
-            // serialize metadata object
-            std::string metadata_str = metadata::serialize_to_string(to_send);
-            //dataflasks send
-            long version = df_client->get_latest_version(path);
-            df_client->put(path, version + 1, metadata_str.data(), metadata_str.size());
+//            metadata to_send(stbuf);
+//            // serialize metadata object
+//            std::string metadata_str = metadata::serialize_to_string(to_send);
+//            //dataflasks send
+//            long version = df_client->get_latest_version(path);
+//            df_client->put(path, version + 1, metadata_str.data(), metadata_str.size());
+
+            state->update_open_file_metadata(path, stbuf);
 
             result = size;
         } catch (EmptyViewException& e) {

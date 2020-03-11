@@ -6,12 +6,14 @@
 #define P2PFS_LSFS_IMPL_H
 
 #include <vector>
+#include "lsfs_state.h"
 #include <queue>
-#include "fuse_wrapper.h"
-#include "fuse_wrapper.cpp"
-#include "../df_client/client.h"
-#include "passthrough_haslab/metadata.h"
+#include "fuse/fuse_common/fuse_wrapper.h"
+#include "fuse/fuse_common/fuse_wrapper.cpp"
+#include "df_client/client.h"
+#include "metadata.h"
 #include "exceptions/custom_exceptions.h"
+#include "util.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -21,24 +23,9 @@
 #include <sys/statvfs.h>
 #include <spdlog/logger.h>
 
-/* ================ MACROS ==================*/
-
-#define BLK_SIZE (size_t) 4096
-
-/* ==========================================*/
-
-extern std::mutex version_tracker_mutex;
-extern std::unordered_map<std::string, long> version_tracker; // path => version
-extern std::unique_ptr<client> df_client;
+extern std::unique_ptr<lsfs_state> state;
+extern std::shared_ptr<client> df_client;
 extern std::shared_ptr<spdlog::logger> logger;
-
-long increment_version_and_get(std::string path);
-long get_version(std::string path);
-int open_and_read_size(const char *path, size_t* size);
-int add_child_to_parent_dir(const char *path, bool is_dir);
-int put_metadata(metadata& met, const char* path);
-std::unique_ptr<metadata> get_metadata(const char* path);
-
 
 class lsfs_impl : public fuse_wrapper::fuse<lsfs_impl>{
 

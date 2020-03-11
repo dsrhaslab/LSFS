@@ -1,5 +1,8 @@
-/* -------------------------------------------------------------------------- */
+//
+// Created by danielsf97 on 3/11/20.
+//
 
+#include "fuse_utils.h"
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -7,9 +10,6 @@
 #include <string.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-
-#include "util.h"
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -30,29 +30,29 @@ int fuse_pt_is_super_user(void)
         return -1;
 
     return
-        ruid == 0 && euid == 0 && suid == 0 &&
-        rgid == 0 && egid == 0 && sgid == 0;
+            ruid == 0 && euid == 0 && suid == 0 &&
+            rgid == 0 && egid == 0 && sgid == 0;
 }
 
 void fuse_pt_assert_super_user(void)
 {
     switch (fuse_pt_is_super_user())
     {
-    case 0:
-        print_error_and_fail("not superuser");
+        case 0:
+            print_error_and_fail("not superuser");
 
-    case 1:
-        break;
+        case 1:
+            break;
 
-    default:
-        print_error_errno_and_fail("failed to check if user is superuser");
+        default:
+            print_error_errno_and_fail("failed to check if user is superuser");
     }
 }
 
 bool fuse_pt_impersonate_calling_process(
-    uid_t uid, gid_t gid, mode_t umask,
-    mode_t *ptr_mode
-    )
+        uid_t uid, gid_t gid, mode_t umask,
+        mode_t *ptr_mode
+)
 {
     // From 'man 2 setfsuid': "setfsuid() is nowadays unneeded and should be
     // avoided in new applications (likewise for setfsgid(2))".
@@ -153,30 +153,3 @@ void print_error_errno_and_fail(const char *fmt, ...)
 }
 
 /* -------------------------------------------------------------------------- */
-
-bool is_temp_file(std::string path){
-    std::smatch match;
-    return std::regex_search(path, match, temp_extensions);
-}
-
-std::unique_ptr<std::string> get_parent_dir(std::string path){
-    std::smatch match;
-    auto res = std::regex_search(path, match, parent_dir_pattern);
-
-    if(match.size() > 1){
-        return std::make_unique<std::string>(std::string(match[1].str()));
-    }
-
-    return nullptr;
-}
-
-std::unique_ptr<std::string> get_child_name(std::string path){
-    std::smatch match;
-    auto res = std::regex_search(path, match, child_name_pattern);
-
-    if(match.size() > 1){
-        return std::make_unique<std::string>(std::string(match[1].str()));
-    }
-
-    return nullptr;
-}

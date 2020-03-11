@@ -9,11 +9,8 @@
 #include <unistd.h>
 
 #include "util.h"
-#include "../lsfs_impl.h"
+#include "fuse/fuse_lsfs/lsfs_impl.h"
 #include "metadata.h"
-#include "exceptions/custom_exceptions.h"
-
-extern std::unique_ptr<client> df_client;
 
 /* -------------------------------------------------------------------------- */
 
@@ -121,11 +118,11 @@ int lsfs_impl::_mkdir(
     // create metadata object
     metadata to_send(stbuf);
     // put metadata
-    int res = put_metadata(to_send, path);
+    int res = state->put_metadata(to_send, path);
     if(res == -1){
         return -errno;
     }
-    res = add_child_to_parent_dir(path, true);
+    res = state->add_child_to_parent_dir(path, true);
     if(res == -1){
         return -errno;
     }

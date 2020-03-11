@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 #include "util.h"
-#include "../lsfs_impl.h"
+#include "fuse/fuse_lsfs/lsfs_impl.h"
 
 /* -------------------------------------------------------------------------- */
 

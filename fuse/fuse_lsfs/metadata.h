@@ -16,7 +16,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
-#include "fuse35.h"
+#include "fuse/fuse_common/fuse35.h"
 
 class metadata {
 private:
