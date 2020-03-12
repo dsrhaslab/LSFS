@@ -9,7 +9,7 @@
 /* -------------------------------------------------------------------------- */
 
 static std::regex temp_extensions("(\\.swx$|\\.swp$|\\.inf$|/\\.|~$)");
-static std::regex parent_dir_pattern("(.+)/[^/]+$");
+static std::regex parent_dir_pattern("(.*)/[^/]+$");
 static std::regex child_name_pattern("/([^/]+)$");
 
 bool is_temp_file(std::string path);

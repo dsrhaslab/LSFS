@@ -48,34 +48,34 @@ int lsfs_impl::_opendir(
         logger->flush();
     }
 
-    if (strcmp(path, "/") == 0) {
-        //root
-
-        // allocate dir_handle
-        struct dir_handle *const dir = static_cast<dir_handle *const>(malloc(sizeof(struct dir_handle)));
-
-        if (!dir)
-            return -ENOMEM;
-
-        // initialize dir_handle
-
-        dir->dir_ptr = opendir(path);
-        dir->entry   = NULL;
-        dir->offset  = 0;
-
-        if (!dir->dir_ptr)
-        {
-            const int err = errno;
-
-            free(dir);
-
-            return -err;
-        }
-
-        // ---
-
-        fi->fh = (uint64_t)(uintptr_t)dir;
-    }
+//    if (strcmp(path, "/") == 0) {
+//        //root
+//
+//        // allocate dir_handle
+//        struct dir_handle *const dir = static_cast<dir_handle *const>(malloc(sizeof(struct dir_handle)));
+//
+//        if (!dir)
+//            return -ENOMEM;
+//
+//        // initialize dir_handle
+//
+//        dir->dir_ptr = opendir(path);
+//        dir->entry   = NULL;
+//        dir->offset  = 0;
+//
+//        if (!dir->dir_ptr)
+//        {
+//            const int err = errno;
+//
+//            free(dir);
+//
+//            return -err;
+//        }
+//
+//        // ---
+//
+//        fi->fh = (uint64_t)(uintptr_t)dir;
+//    }
 
     return 0;
 }
@@ -95,16 +95,16 @@ int lsfs_impl::_releasedir(
 
     (void)path;
 
-    if (strcmp(path, "/") == 0) {
-        // root
-
-        struct dir_handle *const dir = get_dir_handle(fi);
-
-        if (closedir(dir->dir_ptr) != 0)
-            return -errno;
-
-        free(dir);
-    }
+//    if (strcmp(path, "/") == 0) {
+//        // root
+//
+//        struct dir_handle *const dir = get_dir_handle(fi);
+//
+//        if (closedir(dir->dir_ptr) != 0)
+//            return -errno;
+//
+//        free(dir);
+//    }
 
     return 0;
 }
@@ -121,12 +121,12 @@ int lsfs_impl::_fsyncdir(
 
     int result = 0;
 
-    if (strcmp(path, "/") == 0) {
-
-        const int fd = dirfd(get_dir_handle(fi)->dir_ptr);
-
-        result = isdatasync ? fdatasync(fd) : fsync(fd);
-    }
+//    if (strcmp(path, "/") == 0) {
+//
+//        const int fd = dirfd(get_dir_handle(fi)->dir_ptr);
+//
+//        result = isdatasync ? fdatasync(fd) : fsync(fd);
+//    }
 
     return (result == 0) ? 0 : -errno;
 }
@@ -146,59 +146,61 @@ int lsfs_impl::_readdir(
 
     (void)path;
 
-    if (strcmp(path, "/") == 0) {
-        // if is root
-
-        struct dir_handle *const dir = get_dir_handle(fi);
-
-        if (dir->offset != offset) {
-            seekdir(dir->dir_ptr, offset);
-
-            dir->entry = NULL;
-            dir->offset = offset;
-        }
-
-        while (true) {
-            if (!dir->entry) {
-                dir->entry = readdir(dir->dir_ptr);
-
-                if (!dir->entry)
-                    break;
-            }
-
-            struct stat st;
-            enum fuse_fill_dir_flags fill_flags = static_cast<fuse_fill_dir_flags>(0);
-
-            if (flags & FUSE_READDIR_PLUS) {
-                const int res = fstatat(
-                        dirfd(dir->dir_ptr), dir->entry->d_name, &st,
-                        AT_SYMLINK_NOFOLLOW
-                );
-
-                if (res != -1)
-                    fill_flags = static_cast<fuse_fill_dir_flags>(fill_flags | FUSE_FILL_DIR_PLUS);
-            }
-
-            if (!(fill_flags & FUSE_FILL_DIR_PLUS)) {
-                memset(&st, 0, sizeof st);
-
-                st.st_ino = dir->entry->d_ino;
-                st.st_mode = dir->entry->d_type << 12;
-            }
-
-            const off_t next_offset = telldir(dir->dir_ptr);
-
-            if (filler(buf, dir->entry->d_name, &st, next_offset, fill_flags))
-                break;
-
-            dir->entry = NULL;
-            dir->offset = next_offset;
-        }
-    }else{
+//    if (strcmp(path, "/") == 0) {
+//        // if is root
+//
+//        struct dir_handle *const dir = get_dir_handle(fi);
+//
+//        if (dir->offset != offset) {
+//            seekdir(dir->dir_ptr, offset);
+//
+//            dir->entry = NULL;
+//            dir->offset = offset;
+//        }
+//
+//        while (true) {
+//            if (!dir->entry) {
+//                dir->entry = readdir(dir->dir_ptr);
+//
+//                if (!dir->entry)
+//                    break;
+//            }
+//
+//            struct stat st;
+//            enum fuse_fill_dir_flags fill_flags = static_cast<fuse_fill_dir_flags>(0);
+//
+//            if (flags & FUSE_READDIR_PLUS) {
+//                const int res = fstatat(
+//                        dirfd(dir->dir_ptr), dir->entry->d_name, &st,
+//                        AT_SYMLINK_NOFOLLOW
+//                );
+//
+//                if (res != -1)
+//                    fill_flags = static_cast<fuse_fill_dir_flags>(fill_flags | FUSE_FILL_DIR_PLUS);
+//            }
+//
+//            if (!(fill_flags & FUSE_FILL_DIR_PLUS)) {
+//                memset(&st, 0, sizeof st);
+//
+//                st.st_ino = dir->entry->d_ino;
+//                st.st_mode = dir->entry->d_type << 12;
+//            }
+//
+//            const off_t next_offset = telldir(dir->dir_ptr);
+//
+//            if (filler(buf, dir->entry->d_name, &st, next_offset, fill_flags))
+//                break;
+//
+//            dir->entry = NULL;
+//            dir->offset = next_offset;
+//        }
+//    }else{
         enum fuse_fill_dir_flags fill_flags = static_cast<fuse_fill_dir_flags>(0);
 
         filler(buf, ".", NULL, 0, fill_flags); // Current Directory
-        filler(buf, "..", NULL, 0, fill_flags); // Parent Directory
+        if (strcmp(path, "/") != 0) {
+            filler(buf, "..", NULL, 0, fill_flags); // Parent Directory
+        }
 
         std::unique_ptr<metadata> met = state->get_metadata(path);
 
@@ -209,7 +211,7 @@ int lsfs_impl::_readdir(
         for(auto& child: met->childs){
             filler(buf, child.c_str(), NULL, 0, fill_flags);
         }
-    }
+//    }
 
     return 0;
 }

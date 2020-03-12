@@ -69,6 +69,20 @@ void*  lsfs_impl::_init(
 
     // ---
 
+    // ensure root directory exists
+
+    const char* root_path = "/";
+    long version = df_client->get_latest_version(root_path);
+    if(version == -1){
+        //filesystem not initialize
+        int res = _mkdir(root_path, 0777);
+        if(res != 0){
+            exit(1);
+        }
+    }
+
+    // ---
+
     return NULL;
 }
 

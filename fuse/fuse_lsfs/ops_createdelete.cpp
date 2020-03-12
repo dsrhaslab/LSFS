@@ -114,7 +114,8 @@ int lsfs_impl::_mkdir(
     const struct fuse_context* ctx = fuse_get_context();
     struct stat stbuf;
     // init file stat
-    metadata::initialize_metadata(&stbuf, S_IFDIR | mode, 2, ctx->gid, ctx->uid);
+    nlink_t n_link = (strcmp(path, "/") == 0) ? 1 : 2;
+    metadata::initialize_metadata(&stbuf, S_IFDIR | mode, n_link, ctx->gid, ctx->uid);
     // create metadata object
     metadata to_send(stbuf);
     // put metadata
@@ -123,8 +124,8 @@ int lsfs_impl::_mkdir(
         return -errno;
     }
     res = state->add_child_to_parent_dir(path, true);
-    if(res == -1){
-        return -errno;
+    if(res != 0){
+        return res;
     }
 
 //    const int return_value = (mkdir(path, mode) == 0) ? 0 : -errno;

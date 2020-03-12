@@ -22,7 +22,7 @@ int lsfs_impl::_getattr(
     )
 {
     int result;
-    if (strcmp(path, "/") != 0) {
+    //if (strcmp(path, "/") != 0) {
         logger->info("GETATTR " + std::string(path));
         logger->flush();
 
@@ -43,9 +43,9 @@ int lsfs_impl::_getattr(
             logger->info("GETATTR - Não é temporário " + std::to_string(stbuf->st_size));
             logger->flush();
         }
-    }else{
-        result = fi ? fstat((int)fi->fh, stbuf) : lstat(path, stbuf);
-    }
+    //}else{
+    //    result = fi ? fstat((int)fi->fh, stbuf) : lstat(path, stbuf);
+    //}
 
     return (result == 0) ? 0 : -errno;
 }

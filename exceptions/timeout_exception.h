@@ -11,7 +11,7 @@ struct TimeoutException : public std::exception
 {
     const char * what () const throw ()
     {
-        return "Key Not Found Exception!!!";
+        return "Timeout Exception!!!";
     }
 };
 

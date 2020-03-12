@@ -148,7 +148,7 @@ int lsfs_state::add_child_to_parent_dir(const char *path, bool is_dir) {
 //        }
     }
 
-    //TODO handle root directory case
+    // root directory doesn't have a parent
     return 0;
 }
 

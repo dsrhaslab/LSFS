@@ -10,7 +10,6 @@ int main(int argc, char *argv[])
 {
 
     lsfs_impl fs;
-
     int status = fs.run(argc, argv, NULL);
 
     return status;
