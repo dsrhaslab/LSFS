@@ -3,33 +3,44 @@ main_confs:
   view_size: 8
   gossip_size: 7
   message_passing_interval_sec: 10
-  exec_time_sec: 800
+  exec_time_sec: 4000
   base_port: 12350
   peer_instantiation_interval_sec: 0.01
   log_interval_sec: 5
-  logging_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/logging/logging_extra16/
-  results_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/results/results_extra16/
+  logging_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/logging/logging3_extra18/
+  results_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/results/results3_extra18_age40_local8/
   rep_max: 10
   rep_min: 5
-  max_age: 25
+  max_age: 40
   local_message: true
   local_interval_sec: 8
   anti_entropy_interval_sec: 20
   reply_chance: 1
   smart: true
-  nr_puts_required: 1
+  ######################################
+  #               Client               #
+  ######################################
+
+  nr_puts_required: 3
+  nr_gets_required: 3
+  nr_gets_version_required: 3
   client_wait_timeout: 5
+  mt_client_handler: true
+  nr_client_handler_ths: 3
+
+  ######################################
+
   lb_interval: 5
   draw_graph: False
   graph_labels: False
 simulation:
   configuration:
-    - execution_type: one-time
-      time_start_sec: 300
-      # time_end_sec: 60
-      # time_interval_sec: 10
-      churn_op_type: remove
-      percentage: 50
+          #    - execution_type: constant
+      #      time_start_sec: 300
+      #      time_end_sec: 500
+      #      time_interval_sec: 50
+      #      churn_op_type: substitute
+      #      percentage: 10
 #    - execution_type: constant
 #      time_start_sec: 800
 #      time_end_sec: 1100

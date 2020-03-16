@@ -11,8 +11,8 @@
 #include "../exceptions/custom_exceptions.h"
 #include <regex>
 
-client_reply_handler_st::client_reply_handler_st(std::string ip, int port, int nr_puts_required, long wait_timeout):
-    client_reply_handler(ip, port, nr_puts_required, wait_timeout),
+client_reply_handler_st::client_reply_handler_st(std::string ip, int port, long wait_timeout):
+    client_reply_handler(ip, port, wait_timeout),
     socket_rcv(socket(PF_INET, SOCK_DGRAM, 0))
 {}
 

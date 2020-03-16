@@ -22,7 +22,6 @@ protected:
     std::string ip;
     std::unordered_map<std::string, std::vector<std::pair<long, std::shared_ptr<std::string>>>> get_replies; //par versão-valor
     std::unordered_map<kv_store_key<std::string>, std::set<long>> put_replies;
-    int nr_puts_required;
     long wait_timeout;
     std::mutex get_global_mutex;
     std::map<std::string, std::pair<std::unique_ptr<std::mutex>, std::unique_ptr<std::condition_variable>>> get_mutexes;
@@ -30,10 +29,10 @@ protected:
     std::map<kv_store_key<std::string>, std::pair<std::unique_ptr<std::mutex>, std::unique_ptr<std::condition_variable>>> put_mutexes;
 
 public:
-    client_reply_handler(std::string ip, int port, int nr_puts_required, long wait_timeout);
+    client_reply_handler(std::string ip, int port, long wait_timeout);
 
     long register_put(std::string key, long version);
-    std::unique_ptr<std::set<long>> wait_for_put(kv_store_key<std::string> key);
+    std::unique_ptr<std::set<long>> wait_for_put(kv_store_key<std::string> key, int wait_for);
     void register_get(std::string req_id);
     std::shared_ptr<std::string> wait_for_get(std::string req_id, int wait_for);
     void register_get_latest_version(std::string req_id);

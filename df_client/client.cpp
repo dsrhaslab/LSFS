@@ -14,13 +14,16 @@
 #include "client_reply_handler_mt.h"
 #include "../exceptions/custom_exceptions.h"
 
-client::client(std::string ip, long id, int port, int lb_port):
+client::client(std::string ip, long id, int port, int lb_port, const char* conf_filename):
     ip(ip), id(id), port(port), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
     , request_count(0)
 {
-    YAML::Node config = YAML::LoadFile("scripts/conf.yaml");
+    YAML::Node config = YAML::LoadFile(conf_filename);
     auto main_confs = config["main_confs"];
     this->nr_puts_required = main_confs["nr_puts_required"].as<int>();
+    this->nr_gets_required = main_confs["nr_gets_required"].as<int>();
+    this->nr_gets_version_required = main_confs["nr_gets_version_required"].as<int>();
+    bool mt_client_handler = main_confs["mt_client_handler"].as<bool>();
     long wait_timeout = main_confs["client_wait_timeout"].as<long>();
     long lb_interval = main_confs["lb_interval"].as<long>();
 
@@ -30,9 +33,16 @@ client::client(std::string ip, long id, int port, int lb_port):
     this->lb_th = std::thread (std::ref(*this->lb));
     this->lb_listener_th = std::thread (std::ref(*this->lb_listener));
 
-    this->handler = std::make_shared<client_reply_handler_mt>(ip, port, nr_puts_required, wait_timeout);
+    if(mt_client_handler){
+        int nr_workers = main_confs["nr_client_handler_ths"].as<int>();
+        this->handler = std::make_shared<client_reply_handler_mt>(ip, port, wait_timeout, nr_workers);
+    }else{
+        this->handler = std::make_shared<client_reply_handler_st>(ip, port, wait_timeout);
+    }
     this->handler_th = std::thread (std::ref(*this->handler));
 }
+
+
 
 void client::stop(){
     lb->stop();
@@ -123,7 +133,7 @@ int client::send_put(peer_data &peer, std::string key, long version, const char 
     return send_msg(peer, msg);
 }
 
-std::set<long> client::put(std::string key, long version, const char *data, size_t size) {
+std::set<long> client::put(std::string key, long version, const char *data, size_t size, int wait_for) {
    this->handler->register_put(key, version); // throw const char* (Escritas concorrentes sobre a mesma chave)
    kv_store_key<std::string> comp_key = {key, version};
    std::unique_ptr<std::set<long>> res = nullptr;
@@ -134,7 +144,7 @@ std::set<long> client::put(std::string key, long version, const char *data, size
        if(status == 0){
            std::cout << "PUT (TO " << peer.id << ") " << key << " : " << version << " ==============================>" << std::endl;
            try{
-               res = this->handler->wait_for_put(comp_key);
+               res = this->handler->wait_for_put(comp_key, wait_for);
            }catch(TimeoutException& e){
                max_timeouts--;
            }
@@ -144,11 +154,11 @@ std::set<long> client::put(std::string key, long version, const char *data, size
    if(res == nullptr){
        throw TimeoutException();
    }
-   
+
    return *res;
 }
 
-std::shared_ptr<std::string> client::get(std::string key, long* version_ptr, int wait_for) {
+std::shared_ptr<std::string> client::get(std::string key, int wait_for, long* version_ptr) {
     long req_id = this->inc_and_get_request_count();
     std::string req_id_str = std::to_string(this->id) +":" + this->ip + ":" + std::to_string(this->port) + ":" + std::to_string(req_id);
     this->handler->register_get(req_id_str);
@@ -171,7 +181,7 @@ std::shared_ptr<std::string> client::get(std::string key, long* version_ptr, int
     if(res == nullptr){
         throw TimeoutException();
     }
-    
+
     return res;
 }
 

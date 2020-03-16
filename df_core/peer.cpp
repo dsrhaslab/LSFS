@@ -40,7 +40,7 @@ peer::peer(long id, std::string ip, int pss_port, int data_port, double position
     }
 }
 
-peer::peer(long id, std::string ip, int pss_port, int data_port,double position, long pss_boot_time, int pss_view_size, long pss_sleep_interval, int pss_gossip_size,
+peer::peer(long id, std::string ip, int pss_port, int data_port,double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size,
         int logging_interval, int anti_entropy_interval, std::string logging_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval, float reply_chance, bool smart, std::shared_ptr<spdlog::logger> logger)
     :   id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
         local_interval(local_interval), reply_chance(reply_chance),

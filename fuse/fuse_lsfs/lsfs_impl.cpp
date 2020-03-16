@@ -11,7 +11,7 @@ std::shared_ptr<spdlog::logger> logger;
 
 lsfs_impl::lsfs_impl(){
 
-    df_client = std::make_shared<client>("127.0.0.1", 0, 1235 /*kv_port*/, 1234 /*lb_port*/);
+    df_client = std::make_shared<client>("127.0.0.1", 0, 1235 /*kv_port*/, 1234 /*lb_port*/, "scripts/conf.yaml");
 
     try
     {

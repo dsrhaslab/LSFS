@@ -98,7 +98,7 @@ std::unique_ptr<metadata> lsfs_state::get_metadata(const char* path){
         }else{
             std::cout << "######################" << path << " VERSIONG: " << version << "#################################" << std::endl;
             //Fazer um get de metadados ao dataflasks
-            std::shared_ptr<std::string> data = df_client->get(path, &version, 1);
+            std::shared_ptr<std::string> data = df_client->get(path, 1, &version);
             res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
         }
     }catch(TimeoutException& e){

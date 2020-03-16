@@ -20,12 +20,12 @@
 
 class client_reply_handler_mt : public client_reply_handler{
 private:
-    int nr_worker_threads = 3;
+    int nr_worker_threads;
     boost::asio::io_service io_service;
     boost::thread_group thread_pool;
 
 public:
-    client_reply_handler_mt(std::string ip, int port, int nr_puts_required, long wait_timeout);
+    client_reply_handler_mt(std::string ip, int port, long wait_timeout, int nr_workers);
     ~client_reply_handler_mt() = default;
     void operator ()();
     void stop();

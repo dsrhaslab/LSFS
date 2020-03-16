@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
 
 
 
-    client cli = client(ip, id, kv_port, lb_port);
+    client cli = client(ip, id, kv_port, lb_port, "scripts/conf.yaml");
 
 //    cli.put("/", 0, "ole", 3);
 //    cli.put("/ola", 0, "ole", 3);

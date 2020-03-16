@@ -7,8 +7,8 @@
 #include <regex>
 
 
-client_reply_handler::client_reply_handler(std::string ip, int port, int nr_puts_required, long wait_timeout):
-        ip(ip), port(port), nr_puts_required(nr_puts_required), wait_timeout(wait_timeout)
+client_reply_handler::client_reply_handler(std::string ip, int port, long wait_timeout):
+        ip(ip), port(port), wait_timeout(wait_timeout)
 {}
 
 long client_reply_handler::register_put(std::string key, long version) {
@@ -30,20 +30,20 @@ long client_reply_handler::register_put(std::string key, long version) {
     return version;
 }
 
-std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(kv_store_key<std::string> key){
+std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(kv_store_key<std::string> key, int wait_for){
     std::unique_ptr<std::set<long>> res = nullptr;
 
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
 
     bool timeout_happened = false;
-    
+
     auto it = this->put_replies.find(key);
     if(it != this->put_replies.end()) {
         // se a chave existe, fazer lock da chave
         auto &sync_pair = this->put_mutexes.find(key)->second;
         std::unique_lock<std::mutex> lock_key(*sync_pair.first);
 
-        if (it->second.size() < this->nr_puts_required) {
+        if (it->second.size() < wait_for) {
             // caso ainda não tenhamos o número de respostas necessárias
 
             // fazer unlock do global put lock
@@ -59,7 +59,7 @@ std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(kv_store_key<
 
         // verificar se o put já foi realizado com sucesso
         auto it_new = this->put_replies.find(key);
-        if (it_new->second.size() >= this->nr_puts_required) {
+        if (it_new->second.size() >= wait_for) {
 
             // se o put já foi realizado com sucesso, como ainda temos os locks
             // podemos remover as entradas para a chave
@@ -155,7 +155,7 @@ std::shared_ptr<std::string> client_reply_handler::wait_for_get(std::string req_
 
     if(res == nullptr && timeout_happened)
         throw TimeoutException();
-    
+
     return res;
 }
 

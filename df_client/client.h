@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <utility>
 #include "client_reply_handler_st.h"
 #include "../df_loadbalancing/dynamic_load_balancer.h"
 #include "../df_loadbalancing/load_balancer_listener.h"
@@ -24,6 +25,8 @@ private:
     int sender_socket;
     std::atomic<long> request_count;
     int nr_puts_required;
+    int nr_gets_required;
+    int nr_gets_version_required;
 
     std::shared_ptr<dynamic_load_balancer> lb;
     std::thread lb_th;
@@ -35,11 +38,20 @@ private:
     std::thread handler_th;
 
 public:
-    client(std::string ip, long id, int port, int lb_port);
+    client(std::string ip, long id, int port, int lb_port, const char* conf_filename);
     void stop();
-    std::set<long> put(std::string key, long version, const char* data, size_t size);
-    std::shared_ptr<std::string> get(std::string key, long* version = nullptr, int wait_for = 3);
-    long get_latest_version(std::string key, int wait_for = 3);
+    std::set<long> put(std::string key, long version, const char* data, size_t size, int wait_for);
+    inline std::set<long> put(std::string key, long version, const char* data, size_t size) {
+        return put(std::move(key), version, data, size, nr_puts_required);
+    };
+    std::shared_ptr<std::string> get(std::string key, int wait_for, long* version = nullptr);
+    inline std::shared_ptr<std::string> get(std::string key, long* version = nullptr){
+      return get(std::move(key), nr_gets_required, version);
+    };
+    long get_latest_version(std::string key, int wait_for);
+    inline long get_latest_version(std::string key){
+        return get_latest_version(std::move(key), nr_gets_version_required);
+    };
 
 private:
     long inc_and_get_request_count();
