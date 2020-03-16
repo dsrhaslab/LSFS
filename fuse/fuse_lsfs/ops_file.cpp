@@ -273,11 +273,6 @@ int lsfs_impl::_read(
 //                }
                 std::shared_ptr<std::string> data = df_client->get(blk_path /*, &version*/);
 
-                if (data == nullptr){
-                    errno = EHOSTUNREACH; // Not Reachable Host
-                    return -errno;
-                }
-
                 size_t max_read = (bytes_count + BLK_SIZE) > size ? (size - bytes_count) : BLK_SIZE;
                 size_t actually_read = (file_size - offset) > max_read ? max_read : (file_size - offset);
 
@@ -285,10 +280,13 @@ int lsfs_impl::_read(
                 bytes_count += actually_read;
             }
 
-        } catch (EmptyViewException &e) {
+        }catch (EmptyViewException& e) {
             // empty view -> nothing to do
             e.what();
             errno = EAGAIN; //resource unavailable
+            return -errno;
+        }catch(TimeoutException& e){
+            errno = EHOSTUNREACH; // Not Reachable Host
             return -errno;
         }
     }else{

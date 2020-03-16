@@ -127,15 +127,24 @@ std::set<long> client::put(std::string key, long version, const char *data, size
    this->handler->register_put(key, version); // throw const char* (Escritas concorrentes sobre a mesma chave)
    kv_store_key<std::string> comp_key = {key, version};
    std::unique_ptr<std::set<long>> res = nullptr;
-   while(res == nullptr || res->size() < this->nr_puts_required){
+   int max_timeouts = 4;
+   while(res == nullptr && max_timeouts > 0){
        peer_data peer = this->lb->get_random_peer(); //throw exception
        int status = this->send_put(peer, key, version, data, size);
        if(status == 0){
            std::cout << "PUT (TO " << peer.id << ") " << key << " : " << version << " ==============================>" << std::endl;
-           res = this->handler->wait_for_put(comp_key);
+           try{
+               res = this->handler->wait_for_put(comp_key);
+           }catch(TimeoutException& e){
+               max_timeouts--;
+           }
        }
    }
 
+   if(res == nullptr){
+       throw TimeoutException();
+   }
+   
    return *res;
 }
 
@@ -146,14 +155,23 @@ std::shared_ptr<std::string> client::get(std::string key, long* version_ptr, int
     std::shared_ptr<std::string> res (nullptr);
 
     int max_timeouts = 4;
-    while(res == nullptr && max_timeouts-- > 0){
+    while(res == nullptr && max_timeouts > 0){
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get(peer, key, version_ptr, req_id_str);
         if (status == 0) {
             std::cout << "GET " << req_id  << " " << key << (version_ptr == nullptr ? ": ?" : ": " + *version_ptr) << " ==================================>" << std::endl;
-            res = this->handler->wait_for_get(req_id_str, wait_for);
+            try{
+                res = this->handler->wait_for_get(req_id_str, wait_for);
+            }catch(TimeoutException& e){
+                max_timeouts--;
+            }
         }
     }
+
+    if(res == nullptr){
+        throw TimeoutException();
+    }
+    
     return res;
 }
 

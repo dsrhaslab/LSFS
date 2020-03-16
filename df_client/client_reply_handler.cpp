@@ -35,6 +35,8 @@ std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(kv_store_key<
 
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
 
+    bool timeout_happened = false;
+    
     auto it = this->put_replies.find(key);
     if(it != this->put_replies.end()) {
         // se a chave existe, fazer lock da chave
@@ -47,7 +49,8 @@ std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(kv_store_key<
             // fazer unlock do global put lock
             lock.unlock();
             // esperar por um notify na chave -> ele faz lock automatico da chave
-            sync_pair.second->wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
+            std::cv_status status = sync_pair.second->wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
+            if(status == std::cv_status::timeout) timeout_happened = true;
             // fazer o unlock da mutex da key, porque temos de obter os locks por ordem
             lock_key.unlock();
             lock.lock();
@@ -75,6 +78,9 @@ std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(kv_store_key<
 
     lock.unlock();
 
+    if(res == nullptr && timeout_happened)
+        throw TimeoutException();
+
     return std::move(res);
 }
 
@@ -99,6 +105,8 @@ std::shared_ptr<std::string> client_reply_handler::wait_for_get(std::string req_
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
+    bool timeout_happened = false;
+
     auto it = this->get_replies.find(req_id);
     if(it != this->get_replies.end()) {
         //se existe entrada para a chave, fazer lock dessa entrada
@@ -111,7 +119,8 @@ std::shared_ptr<std::string> client_reply_handler::wait_for_get(std::string req_
             // fazer unlock do global get lock
             lock.unlock();
             // esperar por um notify na chave -> ele faz lock automatico da chave
-            sync_pair.second->wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
+            std::cv_status status = sync_pair.second->wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
+            if(status == std::cv_status::timeout) timeout_happened = true;
             // fazer o unlock da mutex da key, porque temos de obter os locks por ordem
             lock_key.unlock();
             lock.lock();
@@ -144,6 +153,9 @@ std::shared_ptr<std::string> client_reply_handler::wait_for_get(std::string req_
 
     lock.unlock();
 
+    if(res == nullptr && timeout_happened)
+        throw TimeoutException();
+    
     return res;
 }
 

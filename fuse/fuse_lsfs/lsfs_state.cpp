@@ -99,13 +99,7 @@ std::unique_ptr<metadata> lsfs_state::get_metadata(const char* path){
             std::cout << "######################" << path << " VERSIONG: " << version << "#################################" << std::endl;
             //Fazer um get de metadados ao dataflasks
             std::shared_ptr<std::string> data = df_client->get(path, &version, 1);
-
-            if (data == nullptr){
-                errno = EHOSTUNREACH; // Not Reachable Host
-            }else{
-                // reconstruir a struct stat com o resultado
-                res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
-            }
+            res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
         }
     }catch(TimeoutException& e){
         errno = EHOSTUNREACH; // Not Reachable Host
@@ -125,9 +119,10 @@ int lsfs_state::add_child_to_parent_dir(const char *path, bool is_dir) {
 //            return -errno;
 //        }else{
         //Fazer um get de metadados ao dataflasks
-        std::shared_ptr<std::string> data = df_client->get(parent_path->c_str() /*, &version*/);
-
-        if (data == nullptr){
+        std::shared_ptr<std::string> data;
+        try {
+             data = df_client->get(parent_path->c_str() /*, &version*/);
+        }catch(TimeoutException& e){
             errno = EHOSTUNREACH; // Not Reachable Host
             return -errno;
         }
