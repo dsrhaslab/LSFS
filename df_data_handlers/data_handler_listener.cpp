@@ -389,13 +389,14 @@ private:
                 }
             }
             if(version != nullptr){
-                //se tenho alguma versão da chave ou a minha slice é a mesma que a da chave (version == -1)
+                // se a chave pertence à minha slice (versão da chave >= -1)
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                 if(achance <= this->chance){
                     //a probabilidade ditou para fazer forward message
-                    int obj_slice = this->store->get_slice_for_key(key);
-                    std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                    std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
                     if(!slice_peers.empty() && this->smart_forward){
+                        // forward to other peers from my slice as its the right slice for the key
+                        // trying to speed up quorum
                         this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
                     }else{
                         std::vector<peer_data> view = this->pss_ptr->get_view();
@@ -414,10 +415,6 @@ private:
                 reply_message.set_allocated_get_latest_version_reply_msg(message_content);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
-                // forward to other peers from my slice if is the right slice for the key
-                // trying to speed up quorum
-                std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-                this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }else{
                 //se não tenho o conteudo da chave -> fazer forward
                 int obj_slice = this->store->get_slice_for_key(key);
