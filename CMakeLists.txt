@@ -71,7 +71,14 @@ add_executable( peer_exe
         df_data_handlers/anti_entropy.h
         df_core/peer.h
         df_core/peer.cpp
-        df_store/kv_store_wiredtiger.h exceptions/wiredtiger_error.h df_store/kv_store_leveldb.h exceptions/leveldb_error.h df_util/util.cpp df_util/util.h df_store/kv_store_memory_v2.h)
+        df_store/kv_store_wiredtiger.h
+        exceptions/wiredtiger_error.h
+        df_store/kv_store_leveldb.h
+        exceptions/leveldb_error.h
+        df_util/util.cpp
+        df_util/util.h
+        df_store/kv_store_memory_v2.h
+        )
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)

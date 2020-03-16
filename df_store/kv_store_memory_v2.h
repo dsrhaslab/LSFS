@@ -22,39 +22,21 @@ template <typename T>
 class kv_store_memory_v2: public kv_store<T>{
 private:
     std::unordered_map<T, std::map<long, std::shared_ptr<std::string>>> store;
-    std::atomic<int> slice = 1; //[1, nr_slices]
-    std::atomic<int> nr_slices = 1;
-    std::unordered_map<kv_store_key<T>, bool> seen;
-    std::unordered_map<std::string, bool> request_log;
-    std::unordered_map<std::string, bool> anti_entropy_log;
-    std::recursive_mutex seen_mutex;
     std::recursive_mutex store_mutex;
-    std::recursive_mutex req_log_mutex;
-    std::recursive_mutex anti_entropy_log_mutex;
+
 
 public:
     int init(void*, long id) override ;
     void close() override;
     std::string db_name() const override;
-    int get_slice_for_key(T key) override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<T>> get_keys() override;
-    bool have_seen(T key, long version) override;
-    void seen_it(T key, long version) override;
     bool put(T key, long version, std::string bytes) override; // use string.c_str() to convert string to const char*
     std::shared_ptr<std::string> get(kv_store_key<T> key) override;
     std::shared_ptr<std::string> remove(kv_store_key<T> key) override;
-    int get_slice() override;
-    void set_slice(int slice) override;
-    int get_nr_slices() override;
-    void set_nr_slices(int nr_slices) override;
-    bool in_log(std::string req_id);
-    void log_req(std::string req_id);
-    bool in_anti_entropy_log(std::string req_id);
-    void log_anti_entropy_req(std::string req_id);
-    void print_store();
-    std::shared_ptr<std::string> get_latest(T key, long *version);
-    std::unique_ptr<long> get_latest_version(std::string key);
+    void print_store() override;
+    std::shared_ptr<std::string> get_latest(T key, long *version) override;
+    std::unique_ptr<long> get_latest_version(std::string key) override;
 };
 
 template <typename T>
@@ -66,53 +48,6 @@ void kv_store_memory_v2<T>::close() {}
 template<typename T>
 std::string kv_store_memory_v2<T>::db_name() const {
     return "kv_store_memory_v2_db";
-}
-
-template <typename T>
-int kv_store_memory_v2<T>::get_slice_for_key(T key) {
-    if(nr_slices == 1) return 1;
-
-    size_t max = SIZE_MAX;
-    size_t min = 0;
-    size_t target = std::hash<T>()(key);
-    size_t step = (max / this->nr_slices);
-
-    size_t current = min;
-    int slice = 1;
-    size_t next_current = current + step;
-
-    while (target > next_current){
-        current = next_current;
-        next_current = current + step;
-        if(current > 0 && next_current < 0) break; //in the case of overflow
-        slice = slice + 1;
-    }
-
-    if(slice > this->nr_slices){
-        slice = this->nr_slices - 1;
-    }
-
-    return slice;
-
-//    long max = LONG_MAX;
-//    long min = LONG_MIN;
-//    long step = (max / this->nr_slices) * 2;
-//    long current = min;
-//    int slice = 1;
-//
-//    long next_current = current + step;
-//    while (key > next_current){
-//        current = next_current;
-//        next_current = current + step;
-//        if(current > 0 && next_current < 0) break; //in the case of overflow
-//        slice = slice + 1;
-//    }
-//
-//    if(slice > this->nr_slices){
-//        slice = this->nr_slices - 1;
-//    }
-//
-//    return slice; //[1, nr_slices]
 }
 
 template <typename T>
@@ -143,26 +78,6 @@ std::unordered_set<kv_store_key<T>> kv_store_memory_v2<T>::get_keys() {
         }
     }
     return std::move(keys);
-}
-
-template <typename T>
-bool kv_store_memory_v2<T>::have_seen(T key, long version) {
-    kv_store_key<T> key_to_check({key, version});
-
-    std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
-    auto it = this->seen.find(key_to_check);
-    if(it == this->seen.end()){ //a chave não existe no mapa seen
-        return false;
-    }else{
-        return it->second;
-    }
-}
-
-template <typename T>
-void kv_store_memory_v2<T>::seen_it(T key, long version) {
-    kv_store_key<T> key_to_insert({key, version});
-    std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
-    this->seen.insert_or_assign(std::move(key_to_insert), true);
 }
 
 template <typename T>
@@ -263,50 +178,6 @@ std::shared_ptr<std::string> kv_store_memory_v2<T>::remove(kv_store_key<T> key) 
             return res;
         }
     }
-}
-
-template <typename T>
-int kv_store_memory_v2<T>::get_slice() {
-    return this->slice;
-}
-
-template <typename T>
-void kv_store_memory_v2<T>::set_slice(int slice) {
-    this->slice = slice;
-}
-
-template <typename T>
-int kv_store_memory_v2<T>::get_nr_slices() {
-    return this->nr_slices;
-}
-
-template <typename T>
-void kv_store_memory_v2<T>::set_nr_slices(int nr_slices) {
-    this->nr_slices = nr_slices;
-}
-
-template <typename T>
-bool kv_store_memory_v2<T>::in_log(std::string req_id) {
-    std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
-    return !(this->request_log.find(req_id) == this->request_log.end());
-}
-
-template <typename T>
-void kv_store_memory_v2<T>::log_req(std::string req_id) {
-    std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
-    this->request_log.insert_or_assign(req_id, true);
-}
-
-template <typename T>
-bool kv_store_memory_v2<T>::in_anti_entropy_log(std::string req_id) {
-    std::scoped_lock<std::recursive_mutex> lk(this->anti_entropy_log_mutex);
-    return !(this->anti_entropy_log.find(req_id) == this->anti_entropy_log.end());
-}
-
-template <typename T>
-void kv_store_memory_v2<T>::log_anti_entropy_req(std::string req_id) {
-    std::scoped_lock<std::recursive_mutex> lk(this->anti_entropy_log_mutex);
-    this->anti_entropy_log.insert_or_assign(req_id, true);
 }
 
 #endif //P2PFS_KV_STORE_MEMORY_V2_H
