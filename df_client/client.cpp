@@ -23,6 +23,7 @@ client::client(std::string ip, long id, int port, int lb_port, const char* conf_
     this->nr_puts_required = main_confs["nr_puts_required"].as<int>();
     this->nr_gets_required = main_confs["nr_gets_required"].as<int>();
     this->nr_gets_version_required = main_confs["nr_gets_version_required"].as<int>();
+    this->max_timeouts = main_confs["max_nr_requests_timeouts"].as<int>();
     bool mt_client_handler = main_confs["mt_client_handler"].as<bool>();
     long wait_timeout = main_confs["client_wait_timeout"].as<long>();
     long lb_interval = main_confs["lb_interval"].as<long>();
@@ -137,8 +138,8 @@ std::set<long> client::put(std::string key, long version, const char *data, size
    this->handler->register_put(key, version); // throw const char* (Escritas concorrentes sobre a mesma chave)
    kv_store_key<std::string> comp_key = {key, version};
    std::unique_ptr<std::set<long>> res = nullptr;
-   int max_timeouts = 4;
-   while(res == nullptr && max_timeouts > 0){
+   int curr_timeouts = 0;
+   while(res == nullptr && curr_timeouts < this->max_timeouts){
        peer_data peer = this->lb->get_random_peer(); //throw exception
        int status = this->send_put(peer, key, version, data, size);
        if(status == 0){
@@ -146,7 +147,7 @@ std::set<long> client::put(std::string key, long version, const char *data, size
            try{
                res = this->handler->wait_for_put(comp_key, wait_for);
            }catch(TimeoutException& e){
-               max_timeouts--;
+               curr_timeouts++;
            }
        }
    }
@@ -164,8 +165,8 @@ std::shared_ptr<std::string> client::get(std::string key, int wait_for, long* ve
     this->handler->register_get(req_id_str);
     std::shared_ptr<std::string> res (nullptr);
 
-    int max_timeouts = 4;
-    while(res == nullptr && max_timeouts > 0){
+    int curr_timeouts = 0;
+    while(res == nullptr && curr_timeouts < this->max_timeouts){
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get(peer, key, version_ptr, req_id_str);
         if (status == 0) {
@@ -173,7 +174,7 @@ std::shared_ptr<std::string> client::get(std::string key, int wait_for, long* ve
             try{
                 res = this->handler->wait_for_get(req_id_str, wait_for);
             }catch(TimeoutException& e){
-                max_timeouts--;
+                curr_timeouts++;
             }
         }
     }
@@ -191,13 +192,17 @@ long client::get_latest_version(std::string key, int wait_for) {
     this->handler->register_get_latest_version(req_id_str);
     std::unique_ptr<long> res (nullptr);
 
-    int max_timeouts = 4;
-    while(res == nullptr && max_timeouts-- > 0){
+    int curr_timeouts = 0;
+    while(res == nullptr && curr_timeouts < this->max_timeouts){
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get_latest_version(peer, key, req_id_str);
         if (status == 0) {
             std::cout << "GET Version " << req_id << " Key:" << key << " ==================================>" << std::endl;
-            res = this->handler->wait_for_get_latest_version(req_id_str, wait_for);
+            try{
+                res = this->handler->wait_for_get_latest_version(req_id_str, wait_for);
+            }catch(TimeoutException& e){
+                curr_timeouts++;
+            }
         }
     }
 

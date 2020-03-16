@@ -27,6 +27,7 @@ private:
     int nr_puts_required;
     int nr_gets_required;
     int nr_gets_version_required;
+    int max_timeouts;
 
     std::shared_ptr<dynamic_load_balancer> lb;
     std::thread lb_th;

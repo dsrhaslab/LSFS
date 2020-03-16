@@ -27,6 +27,7 @@ main_confs:
   client_wait_timeout: 5
   mt_client_handler: true
   nr_client_handler_ths: 3
+  max_nr_requests_timeouts: 4
 
   ######################################
 
