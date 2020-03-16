@@ -16,39 +16,19 @@
 #include <boost/thread/thread.hpp>
 #include <kv_message.pb.h>
 #include <df_store/kv_store_key.h>
+#include "client_reply_handler.h"
 
-class client_reply_handler_mt {
+class client_reply_handler_mt : public client_reply_handler{
 private:
-    int running;
-    int socket_rcv;
-    int port;
-    std::string ip;
     int nr_worker_threads = 3;
     boost::asio::io_service io_service;
     boost::thread_group thread_pool;
-    std::unordered_map<std::string, std::shared_ptr<std::string>> get_replies;
-    std::unordered_map<kv_store_key<std::string>, std::set<long>> put_replies;
-    int nr_puts_required;
-    long wait_timeout;
-    std::mutex get_global_mutex;
-    std::map<std::string, std::pair<std::unique_ptr<std::mutex>, std::unique_ptr<std::condition_variable>>> get_mutexes;
-    std::mutex put_global_mutex;
-    std::map<kv_store_key<std::string>, std::pair<std::unique_ptr<std::mutex>, std::unique_ptr<std::condition_variable>>> put_mutexes;
-
 
 public:
     client_reply_handler_mt(std::string ip, int port, int nr_puts_required, long wait_timeout);
-    ~client_reply_handler_mt();
+    ~client_reply_handler_mt() = default;
     void operator ()();
-    long register_put(std::string key, long version);
-    std::unique_ptr<std::set<long>> wait_for_put(kv_store_key<std::string> key);
-    void register_get(std::string req_id);
-    std::shared_ptr<std::string> wait_for_get(std::string req_id);
     void stop();
-
-    void process_get_reply_msg(const proto::get_reply_message &message);
-
-    void process_put_reply_msg(const proto::put_reply_message &message);
 };
 
 

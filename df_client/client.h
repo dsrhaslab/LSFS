@@ -9,7 +9,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
-#include "client_reply_handler.h"
+#include "client_reply_handler_st.h"
 #include "../df_loadbalancing/dynamic_load_balancer.h"
 #include "../df_loadbalancing/load_balancer_listener.h"
 #include "../kv_message.pb.h"

@@ -30,7 +30,7 @@ client::client(std::string ip, long id, int port, int lb_port):
     this->lb_th = std::thread (std::ref(*this->lb));
     this->lb_listener_th = std::thread (std::ref(*this->lb_listener));
 
-    this->handler = std::make_shared<client_reply_handler>(ip, port, nr_puts_required, wait_timeout);
+    this->handler = std::make_shared<client_reply_handler_mt>(ip, port, nr_puts_required, wait_timeout);
     this->handler_th = std::thread (std::ref(*this->handler));
 }
 
@@ -131,7 +131,7 @@ std::set<long> client::put(std::string key, long version, const char *data, size
        peer_data peer = this->lb->get_random_peer(); //throw exception
        int status = this->send_put(peer, key, version, data, size);
        if(status == 0){
-           std::cout << "PUT " << key << " : " << version << " ==============================>" << std::endl;
+           std::cout << "PUT (TO " << peer.id << ") " << key << " : " << version << " ==============================>" << std::endl;
            res = this->handler->wait_for_put(comp_key);
        }
    }
@@ -150,7 +150,7 @@ std::shared_ptr<std::string> client::get(std::string key, long* version_ptr, int
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get(peer, key, version_ptr, req_id_str);
         if (status == 0) {
-            std::cout << "GET " << req_id << " ==================================>" << std::endl;
+            std::cout << "GET " << req_id  << " " << key << (version_ptr == nullptr ? ": ?" : ": " + *version_ptr) << " ==================================>" << std::endl;
             res = this->handler->wait_for_get(req_id_str, wait_for);
         }
     }
@@ -168,7 +168,7 @@ long client::get_latest_version(std::string key, int wait_for) {
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get_latest_version(peer, key, req_id_str);
         if (status == 0) {
-            std::cout << "GET " << req_id << " ==================================>" << std::endl;
+            std::cout << "GET Version " << req_id << " Key:" << key << " ==================================>" << std::endl;
             res = this->handler->wait_for_get_latest_version(req_id_str, wait_for);
         }
     }
@@ -176,6 +176,8 @@ long client::get_latest_version(std::string key, int wait_for) {
     if(res == nullptr){
         throw TimeoutException();
     }
+
+    std::cout << "######################" << key << " VERSIONR: " << *res<< "#################################" << std::endl;
 
     return *res;
 }

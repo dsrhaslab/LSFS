@@ -25,6 +25,15 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
+/*
+ * TODO: Melhorar isto: get latest e get latest version estão a percorrer a db toda
+ * -> Coisas que já tentei:
+ *      -> criar um index: (não funciona porque o set_key corresponde à key do index, pelo que
+ *      não consigo ir buscar a chave primária associada, bem como penso que só funciona para valores
+ *      de indice diferentes )
+ *      -> tentei ainda fazer search_near: não funciona porque não ordena da forma esperada as chaves
+ * */
+
 class kv_store_wiredtiger: public kv_store<std::string>{
 private:
     WT_CONNECTION *conn;
@@ -145,13 +154,24 @@ int kv_store_wiredtiger::init(void* path, long id){
         return -1;
     }
     std::string table_name = "table:" + std::to_string(this->id);
-    res = session->create(session, table_name.c_str(), "key_format=Sl,value_format=u");
+    res = session->create(session, table_name.c_str(), "key_format=Sl,value_format=u,columns=(key,version,value)");
     if (res != 0){
         fprintf(stderr,
                 "create_table: %s\n",
                 "Error creating wiredtiger table!");
         return -1;
     }
+//    /* Create an immutable index. */
+//    /* Immutable - This setting tells WiredTiger that the index keys for a record do not change when records are updated*/
+//    std::string index_name = "index:" + std::to_string(this->id) + ":key";
+//    res = session->create(session, index_name.c_str(), "columns=(key),immutable");
+//    if (res != 0){
+//        fprintf(stderr,
+//                "create_table: %s\n",
+//                "Error creating wiredtiger index!");
+//        return -1;
+//    }
+
     return 0;
 }
 
@@ -330,14 +350,14 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get_latest(std::string key, lo
     }catch(WiredTigerException e){
         return nullptr;
     }
-    cursor->set_key(cursor, key.c_str());
+//    cursor->set_key(cursor, key.c_str());
 
     std::string current_key;
     long current_max_version = LONG_MIN;
 
     while (cursor->next(cursor) == 0) {
         cursor->get_key(cursor, &key_it, &version_it);
-        if(version_it >= current_max_version){
+        if(strcmp(key.c_str(),key_it) == 0 && version_it >= current_max_version) {
             current_max_version = version_it;
             current_key = std::string(key_it);
         }
@@ -372,14 +392,14 @@ std::unique_ptr<long> kv_store_wiredtiger::get_latest_version(std::string key) {
     }catch(WiredTigerException e){
         return nullptr;
     }
-    cursor->set_key(cursor, key.c_str());
+//    cursor->set_key(cursor, key.c_str());
 
     std::string current_key;
     long current_max_version = LONG_MIN;
 
     while (cursor->next(cursor) == 0) {
         cursor->get_key(cursor, &key_it, &version_it);
-        if(version_it >= current_max_version){
+        if(strcmp(key.c_str(),key_it) == 0 && version_it >= current_max_version){
             current_max_version = version_it;
             current_key = std::string(key_it);
         }

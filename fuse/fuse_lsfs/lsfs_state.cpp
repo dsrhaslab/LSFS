@@ -96,6 +96,7 @@ std::unique_ptr<metadata> lsfs_state::get_metadata(const char* path){
         if(version == -1){
             errno = ENOENT;
         }else{
+            std::cout << "######################" << path << " VERSIONG: " << version << "#################################" << std::endl;
             //Fazer um get de metadados ao dataflasks
             std::shared_ptr<std::string> data = df_client->get(path, &version, 1);
 

@@ -1,134 +1,15 @@
 //
-// Created by danielsf97 on 1/27/20.
+// Created by danielsf97 on 3/16/20.
 //
 
 #include "client_reply_handler.h"
-#include "../kv_message.pb.h"
-#include <netinet/in.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <iostream>
 #include "../exceptions/custom_exceptions.h"
 #include <regex>
 
+
 client_reply_handler::client_reply_handler(std::string ip, int port, int nr_puts_required, long wait_timeout):
-    ip(ip), port(port), nr_puts_required(nr_puts_required), wait_timeout(wait_timeout), socket_rcv(socket(PF_INET, SOCK_DGRAM, 0))
+        ip(ip), port(port), nr_puts_required(nr_puts_required), wait_timeout(wait_timeout)
 {}
-
-client_reply_handler::~client_reply_handler()
-{
-    close(this->socket_rcv);
-}
-
-void client_reply_handler::operator()() {
-    this->running = true;
-    std::cout << "Client Reply Handler is Active!!" << std::endl;
-
-    struct sockaddr_in si_me, si_other;
-    socklen_t addr_size = sizeof(si_other);
-
-    memset(&si_me, '\0', sizeof(si_me));
-    si_me.sin_family = AF_INET;
-    si_me.sin_port = htons(this->port);
-    si_me.sin_addr.s_addr = inet_addr(this->ip.c_str());
-
-    bind(this->socket_rcv, (struct sockaddr*)&si_me, sizeof(si_me));
-    char buf [65500];
-
-    while(this->running){
-        int bytes_rcv = recvfrom(this->socket_rcv, buf, 65500, 0, (struct sockaddr*)& si_other, &addr_size);
-
-        if(this->running){
-            try {
-                proto::kv_message message;
-                message.ParseFromArray(buf, bytes_rcv);
-                if(message.has_get_reply_msg()){
-
-                    const proto::get_reply_message& msg = message.get_reply_msg();
-                    std::string req_id = msg.reqid();
-                    long replier_id = msg.id();
-                    std::string data = msg.data();
-
-                    std::unique_lock<std::mutex> lock(this->get_global_mutex);
-
-                    std::regex composite_key(".+:(\\d+)$");
-                    std::smatch match;
-                    auto res = std::regex_search(req_id, match, composite_key);
-                    std::cout << "<==============================" << " GET " << std::stol(match[1].str(), nullptr) << std::endl;
-
-                    auto it = this->get_replies.find(req_id);
-                    if(it != this->get_replies.end()){
-                        // a chave existe
-                        auto& sync_pair = this->get_mutexes.find(req_id)->second;
-                        std::unique_lock<std::mutex> reqid_lock(*sync_pair.first);
-                        lock.unlock(); //free global get lock
-
-                        it->second.push_back(std::make_pair<long, std::shared_ptr<std::string>>(msg.version(), std::make_shared<std::string>(data)));
-                        sync_pair.second->notify_all();
-                        reqid_lock.unlock();
-                    }else{
-                        std::cout << "GET REPLY IGNORED - NON EXISTENT KEY" << std::endl;
-                    }
-                }else if(message.has_put_reply_msg()){
-
-                    const proto::put_reply_message& msg = message.put_reply_msg();
-                    std::string key = msg.key();
-                    long version = msg.version();
-                    kv_store_key<std::string> comp_key = {key, version};
-                    long replier_id = msg.id();
-
-                    std::unique_lock<std::mutex> lock(this->put_global_mutex);
-
-                    std::cout << "<==============================" << " PUT " << key << " : " << version << std::endl;
-
-                    auto it = this->put_replies.find(comp_key);
-                    if(it != this->put_replies.end()){
-                        // a chave existe
-                        auto& sync_pair = this->put_mutexes.find(comp_key)->second;
-                        std::unique_lock<std::mutex> key_lock(*sync_pair.first);
-
-                        lock.unlock(); //free global put lock
-
-                        it->second.emplace(replier_id);
-                        sync_pair.second->notify_all();
-                        key_lock.unlock();
-                    }else{
-                        std::cout << "PUT REPLY IGNORED - NON EXISTENT KEY" << std::endl;
-                    }
-                }else if(message.has_get_latest_version_reply_msg()){
-
-                    const proto::get_latest_version_reply_message& msg = message.get_latest_version_reply_msg();
-                    std::string req_id = msg.reqid();
-
-                    std::unique_lock<std::mutex> lock(this->get_global_mutex);
-
-                    std::regex composite_key(".+:(\\d+)$");
-                    std::smatch match;
-                    auto res = std::regex_search(req_id, match, composite_key);
-                    std::cout << "<==============================" << " GET " << std::stol(match[1].str(), nullptr) << std::endl;
-
-                    auto it = this->get_replies.find(req_id);
-                    if(it != this->get_replies.end()){
-                        // a chave existe
-                        auto& sync_pair = this->get_mutexes.find(req_id)->second;
-                        std::unique_lock<std::mutex> reqid_lock(*sync_pair.first);
-                        lock.unlock(); //free global get lock
-
-                        it->second.push_back(std::make_pair<long, std::shared_ptr<std::string>>(msg.version(), nullptr));
-                        sync_pair.second->notify_all();
-                        reqid_lock.unlock();
-                    }else{
-                        std::cout << "GET REPLY IGNORED - NON EXISTENT KEY" << std::endl;
-                    }
-                }
-            }
-            catch(const char* e){
-                std::cerr << e << std::endl;
-            }
-            catch(...){}
-        }
-    }
-}
 
 long client_reply_handler::register_put(std::string key, long version) {
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
@@ -186,7 +67,7 @@ std::unique_ptr<std::set<long>> client_reply_handler::wait_for_put(kv_store_key<
             // porque é certo que apenas uma thread podes estar à espera de uma mesma key
             auto it_key = this->put_mutexes.find(key);
             lock_key.unlock(); // é estritamente necessário fazer free porque se não ao removermos
-                               // como sai do scope ele vai tentar faazer free num mutex inexistente (SIGSEV)
+            // como sai do scope ele vai tentar faazer free num mutex inexistente (SIGSEV)
             this->put_mutexes.erase(it_key);
         }
 
@@ -324,20 +205,80 @@ std::unique_ptr<long> client_reply_handler::wait_for_get_latest_version(std::str
     return std::move(res);
 }
 
-void client_reply_handler::stop() {
-    this->running = false;
+void client_reply_handler::process_get_reply_msg(const proto::get_reply_message &msg) {
+    std::string req_id = msg.reqid();
+    long replier_id = msg.id();
+    std::string data = msg.data();
 
-    //send special message to awake main thread
-    struct sockaddr_in serverAddr;
-    int sockfd = socket(PF_INET, SOCK_DGRAM, 0);
-    memset(&serverAddr, '\0', sizeof(serverAddr));
+    std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(this->port);
-    serverAddr.sin_addr.s_addr = inet_addr(this->ip.c_str());
+    std::regex composite_key(".+:(\\d+)$");
+    std::smatch match;
+    auto res = std::regex_search(req_id, match, composite_key);
+    std::cout << "<==============================" << " GET " << std::stol(match[1].str(), nullptr) << std::endl;
 
-    char* buf[1];
+    auto it = this->get_replies.find(req_id);
+    if(it != this->get_replies.end()){
+        // a chave existe
+        auto& sync_pair = this->get_mutexes.find(req_id)->second;
+        std::unique_lock<std::mutex> reqid_lock(*sync_pair.first);
+        lock.unlock(); //free global get lock
 
-    sendto(sockfd, buf, 1, 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-    close(sockfd);
+        it->second.push_back(std::make_pair<long, std::shared_ptr<std::string>>(msg.version(), std::make_shared<std::string>(data)));
+        sync_pair.second->notify_all();
+        reqid_lock.unlock();
+    }else{
+        std::cout << "GET REPLY IGNORED - NON EXISTENT KEY" << std::endl;
+    }
+}
+
+void client_reply_handler::process_put_reply_msg(const proto::put_reply_message &msg) {
+    std::string key = msg.key();
+    long version = msg.version();
+    kv_store_key<std::string> comp_key = {key, version};
+    long replier_id = msg.id();
+
+    std::unique_lock<std::mutex> lock(this->put_global_mutex);
+
+    std::cout << "<==============================" << " PUT " << key << " : " << version << std::endl;
+
+    auto it = this->put_replies.find(comp_key);
+    if(it != this->put_replies.end()){
+        // a chave existe
+        auto& sync_pair = this->put_mutexes.find(comp_key)->second;
+        std::unique_lock<std::mutex> key_lock(*sync_pair.first);
+
+        lock.unlock(); //free global put lock
+
+        it->second.emplace(replier_id);
+        sync_pair.second->notify_all();
+        key_lock.unlock();
+    }else{
+        std::cout << "PUT REPLY IGNORED - NON EXISTENT KEY" << std::endl;
+    }
+}
+
+void client_reply_handler::process_get_latest_version_reply_msg(const proto::get_latest_version_reply_message& msg) {
+    std::string req_id = msg.reqid();
+
+    std::unique_lock<std::mutex> lock(this->get_global_mutex);
+
+    std::regex composite_key(".+:(\\d+)$");
+    std::smatch match;
+    auto res = std::regex_search(req_id, match, composite_key);
+    std::cout << "<==============================" << " GET " << std::stol(match[1].str(), nullptr) << std::endl;
+
+    auto it = this->get_replies.find(req_id);
+    if(it != this->get_replies.end()){
+        // a chave existe
+        auto& sync_pair = this->get_mutexes.find(req_id)->second;
+        std::unique_lock<std::mutex> reqid_lock(*sync_pair.first);
+        lock.unlock(); //free global get lock
+
+        it->second.push_back(std::make_pair<long, std::shared_ptr<std::string>>(msg.version(), nullptr));
+        sync_pair.second->notify_all();
+        reqid_lock.unlock();
+    }else{
+        std::cout << "GET REPLY IGNORED - NON EXISTENT KEY" << std::endl;
+    }
 }
