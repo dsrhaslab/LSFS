@@ -2,8 +2,8 @@
 // Created by danielsf97 on 1/30/20.
 //
 
-#include <df_serializer/capnp/capnp_serializer.h>
-#include <df_tcp_client_server_connection/tcp_client_server_connection.h>
+#include "../df_serializer/capnp/capnp_serializer.h"
+#include "../df_tcp_client_server_connection/tcp_client_server_connection.h"
 #include <thread>
 #include <utility>
 #include <netinet/in.h>

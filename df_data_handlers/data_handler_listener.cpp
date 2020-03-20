@@ -138,9 +138,9 @@ private:
                     break;
             }
 
-            if(data != nullptr){
-                std::cout << "<================================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version << std::endl;
+            std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version << std::endl;
 
+            if(data != nullptr){
                 //se tenho o conteudo da chave
                 auto data_size = data->size();
                 char buf[data_size];
@@ -388,6 +388,9 @@ private:
                     e.what();
                 }
             }
+
+            std::cout << "<=============(" << (version != nullptr) << ")================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << std::endl;
+
             if(version != nullptr){
                 // se a chave pertence à minha slice (versão da chave >= -1)
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
@@ -415,6 +418,8 @@ private:
                 reply_message.set_allocated_get_latest_version_reply_msg(message_content);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
+                std::cout << "GET REPLY (\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
+
             }else{
                 //se não tenho o conteudo da chave -> fazer forward
                 int obj_slice = this->store->get_slice_for_key(key);

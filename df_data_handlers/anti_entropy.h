@@ -8,7 +8,7 @@
 #include <vector>
 #include <atomic>
 #include <kv_message.pb.h>
-#include <df_pss/pss.h>
+#include "../df_pss/pss.h"
 
 
 class anti_entropy{

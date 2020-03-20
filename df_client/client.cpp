@@ -43,8 +43,6 @@ client::client(std::string ip, long id, int port, int lb_port, const char* conf_
     this->handler_th = std::thread (std::ref(*this->handler));
 }
 
-
-
 void client::stop(){
     lb->stop();
     std::cout << "stopped load balancer" << std::endl;
@@ -61,9 +59,7 @@ void client::stop(){
 }
 
 long client::inc_and_get_request_count() {
-    //TODO apesar de ser atomic precisa de um lock aqui
-    this->request_count += 1;
-    return this->request_count;
+    return this->request_count++;
 }
 
 int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
@@ -170,7 +166,7 @@ std::shared_ptr<std::string> client::get(std::string key, int wait_for, long* ve
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get(peer, key, version_ptr, req_id_str);
         if (status == 0) {
-            std::cout << "GET " << req_id  << " " << key << (version_ptr == nullptr ? ": ?" : ": " + *version_ptr) << " ==================================>" << std::endl;
+            std::cout << "GET " << req_id  << " TO (" << peer.id << ") " << key << (version_ptr == nullptr ? ": ?" : ": " + *version_ptr) << " ==================================>" << std::endl;
             try{
                 res = this->handler->wait_for_get(req_id_str, wait_for);
             }catch(TimeoutException& e){
@@ -197,7 +193,7 @@ long client::get_latest_version(std::string key, int wait_for) {
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get_latest_version(peer, key, req_id_str);
         if (status == 0) {
-            std::cout << "GET Version " << req_id << " Key:" << key << " ==================================>" << std::endl;
+            std::cout << "GET Version " << req_id << " TO (" << peer.id << ") " << " Key:" << key << " ==================================>" << std::endl;
             try{
                 res = this->handler->wait_for_get_latest_version(req_id_str, wait_for);
             }catch(TimeoutException& e){

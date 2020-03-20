@@ -13,7 +13,7 @@
 #include <mutex>
 #include <atomic>
 #include <pss_message.pb.h>
-#include <df_core/group_construction.h>
+#include "../df_core/group_construction.h"
 
 class pss {
 private:

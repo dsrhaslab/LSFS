@@ -12,8 +12,8 @@
 #include "group_construction.h"
 #include <memory>
 #include <thread>
-#include <df_data_handlers/anti_entropy.h>
-#include <df_store/kv_store.h>
+#include "../df_data_handlers/anti_entropy.h"
+#include "../df_store/kv_store.h"
 #include <spdlog/logger.h>
 
 class peer {

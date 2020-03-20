@@ -8,7 +8,7 @@
 
 #include <boost/asio/io_service.hpp>
 #include <boost/thread/thread.hpp>
-#include "df_pss/pss.h"
+#include "../df_pss/pss.h"
 #include "../df_store/kv_store.h"
 
 class data_handler_listener {

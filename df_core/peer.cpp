@@ -14,9 +14,9 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include <stdlib.h>
-#include <df_store/kv_store_wiredtiger.h>
-#include <df_store/kv_store_leveldb.h>
-#include <df_store/kv_store_memory_v2.h>
+#include "../df_store/kv_store_wiredtiger.h"
+#include "../df_store/kv_store_leveldb.h"
+#include "../df_store/kv_store_memory_v2.h"
 
 std::shared_ptr<peer> g_peer_impl;
 
