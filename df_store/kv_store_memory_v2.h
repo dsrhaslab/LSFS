@@ -100,10 +100,6 @@ std::unique_ptr<long> kv_store_memory_v2<T>::get_client_id_from_key_version(std:
         if(exists){
             res = std::make_unique<long>(max_version.client_id);
         }
-
-//        const auto& version_block_pair = it->second.rbegin(); //reverse begin give me the biggest version because std::map is ordered
-//        max_version = version_block_pair->first;
-//        res = std::make_unique<long>(max_version.client_id);
     }
     return res;
 }

@@ -248,16 +248,22 @@ std::unique_ptr<long> kv_store_wiredtiger::get_client_id_from_key_version(std::s
 
 
     auto current_max_version = kv_store_key_version(version);
+    bool exists = false;
 
     while (cursor->next(cursor) == 0) {
         cursor->get_key(cursor, &key_it, &version_it, &client_id_it);
         kv_store_key_version temp_version = kv_store_key_version(version_it, client_id_it);
         if(strcmp(key.c_str(),key_it) == 0 && version_it == version && temp_version >= current_max_version) {
             current_max_version = temp_version;
+            exists = true;
         }
     }
 
-    return std::make_unique<long>(current_max_version.client_id);
+    if(exists){
+        return std::make_unique<long>(current_max_version.client_id);
+    }
+
+    return nullptr;
 }
 
 void kv_store_wiredtiger::print_store(){
@@ -296,6 +302,9 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string>&
 
     if(key.key_version.client_id == -1){
         std::unique_ptr<long> current_max_client_id = get_client_id_from_key_version(key.key, key.key_version.version);
+        if(current_max_client_id == nullptr){
+            return nullptr;
+        }
         key.key_version.client_id = *current_max_client_id;
     }
 
