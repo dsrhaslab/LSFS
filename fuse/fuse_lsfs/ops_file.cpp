@@ -152,6 +152,26 @@ int lsfs_impl::_open(
     return return_value;
 }
 
+int lsfs_impl::_flush(const char *path, struct fuse_file_info *fi){
+    const int fd = (int)fi->fh;
+
+    if (path){
+        logger->info("FLUSH " + std::string(path) + " FD:" + std::to_string(fd));
+        logger->flush();
+    }else{
+        logger->info("FLUSH FD:" + std::to_string(fd));
+        logger->flush();
+    }
+
+    (void)path;
+
+    if(!is_temp_file(path)) {
+        return state->flush_and_release_open_file(path);
+    }else{
+        return 0;
+    }
+}
+
 int lsfs_impl::_release(
     const char *path,
     struct fuse_file_info *fi
@@ -170,8 +190,7 @@ int lsfs_impl::_release(
     (void)path;
 
     if(!is_temp_file(path)) {
-        state->flush_and_release_open_file(path);
-        return 0;
+        return state->flush_and_release_open_file(path);
     }else{
         return (close((int)fi->fh) == 0) ? 0 : -errno;
     }
@@ -202,8 +221,7 @@ int lsfs_impl::_fsync(
 //        if(result != 0){
 //            return -errno; //res = -errno
 //        }
-        state->flush_open_file(path);
-        return 0;
+        return state->flush_open_file(path);
     }else{
         result = isdatasync ? fdatasync(fd) : fsync(fd);
     }
@@ -354,8 +372,13 @@ int lsfs_impl::_write(
                         read_off += (first_block_size - off_blk);
                         current_blk++;
                         std::string blk_path = std::string(path) + ":" + std::to_string(current_blk);
-                        long version = df_client->get_latest_version(blk_path);
-                        df_client->put(blk_path, version + 1, buf, size);
+                        int res = state->put_block(blk_path.c_str(), buf, size, true);
+                        if(res == -1){
+                            return -errno;
+                        }
+
+//                        long version = df_client->get_latest_version(blk_path);
+//                        df_client->put(blk_path, version + 1, buf, size);
                     }
                 } else {
                     errno = EPERM;
@@ -368,8 +391,12 @@ int lsfs_impl::_write(
                 size_t write_size = (read_off + BLK_SIZE) > size ? (size - read_off) : BLK_SIZE;
                 current_blk++;
                 std::string blk_path = std::string(path) + ":" + std::to_string(current_blk);
-                long version = df_client->get_latest_version(blk_path);
-                df_client->put(blk_path, version + 1, &buf[read_off], write_size);
+                int res = state->put_block(blk_path.c_str(), &buf[read_off], write_size, true);
+                if(res == -1){
+                    return -errno;
+                }
+//                long version = df_client->get_latest_version(blk_path);
+//                df_client->put(blk_path, version + 1, &buf[read_off], write_size);
                 read_off += BLK_SIZE;
             }
 

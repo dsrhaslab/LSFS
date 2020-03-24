@@ -28,7 +28,12 @@ int lsfs_impl::_getattr(
 
         if(!is_temp_file(path)){
 
-            if(!state->get_metadata_if_file_opened(path, stbuf)){
+            bool got_metadata = false;
+            got_metadata = state->get_metadata_if_file_opened(path, stbuf);
+            if(!got_metadata){
+                got_metadata = state->get_metadata_if_dir_opened(path, stbuf);
+            }
+            if(!got_metadata){
                 std::unique_ptr<metadata> res = state->get_metadata(path);
                 if(res == nullptr){
                     return -errno;
@@ -120,7 +125,9 @@ int lsfs_impl::_utimens(
 
             metadata to_send(stbuf);
             // serialize metadata object
-            res = state->put_metadata(to_send, path);
+
+            bool is_dir = S_ISDIR(stbuf.st_mode);
+            res = state->put_metadata(to_send, path, (is_dir == false));
             if (res == -1) {
                 return -errno;
             }
@@ -173,7 +180,7 @@ int lsfs_impl::_truncate(
             stbuf.st_mtim = stbuf.st_ctim;
             metadata to_send(stbuf);
             // serialize metadata object
-            res = state->put_metadata(to_send, path);
+            res = state->put_metadata(to_send, path, true);
             if(res == -1){
                 return -errno;
             }

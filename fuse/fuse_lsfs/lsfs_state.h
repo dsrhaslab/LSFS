@@ -43,7 +43,8 @@ public:
     long get_version(std::string path);
     int open_and_read_size(const char *path, size_t* size);
     int add_child_to_parent_dir(const char *path, bool is_dir);
-    int put_metadata(metadata& met, const char* path);
+    int put_block(const char* path, const char* buf, size_t size, bool timestamp_version = false);
+    int put_metadata(metadata& met, const char* path, bool timestamp_version = false);
     std::unique_ptr<metadata> get_metadata(const char* path);
     void add_open_file(const char* path, struct stat& stbuf, FileAccess::FileAccess access);
     bool is_file_opened(const char* path);
@@ -51,8 +52,9 @@ public:
     bool update_file_size_if_opened(const char* path, size_t size);
     bool update_file_time_if_opened(const char* path, const struct timespec ts[2]);
     bool get_metadata_if_file_opened(const char* path, struct stat* stbuf);
+    bool get_metadata_if_dir_opened(const char* path, struct stat* stbuf);
     int flush_open_file(const char* path);
-    void flush_and_release_open_file(const char* path);
+    int flush_and_release_open_file(const char* path);
 };
 
 

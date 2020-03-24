@@ -4,6 +4,7 @@
 
 #include "lsfs_state.h"
 
+#include <ctime>
 #include <utility>
 
 lsfs_state::lsfs_state(std::shared_ptr<client> df_client, std::shared_ptr<spdlog::logger> logger):
@@ -60,15 +61,17 @@ int lsfs_state::open_and_read_size(
     return 0;
 }
 
-int lsfs_state::put_metadata(metadata& met, const char* path){
+int lsfs_state::put_block(const char* path, const char* buf, size_t size, bool timestamp_version) {
     int return_value;
 
-    // serialize metadata object
-    std::string metadata_str = metadata::serialize_to_string(met);
-
     try{
-        long version = df_client->get_latest_version(path);
-        df_client->put(path, version + 1, metadata_str.data(), metadata_str.size());
+        long version;
+        if(timestamp_version){
+            version = std::time(nullptr);
+        }else{
+            version = df_client->get_latest_version(path) + 1;
+        }
+        df_client->put(path, version, buf, size);
         return_value = 0;
     }catch(EmptyViewException& e){
         // empty view -> nothing to do
@@ -86,6 +89,12 @@ int lsfs_state::put_metadata(metadata& met, const char* path){
     }
 
     return return_value;
+}
+
+int lsfs_state::put_metadata(metadata& met, const char* path, bool timestamp_version){
+    // serialize metadata object
+    std::string metadata_str = metadata::serialize_to_string(met);
+    return this->put_block(path, metadata_str.data(), metadata_str.size(), timestamp_version);
 }
 
 std::unique_ptr<metadata> lsfs_state::get_metadata(const char* path){
@@ -277,6 +286,9 @@ bool lsfs_state::get_metadata_if_file_opened(const char* path, struct stat* stbu
     return false;
 }
 
+bool lsfs_state::get_metadata_if_dir_opened(const char* path, struct stat* stbuf){
+    return false;
+}
 
 int lsfs_state::flush_open_file(const char* path){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
@@ -288,9 +300,8 @@ int lsfs_state::flush_open_file(const char* path){
             // create metadata object
             metadata to_send(*(it->second.second));
             // serialize metadata object
-            int res = put_metadata(to_send, path);
+            int res = put_metadata(to_send, path, true);
             if(res != 0){
-                it->second.first = FileAccess::ACCESSED;
                 return res;
             }
 
@@ -302,6 +313,8 @@ int lsfs_state::flush_open_file(const char* path){
                     return res;
                 }
             }
+
+            it->second.first = FileAccess::ACCESSED;
         }
         return 0;
     }
@@ -310,11 +323,15 @@ int lsfs_state::flush_open_file(const char* path){
     return -errno;
 }
 
-void lsfs_state::flush_and_release_open_file(const char* path) {
+int lsfs_state::flush_and_release_open_file(const char* path) {
     std::scoped_lock<std::recursive_mutex> lk(open_files_mutex);
-    flush_open_file(path);
+    int res = flush_open_file(path);
+    if(res != 0){
+        return res;
+    }
     auto it = open_files.find(path);
     if (it != open_files.end()) {
         open_files.erase(it);
     }
+    return 0;
 }

@@ -103,6 +103,11 @@ public:
             struct fuse_file_info *fi
     );
 
+    static int _flush(
+            const char *path,
+            struct fuse_file_info *fi
+    );
+
     static int _fsync(
             const char *path, int isdatasync,
             struct fuse_file_info *fi

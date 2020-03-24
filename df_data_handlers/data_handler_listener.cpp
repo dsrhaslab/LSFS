@@ -114,29 +114,18 @@ private:
         std::string req_id = message.reqid();
         std::shared_ptr<std::string> data(nullptr); //*data = undefined
 
-        std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET GET GET GET GET(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
-
-
         //se o pedido ainda não foi processado e não é um pedido interno (não começa com intern)
         if(!this->store->in_log(req_id) && req_id.rfind("intern", 0) != 0){
-            std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET1 GET1 GET1 GET1 GET1(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
 
             this->store->log_req(req_id);
-
             kv_store_key_version version;
-            std::cout << "<================================== " << "GET2 GET2 GET2 GET2 GET2(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
-
-
             switch (message.version_avail_case()){
                 case proto::get_message::kVersionNone:
                     // Só faz sentido questionar pela última versão conhecida da chave para
                     // peers que pertençam à mesma slice que a key
                     if(this->store->get_slice_for_key(key) == this->store->get_slice()) {
                         try {
-                            std::cout << "<================================== " << "GET3 GET3 GET3 GET3 GET3(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
                             data = this->store->get_latest(key, &version);
-                            std::cout << "<================================== " << "GET4 GET4 GET4 GET4 GET4(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
-
                         } catch (std::exception &e) {
                             //LevelDBException
                             e.what();
@@ -146,16 +135,14 @@ private:
                 case proto::get_message::kVersion:
                     version = kv_store_key_version(message.version());
                     kv_store_key<std::string> get_key = {key, version};
-                    std::cout << "<================================== " << "GET5 GET5 GET5 GET5 GET5(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
                     data = this->store->get(get_key);
-                    std::cout << "<================================== " << "GET6 GET6 GET6 GET6 GET6(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
                     break;
             }
 
 
 
 
-            std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET NOT VERSION(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version.version << std::endl;
+            std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version.version << std::endl;
 
             if(data != nullptr){
                 //se tenho o conteudo da chave
@@ -178,7 +165,7 @@ private:
                     message_content->set_data(buf, data_size);
                     reply_message.set_allocated_get_reply_msg(message_content);
 
-                    std::cout << "GET REPLY NOT VERSION(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
+                    std::cout << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
                     this->reply_client(reply_message, sender_ip, sender_port);
                     // forward to other peers from my slice if is the right slice for the key
