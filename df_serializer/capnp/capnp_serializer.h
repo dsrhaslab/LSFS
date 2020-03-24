@@ -6,12 +6,12 @@
 #define DATAFLASKSCPP_CAPNP_SERIALIZER_H
 
 #include "capnp_serializer.h"
-#include "../serializer.h"
+#include "df_serializer/serializer.h"
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
 #include <vector>
 #include "df_serializer/capnp/packet.capnp.h"
-#include "../../df_pss/pss_message.h"
+#include "df_pss/pss_message.h"
 
 class Capnp_Serializer: public Serializer {
 

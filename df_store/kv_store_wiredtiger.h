@@ -6,7 +6,7 @@
 #define P2PFS_KV_STORE_WIREDTIGER_H
 
 #include <wiredtiger.h>
-#include "../exceptions/custom_exceptions.h"
+#include "exceptions/custom_exceptions.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <atomic>
@@ -42,6 +42,7 @@ private:
 
 private:
     void error_check(int call);
+    std::unique_ptr<long> get_client_id_from_key_version(std::string key, long version);
 
 public:
     ~kv_store_wiredtiger();
@@ -50,10 +51,10 @@ public:
     std::string db_name() const override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<std::string>> get_keys() override;
-    bool put(std::string key, long version, std::string bytes) override; // use string.c_str() to convert string to const char*
-    std::shared_ptr<std::string> get(kv_store_key<std::string> key) override;
+    bool put(std::string key, long version, long client_id, std::string bytes) override; // use string.c_str() to convert string to const char*
+    std::shared_ptr<std::string> get(kv_store_key<std::string>& key) override;
     std::shared_ptr<std::string> remove(kv_store_key<std::string> key) override;
-    std::shared_ptr<std::string> get_latest(std::string key, long *version) override;
+    std::shared_ptr<std::string> get_latest(std::string key, kv_store_key_version* kv_version) override;
     std::unique_ptr<long> get_latest_version(std::string key) override;
     void print_store() override;
 };
@@ -132,7 +133,7 @@ int kv_store_wiredtiger::init(void* path, long id){
         return -1;
     }
     std::string table_name = "table:" + std::to_string(this->id);
-    res = session->create(session, table_name.c_str(), "key_format=Sl,value_format=u,columns=(key,version,value)");
+    res = session->create(session, table_name.c_str(), "key_format=Sll,value_format=u,columns=(key,version,client_id,value)");
     if (res != 0){
         fprintf(stderr,
                 "create_table: %s\n",
@@ -168,7 +169,7 @@ void kv_store_wiredtiger::update_partition(int p, int np) {
         try {
             error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor));
             for(const auto& seen_pair: this->seen){
-                cursor->set_key(cursor, seen_pair.first.key.c_str(), seen_pair.first.version);
+                cursor->set_key(cursor, seen_pair.first.key.c_str(), seen_pair.first.key_version.version, seen_pair.first.key_version.client_id);
                 int res = cursor->search(cursor);
 
                 if(res != 0) { // a chave não existe
@@ -185,6 +186,7 @@ std::unordered_set<kv_store_key<std::string>> kv_store_wiredtiger::get_keys() {
     WT_CURSOR *cursor;
     char *key;
     uint32_t version;
+    uint32_t client_id;
 
     std::unordered_set<kv_store_key<std::string>> keys;
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
@@ -192,26 +194,26 @@ std::unordered_set<kv_store_key<std::string>> kv_store_wiredtiger::get_keys() {
     error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor)); //throw exception
 
     while (cursor->next(cursor) == 0) {
-        cursor->get_key(cursor, &key, &version);
-        keys.insert({std::string(key), (long) version});
+        cursor->get_key(cursor, &key, &version, &client_id);
+        keys.insert({std::string(key), kv_store_key_version((long) version, (long) client_id)});
     }
 
     cursor->close(cursor);
     return std::move(keys);
 }
 
-bool kv_store_wiredtiger::put(std::string key, long version, std::string bytes) {
+bool kv_store_wiredtiger::put(std::string key, long version, long client_id, std::string bytes) {
     WT_CURSOR *cursor;
     WT_ITEM item;
 
-    this->seen_it(key, version);
+    this->seen_it(key, version, client_id);
     int k_slice = this->get_slice_for_key(key);
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     if(this->slice == k_slice){
         std::string table_name = "table:" + std::to_string(this->id);
         error_check(session->open_cursor(session, table_name.c_str(), nullptr, "overwrite=true", &cursor)); //throw exception
-        cursor->set_key(cursor, key.c_str(), version);
+        cursor->set_key(cursor, key.c_str(), version, client_id);
         auto data_size = bytes.size();
         char buf[data_size];
         bytes.copy(buf, data_size);
@@ -220,17 +222,49 @@ bool kv_store_wiredtiger::put(std::string key, long version, std::string bytes) 
         cursor->set_value(cursor, &item);
         cursor->insert(cursor);
         cursor->close(cursor);
-        return true;
+
+        std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
+        if(max_client_id == nullptr) return false;
+        return *max_client_id == client_id;
     }else{
         //Object received but does not belong to this df_store.
         return false;
     }
 }
 
+std::unique_ptr<long> kv_store_wiredtiger::get_client_id_from_key_version(std::string key, long version){
+    WT_CURSOR *cursor;
+    char *key_it;
+    uint32_t version_it;
+    uint32_t client_id_it;
+
+    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
+    std::string table_name = "table:" + std::to_string(this->id);
+    try {
+        error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor));
+    }catch(WiredTigerException e){
+        return nullptr;
+    }
+
+
+    auto current_max_version = kv_store_key_version(version);
+
+    while (cursor->next(cursor) == 0) {
+        cursor->get_key(cursor, &key_it, &version_it, &client_id_it);
+        kv_store_key_version temp_version = kv_store_key_version(version_it, client_id_it);
+        if(strcmp(key.c_str(),key_it) == 0 && version_it == version && temp_version >= current_max_version) {
+            current_max_version = temp_version;
+        }
+    }
+
+    return std::make_unique<long>(current_max_version.client_id);
+}
+
 void kv_store_wiredtiger::print_store(){
     WT_CURSOR *cursor;
     char *key;
     uint32_t version;
+    uint32_t client_id;
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
@@ -240,15 +274,15 @@ void kv_store_wiredtiger::print_store(){
         std::cout << "================= MY STORE =============" << std::endl;
         int i;
         while ((i = cursor->next(cursor)) == 0) {
-            cursor->get_key(cursor, &key, &version);
-            std::cout << std::string(key) << ": " << (long) version << std::endl;
+            cursor->get_key(cursor, &key, &version, &client_id);
+            std::cout << std::string(key) << ": " << (long) version << ": " << (long) client_id << std::endl;
         }
         std::cout << "========================================" << std::endl;
         cursor->close(cursor);
     }catch(WiredTigerException e){}
 }
 
-std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string> key) {
+std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string>& key) {
     WT_CURSOR *cursor;
     WT_ITEM value;
 
@@ -259,7 +293,14 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string> 
     }catch(WiredTigerException e){
         return nullptr;
     }
-    cursor->set_key(cursor, key.key.c_str(), key.version);
+
+    if(key.key_version.client_id == -1){
+        std::unique_ptr<long> current_max_client_id = get_client_id_from_key_version(key.key, key.key_version.version);
+        key.key_version.client_id = *current_max_client_id;
+    }
+
+
+    cursor->set_key(cursor, key.key.c_str(), key.key_version.version, key.key_version.client_id);
     int res = cursor->search(cursor);
     if(res == 0){
         cursor->get_value(cursor, &value);
@@ -271,11 +312,12 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string> 
     }
 }
 
-std::shared_ptr<std::string> kv_store_wiredtiger::get_latest(std::string key, long *version) {
+std::shared_ptr<std::string> kv_store_wiredtiger::get_latest(std::string key, kv_store_key_version* kv_version) {
     WT_CURSOR *cursor;
     WT_ITEM value;
     char *key_it;
     uint32_t version_it;
+    uint32_t client_id_it;
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
@@ -287,19 +329,20 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get_latest(std::string key, lo
 //    cursor->set_key(cursor, key.c_str());
 
     std::string current_key;
-    long current_max_version = LONG_MIN;
+    auto current_max_version = kv_store_key_version(LONG_MIN);
 
     while (cursor->next(cursor) == 0) {
-        cursor->get_key(cursor, &key_it, &version_it);
-        if(strcmp(key.c_str(),key_it) == 0 && version_it >= current_max_version) {
-            current_max_version = version_it;
+        cursor->get_key(cursor, &key_it, &version_it, &client_id_it);
+        kv_store_key_version temp_version = kv_store_key_version(version_it, client_id_it);
+        if(strcmp(key.c_str(),key_it) == 0 && temp_version >= current_max_version) {
+            current_max_version = temp_version;
             current_key = std::string(key_it);
         }
     }
 
     if(!current_key.empty()){
-        *version = current_max_version;
-        cursor->set_key(cursor, key.c_str(), current_max_version);
+        *kv_version = current_max_version;
+        cursor->set_key(cursor, key.c_str(), current_max_version.version, current_max_version.client_id);
 
         int res = cursor->search(cursor);
         if(res == 0){
@@ -318,6 +361,7 @@ std::unique_ptr<long> kv_store_wiredtiger::get_latest_version(std::string key) {
     WT_ITEM value;
     char *key_it;
     uint32_t version_it;
+    uint32_t client_id_it;
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
@@ -332,7 +376,7 @@ std::unique_ptr<long> kv_store_wiredtiger::get_latest_version(std::string key) {
     long current_max_version = LONG_MIN;
 
     while (cursor->next(cursor) == 0) {
-        cursor->get_key(cursor, &key_it, &version_it);
+        cursor->get_key(cursor, &key_it, &version_it, &client_id_it);
         if(strcmp(key.c_str(),key_it) == 0 && version_it >= current_max_version){
             current_max_version = version_it;
             current_key = std::string(key_it);
@@ -356,7 +400,7 @@ std::shared_ptr<std::string> kv_store_wiredtiger::remove(kv_store_key<std::strin
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
     error_check(session->open_cursor(session,table_name.c_str(), nullptr, nullptr, &cursor));
-    cursor->set_key(cursor, key.key.c_str(), key.version);
+    cursor->set_key(cursor, key.key.c_str(), key.key_version.version, key.key_version.client_id);
 
 
     int res = cursor->search(cursor);

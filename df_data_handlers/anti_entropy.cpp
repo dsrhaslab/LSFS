@@ -2,8 +2,8 @@
 // Created by danielsf97 on 1/30/20.
 //
 
-#include "../df_serializer/capnp/capnp_serializer.h"
-#include "../df_tcp_client_server_connection/tcp_client_server_connection.h"
+#include "df_serializer/capnp/capnp_serializer.h"
+#include "df_tcp_client_server_connection/tcp_client_server_connection.h"
 #include <thread>
 #include <utility>
 #include <netinet/in.h>
@@ -56,7 +56,8 @@ void anti_entropy::operator()() {
                 for (auto &key : this->store->get_keys()) {
                     proto::kv_store_key *kv_key = message_content->add_keys();
                     kv_key->set_key(key.key);
-                    kv_key->set_version(key.version);
+                    kv_key->set_version(key.key_version.version);
+                    kv_key->set_client_id(key.key_version.client_id);
                 }
                 message.set_allocated_anti_entropy_msg(message_content);
                 this->send_peer_keys(slice_view, message);

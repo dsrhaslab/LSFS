@@ -55,8 +55,8 @@ nr_peers_known_to_torecover = view_size / 2
 draw_final_graph = args.get("d")
 
 if(args.get('remote')):
-   bootstrapping = '.././bootstrapper_exe'
-   peer_program = '.././peer_exe' 
+   bootstrapping = '../build/bootstrapper_exe'
+   peer_program = '../build/peer_exe'
 else:
    bootstrapping = '../cmake-build-debug/./bootstrapper_exe'
    peer_program = '../cmake-build-debug/./peer_exe' 

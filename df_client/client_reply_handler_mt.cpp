@@ -3,13 +3,13 @@
 //
 
 #include "client_reply_handler_mt.h"
-#include "../kv_message.pb.h"
+#include "kv_message.pb.h"
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <iostream>
-#include <df_communication/udp_async_server.h>
-#include "../exceptions/custom_exceptions.h"
+#include "df_communication/udp_async_server.h"
+#include "exceptions/custom_exceptions.h"
 #include <regex>
 
 /* =====================================================================================================================

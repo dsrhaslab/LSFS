@@ -3,11 +3,11 @@
 //
 
 #include "capnp_serializer.h"
-#include "../../df_pss/pss_message.h"
+#include "df_pss/pss_message.h"
 #include <iostream>
 
 #include <netinet/in.h>
-#include "../../df_tcp_client_server_connection/tcp_client_server_connection.h"
+#include "df_tcp_client_server_connection/tcp_client_server_connection.h"
 
 
 #define LOG(X) std::cout << X << std::endl;

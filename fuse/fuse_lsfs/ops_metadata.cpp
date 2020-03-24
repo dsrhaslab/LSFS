@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <exceptions/custom_exceptions.h>
+#include "exceptions/custom_exceptions.h"
 
 #include "util.h"
 #include "fuse/fuse_lsfs/lsfs_impl.h"

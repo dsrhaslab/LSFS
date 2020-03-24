@@ -7,7 +7,7 @@
 
 #include <string>
 #include <vector>
-#include "../df_core/peer_data.h"
+#include "df_core/peer_data.h"
 
 struct pss_message {
     enum Type {

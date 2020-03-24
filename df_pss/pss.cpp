@@ -7,8 +7,8 @@
 #include <iostream>
 #include <fstream>
 #include "pss.h"
-#include "../df_tcp_client_server_connection/tcp_client_server_connection.h"
-#include "../df_serializer/capnp/capnp_serializer.h"
+#include "df_tcp_client_server_connection/tcp_client_server_connection.h"
+#include "df_serializer/capnp/capnp_serializer.h"
 #include "pss_message.pb.h"
 #include <thread>
 #include <chrono>         // std::chrono::seconds

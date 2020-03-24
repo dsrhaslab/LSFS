@@ -10,9 +10,9 @@
 #include <iostream>
 #include <memory>
 #include "yaml-cpp/yaml.h"
-#include "../df_core/peer.h"
+#include "df_core/peer.h"
 #include "client_reply_handler_mt.h"
-#include "../exceptions/custom_exceptions.h"
+#include "exceptions/custom_exceptions.h"
 
 client::client(std::string ip, long id, int port, int lb_port, const char* conf_filename):
     ip(ip), id(id), port(port), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
@@ -74,7 +74,6 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
 
         std::string buf;
         msg.SerializeToString(&buf);
-
         std::cout << "Size of buffer: " << buf.size() << std::endl;
         int res = sendto(this->sender_socket, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
@@ -97,8 +96,11 @@ int client::send_get(peer_data &peer, std::string key, long* version, std::strin
     }else{
         message_content->set_version_none(true);
     }
+    message_content->set_version_client_id(-1);
     message_content->set_reqid(req_id);
     msg.set_allocated_get_msg(message_content);
+
+    std::cout << "key: " << message_content->key() <<" REQID: " << message_content->reqid() << std::endl;
 
     return send_msg(peer, msg);
 }
@@ -132,7 +134,7 @@ int client::send_put(peer_data &peer, std::string key, long version, const char 
 
 std::set<long> client::put(std::string key, long version, const char *data, size_t size, int wait_for) {
    this->handler->register_put(key, version); // throw const char* (Escritas concorrentes sobre a mesma chave)
-   kv_store_key<std::string> comp_key = {key, version};
+   kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
    std::unique_ptr<std::set<long>> res = nullptr;
    int curr_timeouts = 0;
    while(res == nullptr && curr_timeouts < this->max_timeouts){
@@ -166,7 +168,7 @@ std::shared_ptr<std::string> client::get(std::string key, int wait_for, long* ve
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get(peer, key, version_ptr, req_id_str);
         if (status == 0) {
-            std::cout << "GET " << req_id  << " TO (" << peer.id << ") " << key << (version_ptr == nullptr ? ": ?" : ": " + *version_ptr) << " ==================================>" << std::endl;
+            std::cout << "GET " << req_id  << " TO (" << peer.id << ") " << key << (version_ptr == nullptr ? ": ?" : ": " + std::to_string(*version_ptr)) << " ==================================>" << std::endl;
             try{
                 res = this->handler->wait_for_get(req_id_str, wait_for);
             }catch(TimeoutException& e){

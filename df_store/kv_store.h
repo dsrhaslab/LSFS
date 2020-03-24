@@ -31,17 +31,17 @@ public:
     virtual void close() = 0;
     virtual void update_partition(int p, int np) = 0;
     virtual std::unordered_set<kv_store_key<T>> get_keys() = 0;
-    virtual bool put(T key, long version, std::string bytes) = 0; // use string.c_str() to convert string to const char*
-    virtual std::shared_ptr<std::string> get(kv_store_key<T> key) = 0;
+    virtual bool put(T key, long version, long client_id, std::string bytes) = 0; // use string.c_str() to convert string to const char*
+    virtual std::shared_ptr<std::string> get(kv_store_key<T>& key) = 0;
     virtual std::shared_ptr<std::string> remove(kv_store_key<T> key) = 0;
-    virtual std::shared_ptr<std::string> get_latest(T key, long* version) = 0;
+    virtual std::shared_ptr<std::string> get_latest(T key, kv_store_key_version* version) = 0;
     virtual std::unique_ptr<long> get_latest_version(T key) = 0;
     virtual void print_store() = 0;
 
 
     int get_slice_for_key(T key);
-    bool have_seen(T key, long version);
-    void seen_it(T key, long version);
+    bool have_seen(T key, long version, long client_id);
+    void seen_it(T key, long version, long client_id);
     int get_slice();
     void set_slice(int slice);
     int get_nr_slices();
@@ -80,8 +80,8 @@ int kv_store<T>::get_slice_for_key(T key) {
 }
 
 template <typename T>
-bool kv_store<T>::have_seen(T key, long version) {
-    kv_store_key<T> key_to_check({key, version});
+bool kv_store<T>::have_seen(T key, long version, long client_id) {
+    kv_store_key<T> key_to_check({key, kv_store_key_version(version, client_id)});
 
     std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
     auto it = this->seen.find(key_to_check);
@@ -93,8 +93,8 @@ bool kv_store<T>::have_seen(T key, long version) {
 }
 
 template <typename T>
-void kv_store<T>::seen_it(T key, long version) {
-    kv_store_key<T> key_to_insert({key, version});
+void kv_store<T>::seen_it(T key, long version, long client_id) {
+    kv_store_key<T> key_to_insert({key, kv_store_key_version(version, client_id)});
     std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
     this->seen.insert_or_assign(std::move(key_to_insert), true);
 }

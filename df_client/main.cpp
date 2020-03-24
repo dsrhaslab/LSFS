@@ -9,7 +9,7 @@
 #include <time.h>
 #include "yaml-cpp/yaml.h"
 #include <fstream>
-#include <df_loadbalancing/load_balancer_listener.h>
+#include "df_loadbalancing/load_balancer_listener.h"
 #include "client.h"
 #include "df_loadbalancing/dynamic_load_balancer.h"
 #include "df_core/peer.h"
@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
 
 
 
-    client cli = client(ip, id, kv_port, lb_port, "scripts/conf.yaml");
+    client cli = client(ip, id, kv_port, lb_port, "../scripts/conf.yaml");
 
 //    cli.put("/", 0, "ole", 3);
 //    cli.put("/ola", 0, "ole", 3);
@@ -58,18 +58,25 @@ int main(int argc, char **argv) {
 //    "Aenean sit amet pulvinar justo. Sed et ipsum varius, facilisis arcu eget, auctor sem. Ut varius eros varius purus rutrum, at dictum lorem rhoncus. Cras et nunc quis metus sagittis convallis. Curabitur semper enim at lacus fermentum, quis bibendum tellus ornare. In enim libero, pharetra in lacinia eget, vulputate at lorem. Aenean iaculis neque quis facilisis aliquet. Morbi elementum, ligula a varius blandit, ante dolor vulputate nisi, vestibulum finibus tortor mauris ut risus. Mauris finibus enim sed consequat accumsan. Aliquam volutpat, sem hendrerit auctor rhoncus, leo nunc lobortis ligula, quis sollicitudin massa odio euismod purus. Proin vestibulum sed nibh placerat faucibus. Vestibulum tortor felis, rhoncus aliquet hendrerit id, commodo ut ipsum. "
 //    ,100);
 //
-//    try {
-//        version = cli.get_latest_version("/bigfileset/00000001/00000001", 1);
-//    }catch(...){
-//        version = 0;
-//    }
+    try {
+        version = cli.get_latest_version("/bigfileset/00000001/00000001", 1);
+    }catch(...){
+        version = 0;
+    }
 //
-//    cli.put("/bigfileset/00000001/00000001",version + 1,"KV ALMOST FINISHED", 18);
+    cli.put("/bigfileset/00000001/00000001",version + 1,"KV ALMOST FINISHED", 18, 1);
 ////    cli.put(3,1,"KV ALMOST FINISHED");
 ////    cli.put(4,1,"KV ALMOST FINISHED");
-//    std::shared_ptr<std::string> data = cli.get("/bigfileset/00000001/00000001");
-//    std::string data_s = *data;
-//    std::cout << data_s << std::endl;
+
+    try {
+        version = cli.get_latest_version("/bigfileset/00000001/00000001", 1);
+    }catch(...){
+        version = 0;
+    }
+
+    std::shared_ptr<std::string> data = cli.get("/bigfileset/00000001/00000001",1, &version);
+    std::string data_s = *data;
+    std::cout << data_s << std::endl;
 //
 //    std::cout << "PUT DONE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 

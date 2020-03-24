@@ -15,7 +15,7 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/thread/thread.hpp>
 #include <kv_message.pb.h>
-#include <df_store/kv_store_key.h>
+#include "df_store/kv_store_key.h"
 #include "client_reply_handler.h"
 
 class client_reply_handler_mt : public client_reply_handler{

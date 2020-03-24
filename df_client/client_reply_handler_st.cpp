@@ -3,12 +3,12 @@
 //
 
 #include "client_reply_handler_st.h"
-#include "../kv_message.pb.h"
+#include "kv_message.pb.h"
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <iostream>
-#include "../exceptions/custom_exceptions.h"
+#include "exceptions/custom_exceptions.h"
 #include <regex>
 
 client_reply_handler_st::client_reply_handler_st(std::string ip, int port, long wait_timeout):

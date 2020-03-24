@@ -13,7 +13,7 @@
 #include <atomic>
 #include <spdlog/logger.h>
 #include "peer_data.h"
-#include "../df_store/kv_store.h"
+#include "df_store/kv_store.h"
 
 class group_construction {
 private:

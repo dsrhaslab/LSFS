@@ -23,17 +23,20 @@ private:
     std::unordered_map<kv_store_key<T>, std::shared_ptr<std::string>> store;
     std::recursive_mutex store_mutex;
 
+private:
+    std::unique_ptr<long> get_client_id_from_key_version(std::string key, long version);
+
 public:
     int init(void*, long id) override ;
     std::string db_name() const override;
     void close() override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<T>> get_keys() override;
-    bool put(T key, long version, std::string bytes) override; // use string.c_str() to convert string to const char*
-    std::shared_ptr<std::string> get(kv_store_key<T> key) override;
+    bool put(std::string key, long version, long client_id, std::string bytes) override; // use string.c_str() to convert string to const char*
+    std::shared_ptr<std::string> get(kv_store_key<std::string>& key) override;
     std::shared_ptr<std::string> remove(kv_store_key<T> key) override;
     void print_store() override;
-    std::shared_ptr<std::string> get_latest(T key, long *version) override;
+    std::shared_ptr<std::string> get_latest(std::string key, kv_store_key_version* kv_version) override;
     std::unique_ptr<long> get_latest_version(std::string key) override;
 };
 
@@ -75,16 +78,37 @@ std::unordered_set<kv_store_key<T>> kv_store_memory<T>::get_keys() {
 }
 
 template <typename T>
-bool kv_store_memory<T>::put(T key, long version, std::string bytes) {
-    kv_store_key<T> key_to_insert({key, version});
-    this->seen_it(key, version);
+std::unique_ptr<long> kv_store_memory<T>::get_client_id_from_key_version(std::string key, long version){
+    std::unique_ptr<long> res(nullptr);
+    kv_store_key_version max_version = kv_store_key_version(version);
+    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
+    bool exists = false;
+    for(const auto& store_pair: this->store){
+        if(store_pair.first.key == key && store_pair.first.key_version.version == version && store_pair.first.key_version >= max_version){
+            max_version = store_pair.first.key_version;
+            exists = true;
+        }
+    }
+
+    if(exists){
+        res = std::make_unique<long>(max_version.client_id);
+    }
+
+    return res;
+}
+
+template <typename T>
+bool kv_store_memory<T>::put(std::string key, long version, long client_id, std::string bytes) {
+    kv_store_key<T> key_to_insert({key, kv_store_key_version(version, client_id)});
+    this->seen_it(key, version, client_id);
     int k_slice = this->get_slice_for_key(key);
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     if(this->slice == k_slice){
         auto data_size = bytes.size();
         this->store.insert_or_assign(std::move(key_to_insert), std::make_shared<std::string>(bytes));
-        return true;
+        std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
+        return *max_client_id == client_id;
     }else{
         //Object received but does not belong to this df_store.
         return false;
@@ -96,14 +120,23 @@ void kv_store_memory<T>::print_store(){
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::cout << "================= MY STORE =============" << std::endl;
     for(auto& it : this->store)
-        std::cout << it.first.key << ": " << it.second << std::endl;
+        std::cout << it.first.key << ": " << it.first.key_version.version << std::endl;
     std::cout << "========================================" << std::endl;
 
 }
 
 template <typename T>
-std::shared_ptr<std::string> kv_store_memory<T>::get(kv_store_key<T> key) {
+std::shared_ptr<std::string> kv_store_memory<T>::get(kv_store_key<std::string>& key) {
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
+
+    if(key.key_version.client_id == -1){
+        std::unique_ptr<long> current_max_client_id = get_client_id_from_key_version(key.key, key.key_version.version);
+        if(current_max_client_id == nullptr){
+            return nullptr;
+        }
+        key.key_version.client_id = *current_max_client_id;
+    }
+
     const auto& it = this->store.find(key);
     if(it == this->store.end()){// a chave não existe
         return nullptr;
@@ -113,31 +146,37 @@ std::shared_ptr<std::string> kv_store_memory<T>::get(kv_store_key<T> key) {
 }
 
 template <typename T>
-std::shared_ptr<std::string> kv_store_memory<T>::get_latest(T key, long* version){
+std::shared_ptr<std::string> kv_store_memory<T>::get_latest(std::string key, kv_store_key_version* kv_version){
     std::shared_ptr<std::string> res = nullptr;
-    long max_version = LONG_MIN;
+    auto max_version = kv_store_key_version(LONG_MIN);
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
+
     for(const auto& store_pair: this->store){
-        if(store_pair.first.key == key && store_pair.first.version >= max_version){
-            max_version = store_pair.first.version;
+        if(store_pair.first.key == key && store_pair.first.key_version >= max_version){
+            max_version = store_pair.first.key_version;
             res = store_pair.second;
         }
     }
-    *version = max_version;
+    *kv_version = max_version;
     return res;
 }
 
 template <typename T>
 std::unique_ptr<long> kv_store_memory<T>::get_latest_version(std::string key){
     std::unique_ptr<long> res = nullptr;
-    long max_version = LONG_MIN;
+    auto max_version = kv_store_key_version(LONG_MIN);
 
+    bool exists = false;
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     for(const auto& store_pair: this->store){
-        if(store_pair.first.key == key && store_pair.first.version >= max_version){
-            max_version = store_pair.first.version;
-            res = std::make_unique<long>(max_version);
+        if(store_pair.first.key == key && store_pair.first.key_version >= max_version){
+            max_version = store_pair.first.key_version;
+            exists = true;
         }
+    }
+
+    if (exists){
+        res = std::make_unique<long>(max_version.version);
     }
 
     return res;

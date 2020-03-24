@@ -4,7 +4,7 @@
 
 #define LOG(X) std::cout << X << std::endl;
 #include "data_handler_listener.h"
-#include "../df_communication/udp_async_server.h"
+#include "df_communication/udp_async_server.h"
 #include <kv_message.pb.h>
 
 #include <utility>
@@ -114,18 +114,29 @@ private:
         std::string req_id = message.reqid();
         std::shared_ptr<std::string> data(nullptr); //*data = undefined
 
+        std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET GET GET GET GET(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
+
+
         //se o pedido ainda não foi processado e não é um pedido interno (não começa com intern)
         if(!this->store->in_log(req_id) && req_id.rfind("intern", 0) != 0){
+            std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET1 GET1 GET1 GET1 GET1(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
+
             this->store->log_req(req_id);
 
-            long version;
+            kv_store_key_version version;
+            std::cout << "<================================== " << "GET2 GET2 GET2 GET2 GET2(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
+
+
             switch (message.version_avail_case()){
                 case proto::get_message::kVersionNone:
                     // Só faz sentido questionar pela última versão conhecida da chave para
                     // peers que pertençam à mesma slice que a key
                     if(this->store->get_slice_for_key(key) == this->store->get_slice()) {
                         try {
+                            std::cout << "<================================== " << "GET3 GET3 GET3 GET3 GET3(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
                             data = this->store->get_latest(key, &version);
+                            std::cout << "<================================== " << "GET4 GET4 GET4 GET4 GET4(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
+
                         } catch (std::exception &e) {
                             //LevelDBException
                             e.what();
@@ -133,12 +144,18 @@ private:
                     }
                     break;
                 case proto::get_message::kVersion:
-                    version = message.version();
-                    data = this->store->get({key, version});
+                    version = kv_store_key_version(message.version());
+                    kv_store_key<std::string> get_key = {key, version};
+                    std::cout << "<================================== " << "GET5 GET5 GET5 GET5 GET5(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
+                    data = this->store->get(get_key);
+                    std::cout << "<================================== " << "GET6 GET6 GET6 GET6 GET6(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << std::endl;
                     break;
             }
 
-            std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version << std::endl;
+
+
+
+            std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET NOT VERSION(\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version.version << std::endl;
 
             if(data != nullptr){
                 //se tenho o conteudo da chave
@@ -155,12 +172,13 @@ private:
                     message_content->set_port(this->port);
                     message_content->set_id(this->id);
                     message_content->set_key(key);
-                    message_content->set_version(version);
+                    message_content->set_version(version.version);
+                    message_content->set_version_client_id(version.client_id);
                     message_content->set_reqid(req_id);
                     message_content->set_data(buf, data_size);
                     reply_message.set_allocated_get_reply_msg(message_content);
 
-                    std::cout << "GET REPLY (\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
+                    std::cout << "GET REPLY NOT VERSION(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
                     this->reply_client(reply_message, sender_ip, sender_port);
                     // forward to other peers from my slice if is the right slice for the key
@@ -201,7 +219,8 @@ private:
                     long version = message.version();
 
                     this->store->log_anti_entropy_req(req_id);
-                    data = this->store->get({key, version});
+                    kv_store_key<std::string> get_key = {key, kv_store_key_version(version, message.version_client_id())};
+                    data = this->store->get(get_key);
 
                     if(data != nullptr){
                         auto data_size = data->size();
@@ -215,6 +234,7 @@ private:
                         message_content->set_id(this->id);
                         message_content->set_key(key);
                         message_content->set_version(version);
+                        message_content->set_version_client_id(message.version_client_id());
                         message_content->set_reqid(req_id);
                         message_content->set_data(buf, data_size);
                         reply_message.set_allocated_get_reply_msg(message_content);
@@ -235,11 +255,12 @@ private:
         proto::get_reply_message message = msg.get_reply_msg();
         std::string key = message.key();
         long version = message.version();
+        long client_id = message.version_client_id();
         std::string data = message.data();
 
-        if (!this->store->have_seen(key, version)) {
+        if (!this->store->have_seen(key, version, client_id)) {
             try {
-                bool stored = this->store->put(key, version, data);
+                bool stored = this->store->put(key, version, client_id, data);
             }catch(std::exception e){}
         }
     }
@@ -250,12 +271,13 @@ private:
         int sender_port = message.port();
         std::string key = message.key();
         long version = message.version();
+        long client_id = message.id();
         std::string data = message.data();
 
-        if (!this->store->have_seen(key, version)) {
+        if (!this->store->have_seen(key, version, client_id)) {
             bool stored;
             try {
-                stored = this->store->put(key, version, data);
+                stored = this->store->put(key, version, client_id, data);
             }catch(std::exception){
                 stored = false;
             }
@@ -329,7 +351,7 @@ private:
 
             std::unordered_set<kv_store_key<std::string>> keys_to_request;
             for (auto &key : message.keys()) {
-                kv_store_key<std::string> kv_key = {key.key(), key.version()};
+                kv_store_key<std::string> kv_key = {key.key(), kv_store_key_version(key.version(), key.client_id())};
                 if (keys.find(kv_key) == keys.end()) {
                     // não possuimos a chave
                     if (this->store->get_slice_for_key(kv_key.key) == this->store->get_slice()) {
@@ -346,7 +368,7 @@ private:
                 message_content->set_port(this->port);
                 message_content->set_id(this->id);
                 message_content->set_key(key.key);
-                message_content->set_version(key.version);
+                message_content->set_version(key.key_version.version);
                 message_content->set_reqid(
                         "intern" + to_string(this->id) + ":" + to_string(this->get_anti_entropy_req_count()));
                 get_msg.set_allocated_get_msg(message_content);
@@ -389,7 +411,7 @@ private:
                 }
             }
 
-            std::cout << "<=============(" << (version != nullptr) << ")================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << std::endl;
+            std::cout << "<=============(" << (version != nullptr) << ")================== " << "GET Version (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << std::endl;
 
             if(version != nullptr){
                 // se a chave pertence à minha slice (versão da chave >= -1)
@@ -418,7 +440,7 @@ private:
                 reply_message.set_allocated_get_latest_version_reply_msg(message_content);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
-                std::cout << "GET REPLY (\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
+                std::cout << "GET REPLY Version(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
             }else{
                 //se não tenho o conteudo da chave -> fazer forward

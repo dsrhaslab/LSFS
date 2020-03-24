@@ -5,7 +5,7 @@
 #include "bootstrapper_impl.h"
 #include <iostream>
 #include <memory>
-#include "../df_serializer/capnp/capnp_serializer.h"
+#include "df_serializer/capnp/capnp_serializer.h"
 #include <thread>
 
 #include <algorithm>    // std::random_shuffle

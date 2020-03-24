@@ -3,7 +3,8 @@
 //
 
 #include "client_reply_handler.h"
-#include "../exceptions/custom_exceptions.h"
+#include "exceptions/custom_exceptions.h"
+#include "df_store/kv_store_key.h"
 #include <regex>
 
 
@@ -14,7 +15,7 @@ client_reply_handler::client_reply_handler(std::string ip, int port, long wait_t
 long client_reply_handler::register_put(std::string key, long version) {
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
 
-    kv_store_key<std::string> comp_key = {key, version};
+    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
 
     auto it = this->put_replies.find(comp_key);
     if(it == this->put_replies.end()){
@@ -90,7 +91,7 @@ void client_reply_handler::register_get(std::string req_id) {
     auto it = this->get_replies.find(req_id);
     if(it == this->get_replies.end()){
         // a chave não existe
-        std::vector<std::pair<long, std::shared_ptr<std::string>>> temp;
+        std::vector<std::pair<kv_store_key_version, std::shared_ptr<std::string>>> temp;
         this->get_replies.emplace(req_id, temp);
         this->get_mutexes.emplace(req_id, std::make_pair(std::make_unique<std::mutex>(), std::make_unique<std::condition_variable>()));
     }else{
@@ -133,7 +134,7 @@ std::shared_ptr<std::string> client_reply_handler::wait_for_get(std::string req_
 
             // se já temos uma maioria de resposta, como ainda temos os locks
             // podemos remover as entradas para a chave
-            long max_version = -1;
+            auto max_version = kv_store_key_version(-1);
             for(auto& entry : it_new->second){
                 if(entry.first > max_version){
                     max_version = entry.first;
@@ -199,8 +200,8 @@ std::unique_ptr<long> client_reply_handler::wait_for_get_latest_version(std::str
             // podemos remover as entradas para a chave
             long max_version = -1;
             for(auto& entry : it_new->second){
-                if(entry.first > max_version){
-                    max_version = entry.first;
+                if(entry.first.version > max_version){
+                    max_version = entry.first.version;
                 }
             }
             res = std::make_unique<long>(max_version);
@@ -225,7 +226,6 @@ std::unique_ptr<long> client_reply_handler::wait_for_get_latest_version(std::str
 
 void client_reply_handler::process_get_reply_msg(const proto::get_reply_message &msg) {
     std::string req_id = msg.reqid();
-    long replier_id = msg.id();
     std::string data = msg.data();
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
@@ -242,7 +242,10 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
         std::unique_lock<std::mutex> reqid_lock(*sync_pair.first);
         lock.unlock(); //free global get lock
 
-        it->second.push_back(std::make_pair<long, std::shared_ptr<std::string>>(msg.version(), std::make_shared<std::string>(data)));
+        it->second.emplace_back(std::make_pair<kv_store_key_version, std::shared_ptr<std::string>>(
+                kv_store_key_version(msg.version(), msg.version_client_id()),
+                std::make_shared<std::string>(data)
+        ));
         sync_pair.second->notify_all();
         reqid_lock.unlock();
     }else{
@@ -253,7 +256,7 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
 void client_reply_handler::process_put_reply_msg(const proto::put_reply_message &msg) {
     std::string key = msg.key();
     long version = msg.version();
-    kv_store_key<std::string> comp_key = {key, version};
+    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
     long replier_id = msg.id();
 
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
@@ -293,7 +296,10 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
         std::unique_lock<std::mutex> reqid_lock(*sync_pair.first);
         lock.unlock(); //free global get lock
 
-        it->second.push_back(std::make_pair<long, std::shared_ptr<std::string>>(msg.version(), nullptr));
+        it->second.emplace_back(std::make_pair<kv_store_key_version, std::shared_ptr<std::string>>(
+                kv_store_key_version(msg.version()),
+                nullptr
+        ));
         sync_pair.second->notify_all();
         reqid_lock.unlock();
     }else{

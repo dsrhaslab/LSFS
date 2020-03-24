@@ -11,10 +11,10 @@
 #include <atomic>
 #include <utility>
 #include "client_reply_handler_st.h"
-#include "../df_loadbalancing/dynamic_load_balancer.h"
-#include "../df_loadbalancing/load_balancer_listener.h"
-#include "../kv_message.pb.h"
-#include "../df_core/peer_data.h"
+#include "df_loadbalancing/dynamic_load_balancer.h"
+#include "df_loadbalancing/load_balancer_listener.h"
+#include "kv_message.pb.h"
+#include "df_core/peer_data.h"
 #include "client_reply_handler_mt.h"
 
 class client {

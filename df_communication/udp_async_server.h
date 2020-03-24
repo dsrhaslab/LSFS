@@ -6,7 +6,7 @@
 #define P2PFS_UDP_ASYNC_SERVER_H
 #include <boost/asio/io_service.hpp>
 #include <boost/bind.hpp>
-#include "../df_core/peer.h"
+#include "df_core/peer.h"
 #include <iostream>
 #include <boost/asio.hpp>
 #include <pss_message.pb.h>

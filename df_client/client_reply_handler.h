@@ -11,7 +11,8 @@
 #include <mutex>
 #include <condition_variable>
 #include <map>
-#include <df_store/kv_store_key.h>
+#include "df_store/kv_store_key.h"
+#include "df_store/kv_store_key_version.h"
 #include <vector>
 #include <kv_message.pb.h>
 
@@ -20,7 +21,7 @@ class client_reply_handler {
 protected:
     int port;
     std::string ip;
-    std::unordered_map<std::string, std::vector<std::pair<long, std::shared_ptr<std::string>>>> get_replies; //par versão-valor
+    std::unordered_map<std::string, std::vector<std::pair<kv_store_key_version, std::shared_ptr<std::string>>>> get_replies; //par versão-valor
     std::unordered_map<kv_store_key<std::string>, std::set<long>> put_replies;
     long wait_timeout;
     std::mutex get_global_mutex;

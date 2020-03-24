@@ -5,8 +5,8 @@
 #ifndef P2PFS_LOAD_BALANCER_H
 #define P2PFS_LOAD_BALANCER_H
 
-#include "../df_core/peer_data.h"
-#include "../pss_message.pb.h"
+#include "df_core/peer_data.h"
+#include "pss_message.pb.h"
 
 class load_balancer{
 public:

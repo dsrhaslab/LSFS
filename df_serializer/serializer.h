@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <vector>
-#include "../df_pss/pss_message.h"
+#include "df_pss/pss_message.h"
 
 class Serializer {
 

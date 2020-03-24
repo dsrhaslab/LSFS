@@ -4,6 +4,7 @@ project(p2pfs)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(CMAKE_PREFIX_PATH "/usr/local/lib64/cmake")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build")
 
 find_package(CapnProto CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
@@ -37,7 +38,8 @@ add_executable(bootstrapper_exe
         df_communication/udp_async_server.h
         )
 target_link_libraries(bootstrapper_exe PRIVATE CapnProto::capnp)
-target_include_directories(bootstrapper_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(bootstrapper_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+#target_include_directories(bootstrapper_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bootstrapper_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_link_libraries(bootstrapper_exe PUBLIC ${Boost_LIBRARIES})
 target_link_libraries(bootstrapper_exe PRIVATE yaml-cpp)
@@ -78,13 +80,14 @@ add_executable( peer_exe
         df_util/util.cpp
         df_util/util.h
         df_store/kv_store_memory_v2.h
-        )
+        df_store/kv_store_key_version.h)
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)
 target_link_libraries(peer_exe PUBLIC ${PROTOBUF_LIBRARIES})
 target_link_libraries(peer_exe PUBLIC ${Boost_LIBRARIES})
-target_include_directories(peer_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(peer_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+#target_include_directories(peer_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(peer_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(peer_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(peer_exe PRIVATE spdlog::spdlog)
@@ -115,14 +118,24 @@ add_executable( client_exe
         df_client/client.h
         df_client/client_reply_handler_st.cpp
         df_client/client_reply_handler_st.h
-        df_client/main.cpp exceptions/empty_view_exception.h exceptions/concurrent_writes_same_key.h exceptions/custom_exceptions.h df_client/client_reply_handler_mt.cpp df_client/client_reply_handler_mt.h df_client/client_reply_handler.cpp df_client/client_reply_handler.h)
+        df_client/main.cpp
+        exceptions/empty_view_exception.h
+        exceptions/concurrent_writes_same_key.h
+        exceptions/custom_exceptions.h
+        df_client/client_reply_handler_mt.cpp
+        df_client/client_reply_handler_mt.h
+        df_client/client_reply_handler.cpp
+        df_client/client_reply_handler.h
+        df_store/kv_store_key_version.h
+        )
 
 target_link_libraries(client_exe PRIVATE CapnProto::capnp)
 target_link_libraries(client_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(client_exe PRIVATE yaml-cpp)
 target_link_libraries(client_exe PUBLIC ${PROTOBUF_LIBRARIES})
 target_link_libraries(client_exe PUBLIC ${Boost_LIBRARIES})
-target_include_directories(client_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(client_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+#target_include_directories(client_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(client_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(client_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -183,7 +196,8 @@ target_link_libraries(lsfs_exe PUBLIC ${Boost_LIBRARIES})
 target_link_libraries(lsfs_exe PRIVATE spdlog::spdlog)
 target_link_libraries(lsfs_exe PUBLIC fuse3)
 target_link_libraries(lsfs_exe PUBLIC ${Boost_LIBRARIES})
-target_include_directories(lsfs_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(lsfs_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+#target_include_directories(lsfs_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(lsfs_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(lsfs_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(lsfs_exe PRIVATE FUSE_USE_VERSION=35 _FILE_OFFSET_BITS=64)
