@@ -128,6 +128,8 @@ int lsfs_impl::_mkdir(
         return res;
     }
 
+    state->add_or_refresh_working_directory(path, to_send);
+
 //    const int return_value = (mkdir(path, mode) == 0) ? 0 : -errno;
 
     fuse_pt_unimpersonate();

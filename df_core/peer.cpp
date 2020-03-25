@@ -18,14 +18,17 @@
 #include "df_store/kv_store_leveldb.h"
 #include "df_store/kv_store_memory_v2.h"
 
+// definition
+extern std::string merge_metadata(std::string&, std::string&);
+
 std::shared_ptr<peer> g_peer_impl;
 
 peer::peer(long id, std::string ip, int pss_port, int data_port, double position, std::shared_ptr<spdlog::logger> logger):
     id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position), logger(logger),
-//    store(std::make_shared<kv_store_leveldb>()),
-//    store(std::make_shared<kv_store_wiredtiger>()),
-//    store(std::make_shared<kv_store_memory_v2<std::string>>()),
-    store(std::make_shared<kv_store_memory<std::string>>()),
+//    store(std::make_shared<kv_store_leveldb>(merge_metadata)),
+//    store(std::make_shared<kv_store_wiredtiger>(merge_metadata)),
+//    store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata)),
+    store(std::make_shared<kv_store_memory<std::string>>(merge_metadata)),
     group_c(ip, pss_port, id, position, 5, 10, 40, true, 15, this->store, logger),
     cyclon(peer::boot_ip, peer::boot_port, ip, pss_port, id, position,2,8,10,7, &(this->group_c)),
     listener("127.0.0.1", this->pss_port, &(this->cyclon) ),
@@ -44,10 +47,10 @@ peer::peer(long id, std::string ip, int pss_port, int data_port,double position,
         int logging_interval, int anti_entropy_interval, std::string logging_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval, float reply_chance, bool smart, std::shared_ptr<spdlog::logger> logger)
     :   id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
         local_interval(local_interval), reply_chance(reply_chance),
-//        store(std::make_shared<kv_store_leveldb>()),
-        store(std::make_shared<kv_store_wiredtiger>()),
-//        store(std::make_shared<kv_store_memory_v2<std::string>>()),
-//        store(std::make_shared<kv_store_memory<std::string>>()),
+        store(std::make_shared<kv_store_leveldb>(merge_metadata)),
+//        store(std::make_shared<kv_store_wiredtiger>(merge_metadata)),
+//        store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata)),
+//        store(std::make_shared<kv_store_memory<std::string>>(merge_metadata)),
         data_handler(ip, data_port, id, reply_chance, &(this->cyclon), this->store, smart),
         anti_ent(ip, data_port, id, &(this->cyclon), this->store, anti_entropy_interval),
         group_c(ip, pss_port, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),

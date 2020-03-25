@@ -45,6 +45,7 @@ private:
     std::unique_ptr<long> get_client_id_from_key_version(std::string key, long version);
 
 public:
+    explicit kv_store_wiredtiger(std::string (*f)(std::string&, std::string&));
     ~kv_store_wiredtiger();
     int init(void*, long id) override ;
     void close() override ;
@@ -52,12 +53,17 @@ public:
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<std::string>> get_keys() override;
     bool put(std::string key, long version, long client_id, std::string bytes) override; // use string.c_str() to convert string to const char*
+    bool put_with_merge(std::string key, long version, long client_id, std::string bytes);
     std::shared_ptr<std::string> get(kv_store_key<std::string>& key) override;
     std::shared_ptr<std::string> remove(kv_store_key<std::string> key) override;
     std::shared_ptr<std::string> get_latest(std::string key, kv_store_key_version* kv_version) override;
     std::unique_ptr<long> get_latest_version(std::string key) override;
     void print_store() override;
 };
+
+kv_store_wiredtiger::kv_store_wiredtiger(std::string (*f)(std::string&, std::string&)) {
+    this->merge_function = f;
+}
 
 kv_store_wiredtiger::~kv_store_wiredtiger() {
     conn->close(conn, NULL);
@@ -423,6 +429,10 @@ std::shared_ptr<std::string> kv_store_wiredtiger::remove(kv_store_key<std::strin
 
     return ret;
 
+}
+
+bool kv_store_wiredtiger::put_with_merge(std::string key, long version, long client_id, std::string bytes) {
+    return false;
 }
 
 #endif //P2PFS_KV_STORE_WIREDTIGER_H

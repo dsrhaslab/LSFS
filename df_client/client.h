@@ -45,6 +45,10 @@ public:
     inline std::set<long> put(std::string key, long version, const char* data, size_t size) {
         return put(std::move(key), version, data, size, nr_puts_required);
     };
+    std::set<long> put_with_merge(std::string key, long version, const char* data, size_t size, int wait_for);
+    inline std::set<long> put_with_merge(std::string key, long version, const char* data, size_t size) {
+        return put_with_merge(std::move(key), version, data, size, nr_puts_required);
+    };
     std::shared_ptr<std::string> get(std::string key, int wait_for, long* version = nullptr);
     inline std::shared_ptr<std::string> get(std::string key, long* version = nullptr){
       return get(std::move(key), nr_gets_required, version);
@@ -59,6 +63,7 @@ private:
     int send_msg(peer_data& target_peer, proto::kv_message& msg);
     int send_get(peer_data &peer, std::string key, long* version, std::string req_id);
     int send_put(peer_data& peer, std::string key, long version, const char* data, size_t size);
+    int send_put_with_merge(peer_data& peer, std::string key, long version, const char* data, size_t size);
     int send_get_latest_version(peer_data &peer, std::string key, std::string req_id);
 };
 

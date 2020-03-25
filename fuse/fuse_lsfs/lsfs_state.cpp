@@ -97,6 +97,33 @@ int lsfs_state::put_metadata(metadata& met, const char* path, bool timestamp_ver
     return this->put_block(path, metadata_str.data(), metadata_str.size(), timestamp_version);
 }
 
+int lsfs_state::put_with_merge_metadata(metadata& met, const char* path){
+    // serialize metadata object
+    std::string metadata_str = metadata::serialize_to_string(met);
+    int return_value;
+
+    try{
+        long version  = df_client->get_latest_version(path) + 1;
+        df_client->put_with_merge(path, version, metadata_str.data(), metadata_str.size());
+        return_value = 0;
+    }catch(EmptyViewException& e){
+        // empty view -> nothing to do
+        e.what();
+        errno = EAGAIN; //resource unavailable
+        return_value = -1;
+    }catch(ConcurrentWritesSameKeyException& e){
+        e.what();
+        errno = EPERM; //operation not permitted
+        return_value = -1;
+    }catch(TimeoutException& e){
+        e.what();
+        errno = EHOSTUNREACH;
+        return_value = -1;
+    }
+
+    return return_value;
+}
+
 std::unique_ptr<metadata> lsfs_state::get_metadata(const char* path){
 //    long version = get_version(path);
     std::unique_ptr<metadata> res = nullptr;
@@ -117,6 +144,36 @@ std::unique_ptr<metadata> lsfs_state::get_metadata(const char* path){
     return res;
 }
 
+void lsfs_state::add_or_refresh_working_directory(const char *path, metadata &met) {
+    std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
+
+
+    for(auto it = working_directories.begin(); it != working_directories.end(); ++it){
+        if(it->first == path){
+            it = working_directories.erase(it);
+            break;
+        }
+    }
+    if(this->working_directories.size() == this->max_working_directories_cache){
+        this->working_directories.erase(this->working_directories.begin());
+    }
+    this->working_directories.emplace_back(path, std::make_unique<metadata>(met));
+}
+
+std::unique_ptr<metadata> lsfs_state::add_child_to_working_dir_and_retreive(const char* parent_path, const char* child_name, bool is_dir){
+    std::unique_ptr<metadata> res(nullptr);
+    std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
+    for(auto & working_directory : working_directories){
+        if(working_directory.first == parent_path){
+            working_directory.second->add_child(child_name, is_dir);
+            res = std::make_unique<metadata>(*working_directory.second);
+            this->add_or_refresh_working_directory(parent_path, *res);
+        }
+    }
+    return res;
+}
+
+
 int lsfs_state::add_child_to_parent_dir(const char *path, bool is_dir) {
     std::unique_ptr<std::string> parent_path = get_parent_dir(path);
     std::unique_ptr<std::string> child_name = get_child_name(path);
@@ -128,27 +185,44 @@ int lsfs_state::add_child_to_parent_dir(const char *path, bool is_dir) {
 //            return -errno;
 //        }else{
         //Fazer um get de metadados ao dataflasks
-        std::shared_ptr<std::string> data;
-        try {
-             data = df_client->get(parent_path->c_str() /*, &version*/);
-        }catch(TimeoutException& e){
-            errno = EHOSTUNREACH; // Not Reachable Host
-            return -errno;
+
+        std::unique_ptr<metadata> met(nullptr);
+        met = this->add_child_to_working_dir_and_retreive(parent_path.get()->c_str(), child_name.get()->c_str(), is_dir);
+        if(met == nullptr){
+            //parent folder is not a working directory
+            try {
+                std::shared_ptr<std::string> data = df_client->get(parent_path->c_str() /*, &version*/);
+                // reconstruir a struct stat com o resultado
+                met = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
+                // remove last version added/removed child log
+                met->reset_add_remove_log();
+                // add child path to metadata
+                met->add_child(*child_name, is_dir);
+
+                if(*parent_path != "/"){
+                    add_or_refresh_working_directory(parent_path.get()->c_str(), *met);
+                }
+            }catch(TimeoutException& e){
+                errno = EHOSTUNREACH; // Not Reachable Host
+                return -errno;
+            }
         }
 
-        // reconstruir a struct stat com o resultado
-        metadata met = metadata::deserialize_from_string(*data);
-        // increase parent hard links if its a directory
-        if(is_dir){
-            met.stbuf.st_nlink++;
+        if(is_working_directory(parent_path->c_str())){
+            // put metadata
+            int res = put_metadata(*met, parent_path->c_str(), true);
+            if(res != 0){
+                return -errno;
+            }
+            //on successful put metadata clear add remove childs log
+            this->reset_working_directory_add_remove_log(parent_path->c_str());
+        }else{
+            int res = put_with_merge_metadata(*met, parent_path->c_str());
+            if(res != 0){
+                return -errno;
+            }
         }
-        // add child path to metadata
-        met.add_child(*child_name);
-        // put metadata
-        int res = put_metadata(met, parent_path->c_str());
-        if(res != 0){
-            return -errno;
-        }
+
         return 0;
 //        }
     }
@@ -170,6 +244,16 @@ bool lsfs_state::is_file_opened(const char* path){
     auto it = open_files.find(path);
     if(it != open_files.end()) {
         return true;
+    }
+    return false;
+}
+
+bool lsfs_state::is_working_directory(const char* path){
+    std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
+    for(auto & working_directory : working_directories){
+        if(working_directory.first == path){
+            return true;
+        }
     }
     return false;
 }
@@ -287,6 +371,14 @@ bool lsfs_state::get_metadata_if_file_opened(const char* path, struct stat* stbu
 }
 
 bool lsfs_state::get_metadata_if_dir_opened(const char* path, struct stat* stbuf){
+    std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
+    for(auto & working_directorie : working_directories){
+        if(working_directorie.first == path){
+            memcpy(stbuf, &working_directorie.second->stbuf, sizeof(struct stat));
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -334,4 +426,20 @@ int lsfs_state::flush_and_release_open_file(const char* path) {
         open_files.erase(it);
     }
     return 0;
+}
+
+void lsfs_state::clear_working_directories_cache() {
+    std::scoped_lock<std::recursive_mutex> lk(working_directories_mutex);
+    this->working_directories.clear();
+}
+
+void lsfs_state::reset_working_directory_add_remove_log(const char* path){
+    std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
+    for(auto & working_directory : working_directories){
+        if(working_directory.first == path){
+            working_directory.second->added_childs.clear();
+            working_directory.second->removed_childs.clear();
+            break;
+        }
+    }
 }

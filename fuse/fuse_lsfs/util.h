@@ -16,6 +16,8 @@ bool is_temp_file(std::string path);
 std::unique_ptr<std::string> get_parent_dir(std::string path);
 std::unique_ptr<std::string> get_child_name(std::string path);
 bool operator <(const timespec& lhs, const timespec& rhs);
+std::string merge_metadata(std::string& bytes, std::string& new_bytes);
+
 
 /* -------------------------------------------------------------------------- */
 #endif /* fuse_pt_header_util_h_ */

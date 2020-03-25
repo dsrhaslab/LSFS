@@ -51,6 +51,15 @@ message put_message {
   bytes data = 6;
 }
 
+message put_with_merge_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string key = 4;
+  int64 version = 5;
+  bytes data = 6;
+}
+
 message put_reply_message {
   string ip = 1;
   int32 port = 2;
@@ -77,9 +86,10 @@ message kv_message {
         get_message                         get_msg = 1;
         get_reply_message                   get_reply_msg = 2;
         put_message                         put_msg = 3;
-        put_reply_message                   put_reply_msg = 4;
-        anti_entropy_message                anti_entropy_msg = 5;
-        get_latest_version_message          get_latest_version_msg = 6;
-        get_latest_version_reply_message    get_latest_version_reply_msg = 7;
+        put_with_merge_message              put_with_merge_msg = 4;
+        put_reply_message                   put_reply_msg = 5;
+        anti_entropy_message                anti_entropy_msg = 6;
+        get_latest_version_message          get_latest_version_msg = 7;
+        get_latest_version_reply_message    get_latest_version_reply_msg = 8;
     }
 }

@@ -132,6 +132,20 @@ int client::send_put(peer_data &peer, std::string key, long version, const char 
     return send_msg(peer, msg);
 }
 
+int client::send_put_with_merge(peer_data &peer, std::string key, long version, const char *data, size_t size) {
+    proto::kv_message msg;
+    auto* message_content = new proto::put_with_merge_message();
+    message_content->set_ip(this->ip);
+    message_content->set_port(this->port);
+    message_content->set_id(this->id);
+    message_content->set_key(key);
+    message_content->set_version(version);
+    message_content->set_data(data, size);
+    msg.set_allocated_put_with_merge_msg(message_content);
+
+    return send_msg(peer, msg);
+}
+
 std::set<long> client::put(std::string key, long version, const char *data, size_t size, int wait_for) {
    this->handler->register_put(key, version); // throw const char* (Escritas concorrentes sobre a mesma chave)
    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
@@ -155,6 +169,31 @@ std::set<long> client::put(std::string key, long version, const char *data, size
    }
 
    return *res;
+}
+
+std::set<long> client::put_with_merge(std::string key, long version, const char *data, size_t size, int wait_for) {
+    this->handler->register_put(key, version); // throw const char* (Escritas concorrentes sobre a mesma chave)
+    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
+    std::unique_ptr<std::set<long>> res = nullptr;
+    int curr_timeouts = 0;
+    while(res == nullptr && curr_timeouts < this->max_timeouts){
+        peer_data peer = this->lb->get_random_peer(); //throw exception
+        int status = this->send_put_with_merge(peer, key, version, data, size);
+        if(status == 0){
+            std::cout << "PUT (TO " << peer.id << ") " << key << " : " << version << " ==============================>" << std::endl;
+            try{
+                res = this->handler->wait_for_put(comp_key, wait_for);
+            }catch(TimeoutException& e){
+                curr_timeouts++;
+            }
+        }
+    }
+
+    if(res == nullptr){
+        throw TimeoutException();
+    }
+
+    return *res;
 }
 
 std::shared_ptr<std::string> client::get(std::string key, int wait_for, long* version_ptr) {

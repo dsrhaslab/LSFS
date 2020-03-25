@@ -37,8 +37,7 @@ std::unique_ptr<std::string> get_child_name(std::string path){
     return nullptr;
 }
 
-bool operator <(const timespec& lhs, const timespec& rhs)
-{
+bool operator <(const timespec& lhs, const timespec& rhs){
     if (lhs.tv_sec == rhs.tv_sec)
         return lhs.tv_nsec < rhs.tv_nsec;
     else

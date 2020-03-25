@@ -376,9 +376,6 @@ int lsfs_impl::_write(
                         if(res == -1){
                             return -errno;
                         }
-
-//                        long version = df_client->get_latest_version(blk_path);
-//                        df_client->put(blk_path, version + 1, buf, size);
                     }
                 } else {
                     errno = EPERM;
@@ -395,8 +392,6 @@ int lsfs_impl::_write(
                 if(res == -1){
                     return -errno;
                 }
-//                long version = df_client->get_latest_version(blk_path);
-//                df_client->put(blk_path, version + 1, &buf[read_off], write_size);
                 read_off += BLK_SIZE;
             }
 

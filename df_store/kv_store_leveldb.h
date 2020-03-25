@@ -36,18 +36,24 @@ private:
 
 public:
     ~kv_store_leveldb();
+    explicit kv_store_leveldb(std::string(*f)(std::string&, std::string&));
     int init(void*, long id) override ;
     void close() override ;
     std::string db_name() const override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<std::string>> get_keys() override;
     bool put(std::string key, long version, long client_id, std::string bytes) override; // use string.c_str() to convert string to const char*
+    bool put_with_merge(std::string key, long version, long client_id, std::string bytes);
     std::shared_ptr<std::string> get(kv_store_key<std::string>& key) override;
     std::shared_ptr<std::string> remove(kv_store_key<std::string> key) override;
     std::shared_ptr<std::string> get_latest(std::string key, kv_store_key_version* kv_version) override;
     std::unique_ptr<long> get_latest_version(std::string key) override;
     void print_store() override;
 };
+
+kv_store_leveldb::kv_store_leveldb(std::string (*f)(std::string&, std::string&)) {
+    this->merge_function = f;
+}
 
 kv_store_leveldb::~kv_store_leveldb() {
     delete db;
@@ -335,6 +341,30 @@ std::shared_ptr<std::string> kv_store_leveldb::remove(kv_store_key<std::string> 
         return std::make_shared<std::string>(std::move(value));
     }else{
         return nullptr;
+    }
+}
+
+bool kv_store_leveldb::put_with_merge(std::string key, long version, long client_id, std::string bytes) {
+    try{
+        std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
+        if(max_client_id == nullptr){
+            //no conflict
+            return put(key, version, client_id, bytes);
+        }else{
+            if(*max_client_id != client_id){
+                kv_store_key<std::string> kv_key = {key, kv_store_key_version(version, *max_client_id)};
+                std::shared_ptr<std::string> data = get(kv_key);
+                if(data == nullptr){
+                    // caso ocorresse algum erro
+                    return false;
+                }
+                return put(key, version, std::max(*max_client_id, client_id), merge_function(*data, bytes));
+            }
+        }
+
+        return true;
+    }catch(LevelDBException& e){
+        return false;
     }
 }
 

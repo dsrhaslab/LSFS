@@ -9,24 +9,32 @@
 #include <time.h>
 #include "yaml-cpp/yaml.h"
 #include <fstream>
+#include <fuse/fuse_lsfs/metadata.h>
 #include "df_loadbalancing/load_balancer_listener.h"
 #include "client.h"
 #include "df_loadbalancing/dynamic_load_balancer.h"
 #include "df_core/peer.h"
+
+extern std::string merge_metadata(std::string&, std::string&);
 
 int main(int argc, char **argv) {
     if(argc < 3){
         exit(1);
     }
 
-    int lb_port = 50003;
-    int kv_port = 50004;
+    int lb_port = 50009;
+    int kv_port = 50010;
     std::string ip = "127.0.0.1";
     long id = 4;
 
-
+    int lb_port2 = 50007;
+    int kv_port2 = 50008;
+    std::string ip2 = "127.0.0.1";
+    long id2 = 3;
 
     client cli = client(ip, id, kv_port, lb_port, "../scripts/conf.yaml");
+    client cli2 = client(ip2, id2, kv_port2, lb_port2, "../scripts/conf.yaml");
+
 
 //    cli.put("/", 0, "ole", 3);
 //    cli.put("/ola", 0, "ole", 3);
@@ -80,6 +88,35 @@ int main(int argc, char **argv) {
 //
 //    std::cout << "PUT DONE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 
+
+    struct stat stbuf;
+    metadata::initialize_metadata(&stbuf, 301, 2, 0, 1000);
+    metadata met(stbuf);
+    met.add_child("/a.txt", false);
+    met.add_child("/b.txt", false);
+
+    met.reset_add_remove_log();
+
+    metadata met1 = met;
+    metadata met2 = met;
+
+    met1.add_child("/a", true);
+
+    met2.add_child("/b", true);
+
+    std::string bytes_met1 = metadata::serialize_to_string(met1);
+    cli.put_with_merge("/",1, bytes_met1.data(), bytes_met1.size(), 1);
+
+    std::string bytes_met2 = metadata::serialize_to_string(met2);
+    cli2.put_with_merge("/",1, bytes_met2.data(), bytes_met2.size(), 1);
+
+//    std::string res = merge_metadata(bytes_met1, bytes_met2);
+
+    std::shared_ptr<std::string> data_res = cli.get("/",1);
+
+
+    metadata met3 = metadata::deserialize_from_string(*data_res);
+    std::cout << met3.stbuf.st_nlink << std::endl;
 
     cli.stop();
 

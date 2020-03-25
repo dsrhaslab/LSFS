@@ -28,18 +28,25 @@ private:
     std::unique_ptr<long> get_client_id_from_key_version(std::string key, long version);
 
 public:
+    explicit kv_store_memory_v2(std::string (*f)(std::string&, std::string&));
     int init(void*, long id) override ;
     void close() override;
     std::string db_name() const override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<T>> get_keys() override;
     bool put(std::string key, long version, long client_id, std::string bytes) override; // use string.c_str() to convert string to const char*
+    bool put_with_merge(std::string key, long version, long client_id, std::string bytes);
     std::shared_ptr<std::string> get(kv_store_key<std::string>& key) override;
     std::shared_ptr<std::string> remove(kv_store_key<T> key) override;
     void print_store() override;
     std::shared_ptr<std::string> get_latest(std::string key, kv_store_key_version* kv_version) override;
     std::unique_ptr<long> get_latest_version(std::string key) override;
 };
+
+template <typename T>
+kv_store_memory_v2<T>::kv_store_memory_v2(std::string (*f)(std::string&, std::string&)) {
+    this->merge_function = f;
+}
 
 template <typename T>
 int kv_store_memory_v2<T>::init(void*, long id) { return 0;}
@@ -213,6 +220,11 @@ std::shared_ptr<std::string> kv_store_memory_v2<T>::remove(kv_store_key<T> key) 
             return res;
         }
     }
+}
+
+template<typename T>
+bool kv_store_memory_v2<T>::put_with_merge(std::string key, long version, long client_id, std::string bytes) {
+    return false;
 }
 
 #endif //P2PFS_KV_STORE_MEMORY_V2_H

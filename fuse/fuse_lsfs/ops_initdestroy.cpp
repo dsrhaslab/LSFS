@@ -82,6 +82,8 @@ void*  lsfs_impl::_init(
         }
     }
 
+    state->clear_working_directories_cache();
+
     // ---
 
     return NULL;

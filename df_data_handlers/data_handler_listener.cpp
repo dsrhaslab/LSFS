@@ -48,6 +48,8 @@ public:
                 this->process_get_reply_message(msg);
             }else if(msg.has_put_msg()){
                 this->process_put_message(msg);
+            }else if(msg.has_put_with_merge_msg()){
+                this->process_put_with_merge_message(msg);
             }else if(msg.has_put_reply_msg()){
                 //Este caso não vai acontecer porque os peers não deveriam receber mensagens de reply a um put
             }else if(msg.has_anti_entropy_msg()){
@@ -252,20 +254,39 @@ private:
         }
     }
 
-    void process_put_message(const proto::kv_message &msg) {
-        proto::put_message message = msg.put_msg();
-        std::string sender_ip = message.ip();
-        int sender_port = message.port();
-        std::string key = message.key();
-        long version = message.version();
-        long client_id = message.id();
-        std::string data = message.data();
+    void process_put_message(const proto::kv_message &msg, bool with_merge = false) {
+
+        std::string sender_ip, key, data;
+        long version, client_id;
+        int sender_port;
+
+        if(with_merge){
+            const auto& message = msg.put_with_merge_msg();
+            sender_ip = message.ip();
+            sender_port = message.port();
+            key = message.key();
+            version = message.version();
+            client_id = message.id();
+            data = message.data();
+        }else{
+            const auto& message = msg.put_msg();
+            sender_ip = message.ip();
+            sender_port = message.port();
+            key = message.key();
+            version = message.version();
+            client_id = message.id();
+            data = message.data();
+        }
 
         if (!this->store->have_seen(key, version, client_id)) {
             bool stored;
             try {
-                stored = this->store->put(key, version, client_id, data);
-            }catch(std::exception){
+                if(with_merge) {
+                    stored = this->store->put_with_merge(key, version, client_id, data);
+                }else{
+                    stored = this->store->put(key, version, client_id, data);
+                }
+            }catch(std::exception& e){
                 stored = false;
             }
             std::cout << "<==========(" << std::to_string(stored) <<")============== " << "PUT (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << std::endl;
@@ -323,6 +344,10 @@ private:
 //            }
             //#############################################################################################
         }
+    }
+
+    void process_put_with_merge_message(const proto::kv_message &msg) {
+        process_put_message(msg, true);
     }
 
     long get_anti_entropy_req_count(){

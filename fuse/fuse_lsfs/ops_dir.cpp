@@ -189,7 +189,10 @@ int lsfs_impl::_readdir(
 //            const off_t next_offset = telldir(dir->dir_ptr);
 //
 //            if (filler(buf, dir->entry->d_name, &st, next_offset, fill_flags))
-//                break;
+//                break;// increase parent hard links if its a directory
+//                if(is_dir){
+//                    met->stbuf.st_nlink++;
+//                }
 //
 //            dir->entry = NULL;
 //            dir->offset = next_offset;

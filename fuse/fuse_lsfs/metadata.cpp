@@ -7,8 +7,13 @@
 
 metadata::metadata(struct stat& stbuf): stbuf(stbuf){};
 
-void metadata::add_child(std::string path) {
+void metadata::add_child(std::string path, bool is_dir) {
     this->childs.insert(path);
+    this->added_childs.emplace(is_dir? FileType::DIRECTORY : FileType::FILE, path);
+    // increase parent hard links if its a directory
+    if(is_dir){
+        this->stbuf.st_nlink++;
+    }
 }
 
 std::string metadata::serialize_to_string(metadata& met){
@@ -44,4 +49,9 @@ void metadata::initialize_metadata(struct stat* stbuf, mode_t mode, nlink_t nlin
     stbuf->st_ctim = ts;
     stbuf->st_mtim = ts;
     stbuf->st_blksize = BLK_SIZE;
+}
+
+void metadata::reset_add_remove_log(){
+    this->added_childs.clear();
+    this->removed_childs.clear();
 }

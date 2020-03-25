@@ -80,7 +80,15 @@ add_executable( peer_exe
         df_util/util.cpp
         df_util/util.h
         df_store/kv_store_memory_v2.h
-        df_store/kv_store_key_version.h)
+        df_store/kv_store_key_version.h
+
+        #necessary for merge function
+        fuse/fuse_lsfs/storage_specific.cpp
+        fuse/fuse_lsfs/metadata.h
+        fuse/fuse_lsfs/metadata.cpp
+        fuse/fuse_lsfs/util.h
+        fuse/fuse_lsfs/util.cpp
+        )
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)
@@ -94,6 +102,7 @@ target_link_libraries(peer_exe PRIVATE spdlog::spdlog)
 target_link_libraries(peer_exe PUBLIC wiredtiger)
 target_link_libraries(peer_exe PUBLIC leveldb)
 target_link_libraries(peer_exe PUBLIC stdc++fs) # for creating directories
+target_compile_definitions(peer_exe PRIVATE FUSE_USE_VERSION=35 _FILE_OFFSET_BITS=64)
 
 add_executable( client_exe
         ${packetSources}
@@ -127,6 +136,13 @@ add_executable( client_exe
         df_client/client_reply_handler.cpp
         df_client/client_reply_handler.h
         df_store/kv_store_key_version.h
+
+        #necessary for merge function
+        fuse/fuse_lsfs/storage_specific.cpp
+        fuse/fuse_lsfs/metadata.h
+        fuse/fuse_lsfs/metadata.cpp
+        fuse/fuse_lsfs/util.h
+        fuse/fuse_lsfs/util.cpp
         )
 
 target_link_libraries(client_exe PRIVATE CapnProto::capnp)
@@ -138,7 +154,7 @@ target_include_directories(client_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 #target_include_directories(client_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(client_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(client_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
-
+target_compile_definitions(client_exe PRIVATE FUSE_USE_VERSION=35 _FILE_OFFSET_BITS=64)
 
 add_executable( lsfs_exe
         ${packetSources}
@@ -186,7 +202,7 @@ add_executable( lsfs_exe
         fuse/fuse_lsfs/metadata.cpp
         df_client/client_reply_handler_mt.cpp
         df_client/client_reply_handler_mt.h
-        exceptions/timeout_exception.h fuse/fuse_common/fuse_utils.cpp fuse/fuse_common/fuse_utils.h fuse/fuse_lsfs/lsfs_state.cpp fuse/fuse_lsfs/lsfs_state.h df_client/client_reply_handler.cpp df_client/client_reply_handler.h)
+        exceptions/timeout_exception.h fuse/fuse_common/fuse_utils.cpp fuse/fuse_common/fuse_utils.h fuse/fuse_lsfs/lsfs_state.cpp fuse/fuse_lsfs/lsfs_state.h df_client/client_reply_handler.cpp df_client/client_reply_handler.h fuse/fuse_lsfs/storage_specific.cpp)
 
 target_link_libraries(lsfs_exe PRIVATE CapnProto::capnp)
 target_link_libraries(lsfs_exe PRIVATE nlohmann_json::nlohmann_json)
