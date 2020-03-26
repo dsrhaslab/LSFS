@@ -218,7 +218,12 @@ bool kv_store_wiredtiger::put(std::string key, long version, long client_id, std
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     if(this->slice == k_slice){
         std::string table_name = "table:" + std::to_string(this->id);
-        error_check(session->open_cursor(session, table_name.c_str(), nullptr, "overwrite=true", &cursor)); //throw exception
+        try{
+            error_check(session->open_cursor(session, table_name.c_str(), nullptr, "overwrite=true", &cursor));
+        }catch(WiredTigerException& e){
+            this->unseen_it(key, version, client_id);
+            throw WiredTigerException();
+        }
         cursor->set_key(cursor, key.c_str(), version, client_id);
         auto data_size = bytes.size();
         char buf[data_size];
@@ -237,7 +242,8 @@ bool kv_store_wiredtiger::put(std::string key, long version, long client_id, std
                 return *max_client_id == client_id;
             }
         }catch(WiredTigerException e){
-            return false;
+            this->unseen_it(key, version, client_id);
+            throw WiredTigerException();
         }
     }else{
         //Object received but does not belong to this df_store.

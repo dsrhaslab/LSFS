@@ -206,7 +206,8 @@ bool kv_store_leveldb::put(std::string key, long version, long client_id, std::s
                 return *max_client_id == client_id;
             }
         }catch(LevelDBException& e){
-            return false;
+            this->unseen_it(key, version, client_id);
+            throw LevelDBException();
         }
     }else{
         //Object received but does not belong to this df_store.

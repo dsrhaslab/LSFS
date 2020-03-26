@@ -43,6 +43,7 @@ public:
     int get_slice_for_key(T key);
     bool have_seen(T key, long version, long client_id);
     void seen_it(T key, long version, long client_id);
+    void unseen_it(T key, long version, long client_id);
     int get_slice();
     void set_slice(int slice);
     int get_nr_slices();
@@ -98,6 +99,13 @@ void kv_store<T>::seen_it(T key, long version, long client_id) {
     kv_store_key<T> key_to_insert({key, kv_store_key_version(version, client_id)});
     std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
     this->seen.insert_or_assign(std::move(key_to_insert), true);
+}
+
+template <typename T>
+void kv_store<T>::unseen_it(T key, long version, long client_id) {
+    kv_store_key<T> key_to_unseen({key, kv_store_key_version(version, client_id)});
+    std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
+    this->seen.insert_or_assign(std::move(key_to_unseen), false);
 }
 
 template <typename T>
