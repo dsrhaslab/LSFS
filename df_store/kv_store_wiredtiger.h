@@ -229,9 +229,16 @@ bool kv_store_wiredtiger::put(std::string key, long version, long client_id, std
         cursor->insert(cursor);
         cursor->close(cursor);
 
-        std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
-        if(max_client_id == nullptr) return false;
-        return *max_client_id == client_id;
+        try {
+            std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
+            if (max_client_id == nullptr){
+                return false;
+            }else{
+                return *max_client_id == client_id;
+            }
+        }catch(WiredTigerException e){
+            return false;
+        }
     }else{
         //Object received but does not belong to this df_store.
         return false;
@@ -246,12 +253,8 @@ std::unique_ptr<long> kv_store_wiredtiger::get_client_id_from_key_version(std::s
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
-    try {
-        error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor));
-    }catch(WiredTigerException e){
-        return nullptr;
-    }
 
+    error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor)); //throw WiredTigerError
 
     auto current_max_version = kv_store_key_version(version);
     bool exists = false;
@@ -307,7 +310,11 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string>&
     }
 
     if(key.key_version.client_id == -1){
-        std::unique_ptr<long> current_max_client_id = get_client_id_from_key_version(key.key, key.key_version.version);
+        std::unique_ptr<long> current_max_client_id(nullptr);
+        try{
+            current_max_client_id = get_client_id_from_key_version(key.key, key.key_version.version);
+        }catch(WiredTigerException e){}
+
         if(current_max_client_id == nullptr){
             return nullptr;
         }
@@ -432,7 +439,28 @@ std::shared_ptr<std::string> kv_store_wiredtiger::remove(kv_store_key<std::strin
 }
 
 bool kv_store_wiredtiger::put_with_merge(std::string key, long version, long client_id, std::string bytes) {
-    return false;
+    try{
+        std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
+        if(max_client_id == nullptr){
+            //no conflict
+            return put(key, version, client_id, bytes);
+        }else{
+            if(*max_client_id != client_id){
+                kv_store_key<std::string> kv_key = {key, kv_store_key_version(version, *max_client_id)};
+                std::shared_ptr<std::string> data = get(kv_key);
+                if(data == nullptr){
+                    // caso ocorresse algum erro
+                    return false;
+                }
+                return put(key, version, std::max(*max_client_id, client_id), this->merge_function(*data, bytes));
+            }
+        }
+
+        return true;
+
+    }catch(WiredTigerException e){
+        return false;
+    }
 }
 
 #endif //P2PFS_KV_STORE_WIREDTIGER_H

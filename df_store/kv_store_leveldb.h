@@ -358,7 +358,7 @@ bool kv_store_leveldb::put_with_merge(std::string key, long version, long client
                     // caso ocorresse algum erro
                     return false;
                 }
-                return put(key, version, std::max(*max_client_id, client_id), merge_function(*data, bytes));
+                return put(key, version, std::max(*max_client_id, client_id), this->merge_function(*data, bytes));
             }
         }
 

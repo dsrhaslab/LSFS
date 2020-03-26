@@ -205,7 +205,23 @@ std::shared_ptr<std::string> kv_store_memory<T>::remove(kv_store_key<T> key) {
 
 template<typename T>
 bool kv_store_memory<T>::put_with_merge(std::string key, long version, long client_id, std::string bytes) {
-    return false;
+    std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
+    if(max_client_id == nullptr){
+        //no conflict
+        return put(key, version, client_id, bytes);
+    }else{
+        if(*max_client_id != client_id){
+            kv_store_key<std::string> kv_key = {key, kv_store_key_version(version, *max_client_id)};
+            std::shared_ptr<std::string> data = get(kv_key);
+            if(data == nullptr){
+                // caso ocorresse algum erro
+                return false;
+            }
+            return put(key, version, std::max(*max_client_id, client_id), this->merge_function(*data, bytes));
+        }
+    }
+
+    return true;
 }
 
 #endif //P2PFS_KV_STORE_MEMORY_H
