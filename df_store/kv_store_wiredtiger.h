@@ -52,12 +52,13 @@ public:
     std::string db_name() const override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<std::string>> get_keys() override;
-    bool put(std::string key, long version, long client_id, std::string bytes) override; // use string.c_str() to convert string to const char*
+    bool put(std::string key, long version, long client_id, std::string bytes, bool is_merge = false) override; // use string.c_str() to convert string to const char*
     bool put_with_merge(std::string key, long version, long client_id, std::string bytes);
     std::shared_ptr<std::string> get(kv_store_key<std::string>& key) override;
     std::shared_ptr<std::string> remove(kv_store_key<std::string> key) override;
     std::shared_ptr<std::string> get_latest(std::string key, kv_store_key_version* kv_version) override;
     std::unique_ptr<long> get_latest_version(std::string key) override;
+    std::shared_ptr<std::string> get_anti_entropy(kv_store_key<std::string> key, bool* is_merge) override;
     void print_store() override;
 };
 
@@ -139,7 +140,7 @@ int kv_store_wiredtiger::init(void* path, long id){
         return -1;
     }
     std::string table_name = "table:" + std::to_string(this->id);
-    res = session->create(session, table_name.c_str(), "key_format=Sll,value_format=u,columns=(key,version,client_id,value)");
+    res = session->create(session, table_name.c_str(), "key_format=Sll,value_format=ub,columns=(key,version,client_id,value,merge)");
     if (res != 0){
         fprintf(stderr,
                 "create_table: %s\n",
@@ -208,7 +209,7 @@ std::unordered_set<kv_store_key<std::string>> kv_store_wiredtiger::get_keys() {
     return std::move(keys);
 }
 
-bool kv_store_wiredtiger::put(std::string key, long version, long client_id, std::string bytes) {
+bool kv_store_wiredtiger::put(std::string key, long version, long client_id, std::string bytes, bool is_merge) {
     WT_CURSOR *cursor;
     WT_ITEM item;
 
@@ -230,21 +231,28 @@ bool kv_store_wiredtiger::put(std::string key, long version, long client_id, std
         bytes.copy(buf, data_size);
         item.data = buf;
         item.size = data_size;
-        cursor->set_value(cursor, &item);
+        cursor->set_value(cursor, &item, is_merge);
         cursor->insert(cursor);
         cursor->close(cursor);
 
-        try {
-            std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
-            if (max_client_id == nullptr){
-                return false;
-            }else{
-                return *max_client_id == client_id;
+        if(!is_merge){
+            //if is not a merge operation should only respond that put was sucessfully if the
+            //version commited is actualy the current version
+
+            try {
+                std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
+                if (max_client_id == nullptr){
+                    return false;
+                }else{
+                    return *max_client_id == client_id;
+                }
+            }catch(WiredTigerException e){
+                this->unseen_it(key, version, client_id);
+                throw WiredTigerException();
             }
-        }catch(WiredTigerException e){
-            this->unseen_it(key, version, client_id);
-            throw WiredTigerException();
         }
+
+        return true;
     }else{
         //Object received but does not belong to this df_store.
         return false;
@@ -306,7 +314,7 @@ void kv_store_wiredtiger::print_store(){
 std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string>& key) {
     WT_CURSOR *cursor;
     WT_ITEM value;
-
+    bool is_merge;
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
     std::string table_name = "table:" + std::to_string(this->id);
     try {
@@ -331,7 +339,33 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string>&
     cursor->set_key(cursor, key.key.c_str(), key.key_version.version, key.key_version.client_id);
     int res = cursor->search(cursor);
     if(res == 0){
-        cursor->get_value(cursor, &value);
+        cursor->get_value(cursor, &value, &is_merge);
+        cursor->close(cursor);
+        return std::make_shared<std::string>(std::string((char*) value.data, value.size));
+    }else{
+        cursor->close(cursor);
+        return nullptr;
+    }
+}
+
+std::shared_ptr<std::string> kv_store_wiredtiger::get_anti_entropy(kv_store_key<std::string> key, bool* is_merge) {
+    WT_CURSOR *cursor;
+    WT_ITEM value;
+
+    std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
+    std::string table_name = "table:" + std::to_string(this->id);
+    try {
+        error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor));
+    }catch(WiredTigerException e){
+        return nullptr;
+    }
+
+    cursor->set_key(cursor, key.key.c_str(), key.key_version.version, key.key_version.client_id);
+    int res = cursor->search(cursor);
+    if(res == 0){
+//        bool merge_int;
+        cursor->get_value(cursor, &value, is_merge); //cant put &is_merge directly
+//        *is_merge = merge_int;
         cursor->close(cursor);
         return std::make_shared<std::string>(std::string((char*) value.data, value.size));
     }else{
@@ -343,6 +377,7 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get(kv_store_key<std::string>&
 std::shared_ptr<std::string> kv_store_wiredtiger::get_latest(std::string key, kv_store_key_version* kv_version) {
     WT_CURSOR *cursor;
     WT_ITEM value;
+    bool merge;
     char *key_it;
     uint32_t version_it;
     uint32_t client_id_it;
@@ -374,7 +409,7 @@ std::shared_ptr<std::string> kv_store_wiredtiger::get_latest(std::string key, kv
 
         int res = cursor->search(cursor);
         if(res == 0){
-            cursor->get_value(cursor, &value);
+            cursor->get_value(cursor, &value, &merge);
             cursor->close(cursor);
             return std::make_shared<std::string>(std::string((char*) value.data, value.size));
         }
@@ -423,6 +458,7 @@ std::unique_ptr<long> kv_store_wiredtiger::get_latest_version(std::string key) {
 std::shared_ptr<std::string> kv_store_wiredtiger::remove(kv_store_key<std::string> key) {
     WT_CURSOR *cursor;
     WT_ITEM value;
+    bool is_merge;
     std::shared_ptr<std::string> ret = nullptr;
 
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
@@ -433,7 +469,7 @@ std::shared_ptr<std::string> kv_store_wiredtiger::remove(kv_store_key<std::strin
 
     int res = cursor->search(cursor);
     if(res == 0){
-        cursor->get_value(cursor, &value);
+        cursor->get_value(cursor, &value, &is_merge);
         ret = std::make_shared<std::string>(std::string((char*) value.data, value.size));
         cursor->remove(cursor);
     }
@@ -446,23 +482,51 @@ std::shared_ptr<std::string> kv_store_wiredtiger::remove(kv_store_key<std::strin
 
 bool kv_store_wiredtiger::put_with_merge(std::string key, long version, long client_id, std::string bytes) {
     try{
-        std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
-        if(max_client_id == nullptr){
-            //no conflict
-            return put(key, version, client_id, bytes);
-        }else{
-            if(*max_client_id != client_id){
-                kv_store_key<std::string> kv_key = {key, kv_store_key_version(version, *max_client_id)};
-                std::shared_ptr<std::string> data = get(kv_key);
-                if(data == nullptr){
-                    // caso ocorresse algum erro
-                    return false;
-                }
-                return put(key, version, std::max(*max_client_id, client_id), this->merge_function(*data, bytes));
-            }
+//        std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
+//        if(max_client_id == nullptr){
+//            //no conflict
+//            return put(key, version, client_id, bytes);
+//        }else{
+//            if(*max_client_id != client_id){
+//                kv_store_key<std::string> kv_key = {key, kv_store_key_version(version, *max_client_id)};
+//                std::shared_ptr<std::string> data = get(kv_key);
+//                if(data == nullptr){
+//                    // caso ocorresse algum erro
+//                    return false;
+//                }
+//                return put(key, version, std::max(*max_client_id, client_id), this->merge_function(*data, bytes));
+//            }
+//        }
+//
+//        return true;
+
+        // quer exista ou não uma entrada para a mesma versão-client_id de outro cliente
+        // faz-se put na mesma da versão deste cliente para ter registo que a versão
+        // de tal cliente foi processada e por motivos de anti-entropia (não requerer
+        // versões-client_id já processados)
+        int res = put(key, version, client_id, bytes, true);
+        if(res == false){
+            return false;
         }
 
-        return true;
+        kv_store_key_version kv_version;
+        //We only need to merge with latest version
+        std::shared_ptr<std::string> data = get_latest(key, &kv_version);
+        if(data != nullptr){
+            if(kv_version.version > version){
+                //if there is a version bigger than mine, use its client_id
+                return put(key, version, client_id, this->merge_function(*data, bytes), true);
+            }else if(kv_version.client_id != client_id){
+                //if there is no version bigger than mine, use max client_id for merge
+                return put(key, version, std::max(kv_version.client_id, client_id), this->merge_function(*data, bytes), true);
+            }
+
+            //No need for merge, my version-client_id is bigger than the others
+            return true;
+        }else{
+            // error on get
+            throw WiredTigerException();
+        }
 
     }catch(WiredTigerException e){
         return false;

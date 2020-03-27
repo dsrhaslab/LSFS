@@ -209,7 +209,8 @@ private:
 
                     this->store->log_anti_entropy_req(req_id);
                     kv_store_key<std::string> get_key = {key, kv_store_key_version(version, message.version_client_id())};
-                    data = this->store->get(get_key);
+                    bool is_merge;
+                    data = this->store->get_anti_entropy(get_key, &is_merge);
 
                     if(data != nullptr){
                         auto data_size = data->size();
@@ -226,6 +227,11 @@ private:
                         message_content->set_version_client_id(message.version_client_id());
                         message_content->set_reqid(req_id);
                         message_content->set_data(buf, data_size);
+                        if(is_merge){
+                            message_content->set_merge(true);
+                        }else{
+                            message_content->set_merge(false);
+                        }
                         reply_message.set_allocated_get_reply_msg(message_content);
 
                         this->reply_client(reply_message, sender_ip, sender_port);
@@ -246,10 +252,15 @@ private:
         long version = message.version();
         long client_id = message.version_client_id();
         std::string data = message.data();
+        bool is_merge = message.merge();
 
         if (!this->store->have_seen(key, version, client_id)) {
             try {
-                bool stored = this->store->put(key, version, client_id, data);
+                if(is_merge){
+                    bool stored = this->store->put_with_merge(key, version, client_id, data);
+                }else{
+                    bool stored = this->store->put(key, version, client_id, data);
+                }
             }catch(std::exception e){}
         }
     }

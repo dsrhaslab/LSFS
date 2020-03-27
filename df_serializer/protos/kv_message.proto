@@ -40,6 +40,7 @@ message get_reply_message {
   int64 version_client_id = 6;
   string reqid = 7;
   bytes data = 8;
+  bool merge = 9; //anti-entropy purposes
 }
 
 message put_message {

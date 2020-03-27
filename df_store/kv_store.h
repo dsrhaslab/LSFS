@@ -32,12 +32,14 @@ public:
     virtual void close() = 0;
     virtual void update_partition(int p, int np) = 0;
     virtual std::unordered_set<kv_store_key<T>> get_keys() = 0;
-    virtual bool put(T key, long version, long client_id, std::string bytes) = 0; // use string.c_str() to convert string to const char*
+    virtual bool put(T key, long version, long client_id, std::string bytes, bool is_merge = false) = 0; // use string.c_str() to convert string to const char*
     virtual bool put_with_merge(T key, long version, long client_id, std::string bytes) = 0;
     virtual std::shared_ptr<std::string> get(kv_store_key<T>& key) = 0;
     virtual std::shared_ptr<std::string> remove(kv_store_key<T> key) = 0;
     virtual std::shared_ptr<std::string> get_latest(T key, kv_store_key_version* version) = 0;
     virtual std::unique_ptr<long> get_latest_version(T key) = 0;
+    virtual std::shared_ptr<std::string> get_anti_entropy(kv_store_key<std::string> key, bool* is_merge) = 0;
+
     virtual void print_store() = 0;
 
     int get_slice_for_key(T key);

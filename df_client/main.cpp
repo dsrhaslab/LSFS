@@ -46,13 +46,13 @@ int main(int argc, char **argv) {
 //    cli.put("/crl", 1, "oli", 3);
 //    cli.put("/crl", 2, "olo", 3);
 
-    long version;
-    try {
-        version = cli.get_latest_version("/", 1);
-    }catch(...){
-        version = 0;
-    }
-    std::cout << "OMG" << version << std::endl;
+//    long version;
+//    try {
+//        version = cli.get_latest_version("/", 1);
+//    }catch(...){
+//        version = 0;
+//    }
+//    std::cout << "OMG" << version << std::endl;
 
 //    cli.put("/bigfileset/00000001/00000001",version + 1,
 //    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum eget elit eget purus tristique aliquam sit amet ut dolor. Sed dapibus, orci sed laoreet sodales, urna ante dictum lacus, convallis rhoncus dolor metus at massa. Proin egestas mauris diam, eu vestibulum lectus cursus eget. Integer iaculis neque ac hendrerit consectetur. Nullam dui est, semper at commodo sit amet, mollis eu purus. Cras eget malesuada diam. Vivamus imperdiet porta libero, eu egestas lectus consectetur quis. Fusce sed pulvinar nisi, id tempus sapien. Aliquam vel risus nibh. Fusce vulputate congue ligula, non elementum enim consequat sit amet. Aliquam finibus at elit ac varius. Ut magna ipsum, sodales id aliquet quis, varius nec ligula. Quisque auctor fringilla mi eget hendrerit. Quisque est orci, eleifend nec turpis eget, condimentum blandit urna.\n"
@@ -65,26 +65,31 @@ int main(int argc, char **argv) {
 //    "\n"
 //    "Aenean sit amet pulvinar justo. Sed et ipsum varius, facilisis arcu eget, auctor sem. Ut varius eros varius purus rutrum, at dictum lorem rhoncus. Cras et nunc quis metus sagittis convallis. Curabitur semper enim at lacus fermentum, quis bibendum tellus ornare. In enim libero, pharetra in lacinia eget, vulputate at lorem. Aenean iaculis neque quis facilisis aliquet. Morbi elementum, ligula a varius blandit, ante dolor vulputate nisi, vestibulum finibus tortor mauris ut risus. Mauris finibus enim sed consequat accumsan. Aliquam volutpat, sem hendrerit auctor rhoncus, leo nunc lobortis ligula, quis sollicitudin massa odio euismod purus. Proin vestibulum sed nibh placerat faucibus. Vestibulum tortor felis, rhoncus aliquet hendrerit id, commodo ut ipsum. "
 //    ,100);
+
+//    try {
+//        version = cli.get_latest_version("/bigfileset/00000001/00000001", 1);
+//    }catch(...){
+//        version = 0;
+//    }
 //
-    try {
-        version = cli.get_latest_version("/bigfileset/00000001/00000001", 1);
-    }catch(...){
-        version = 0;
-    }
-//
-    cli.put("/bigfileset/00000001/00000001",version + 1,"KV ALMOST FINISHED", 18, 1);
+//    cli.put("/bigfileset/00000001/00000001",version + 1,"KV ALMOST FINISHED", 18, 1);
+    long version = 0;
+    cli.put("/bigfileset/00000001/00000001",version,"KV ALMOST FINISHED", 18, 1);
 ////    cli.put(3,1,"KV ALMOST FINISHED");
 ////    cli.put(4,1,"KV ALMOST FINISHED");
 
-    try {
-        version = cli.get_latest_version("/bigfileset/00000001/00000001", 1);
-    }catch(...){
-        version = 0;
-    }
+//    try {
+//        version = cli.get_latest_version("/bigfileset/00000001/00000001", 1);
+//    }catch(...){
+//        version = 0;
+//    }
 
-    std::shared_ptr<std::string> data = cli.get("/bigfileset/00000001/00000001",1, &version);
-    std::string data_s = *data;
-    std::cout << data_s << std::endl;
+//    std::shared_ptr<std::string> data = cli.get("/bigfileset/00000001/00000001",1, &version);
+//    std::string data_s = *data;
+
+    std::shared_ptr<std::string> data1 = cli.get("/bigfileset/00000001/00000001",1);
+    std::string data1_s = *data1;
+    std::cout << data1_s << std::endl;
 //
 //    std::cout << "PUT DONE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 
@@ -107,8 +112,8 @@ int main(int argc, char **argv) {
     std::string bytes_met1 = metadata::serialize_to_string(met1);
     cli.put_with_merge("/",1, bytes_met1.data(), bytes_met1.size(), 1);
 
-    std::string bytes_met2 = metadata::serialize_to_string(met2);
-    cli2.put_with_merge("/",1, bytes_met2.data(), bytes_met2.size(), 1);
+//    std::string bytes_met2 = metadata::serialize_to_string(met2);
+//    cli2.put_with_merge("/",1, bytes_met2.data(), bytes_met2.size(), 1);
 
 //    std::string res = merge_metadata(bytes_met1, bytes_met2);
 
