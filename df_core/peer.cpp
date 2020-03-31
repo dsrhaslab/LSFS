@@ -44,7 +44,7 @@ peer::peer(long id, std::string ip, int pss_port, int data_port, double position
 }
 
 peer::peer(long id, std::string ip, int pss_port, int data_port,double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size,
-        int logging_interval, int anti_entropy_interval, std::string logging_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval, float reply_chance, bool smart, std::shared_ptr<spdlog::logger> logger)
+        int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval, float reply_chance, bool smart, std::shared_ptr<spdlog::logger> logger)
     :   id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
         local_interval(local_interval), reply_chance(reply_chance),
 //        store(std::make_shared<kv_store_leveldb>(merge_metadata)),
@@ -58,7 +58,7 @@ peer::peer(long id, std::string ip, int pss_port, int data_port,double position,
         listener("127.0.0.1", pss_port, &(this->cyclon)),
         v_logger(pss_port, &(this->cyclon), logging_interval, logging_dir)
 {
-    std::string database_folder = std::string("/home/danielsf97/Desktop/") + this->store->db_name() + "/";
+    std::string database_folder = database_dir + this->store->db_name() + "/";
     int res = this->store->init((void*) database_folder.c_str(), id);
     if(res != 0) {
         exit(1);
@@ -128,6 +128,7 @@ int main(int argc, char* argv []){
     int sleep_interval = main_confs["message_passing_interval_sec"].as<int>();
     int logging_interval = main_confs["log_interval_sec"].as<int>();
     std::string logging_dir = main_confs["logging_dir"].as<std::string>();
+    std::string database_dir = main_confs["database_base_path"].as<std::string>();
     int rep_max = main_confs["rep_max"].as<int>();
     int rep_min = main_confs["rep_min"].as<int>();
     int max_age = main_confs["max_age"].as<int>();
@@ -152,7 +153,7 @@ int main(int argc, char* argv []){
     int boot_time = rand() % 10 + 2;
 
     g_peer_impl = std::make_shared<peer>(id,"127.0.0.1",pss_port,data_port,pos,boot_time,view_size,sleep_interval,gossip_size, logging_interval, anti_entropy_interval, logging_dir,
-            rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, logger);
+            database_dir, rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, logger);
     g_peer_impl->start();
     g_peer_impl->join();
 }

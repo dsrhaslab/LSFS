@@ -1,5 +1,4 @@
 #include "udp_async_server.h"
-#include "udp_async_server.h"
 
 void udp_session::handle_request(const boost::system::error_code& error)
 {
