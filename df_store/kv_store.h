@@ -39,6 +39,7 @@ public:
     virtual std::shared_ptr<std::string> get_latest(T key, kv_store_key_version* version) = 0;
     virtual std::unique_ptr<long> get_latest_version(T key) = 0;
     virtual std::shared_ptr<std::string> get_anti_entropy(kv_store_key<std::string> key, bool* is_merge) = 0;
+    virtual void remove_from_set_existent_keys(std::unordered_set<kv_store_key<T>>& keys) = 0;
 
     virtual void print_store() = 0;
 

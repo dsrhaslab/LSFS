@@ -167,7 +167,7 @@ private:
                     message_content->set_data(buf, data_size);
                     reply_message.set_allocated_get_reply_msg(message_content);
 
-                    std::cout << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
+                    std::cout << "GET REPLY(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
                     this->reply_client(reply_message, sender_ip, sender_port);
                     // forward to other peers from my slice if is the right slice for the key
@@ -253,6 +253,8 @@ private:
         long client_id = message.version_client_id();
         std::string data = message.data();
         bool is_merge = message.merge();
+
+        std::cout << "GET REPLY(\033[1;31m" << this->id << "\033[0m) " << key << ":" << version << " <==================================" << std::endl;
 
         if (!this->store->have_seen(key, version, client_id)) {
             try {
@@ -370,19 +372,12 @@ private:
 
 
         try {
-            std::unordered_set<kv_store_key<std::string>> keys = this->store->get_keys();
 
             std::unordered_set<kv_store_key<std::string>> keys_to_request;
-            for (auto &key : message.keys()) {
-                kv_store_key<std::string> kv_key = {key.key(), kv_store_key_version(key.version(), key.client_id())};
-                if (keys.find(kv_key) == keys.end()) {
-                    // não possuimos a chave
-                    if (this->store->get_slice_for_key(kv_key.key) == this->store->get_slice()) {
-                        //se a chave pertence à minha slice
-                        keys_to_request.insert(kv_key);
-                    }
-                }
+            for(auto& key: message.keys()){
+                keys_to_request.insert({key.key(), kv_store_key_version(key.version(), key.client_id())});
             }
+            this->store->remove_from_set_existent_keys(keys_to_request);
 
             for (auto &key: keys_to_request) {
                 proto::kv_message get_msg;
@@ -392,6 +387,7 @@ private:
                 message_content->set_id(this->id);
                 message_content->set_key(key.key);
                 message_content->set_version(key.key_version.version);
+                message_content->set_version_client_id(key.key_version.client_id);
                 message_content->set_reqid(
                         "intern" + to_string(this->id) + ":" + to_string(this->get_anti_entropy_req_count()));
                 get_msg.set_allocated_get_msg(message_content);

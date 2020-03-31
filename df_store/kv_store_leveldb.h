@@ -26,6 +26,8 @@
 #include <fstream>
 #include <cstdlib>
 #include <filesystem>
+#include <random>
+
 namespace fs = std::filesystem;
 
 /*
@@ -39,8 +41,14 @@ private:
     leveldb::DB* db;
     leveldb::DB* db_merge_log;
 
+    std::atomic<long> record_count = 0;
+    std::atomic<long> record_count_cycle = 0;
+    inline const static long record_refresh_rate = 10;
+    inline const static int anti_entropy_max_keys = 20;
+
 private:
     std::unique_ptr<long> get_client_id_from_key_version(std::string key, long version);
+    void refresh_nr_keys_count();
 
 public:
     ~kv_store_leveldb();
@@ -57,6 +65,7 @@ public:
     std::shared_ptr<std::string> get_latest(std::string key, kv_store_key_version* kv_version) override;
     std::unique_ptr<long> get_latest_version(std::string key) override;
     std::shared_ptr<std::string> get_anti_entropy(kv_store_key<std::string> key, bool* is_merge) override;
+    void remove_from_set_existent_keys(std::unordered_set<kv_store_key<std::string>>& keys) override;
     void print_store() override;
 };
 
@@ -152,10 +161,25 @@ void kv_store_leveldb::update_partition(int p, int np) {
 
 std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_keys() {
 
+    long cycle = record_count_cycle++;
+    if(cycle % record_refresh_rate == 0){
+        cycle = 0;
+        this->refresh_nr_keys_count();
+    }
+
+    long max_random_key_start = this->record_count - anti_entropy_max_keys;
+
+    std::random_device rd;
+    std::mt19937 eng(rd());
+    std::uniform_int_distribution<long> distr(0, max_random_key_start);
+    long key_start = distr(eng);
+
     std::unordered_set<kv_store_key<std::string>> keys;
 
     leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
-    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+    for (it->SeekToFirst(); it->Valid() && key_start > 0; it->Next(), --key_start) {}
+
+    for(int i = 0; i < anti_entropy_max_keys && it->Valid(); i++, it->Next()){
         std::string comp_key = it->key().ToString();
         std::string key;
         long version;
@@ -173,6 +197,43 @@ std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_keys() {
 
     delete it;
     return std::move(keys);
+}
+
+void kv_store_leveldb::remove_from_set_existent_keys(std::unordered_set<kv_store_key<std::string>>& keys){
+    leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+
+    for (auto it_keys = keys.begin(); it_keys != keys.end();) {
+        std::string prefix = it_keys->key + "#" + std::to_string(it_keys->key_version.version) + "#" + std::to_string(it_keys->key_version.client_id);
+        it->Seek(prefix);
+        if(it->Valid() && it->key().ToString() == prefix){
+            // se possuimos a chave
+            it_keys = keys.erase(it_keys);
+        }else if(this->get_slice_for_key(it_keys->key) != this->slice){
+            // se a chave não pertence a esta store
+            it_keys = keys.erase(it_keys);
+        }else{
+            ++it_keys;
+        }
+    }
+
+    delete it;
+}
+
+void kv_store_leveldb::refresh_nr_keys_count(){
+    long count = 0;
+
+    leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        count++;
+    }
+
+    if(!it->status().ok()){
+        delete it;
+        return; //DO NOTHING
+    }
+
+    delete it;
+    record_count = count;
 }
 
 std::unique_ptr<long> kv_store_leveldb::get_client_id_from_key_version(std::string key, long version) {
@@ -217,6 +278,7 @@ bool kv_store_leveldb::put(std::string key, long version, long client_id, std::s
         std::string comp_key = key + "#" + std::to_string(version) + "#" + std::to_string(client_id);
         db->Put(writeOptions, comp_key, bytes);
         db_merge_log->Put(writeOptions, comp_key, std::to_string(is_merge));
+        this->record_count++;
 
         if(!is_merge){
             //if is not a merge operation should only respond that put was sucessfully if the
@@ -377,7 +439,8 @@ std::shared_ptr<std::string> kv_store_leveldb::remove(kv_store_key<std::string> 
 
     if (s.ok()){
         s = db->Delete(leveldb::WriteOptions(), comp_key);
-        if(!s.ok()) throw LevelDBException();
+        if(!s.ok())throw LevelDBException();
+        this->record_count--; //removed record from database
         s = db_merge_log->Delete(leveldb::WriteOptions(), comp_key);
         if(!s.ok()) throw LevelDBException();
 
@@ -430,9 +493,11 @@ bool kv_store_leveldb::put_with_merge(std::string key, long version, long client
         if(data != nullptr){
             if(kv_version.version > version){
                 //if there is a version bigger than mine, use its client_id
+                this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
                 return put(key, version, client_id, this->merge_function(*data, bytes), true);
             }else if(kv_version.client_id != client_id){
                 //if there is no version bigger than mine, use max client_id for merge
+                this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
                 return put(key, version, std::max(kv_version.client_id, client_id), this->merge_function(*data, bytes), true);
             }
 
