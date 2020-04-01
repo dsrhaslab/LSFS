@@ -45,17 +45,17 @@ client::client(std::string ip, long id, int port, int lb_port, const char* conf_
 
 void client::stop(){
     lb->stop();
-    std::cout << "stopped load balancer" << std::endl;
+    spdlog::info("stopped load balancer");
     lb_listener->stop();
-    std::cout << "stopped load balancer listener" << std::endl;
+    spdlog::info("stopped load balancer listener");
     lb_th.join();
-    std::cout << "stopped load balancer thread" << std::endl;
+    spdlog::info("stopped load balancer thread");
     lb_listener_th.join();
-    std::cout << "stopped load balancer listener thread" << std::endl;
+    spdlog::info("stopped load balancer listener thread");
     close(sender_socket);
     handler->stop();
     handler_th.join();
-    std::cout << "stopped df_client" << std::endl;
+    spdlog::info("stopped df_client");
 }
 
 long client::inc_and_get_request_count() {
@@ -74,12 +74,12 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
 
         std::string buf;
         msg.SerializeToString(&buf);
-        std::cout << "Size of buffer: " << buf.size() << std::endl;
+        spdlog::debug("Client sent msg with size of buffer: " + std::to_string(buf.size()));
         int res = sendto(this->sender_socket, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
-        if(res == -1){printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));}
+        if(res == -1){spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));}
         else{ return 0; }
-    }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
+    }catch(...){spdlog::error("=============================== NÂO consegui enviar =================");}
 
     return 1;
 }
@@ -99,9 +99,7 @@ int client::send_get(peer_data &peer, std::string key, long* version, std::strin
     message_content->set_version_client_id(-1);
     message_content->set_reqid(req_id);
     msg.set_allocated_get_msg(message_content);
-
-    std::cout << "key: " << message_content->key() <<" REQID: " << message_content->reqid() << std::endl;
-
+    
     return send_msg(peer, msg);
 }
 
@@ -155,7 +153,7 @@ std::set<long> client::put(std::string key, long version, const char *data, size
        peer_data peer = this->lb->get_random_peer(); //throw exception
        int status = this->send_put(peer, key, version, data, size);
        if(status == 0){
-           std::cout << "PUT (TO " << peer.id << ") " << key << " : " << version << " ==============================>" << std::endl;
+           spdlog::debug("PUT (TO " + std::to_string(peer.id) + ") " + key + " : " + std::to_string(version) + " ==============================>");
            try{
                res = this->handler->wait_for_put(comp_key, wait_for);
            }catch(TimeoutException& e){
@@ -180,7 +178,7 @@ std::set<long> client::put_with_merge(std::string key, long version, const char 
         peer_data peer = this->lb->get_random_peer(); //throw exception
         int status = this->send_put_with_merge(peer, key, version, data, size);
         if(status == 0){
-            std::cout << "PUT (TO " << peer.id << ") " << key << " : " << version << " ==============================>" << std::endl;
+            spdlog::debug("PUT (TO " + std::to_string(peer.id) + ") " + key + " : " + std::to_string(version) + " ==============================>");
             try{
                 res = this->handler->wait_for_put(comp_key, wait_for);
             }catch(TimeoutException& e){
@@ -207,7 +205,7 @@ std::shared_ptr<std::string> client::get(std::string key, int wait_for, long* ve
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get(peer, key, version_ptr, req_id_str);
         if (status == 0) {
-            std::cout << "GET " << req_id  << " TO (" << peer.id << ") " << key << (version_ptr == nullptr ? ": ?" : ": " + std::to_string(*version_ptr)) << " ==================================>" << std::endl;
+            spdlog::debug("GET " + std::to_string(req_id)  + " TO (" + std::to_string(peer.id) + ") " + key + (version_ptr == nullptr ? ": ?" : ": " + std::to_string(*version_ptr)) + " ==================================>");
             try{
                 res = this->handler->wait_for_get(req_id_str, wait_for);
             }catch(TimeoutException& e){
@@ -234,7 +232,7 @@ long client::get_latest_version(std::string key, int wait_for) {
         peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
         int status = this->send_get_latest_version(peer, key, req_id_str);
         if (status == 0) {
-            std::cout << "GET Version " << req_id << " TO (" << peer.id << ") " << " Key:" << key << " ==================================>" << std::endl;
+            spdlog::debug("GET Version " + std::to_string(req_id) + " TO (" + std::to_string(peer.id) + ") " + " Key:" + key + " ==================================>");
             try{
                 res = this->handler->wait_for_get_latest_version(req_id_str, wait_for);
             }catch(TimeoutException& e){
@@ -247,7 +245,7 @@ long client::get_latest_version(std::string key, int wait_for) {
         throw TimeoutException();
     }
 
-    std::cout << "######################" << key << " VERSIONR: " << *res<< "#################################" << std::endl;
+    spdlog::debug("######################" + key + " VERSIONR: " + std::to_string(*res) + "#################################");
 
     return *res;
 }

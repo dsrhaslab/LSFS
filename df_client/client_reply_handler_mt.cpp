@@ -66,7 +66,7 @@ void client_reply_handler_mt::operator()() {
         this->thread_pool.join_all();
     }
     catch (std::exception& e) {
-        std::cout << e.what() << std::endl;
+        spdlog::error(e.what());
     }
 }
 

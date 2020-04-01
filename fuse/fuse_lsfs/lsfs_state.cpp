@@ -6,6 +6,7 @@
 
 #include <ctime>
 #include <utility>
+#include <spdlog/spdlog.h>
 
 lsfs_state::lsfs_state(std::shared_ptr<client> df_client, std::shared_ptr<spdlog::logger> logger):
         df_client(std::move(df_client)), logger(std::move(logger))
@@ -132,7 +133,7 @@ std::unique_ptr<metadata> lsfs_state::get_metadata(const char* path){
         if(version == -1){
             errno = ENOENT;
         }else{
-            std::cout << "######################" << path << " VERSIONG: " << version << "#################################" << std::endl;
+            spdlog::debug(std::string("######################") + path + " VERSIONG: " + std::to_string(version) + "#################################");
             //Fazer um get de metadados ao dataflasks
             std::shared_ptr<std::string> data = df_client->get(path, 1, &version);
             res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));

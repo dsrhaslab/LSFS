@@ -78,7 +78,7 @@ kv_store_leveldb::~kv_store_leveldb() {
 }
 
 void kv_store_leveldb::close() {
-    std::cout << "closing connection" << std::endl;
+    spdlog::debug("closing connection");
     delete db;
 }
 

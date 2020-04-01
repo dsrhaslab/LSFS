@@ -1,5 +1,5 @@
 main_confs:
-  nr_peers: 100
+  nr_peers: 1000
   view_size: 8
   gossip_size: 7
   message_passing_interval_sec: 10
@@ -7,9 +7,9 @@ main_confs:
   base_port: 12350
   peer_instantiation_interval_sec: 0.01
   log_interval_sec: 5
-  logging_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/logging/logging3_extra18/
-  results_dir: /home/danielsf97/Desktop/Tese/P2P-Filesystem/results/results3_extra18_age40_local8/
-  database_base_path: /home/danielsf97/Desktop/
+  logging_dir: /mnt/storage/daniel/logging/logging3_extra18/
+  results_dir: /mnt/storage/daniel/results/results3_extra18_age40_local8/
+  database_base_path: /mnt/storage/daniel/databases/
   rep_max: 10
   rep_min: 5
   max_age: 40
@@ -18,6 +18,7 @@ main_confs:
   anti_entropy_interval_sec: 20
   reply_chance: 1
   smart: true
+  log_level: off
   ######################################
   #               Client               #
   ######################################
