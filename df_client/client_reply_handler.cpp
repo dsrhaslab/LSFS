@@ -234,7 +234,7 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
     std::regex composite_key(".+:(\\d+)$");
     std::smatch match;
     auto res = std::regex_search(req_id, match, composite_key);
-//    spdlog::debug("<============================== GET " + std::to_string(std::stol(match[1].str(), nullptr)));
+    spdlog::debug("<============================== GET " + std::to_string(std::stol(match[1].str(), nullptr)));
 
     auto it = this->get_replies.find(req_id);
     if(it != this->get_replies.end()){
@@ -250,7 +250,7 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
         sync_pair.second->notify_all();
         reqid_lock.unlock();
     }else{
-//        spdlog::debug("GET REPLY IGNORED - NON EXISTENT KEY");
+        spdlog::debug("GET REPLY IGNORED - NON EXISTENT KEY");
     }
 }
 
@@ -262,7 +262,7 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
 
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
 
-//    spdlog::debug("<============================== PUT " + key + " : " + std::to_string(version));
+    spdlog::debug("<============================== PUT " + key + " : " + std::to_string(version));
 
     auto it = this->put_replies.find(comp_key);
     if(it != this->put_replies.end()){
@@ -276,7 +276,7 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
         sync_pair.second->notify_all();
         key_lock.unlock();
     }else{
-//        spdlog::debug("PUT REPLY IGNORED - NON EXISTENT KEY");
+        spdlog::debug("PUT REPLY IGNORED - NON EXISTENT KEY");
     }
 }
 
@@ -288,7 +288,7 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
     std::regex composite_key(".+:(\\d+)$");
     std::smatch match;
     auto res = std::regex_search(req_id, match, composite_key);
-//    spdlog::debug("<============================== GET " + std::to_string(std::stol(match[1].str(), nullptr)));
+    spdlog::debug("<============================== GET " + std::to_string(std::stol(match[1].str(), nullptr)));
 
     auto it = this->get_replies.find(req_id);
     if(it != this->get_replies.end()){
@@ -304,6 +304,6 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
         sync_pair.second->notify_all();
         reqid_lock.unlock();
     }else{
-//        spdlog::debug("GET REPLY IGNORED - NON EXISTENT KEY");
+        spdlog::debug("GET REPLY IGNORED - NON EXISTENT KEY");
     }
 }

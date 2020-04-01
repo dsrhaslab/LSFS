@@ -108,14 +108,14 @@ void group_construction::receive_local_message(std::vector<peer_data> received) 
 }
 
 void group_construction::print_view() {
-//    spdlog::debug("====== My View[" + std::to_string(this->port) + "] ====");
+    spdlog::debug("====== My View[" + std::to_string(this->port) + "] ====");
 //    std::cout << "====== My View[" + std::to_string(this->port) + "] ====" << std::endl;
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(auto const& [key, peer] : this->local_view){
-//        spdlog::debug(peer.ip + "(" + std::to_string(peer.port) + ") : " + std::to_string(peer.age)  + " -> " + std::to_string(peer.pos) + ":" + std::to_string(group(peer.pos)));
+        spdlog::debug(peer.ip + "(" + std::to_string(peer.port) + ") : " + std::to_string(peer.age)  + " -> " + std::to_string(peer.pos) + ":" + std::to_string(group(peer.pos)));
 //        std::cout << peer.ip << "(" << peer.port << ") : " << peer.age  << " -> " << peer.pos << ":" << group(peer.pos) << std::endl;
     }
-//    spdlog::debug("==========================");
+    spdlog::debug("==========================");
 //    std::cout << "==========================" << std::endl;
 }
 

@@ -315,7 +315,7 @@ void kv_store_leveldb::print_store(){
         long client_id;
         int res = split_composite_key(comp_key, &key, &version, &client_id);
         if(res == 0){
-//            spdlog::debug(key + ": " + std::to_string(version) + "#" + std::to_string(client_id));
+            spdlog::debug(key + ": " + std::to_string(version) + "#" + std::to_string(client_id));
         }
     }
 
