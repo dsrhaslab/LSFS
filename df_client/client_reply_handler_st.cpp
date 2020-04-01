@@ -10,7 +10,6 @@
 #include <iostream>
 #include "exceptions/custom_exceptions.h"
 #include <regex>
-#include <spdlog/spdlog.h>
 
 client_reply_handler_st::client_reply_handler_st(std::string ip, int port, long wait_timeout):
     client_reply_handler(ip, port, wait_timeout),
@@ -24,7 +23,7 @@ client_reply_handler_st::~client_reply_handler_st()
 
 void client_reply_handler_st::operator()() {
     this->running = true;
-    spdlog::debug("Client Reply Handler is Active!!");
+    std::cout << "Client Reply Handler is Active!!" << std::endl;
 
     struct sockaddr_in si_me, si_other;
     socklen_t addr_size = sizeof(si_other);

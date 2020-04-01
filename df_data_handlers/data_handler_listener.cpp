@@ -62,8 +62,7 @@ public:
 
         }
         catch(const char* e){
-            spdlog::error(e);
-//            std::cout << e << std::endl;
+            std::cout << e << std::endl;
         }
         catch(...){}
     }
@@ -84,15 +83,8 @@ private:
 
             std::scoped_lock<std::recursive_mutex> lk (socket_send_mutex);
             int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-            if(res == -1){
-                spdlog::error("Oh dear, something went wrong with send()! %s\n", strerror(errno));
-
-//                printf("Oh dear, something went wrong with send()! %s\n", strerror(errno));
-            }
-        }catch(...){
-            spdlog::error("=============================== Não consegui enviar =================");
-//            std::cout <<"=============================== Não consegui enviar =================" << std::endl;
-        }
+            if(res == -1){printf("Oh dear, something went wrong with send()! %s\n", strerror(errno));}
+        }catch(...){std::cout <<"=============================== Não consegui enviar =================" << std::endl;}
 
     }
 
@@ -111,15 +103,8 @@ private:
 
                 std::scoped_lock<std::recursive_mutex> lk (socket_send_mutex);
                 int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-                if(res == -1){
-                    spdlog::error("Oh dear, something went wrong with send()! %s\n", strerror(errno));
-
-//                printf("Oh dear, something went wrong with send()! %s\n", strerror(errno));
-                }
-            }catch(...){
-                spdlog::error("=============================== Não consegui enviar =================");
-//            std::cout <<"=============================== Não consegui enviar =================" << std::endl;
-            }
+                if(res == -1){printf("Oh dear, something went wrong with send()! %s\n", strerror(errno));}
+            }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
         }
     }
 
@@ -157,9 +142,9 @@ private:
             }
 
 
-            spdlog::debug("<=============(" + std::to_string((data != nullptr)) + ")================== GET (\033[1;31m" + std::to_string(this->id) + "\033[0m) " + req_id + " " + key + " : " + std::to_string(version.version));
 
-//            std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version.version << std::endl;
+
+            std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version.version << std::endl;
 
             if(data != nullptr){
                 //se tenho o conteudo da chave
@@ -167,8 +152,7 @@ private:
                 char buf[data_size];
                 data->copy(buf, data_size);
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
-//                std::cout << achance << " <= " << chance << std::endl;
+                std::cout << achance << " <= " << chance << std::endl;
                 if(achance <= this->chance){
                     //a probabilidade ditou para responder à mensagem com o conteudo para a chave
                     proto::kv_message reply_message;
@@ -183,8 +167,7 @@ private:
                     message_content->set_data(buf, data_size);
                     reply_message.set_allocated_get_reply_msg(message_content);
 
-                    spdlog::debug("GET REPLY(\033[1;31m" + std::to_string(this->id) + "\033[0m) " + req_id + " ==================================>");
-//                    std::cout << "GET REPLY(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
+                    std::cout << "GET REPLY(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
                     this->reply_client(reply_message, sender_ip, sender_port);
                     // forward to other peers from my slice if is the right slice for the key
@@ -206,8 +189,7 @@ private:
                     }
                 }
             }else{
-                spdlog::debug("===================== DONT HAVEEEEEE =================");
-//                std::cout << "===================== DONT HAVEEEEEE =================" << std::endl;
+                std::cout << "===================== DONT HAVEEEEEE =================" << std::endl;
 
                 //se não tenho o conteudo da chave -> fazer forward
                 int obj_slice = this->store->get_slice_for_key(key);
@@ -272,8 +254,7 @@ private:
         std::string data = message.data();
         bool is_merge = message.merge();
 
-        spdlog::debug("GET REPLY(\033[1;31m" + std::to_string(this->id) + "\033[0m) " + key + ":" + std::to_string(version) + " <==================================");
-//        std::cout << "GET REPLY(\033[1;31m" << this->id << "\033[0m) " << key << ":" << version << " <==================================" << std::endl;
+        std::cout << "GET REPLY(\033[1;31m" << this->id << "\033[0m) " << key << ":" << version << " <==================================" << std::endl;
 
         if (!this->store->have_seen(key, version, client_id)) {
             try {
@@ -321,13 +302,10 @@ private:
             }catch(std::exception& e){
                 stored = false;
             }
-            spdlog::debug("<==========(" + std::to_string(stored) + ")============== PUT (\033[1;31m" + std::to_string(this->id) + "\033[0m) " + key + " : " + std::to_string(version));
-
-//            std::cout << "<==========(" << std::to_string(stored) <<")============== " << "PUT (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << std::endl;
+            std::cout << "<==========(" << std::to_string(stored) <<")============== " << "PUT (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << std::endl;
             if (stored) {
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-//                std::cout << achance << " <= " << chance << std::endl;
-                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
+                std::cout << achance << " <= " << chance << std::endl;
                 std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
                 if (achance <= this->chance) {
                     proto::kv_message reply_message;
@@ -339,8 +317,7 @@ private:
                     message_content->set_version(version);
                     reply_message.set_allocated_put_reply_msg(message_content);
 
-                    spdlog::debug("PUT REPLY (\033[1;31m" + std::to_string(this->id) + "\033[0m) " + key + " : " + std::to_string(version) + " ==================================>");
-//                    std::cout << "PUT REPLY (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << " ==================================>" << std::endl;
+                    std::cout << "PUT REPLY (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << " ==================================>" << std::endl;
                     this->reply_client(reply_message, sender_ip, sender_port);
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 } else {
@@ -453,9 +430,7 @@ private:
                 }
             }
 
-            spdlog::debug("<=============(" + std::to_string((version != nullptr)) + ")================== " + "GET Version (\033[1;31m" + std::to_string(this->id) + "\033[0m) " + req_id + " " + key);
-//            std::cout << "<=============(" << (version != nullptr) << ")================== " << "GET Version (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << std::endl;
-
+            std::cout << "<=============(" << (version != nullptr) << ")================== " << "GET Version (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << std::endl;
 
             if(version != nullptr){
                 // se a chave pertence à minha slice (versão da chave >= -1)
@@ -484,8 +459,7 @@ private:
                 reply_message.set_allocated_get_latest_version_reply_msg(message_content);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
-                spdlog::debug("GET REPLY Version(\033[1;31m" + std::to_string(this->id) + "\033[0m) " + req_id + " ==================================>");
-//                std::cout << "GET REPLY Version(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
+                std::cout << "GET REPLY Version(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
             }else{
                 //se não tenho o conteudo da chave -> fazer forward
@@ -516,8 +490,7 @@ void data_handler_listener::operator()() {
         this->thread_pool.join_all();
     }
     catch (std::exception& e) {
-        spdlog::error(e.what());
-//        std::cout << e.what() << std::endl;
+        std::cout << e.what() << std::endl;
     }
 }
 

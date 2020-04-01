@@ -9,7 +9,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <spdlog/spdlog.h>
 #include "anti_entropy.h"
 
 anti_entropy::anti_entropy(std::string ip, int respond_to_port, long id, pss *pss_ptr,
@@ -35,15 +34,8 @@ void anti_entropy::send_peer_keys(std::vector<peer_data>& target_peers, proto::k
         try {
             int res = sendto(this->sender_socket, buf_data, buf_size, 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
-            if(res == -1){
-                spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
-
-//                printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
-            }
-        }catch(...){
-            spdlog::error("=============================== Não consegui enviar =================");
-//            std::cout <<"=============================== Não consegui enviar =================" << std::endl;
-        }
+            if(res == -1){printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));}
+        }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
     }
 }
 

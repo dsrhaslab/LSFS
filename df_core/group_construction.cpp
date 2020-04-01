@@ -8,7 +8,6 @@
 #include <math.h>
 #include <pss_message.pb.h>
 #include <arpa/inet.h>
-#include <spdlog/spdlog.h>
 
 #define LOG(X) std::cout << X << std::endl;
 
@@ -108,15 +107,12 @@ void group_construction::receive_local_message(std::vector<peer_data> received) 
 }
 
 void group_construction::print_view() {
-    spdlog::debug("====== My View[" + std::to_string(this->port) + "] ====");
-//    std::cout << "====== My View[" + std::to_string(this->port) + "] ====" << std::endl;
+    std::cout << "====== My View[" + std::to_string(this->port) + "] ====" << std::endl;
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(auto const& [key, peer] : this->local_view){
-        spdlog::debug(peer.ip + "(" + std::to_string(peer.port) + ") : " + std::to_string(peer.age)  + " -> " + std::to_string(peer.pos) + ":" + std::to_string(group(peer.pos)));
-//        std::cout << peer.ip << "(" << peer.port << ") : " << peer.age  << " -> " << peer.pos << ":" << group(peer.pos) << std::endl;
+        std::cout << peer.ip << "(" << peer.port << ") : " << peer.age  << " -> " << peer.pos << ":" << group(peer.pos) << std::endl;
     }
-    spdlog::debug("==========================");
-//    std::cout << "==========================" << std::endl;
+    std::cout << "==========================" << std::endl;
 }
 
 
@@ -381,15 +377,8 @@ void group_construction::send_pss_msg(int target_port, std::string& msg_string){
 
         int res = sendto(this->sender_socket, msg_string.data(), msg_string.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
-        if(res == -1){
-            spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
-
-//                printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
-        }
-    }catch(...){
-        spdlog::error("=============================== Não consegui enviar =================");
-//            std::cout <<"=============================== Não consegui enviar =================" << std::endl;
-    }
+        if(res == -1){printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));}
+    }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
 }
 
 

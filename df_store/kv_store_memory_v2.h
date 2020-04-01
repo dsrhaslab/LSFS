@@ -17,7 +17,6 @@
 #include <iostream>
 #include <cstring>
 #include <functional>
-#include <spdlog/spdlog.h>
 
 template <typename T>
 class kv_store_memory_v2: public kv_store<T>{
@@ -65,7 +64,7 @@ std::string kv_store_memory_v2<T>::db_name() const {
 template <typename T>
 void kv_store_memory_v2<T>::update_partition(int p, int np) {
     if(np != this->nr_slices){
-        spdlog::info("UPDATE_PARTITION " + std::to_string(np));
+        std::cout << "UPDATE_PARTITION " << std::to_string(np) << std::endl;
         this->nr_slices = np;
         this->slice = p;
         //clear memory to allow new keys to be stored
@@ -151,13 +150,13 @@ bool kv_store_memory_v2<T>::put(std::string key, long version, long client_id, s
 template <typename T>
 void kv_store_memory_v2<T>::print_store(){
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
-    spdlog::debug("================= MY STORE =============");
+    std::cout << "================= MY STORE =============" << std::endl;
     for(const auto& [key, block_versions]: this->store){
         for(const auto& version_block_pair: block_versions){
-            spdlog::debug(key + ": " + std::to_string(version_block_pair.first.version));
+            std::cout << key << ": " << version_block_pair.first.version << std::endl;
         }
     }
-    spdlog::debug("========================================");
+    std::cout << "========================================" << std::endl;
 
 }
 

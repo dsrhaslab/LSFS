@@ -30,8 +30,7 @@ public:
             this->pss_ptr->process_msg(pss_message);
         }
         catch(const char* e){
-            spdlog::error(e);
-//            std::cout << e << std::endl;
+            std::cout << e << std::endl;
         }
         catch(...){}
     }
@@ -56,8 +55,7 @@ void pss_listener::operator()() {
         this->thread_pool.join_all();
     }
     catch (std::exception& e) {
-        spdlog::error(e.what());
-//        std::cout << e.what() << std::endl;
+        std::cout << e.what() << std::endl;
     }
 }
 

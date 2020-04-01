@@ -23,8 +23,6 @@
 #include <fstream>
 #include <cstdlib>
 #include <filesystem>
-#include <spdlog/spdlog.h>
-
 namespace fs = std::filesystem;
 
 /*
@@ -73,7 +71,7 @@ kv_store_wiredtiger::~kv_store_wiredtiger() {
 }
 
 void kv_store_wiredtiger::close() {
-    spdlog::debug("closing connection");
+    std::cout << "closing connection" << std::endl;
     conn->close(conn, NULL);
 }
 
@@ -110,7 +108,7 @@ void kv_store_wiredtiger::error_check(int call){
                 err = "DEFAULT";
                 break;
         }
-        spdlog::error("\033[1;31mERROR WIREDTIGER: \033[0m" + err);
+        std::cout << "\033[1;31mERROR WIREDTIGER: \033[0m" << err << std::endl;
         throw WiredTigerException();
     }else{
 //        std::cout << "\033[1;31mAll Good\033[0m" << std::endl;
@@ -124,35 +122,29 @@ int kv_store_wiredtiger::init(void* path, long id){
     try{
         std::filesystem::create_directories(database_path.c_str());
     }catch (std::exception& e) {
-        spdlog::error(e.what());
+        std::cout << e.what() << std::endl;
     }
 
     int res = wiredtiger_open(database_path.c_str(), NULL, "create, cache_size=50M" /*default 100M*/, &conn);
     if (res != 0){
-        spdlog::error("wiredtiger_open: %s\n",
+        fprintf(stderr,
+                "wiredtiger_open: %s\n",
                 "Error opening connection to database!");
-//        fprintf(stderr,
-//                "wiredtiger_open: %s\n",
-//                "Error opening connection to database!");
         return -1;
     }
     res = conn->open_session(conn, NULL, NULL, &session);
     if (res != 0){
-        spdlog::error("open_session: %s\n",
+        fprintf(stderr,
+                "open_session: %s\n",
                 "Error opening session to wiredtiger!");
-//        fprintf(stderr,
-//                "open_session: %s\n",
-//                "Error opening session to wiredtiger!");
         return -1;
     }
     std::string table_name = "table:" + std::to_string(this->id);
     res = session->create(session, table_name.c_str(), "key_format=Sll,value_format=ub,columns=(key,version,client_id,value,merge)");
     if (res != 0){
-        spdlog::error("create_table: %s\n",
+        fprintf(stderr,
+                "create_table: %s\n",
                 "Error creating wiredtiger table!");
-//        fprintf(stderr,
-//                "create_table: %s\n",
-//                "Error creating wiredtiger table!");
         return -1;
     }
 //    /* Create an immutable index. */
@@ -173,7 +165,7 @@ void kv_store_wiredtiger::update_partition(int p, int np) {
     WT_CURSOR *cursor;
 
     if(np != this->nr_slices){
-        spdlog::info("UPDATE_PARTITION " + std::to_string(np));
+//        std::cout << "UPDATE_PARTITION " << std::to_string(np) << std::endl;
         this->nr_slices = np;
         this->slice = p;
         //clear memory to allow new keys to be stored
@@ -308,13 +300,13 @@ void kv_store_wiredtiger::print_store(){
     try {
         error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor));
 
-        spdlog::debug("================= MY STORE =============");
+        std::cout << "================= MY STORE =============" << std::endl;
         int i;
         while ((i = cursor->next(cursor)) == 0) {
             cursor->get_key(cursor, &key, &version, &client_id);
-            spdlog::debug(std::string(key) + ": " + std::to_string((long)) version + ": " + std::to_string((long) client_id));
+            std::cout << std::string(key) << ": " << (long) version << ": " << (long) client_id << std::endl;
         }
-        spdlog::debug("========================================");
+        std::cout << "========================================" << std::endl;
         cursor->close(cursor);
     }catch(WiredTigerException e){}
 }
