@@ -308,13 +308,13 @@ void kv_store_wiredtiger::print_store(){
     try {
         error_check(session->open_cursor(session, table_name.c_str(), nullptr, nullptr, &cursor));
 
-        spdlog::debug("================= MY STORE =============");
+//        spdlog::debug("================= MY STORE =============");
         int i;
         while ((i = cursor->next(cursor)) == 0) {
             cursor->get_key(cursor, &key, &version, &client_id);
-            spdlog::debug(std::string(key) + ": " + std::to_string((long)) version + ": " + std::to_string((long) client_id));
+//            spdlog::debug(std::string(key) + ": " + std::to_string((long)) version + ": " + std::to_string((long) client_id));
         }
-        spdlog::debug("========================================");
+//        spdlog::debug("========================================");
         cursor->close(cursor);
     }catch(WiredTigerException e){}
 }

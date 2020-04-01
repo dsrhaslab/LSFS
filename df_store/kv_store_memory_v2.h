@@ -151,13 +151,13 @@ bool kv_store_memory_v2<T>::put(std::string key, long version, long client_id, s
 template <typename T>
 void kv_store_memory_v2<T>::print_store(){
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
-    spdlog::debug("================= MY STORE =============");
+//    spdlog::debug("================= MY STORE =============");
     for(const auto& [key, block_versions]: this->store){
         for(const auto& version_block_pair: block_versions){
-            spdlog::debug(key + ": " + std::to_string(version_block_pair.first.version));
+//            spdlog::debug(key + ": " + std::to_string(version_block_pair.first.version));
         }
     }
-    spdlog::debug("========================================");
+//    spdlog::debug("========================================");
 
 }
 

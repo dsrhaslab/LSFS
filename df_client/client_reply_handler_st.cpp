@@ -24,7 +24,7 @@ client_reply_handler_st::~client_reply_handler_st()
 
 void client_reply_handler_st::operator()() {
     this->running = true;
-    spdlog::debug("Client Reply Handler is Active!!");
+//    spdlog::debug("Client Reply Handler is Active!!");
 
     struct sockaddr_in si_me, si_other;
     socklen_t addr_size = sizeof(si_other);

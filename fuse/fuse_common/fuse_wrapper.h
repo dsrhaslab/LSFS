@@ -5,7 +5,7 @@
 #ifndef P2PFS_FUSE_WRAPPER_H
 #define P2PFS_FUSE_WRAPPER_H
 
-//#define FUSE_PASSTHROUGH_DEBUG
+#define FUSE_PASSTHROUGH_DEBUG
 
 #ifndef FUSE_USE_VERSION
 #define FUSE_USE_VERSION 35
@@ -113,7 +113,7 @@ namespace fuse_wrapper
 
         #ifdef FUSE_PASSTHROUGH_DEBUG
             add_fuse_arg(&args, "-f");
-            add_fuse_arg(&args, "-d");
+//            add_fuse_arg(&args, "-d");
         #endif
 
             return args;
