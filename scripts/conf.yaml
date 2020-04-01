@@ -18,6 +18,7 @@ main_confs:
   anti_entropy_interval_sec: 20
   reply_chance: 1
   smart: true
+  log_level: info
   ######################################
   #               Client               #
   ######################################

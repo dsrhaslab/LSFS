@@ -78,7 +78,7 @@ kv_store_leveldb::~kv_store_leveldb() {
 }
 
 void kv_store_leveldb::close() {
-    std::cout << "closing connection" << std::endl;
+    spdlog::debug("closing connection");
     delete db;
 }
 
@@ -121,7 +121,7 @@ int kv_store_leveldb::init(void* path, long id){
 void kv_store_leveldb::update_partition(int p, int np) {
 
     if(np != this->nr_slices){
-        std::cout << "UPDATE_PARTITION " << std::to_string(np) << std::endl;
+        spdlog::info("UPDATE_PARTITION " + std::to_string(np));
         this->nr_slices = np;
         this->slice = p;
         //clear memory to allow new keys to be stored
@@ -248,7 +248,6 @@ std::unique_ptr<long> kv_store_leveldb::get_client_id_from_key_version(std::stri
         long current_version;
         long current_client_id;
         int res = split_composite_key(comp_key, &current_key, &current_version, &current_client_id);
-        std::cout << "version: " << current_version << " client_id: " << current_client_id << std::endl;
         auto temp_version = kv_store_key_version(current_version, current_client_id);
         if(res == 0 && temp_version >= current_max_version){
             current_max_version = temp_version;
@@ -316,14 +315,16 @@ void kv_store_leveldb::print_store(){
         long client_id;
         int res = split_composite_key(comp_key, &key, &version, &client_id);
         if(res == 0){
-            std::cout << key << ": " << version << "#" << client_id << std::endl;
+            spdlog::debug(key + ": " + std::to_string(version) + "#" + std::to_string(client_id));
         }
     }
 
     if (!it->status().ok())
     {
-        std::cerr << "An error was found during the scan" << std::endl;
-        std::cerr << it->status().ToString() << std::endl;
+        spdlog::error("An error was found during the scan");
+        spdlog::error(it->status().ToString());
+//        std::cerr << "An error was found during the scan" << std::endl;
+//        std::cerr << it->status().ToString() << std::endl;
     }
 }
 
@@ -378,7 +379,6 @@ std::shared_ptr<std::string> kv_store_leveldb::get_latest(std::string key, kv_st
         long current_version;
         long current_client_id;
         int res = split_composite_key(comp_key, &current_key, &current_version, &current_client_id);
-        std::cout << "version: " << current_version << " client_id: " << current_client_id << std::endl;
         auto temp_version = kv_store_key_version(current_version, current_client_id);
         if (res == 0 && temp_version >= current_max_version) {
             current_max_version = temp_version;

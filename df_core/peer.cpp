@@ -17,6 +17,8 @@
 //#include "df_store/kv_store_wiredtiger.h"
 #include "df_store/kv_store_leveldb.h"
 //#include "df_store/kv_store_memory_v2.h"
+#include <spdlog/spdlog.h>
+
 
 // definition
 extern std::string merge_metadata(std::string&, std::string&);
@@ -137,6 +139,7 @@ int main(int argc, char* argv []){
     int anti_entropy_interval = main_confs["anti_entropy_interval_sec"].as<int>();
     float reply_chance = main_confs["reply_chance"].as<float>();
     bool smart = main_confs["smart"].as<bool>();
+    std::string log_level = main_confs["log_level"].as<std::string>();
 
     std::shared_ptr<spdlog::logger> logger;
     try
@@ -149,6 +152,24 @@ int main(int argc, char* argv []){
         std::cout << "Log init failed: " << ex.what() << std::endl;
     }
 
+    {
+        static std::unordered_map<std::string, spdlog::level::level_enum> const levels = {
+                {"trace",    spdlog::level::trace},
+                {"debug",    spdlog::level::debug},
+                {"info",     spdlog::level::info},
+                {"warn",     spdlog::level::warn},
+                {"err",      spdlog::level::err},
+                {"critical", spdlog::level::critical},
+                {"off",      spdlog::level::off}
+        };
+        if (auto it = levels.find(log_level); it != levels.end()) {
+            spdlog::set_level(it->second);
+        } else {
+            spdlog::set_level(spdlog::level::off);
+        }
+    }
+    spdlog::set_pattern( "%v");
+    
     srand (time(NULL));
     int boot_time = rand() % 10 + 2;
 

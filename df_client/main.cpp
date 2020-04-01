@@ -73,8 +73,10 @@ int main(int argc, char **argv) {
 //    }
 //
 //    cli.put("/bigfileset/00000001/00000001",version + 1,"KV ALMOST FINISHED", 18, 1);
-    long version = 0;
-    cli.put("/bigfileset/00000001/00000001",version,"KV ALMOST FINISHED", 18, 1);
+
+//    cli.put("/bigfileset/00000001/00000001",1,"KV ALMOST FINISHED1", 19, 1);
+//    cli.put("/bigfileset/00000001/00000001",0,"KV ALMOST FINISHED0", 19, 1);
+//    cli.put("/bigfileset/00000001/00000001",2,"KV ALMOST FINISHED2", 19, 1);
 ////    cli.put(3,1,"KV ALMOST FINISHED");
 ////    cli.put(4,1,"KV ALMOST FINISHED");
 
@@ -94,34 +96,34 @@ int main(int argc, char **argv) {
 //    std::cout << "PUT DONE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 
 
-    struct stat stbuf;
-    metadata::initialize_metadata(&stbuf, 301, 2, 0, 1000);
-    metadata met(stbuf);
-    met.add_child("/a.txt", false);
-    met.add_child("/b.txt", false);
-
-    met.reset_add_remove_log();
-
-    metadata met1 = met;
-    metadata met2 = met;
-
-    met1.add_child("/a", true);
-
-    met2.add_child("/b", true);
-
-    std::string bytes_met1 = metadata::serialize_to_string(met1);
-    cli.put_with_merge("/",1, bytes_met1.data(), bytes_met1.size(), 1);
+//    struct stat stbuf;
+//    metadata::initialize_metadata(&stbuf, 301, 2, 0, 1000);
+//    metadata met(stbuf);
+//    met.add_child("/a.txt", false);
+//    met.add_child("/b.txt", false);
+//
+//    met.reset_add_remove_log();
+//
+//    metadata met1 = met;
+//    metadata met2 = met;
+//
+//    met1.add_child("/a", true);
+//
+//    met2.add_child("/b", true);
+//
+//    std::string bytes_met1 = metadata::serialize_to_string(met1);
+//    cli.put_with_merge("/",1, bytes_met1.data(), bytes_met1.size(), 1);
 
 //    std::string bytes_met2 = metadata::serialize_to_string(met2);
 //    cli2.put_with_merge("/",1, bytes_met2.data(), bytes_met2.size(), 1);
 
 //    std::string res = merge_metadata(bytes_met1, bytes_met2);
 
-    std::shared_ptr<std::string> data_res = cli.get("/",1);
-
-
-    metadata met3 = metadata::deserialize_from_string(*data_res);
-    std::cout << met3.stbuf.st_nlink << std::endl;
+//    std::shared_ptr<std::string> data_res = cli.get("/",1);
+//
+//
+//    metadata met3 = metadata::deserialize_from_string(*data_res);
+//    std::cout << met3.stbuf.st_nlink << std::endl;
 
     cli.stop();
 

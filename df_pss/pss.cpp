@@ -20,6 +20,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <memory>
+#include <spdlog/spdlog.h>
 
 
 using json = nlohmann::json;
@@ -72,7 +73,8 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, lon
             }
 
         }catch(const char* e){
-            std::cout << e << std::endl;
+            spdlog::error(e);
+//            std::cout << e << std::endl;
         }catch(...){}
     }
 
@@ -193,8 +195,15 @@ void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, pr
         //socket synchronization
         std::scoped_lock<std::recursive_mutex> lk (this->socket_send_mutex);
         int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-        if(res == -1){printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));}
-     }catch(...){std::cout <<"=============================== NÂO consegui enviar =================" << std::endl;}
+        if(res == -1){
+            spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
+
+//                printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
+        }
+    }catch(...){
+        spdlog::error("=============================== Não consegui enviar =================");
+//            std::cout <<"=============================== Não consegui enviar =================" << std::endl;
+    }
 }
 
 void pss::operator()() {
@@ -237,12 +246,15 @@ void pss::operator()() {
 }
 
 void pss::print_view() {
-    std::cout << "====== My View[" + std::to_string(this->port) + "] ====" << std::endl;
+//    std::cout << "====== My View[" + std::to_string(this->port) + "] ====" << std::endl;
+    spdlog::debug("====== My View[" + std::to_string(this->port) + "] ====" );
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(auto const& [key, peer] : this->view){
-        std::cout << peer.ip << "(" << peer.port << ") : " << peer.age << std::endl;
+        spdlog::debug(peer.ip + "(" + std::to_string(peer.port) + ") : " + std::to_string(peer.age) );
+//        std::cout << peer.ip << "(" << peer.port << ") : " << peer.age << std::endl;
     }
-    std::cout << "==========================" << std::endl;
+    spdlog::debug("==========================");
+//    std::cout << "==========================" << std::endl;
 }
 
 int pss::get_my_group() {
@@ -452,8 +464,10 @@ void pss::bootstrapper_termination_alerting() {
         pss_termination_msg.type = pss_message::Type::Termination;
         connection.send_pss_msg(pss_termination_msg);
     }catch(const char* e){
-        std::cout << "Erro ao alertar o df_bootstrapper =========================================================================================================================";
-        LOG(e);
+        spdlog::error(e);
+        spdlog::error("Erro ao alertar o df_bootstrapper =========================================================================================================================");
+
+//        std::cout << "Erro ao alertar o df_bootstrapper =========================================================================================================================";
     }
 }
 
