@@ -30,7 +30,7 @@ namespace FileAccess{
 class lsfs_state {
 
 public:
-    static const int max_working_directories_cache = 5;
+    static const int max_working_directories_cache = 16;
 
 public:
     std::mutex version_tracker_mutex;

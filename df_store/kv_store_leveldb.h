@@ -248,11 +248,23 @@ std::unique_ptr<long> kv_store_leveldb::get_client_id_from_key_version(std::stri
         long current_version;
         long current_client_id;
         int res = split_composite_key(comp_key, &current_key, &current_version, &current_client_id);
-        std::cout << "version: " << current_version << " client_id: " << current_client_id << std::endl;
-        auto temp_version = kv_store_key_version(current_version, current_client_id);
-        if(res == 0 && temp_version >= current_max_version){
-            current_max_version = temp_version;
-            exists = true;
+        //std::cout << "version: " << current_version << " client_id: " << current_client_id << std::endl;
+        //auto temp_version = kv_store_key_version(current_version, current_client_id);
+        //if(res == 0 && temp_version >= current_max_version){
+        //    current_max_version = temp_version;
+        //    exists = true;
+        //}
+        
+        if(res == 0){
+            long a = 23456789;
+            long b = 0;
+            std::cout << "version" << a << " client_id:" << b << std::endl; 
+            //std::cout << "version: " << current_version << " client_id: " << current_client_id << std::endl;
+            auto temp_version = kv_store_key_version(current_version, current_client_id);
+            if(temp_version >= current_max_version){
+                current_max_version = temp_version;
+                exists = true;
+            }
         }
     }
 
@@ -289,7 +301,7 @@ bool kv_store_leveldb::put(std::string key, long version, long client_id, std::s
                 if(max_client_id == nullptr){
                     return false;
                 }else{
-                    return *max_client_id == client_id;
+                    return  *max_client_id == client_id;
                 }
             }catch(LevelDBException& e){
                 this->unseen_it(key, version, client_id);

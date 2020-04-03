@@ -16,7 +16,7 @@
 #include <stdlib.h>
 //#include "df_store/kv_store_wiredtiger.h"
 #include "df_store/kv_store_leveldb.h"
-//#include "df_store/kv_store_memory_v2.h"
+#include "df_store/kv_store_memory_v2.h"
 
 // definition
 extern std::string merge_metadata(std::string&, std::string&);
@@ -25,9 +25,9 @@ std::shared_ptr<peer> g_peer_impl;
 
 peer::peer(long id, std::string ip, int pss_port, int data_port, double position, std::shared_ptr<spdlog::logger> logger):
     id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position), logger(logger),
-    store(std::make_shared<kv_store_leveldb>(merge_metadata)),
+//    store(std::make_shared<kv_store_leveldb>(merge_metadata)),
 //    store(std::make_shared<kv_store_wiredtiger>(merge_metadata)),
-//    store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata)),
+    store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata)),
 //    store(std::make_shared<kv_store_memory<std::string>>(merge_metadata)),
     group_c(ip, pss_port, id, position, 5, 10, 40, true, 15, this->store, logger),
     cyclon(peer::boot_ip, peer::boot_port, ip, pss_port, id, position,2,8,10,7, &(this->group_c)),

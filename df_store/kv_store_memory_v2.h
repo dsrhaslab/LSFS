@@ -17,6 +17,7 @@
 #include <iostream>
 #include <cstring>
 #include <functional>
+#include <random>
 
 template <typename T>
 class kv_store_memory_v2: public kv_store<T>{
@@ -24,6 +25,8 @@ private:
     std::unordered_map<T, std::map<kv_store_key_version, std::shared_ptr<std::string>>> store;
     std::unordered_map<T, bool> store_merge_log;
     std::recursive_mutex store_mutex;
+
+    inline const static int anti_entropy_max_keys = 20;
 
 private:
     std::unique_ptr<long> get_client_id_from_key_version(std::string key, long version);
@@ -43,6 +46,7 @@ public:
     std::shared_ptr<std::string> get_latest(std::string key, kv_store_key_version* kv_version) override;
     std::unique_ptr<long> get_latest_version(std::string key) override;
     std::shared_ptr<std::string> get_anti_entropy(kv_store_key<std::string> key, bool* is_merge) override;
+    void remove_from_set_existent_keys(std::unordered_set<kv_store_key<std::string>>& keys) override;
 };
 
 template <typename T>
@@ -82,13 +86,62 @@ void kv_store_memory_v2<T>::update_partition(int p, int np) {
 template <typename T>
 std::unordered_set<kv_store_key<T>> kv_store_memory_v2<T>::get_keys() {
     std::unordered_set<kv_store_key<T>> keys;
+
     std::scoped_lock<std::recursive_mutex> lk(this->store_mutex);
-    for(const auto& [key, block_versions]: this->store){
-        for(const auto& version_block_pair: block_versions){
-            keys.insert({key, version_block_pair.first});
+    long key_size = this->store.size();
+    std::random_device rd;
+    std::mt19937 eng(rd());
+    std::uniform_int_distribution<long> distr(0, key_size);
+    long key_start = distr(eng);
+
+    auto it = this->store.begin();
+    for(long i = 0; i < key_start; ++i, ++it){}
+    if(it != this->store.end()){
+        std::uniform_int_distribution<long> distr2(0, it->second.size());
+        long inner_key_start = distr2(eng);
+        auto it_inner = it->second.begin();
+        for(long j = 0; j < inner_key_start; ++j, ++it_inner){}
+        while(it_inner != it->second.end() && keys.size() < anti_entropy_max_keys){
+            keys.insert({it->first, it_inner->first});
+            ++it_inner;
         }
     }
+
+    if(keys.size() < anti_entropy_max_keys && it != this->store.end()){
+        ++it;
+        while(it != this->store.end() && keys.size() < anti_entropy_max_keys){
+            auto it_inner = it->second.begin();
+            while(it_inner != it->second.end() && keys.size() < anti_entropy_max_keys){
+                keys.insert({it->first, it_inner->first});
+                ++it_inner;
+            }
+            ++it;
+        }
+    }
+
+    //TODO Aqui ainda podia tentar completar com as chaves que passei ao inicio
+
     return std::move(keys);
+}
+
+template <typename T>
+void kv_store_memory_v2<T>::remove_from_set_existent_keys(std::unordered_set<kv_store_key<std::string>>& keys){
+    for (auto it_keys = keys.begin(); it_keys != keys.end();) {
+        auto it = this->store.find(it_keys->key);
+        if(it != this->store.end()){
+            auto it_inner = it->second.find(it_keys->key_version);
+            if(it_inner != it->second.end()){
+                it_keys = keys.erase(it_keys);
+            }else if(this->get_slice_for_key(it_keys->key) != this->slice){
+                // se a chave não pertence a esta store
+                it_keys = keys.erase(it_keys);
+            }else{
+                ++it_keys;
+            }
+        }else{
+            ++it_keys;
+        }
+    }
 }
 
 template <typename T>
@@ -99,6 +152,9 @@ std::unique_ptr<long> kv_store_memory_v2<T>::get_client_id_from_key_version(std:
     const auto& it = this->store.find(key);
     bool exists = false;
     if(it != this->store.end()){
+        long a = 123456789;
+        long b = 1;
+        std::cout << "version: " << a << " client_id: " << b << std::endl;
         for(const auto& version_block_pair: it->second){
             if(version_block_pair.first.version == version && version_block_pair.first >= max_version){
                 max_version = version_block_pair.first;
