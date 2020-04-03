@@ -28,6 +28,7 @@ private:
     int data_port;
     std::string ip;
     double position;
+    bool view_logger_enabled;
     std::shared_ptr<kv_store<std::string>> store;
     pss cyclon;                     //thread functor que envia msgs
     group_construction group_c;
@@ -59,7 +60,7 @@ private:
 
 public:
     peer(long id, std::string ip, int pss_port, int data_port, double position, std::shared_ptr<spdlog::logger> logger);
-    peer(long id, std::string ip, int pss_port, int data_port, double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size,
+    peer(long id, std::string ip, int pss_port, int data_port, double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
             int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval, float reply_chance, bool smart, std::shared_ptr<spdlog::logger> logger);
     void print_view();
     void start();

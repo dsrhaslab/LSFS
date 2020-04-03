@@ -24,7 +24,7 @@ extern std::string merge_metadata(std::string&, std::string&);
 std::shared_ptr<peer> g_peer_impl;
 
 peer::peer(long id, std::string ip, int pss_port, int data_port, double position, std::shared_ptr<spdlog::logger> logger):
-    id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position), logger(logger),
+    id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position), logger(logger), view_logger_enabled(false),
 //    store(std::make_shared<kv_store_leveldb>(merge_metadata)),
 //    store(std::make_shared<kv_store_wiredtiger>(merge_metadata)),
     store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata)),
@@ -43,20 +43,20 @@ peer::peer(long id, std::string ip, int pss_port, int data_port, double position
     }
 }
 
-peer::peer(long id, std::string ip, int pss_port, int data_port,double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size,
+peer::peer(long id, std::string ip, int pss_port, int data_port,double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
         int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval, float reply_chance, bool smart, std::shared_ptr<spdlog::logger> logger)
     :   id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
-        local_interval(local_interval), reply_chance(reply_chance),
+        view_logger_enabled(view_logger_enabled), local_interval(local_interval), reply_chance(reply_chance),
         store(std::make_shared<kv_store_leveldb>(merge_metadata)),
 //        store(std::make_shared<kv_store_wiredtiger>(merge_metadata)),
 //        store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata)),
 //        store(std::make_shared<kv_store_memory<std::string>>(merge_metadata)),
-        data_handler(ip, data_port, id, reply_chance, &(this->cyclon), this->store, smart),
-        anti_ent(ip, data_port, id, &(this->cyclon), this->store, anti_entropy_interval),
         group_c(ip, pss_port, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),
         cyclon(peer::boot_ip, peer::boot_port, ip, pss_port, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
         listener("127.0.0.1", pss_port, &(this->cyclon)),
-        v_logger(pss_port, &(this->cyclon), logging_interval, logging_dir)
+        v_logger(pss_port, &(this->cyclon), logging_interval, logging_dir),
+        data_handler(ip, data_port, id, reply_chance, &(this->cyclon), this->store, smart),
+        anti_ent(ip, data_port, id, &(this->cyclon), this->store, anti_entropy_interval)
 {
     std::string database_folder = database_dir + this->store->db_name() + "/";
     int res = this->store->init((void*) database_folder.c_str(), id);
@@ -72,13 +72,17 @@ void peer::print_view() {
 void peer::start() {
     this->pss_th = std::thread (std::ref(this->cyclon));
     this->pss_listener_th = std::thread(std::ref(this->listener));
-    this->v_logger_th = std::thread(std::ref(this->v_logger));
+    if(view_logger_enabled) {
+        this->v_logger_th = std::thread(std::ref(this->v_logger));
+    }
     this->data_handler_th = std::thread(std::ref(this->data_handler));
     this->anti_ent_th = std::thread(std::ref(this->anti_ent));
 }
 
 void peer::stop(){
-    this->v_logger.stop_thread();
+    if(view_logger_enabled){
+        this->v_logger.stop_thread();
+    }
     this->cyclon.stop_thread();
     this->listener.stop_thread();
     this->data_handler.stop_thread();
@@ -86,7 +90,9 @@ void peer::stop(){
     this->store->close();
     this->pss_listener_th.join();
     this->pss_th.join();
-    this->v_logger_th.join();
+    if(view_logger_enabled) {
+        this->v_logger_th.join();
+    }
     this->data_handler_th.join();
     this->anti_ent_th.join();
 }
@@ -126,6 +132,7 @@ int main(int argc, char* argv []){
     int view_size = main_confs["view_size"].as<int>();
     int gossip_size = main_confs["gossip_size"].as<int>();
     int sleep_interval = main_confs["message_passing_interval_sec"].as<int>();
+    bool view_logger_enabled = main_confs["view_logger_enabled"].as<bool>();
     int logging_interval = main_confs["log_interval_sec"].as<int>();
     std::string logging_dir = main_confs["logging_dir"].as<std::string>();
     std::string database_dir = main_confs["database_base_path"].as<std::string>();
@@ -171,7 +178,7 @@ int main(int argc, char* argv []){
     srand (time(NULL));
     int boot_time = rand() % 10 + 2;
 
-    g_peer_impl = std::make_shared<peer>(id,"127.0.0.1",pss_port,data_port,pos,boot_time,view_size,sleep_interval,gossip_size, logging_interval, anti_entropy_interval, logging_dir,
+    g_peer_impl = std::make_shared<peer>(id,"127.0.0.1",pss_port,data_port,pos,boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
             database_dir, rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, logger);
     g_peer_impl->start();
     g_peer_impl->join();
