@@ -74,6 +74,7 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
 
         std::string buf;
         msg.SerializeToString(&buf);
+        std::cout << "BUFFER SIZE: " << buf.size() << std::endl;
         spdlog::debug("Client sent msg with size of buffer: " + std::to_string(buf.size()));
         int res = sendto(this->sender_socket, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
@@ -155,7 +156,9 @@ std::set<long> client::put(std::string key, long version, const char *data, size
        if(status == 0){
            spdlog::debug("PUT (TO " + std::to_string(peer.id) + ") " + key + " : " + std::to_string(version) + " ==============================>");
            try{
-               res = this->handler->wait_for_put(comp_key, wait_for);
+               while(res == nullptr){
+                   res = this->handler->wait_for_put(comp_key, wait_for);
+               }
            }catch(TimeoutException& e){
                curr_timeouts++;
            }

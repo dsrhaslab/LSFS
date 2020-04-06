@@ -113,7 +113,7 @@ namespace fuse_wrapper
 
         #ifdef FUSE_PASSTHROUGH_DEBUG
             add_fuse_arg(&args, "-f");
-            add_fuse_arg(&args, "-d");
+            //add_fuse_arg(&args, "-d");
         #endif
 
             return args;
