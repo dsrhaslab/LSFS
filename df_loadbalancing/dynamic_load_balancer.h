@@ -11,6 +11,7 @@
 #include "load_balancer.h"
 #include "df_core/peer_data.h"
 #include "pss_message.pb.h"
+#include <random>
 
 class dynamic_load_balancer: public load_balancer {
 private:
@@ -21,14 +22,15 @@ private:
     int sender_socket;
     std::string ip;
     int port;
+    std::mt19937 random_eng;
 
 public:
     dynamic_load_balancer(std::string boot_ip, int boot_port, std::string ip, int port, long sleep_interval);
-    peer_data get_random_peer() override;
-    void process_msg(proto::pss_message& msg);
-    void operator()();
+    peer_data get_peer(const std::string& key) override;
+    void process_msg(proto::pss_message& msg) override;
+    void operator()() override;
 
-    void stop();
+    void stop() override;
 
 private:
     void send_msg(peer_data& target_peer, proto::pss_message& msg);

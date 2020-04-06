@@ -29,7 +29,7 @@ private:
     int nr_gets_version_required;
     int max_timeouts;
 
-    std::shared_ptr<dynamic_load_balancer> lb;
+    std::shared_ptr<load_balancer> lb;
     std::thread lb_th;
 
     std::shared_ptr<load_balancer_listener> lb_listener;

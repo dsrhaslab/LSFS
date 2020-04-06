@@ -143,7 +143,7 @@ add_executable( client_exe
         fuse/fuse_lsfs/metadata.cpp
         fuse/fuse_lsfs/util.h
         fuse/fuse_lsfs/util.cpp
-        )
+        df_loadbalancing/smart_load_balancer.cpp df_loadbalancing/smart_load_balancer.h)
 
 target_link_libraries(client_exe PRIVATE CapnProto::capnp)
 target_link_libraries(client_exe PRIVATE nlohmann_json::nlohmann_json)
@@ -202,7 +202,7 @@ add_executable( lsfs_exe
         fuse/fuse_lsfs/metadata.cpp
         df_client/client_reply_handler_mt.cpp
         df_client/client_reply_handler_mt.h
-        exceptions/timeout_exception.h fuse/fuse_common/fuse_utils.cpp fuse/fuse_common/fuse_utils.h fuse/fuse_lsfs/lsfs_state.cpp fuse/fuse_lsfs/lsfs_state.h df_client/client_reply_handler.cpp df_client/client_reply_handler.h fuse/fuse_lsfs/storage_specific.cpp)
+        exceptions/timeout_exception.h fuse/fuse_common/fuse_utils.cpp fuse/fuse_common/fuse_utils.h fuse/fuse_lsfs/lsfs_state.cpp fuse/fuse_lsfs/lsfs_state.h df_client/client_reply_handler.cpp df_client/client_reply_handler.h fuse/fuse_lsfs/storage_specific.cpp df_loadbalancing/smart_load_balancer.cpp df_loadbalancing/smart_load_balancer.h)
 
 target_link_libraries(lsfs_exe PRIVATE CapnProto::capnp)
 target_link_libraries(lsfs_exe PRIVATE nlohmann_json::nlohmann_json)

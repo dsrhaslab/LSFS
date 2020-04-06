@@ -14,7 +14,9 @@
 dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, int boot_port, std::string ip, int port, long sleep_interval):
     ip(ip), port(port), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {
-    srand (static_cast <unsigned> (time(nullptr))); //random seed
+
+    std::random_device rd;     // only used once to initialise (seed) engine
+    this->random_eng = std::mt19937(rd());
 
     bool recovered = false;
     std::shared_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
@@ -56,13 +58,15 @@ dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, int boot_port,
     }
 }
 
-peer_data dynamic_load_balancer::get_random_peer() {
+peer_data dynamic_load_balancer::get_peer(const std::string& key = "") {
 
     std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
     int view_size = this->view.size();
     if(view_size == 0) throw "Empty View Received";
-    int random_int = rand()%(view_size);
-    return this->view.at(random_int);;
+
+    std::uniform_int_distribution<int> uni(0, view_size - 1); // guaranteed unbiased
+    int random_int = uni(random_eng);
+    return this->view.at(random_int);
 }
 
 void dynamic_load_balancer::process_msg(proto::pss_message &pss_msg) {
@@ -118,7 +122,7 @@ void dynamic_load_balancer::operator()() {
         std::this_thread::sleep_for (std::chrono::seconds(this->sleep_interval));
         if(this->running){
             try{
-                peer_data target_peer = this->get_random_peer(); //pair (port, age)
+                peer_data target_peer = this->get_peer(); //pair (port, age)
 
                 proto::pss_message pss_message;
                 pss_message.set_sender_ip(this->ip);

@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <df_loadbalancing/smart_load_balancer.h>
 #include "yaml-cpp/yaml.h"
 #include "df_core/peer.h"
 #include "client_reply_handler_mt.h"
@@ -28,7 +29,7 @@ client::client(std::string ip, long id, int port, int lb_port, const char* conf_
     long wait_timeout = main_confs["client_wait_timeout"].as<long>();
     long lb_interval = main_confs["lb_interval"].as<long>();
 
-    this->lb = std::make_shared<dynamic_load_balancer>(peer::boot_ip, peer::boot_port, ip, lb_port, lb_interval);
+    this->lb = std::make_shared<smart_load_balancer>(peer::boot_ip, peer::boot_port, ip, lb_port, lb_interval);
     this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip, lb_port);
 
     this->lb_th = std::thread (std::ref(*this->lb));
@@ -150,7 +151,7 @@ std::set<long> client::put(std::string key, long version, const char *data, size
    std::unique_ptr<std::set<long>> res = nullptr;
    int curr_timeouts = 0;
    while(res == nullptr && curr_timeouts < this->max_timeouts){
-       peer_data peer = this->lb->get_random_peer(); //throw exception
+       peer_data peer = this->lb->get_peer(key); //throw exception
        int status = this->send_put(peer, key, version, data, size);
        if(status == 0){
            spdlog::debug("PUT (TO " + std::to_string(peer.id) + ") " + key + " : " + std::to_string(version) + " ==============================>");
@@ -175,7 +176,7 @@ std::set<long> client::put_with_merge(std::string key, long version, const char 
     std::unique_ptr<std::set<long>> res = nullptr;
     int curr_timeouts = 0;
     while(res == nullptr && curr_timeouts < this->max_timeouts){
-        peer_data peer = this->lb->get_random_peer(); //throw exception
+        peer_data peer = this->lb->get_peer(key); //throw exception
         int status = this->send_put_with_merge(peer, key, version, data, size);
         if(status == 0){
             spdlog::debug("PUT (TO " + std::to_string(peer.id) + ") " + key + " : " + std::to_string(version) + " ==============================>");
@@ -202,7 +203,7 @@ std::shared_ptr<std::string> client::get(std::string key, int wait_for, long* ve
 
     int curr_timeouts = 0;
     while(res == nullptr && curr_timeouts < this->max_timeouts){
-        peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
+        peer_data peer = this->lb->get_peer(key); //throw exception (empty view)
         int status = this->send_get(peer, key, version_ptr, req_id_str);
         if (status == 0) {
             spdlog::debug("GET " + std::to_string(req_id)  + " TO (" + std::to_string(peer.id) + ") " + key + (version_ptr == nullptr ? ": ?" : ": " + std::to_string(*version_ptr)) + " ==================================>");
@@ -229,7 +230,7 @@ long client::get_latest_version(std::string key, int wait_for) {
 
     int curr_timeouts = 0;
     while(res == nullptr && curr_timeouts < this->max_timeouts){
-        peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
+        peer_data peer = this->lb->get_peer(key); //throw exception (empty view)
         int status = this->send_get_latest_version(peer, key, req_id_str);
         if (status == 0) {
             spdlog::debug("GET Version " + std::to_string(req_id) + " TO (" + std::to_string(peer.id) + ") " + " Key:" + key + " ==================================>");
