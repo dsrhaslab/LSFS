@@ -45,12 +45,14 @@ void load_balancer_listener::stop() {
 }
 
 void load_balancer_listener::operator()(){
+    this->running = true;
     char buf [1024];
     struct sockaddr_in si_other;
     socklen_t addr_size = sizeof(si_other);
 
     while(this->running){
         int bytes_rcv = recvfrom(this->socket_rcv, buf, 1024, 0, (struct sockaddr*)& si_other, &addr_size);
+
         if(this->running){
             try {
                 proto::pss_message pss_message;
