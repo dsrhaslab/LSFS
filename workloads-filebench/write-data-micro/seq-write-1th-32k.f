@@ -7,7 +7,7 @@
 
 # ---------------------------------------------------------------------------- #
 
-define fileset name="fileset1", path="<INSERT_DIR_HERE>", entries=1, dirwidth=1, dirgamma=0, filesize=64g
+define fileset name="fileset1", path="/home/gsd/P2P-Filesystem/Teste/InnerFolder", entries=1, dirwidth=1, dirgamma=0, filesize=64g
 
 define process name="process1", instances=1
 {

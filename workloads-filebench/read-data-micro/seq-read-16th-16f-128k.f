@@ -7,7 +7,7 @@
 
 # ---------------------------------------------------------------------------- #
 
-define fileset name="fileset1", path="<INSERT_DIR_HERE>", entries=16, dirwidth=16, dirgamma=0, filesize=4g, prealloc
+define fileset name="fileset1", path="/home/gsd/P2P-Filesystem/Teste/InnerFolder", entries=16, dirwidth=16, dirgamma=0, prealloc, filesize=31250k, reuse
 
 define process name="process1", instances=1
 {
