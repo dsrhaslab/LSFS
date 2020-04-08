@@ -15,7 +15,11 @@ private:
     std::recursive_mutex view_mutex;
 
     std::unordered_map<int, peer_data> local_view; //port -> age
+    std::recursive_mutex local_view_mutex;
     inline const static int nr_saved_peers_by_group = 2;
+    bool local;
+    int local_interval;
+    long cycle;
     double position;
     std::atomic<int> nr_groups;
     std::atomic<int> my_group;
@@ -33,6 +37,7 @@ private:
 
 private:
     peer_data get_random_peer();
+    peer_data get_random_local_peer();
     void receive_message(std::vector<peer_data> received);
     int group(double peer_pos);
     void merge_groups_from_view();
@@ -41,6 +46,7 @@ private:
 public:
     smart_load_balancer(std::string boot_ip, int boot_port, std::string ip, int port, long sleep_interval);
     peer_data get_peer(const std::string& key) override;
+    void receive_local_message(std::vector<peer_data> received);
     void process_msg(proto::pss_message& msg) override;
     void operator()() override;
 

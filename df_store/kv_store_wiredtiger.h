@@ -45,7 +45,7 @@ private:
     std::unique_ptr<long> get_client_id_from_key_version(std::string key, long version);
 
 public:
-    explicit kv_store_wiredtiger(std::string (*f)(std::string&, std::string&));
+    kv_store_wiredtiger(std::string (*f)(std::string&, std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at);
     ~kv_store_wiredtiger();
     int init(void*, long id) override ;
     void close() override ;
@@ -62,8 +62,11 @@ public:
     void print_store() override;
 };
 
-kv_store_wiredtiger::kv_store_wiredtiger(std::string (*f)(std::string&, std::string&)) {
+kv_store_wiredtiger::kv_store_wiredtiger(std::string (*f)(std::string&, std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at) {
     this->merge_function = f;
+    this->seen_log_garbage_at = seen_log_garbage_at;
+    this->request_log_garbage_at = request_log_garbage_at;
+    this->anti_entropy_log_garbage_at = anti_entropy_log_garbage_at;
 }
 
 kv_store_wiredtiger::~kv_store_wiredtiger() {

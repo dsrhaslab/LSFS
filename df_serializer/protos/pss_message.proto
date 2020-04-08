@@ -16,6 +16,7 @@ message pss_message {
     RESPONSE = 1;
     LOCAL = 2;
     LOADBALANCE = 3;
+    LOADBALANCE_LOCAL = 4;
   }
 
   required Type type = 1;

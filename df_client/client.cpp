@@ -29,7 +29,7 @@ client::client(std::string ip, long id, int port, int lb_port, const char* conf_
     long wait_timeout = main_confs["client_wait_timeout"].as<long>();
     long lb_interval = main_confs["lb_interval"].as<long>();
 
-    this->lb = std::make_shared<smart_load_balancer>(peer::boot_ip, peer::boot_port, ip, lb_port, lb_interval);
+    this->lb = std::make_shared<dynamic_load_balancer>(peer::boot_ip, peer::boot_port, ip, lb_port, lb_interval);
     this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip, lb_port);
 
     this->lb_th = std::thread (std::ref(*this->lb));
@@ -157,9 +157,9 @@ std::set<long> client::put(std::string key, long version, const char *data, size
        if(status == 0){
            spdlog::debug("PUT (TO " + std::to_string(peer.id) + ") " + key + " : " + std::to_string(version) + " ==============================>");
            try{
-               while(res == nullptr){
-                   res = this->handler->wait_for_put(comp_key, wait_for);
-               }
+               //while(res == nullptr){
+               res = this->handler->wait_for_put(comp_key, wait_for);
+               //}
            }catch(TimeoutException& e){
                curr_timeouts++;
            }

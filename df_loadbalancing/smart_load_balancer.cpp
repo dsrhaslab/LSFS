@@ -30,11 +30,14 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, int boot_port, std
     this->replication_factor_min = main_confs["rep_min"].as<int>();
     this->max_age = main_confs["max_age"].as<int>();
     this->first_message = true;
+    this->local = main_confs["local_message"].as<bool>();
+    this->local_interval = 5;//main_confs["local_interval_sec"].as<int>();
 
     std::uniform_real_distribution<double> dist(0, 1);
     this->position = dist(random_eng);
     this->nr_groups = 1;
     this->my_group = 1;
+    this->cycle = 1;
 
 
     while(!recovered){
@@ -139,6 +142,8 @@ void smart_load_balancer::split_groups_from_view() {
 
 void smart_load_balancer::receive_message(std::vector<peer_data> received) {
 
+    std::scoped_lock<std::recursive_mutex> lk_local (this->local_view_mutex);
+
     //When a peer boots it must keep up with peers
     int nr_groups_from_peers = 1;
 
@@ -192,6 +197,7 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
 
     if(this->first_message){
         this->nr_groups = nr_groups_from_peers;
+        std::cout << "Nr_groups: " << this->nr_groups << std::endl;
         this->first_message = false;
         this->view.clear();
         for (int i = 0; i < nr_groups_from_peers; i++){
@@ -211,11 +217,13 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
         if(estimation < this->replication_factor_min){
             if(this->nr_groups > 1){
                 this->nr_groups = this->nr_groups/2;
+                std::cout << "Estimation: " << estimation << "Nr_groups: " << this->nr_groups << std::endl;
                 this->merge_groups_from_view();
             }
         }
         if(estimation > this->replication_factor_max){
             this->nr_groups = this->nr_groups*2;
+            std::cout << "Estimation: " << estimation << "Nr_groups: " << this->nr_groups << std::endl;
             this->split_groups_from_view();
         }
     }
@@ -275,6 +283,19 @@ peer_data smart_load_balancer::get_random_peer() {
     }
 }
 
+peer_data smart_load_balancer::get_random_local_peer() {
+    std::scoped_lock<std::recursive_mutex> lk (this->local_view_mutex);
+    int local_view_size = this->local_view.size();
+    if(local_view_size == 0) throw "EMPTY VIEW EXCEPTION";
+    std::uniform_int_distribution<int> uni(0, local_view_size - 1); // guaranteed unbiased
+    int peer_idx = uni(random_eng);
+    auto it = this->local_view.begin();
+    for(int i = 0; i < peer_idx; i++){
+        ++it;
+    }
+    return it->second;
+}
+
 peer_data smart_load_balancer::get_peer(const std::string& key) {
     int key_group__nr;
     if(this->nr_groups == 1) key_group__nr = 1;
@@ -312,6 +333,23 @@ peer_data smart_load_balancer::get_peer(const std::string& key) {
     }
 }
 
+void smart_load_balancer::receive_local_message(std::vector<peer_data> received) {
+    std::scoped_lock<std::recursive_mutex> lk (this->local_view_mutex);
+    for(peer_data& peer: received){
+        if(group(peer.pos) == this->my_group){
+            auto current_it = this->local_view.find(peer.port);
+            if(current_it != this->local_view.end()){ //o elemento existe no mapa
+                int current_age = current_it->second.age;
+                if(current_age > peer.age)
+                    current_it->second.age = peer.age;
+
+            }else{
+                this->local_view.insert(std::make_pair(peer.port, peer));
+            }
+        }
+    }
+}
+
 void smart_load_balancer::process_msg(proto::pss_message &pss_msg) {
     std::vector<peer_data> recv_view;
     for(auto& peer: pss_msg.view()){
@@ -326,7 +364,11 @@ void smart_load_balancer::process_msg(proto::pss_message &pss_msg) {
         recv_view.push_back(peer_data);
     }
 
-    this->receive_message(std::move(recv_view));
+    if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_LOCAL){
+        this->receive_local_message(std::move(recv_view));
+    }else{
+        this->receive_message(std::move(recv_view));
+    }
 }
 
 void smart_load_balancer::operator()() {
@@ -334,15 +376,28 @@ void smart_load_balancer::operator()() {
 
     while(this->running){
         std::this_thread::sleep_for (std::chrono::seconds(this->sleep_interval));
+        this->cycle++;
         if(this->running){
             try{
-                peer_data target_peer = this->get_random_peer(); //pair (port, age)
+                if(this->local && (this->cycle % this->local_interval == 0)){
+                    //send local message
+                    peer_data target_peer = this->get_random_local_peer(); //pair (port, age)
 
-                proto::pss_message pss_message;
-                pss_message.set_sender_ip(this->ip);
-                pss_message.set_sender_port(this->port);
-                pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE);
-                this->send_msg(target_peer, pss_message);
+                    proto::pss_message pss_message;
+                    pss_message.set_sender_ip(this->ip);
+                    pss_message.set_sender_port(this->port);
+                    pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE_LOCAL);
+                    this->send_msg(target_peer, pss_message);
+                }else{
+                    //send loadbalance message
+                    peer_data target_peer = this->get_random_peer(); //pair (port, age)
+
+                    proto::pss_message pss_message;
+                    pss_message.set_sender_ip(this->ip);
+                    pss_message.set_sender_port(this->port);
+                    pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE);
+                    this->send_msg(target_peer, pss_message);
+                }
             }catch(const char* msg){
                 // empty view -> nothing to do
             }
@@ -381,3 +436,5 @@ void smart_load_balancer::send_msg(peer_data &target_peer, proto::pss_message &m
 //            std::cout <<"=============================== Não consegui enviar =================" << std::endl;
     }
 }
+
+

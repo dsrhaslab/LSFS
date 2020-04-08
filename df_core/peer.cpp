@@ -25,10 +25,10 @@ std::shared_ptr<peer> g_peer_impl;
 
 peer::peer(long id, std::string ip, int pss_port, int data_port, double position, std::shared_ptr<spdlog::logger> logger):
     id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position), logger(logger), view_logger_enabled(false),
-//    store(std::make_shared<kv_store_leveldb>(merge_metadata)),
-//    store(std::make_shared<kv_store_wiredtiger>(merge_metadata)),
-    store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata)),
-//    store(std::make_shared<kv_store_memory<std::string>>(merge_metadata)),
+//    store(std::make_shared<kv_store_leveldb>(merge_metadata, 100, 100, 100)),
+//    store(std::make_shared<kv_store_wiredtiger>(merge_metadata, 100, 100, 100)),
+    store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata, 100, 100, 100)),
+//    store(std::make_shared<kv_store_memory<std::string>>(merge_metadata, 100, 100, 100)),
     group_c(ip, pss_port, id, position, 5, 10, 40, true, 15, this->store, logger),
     cyclon(peer::boot_ip, peer::boot_port, ip, pss_port, id, position,2,8,10,7, &(this->group_c)),
     listener("127.0.0.1", this->pss_port, &(this->cyclon) ),
@@ -44,13 +44,14 @@ peer::peer(long id, std::string ip, int pss_port, int data_port, double position
 }
 
 peer::peer(long id, std::string ip, int pss_port, int data_port,double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
-        int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval, float reply_chance, bool smart, std::shared_ptr<spdlog::logger> logger)
+        int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval,
+        float reply_chance, bool smart, std::shared_ptr<spdlog::logger> logger, long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at)
     :   id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
         view_logger_enabled(view_logger_enabled), local_interval(local_interval), reply_chance(reply_chance),
-        store(std::make_shared<kv_store_leveldb>(merge_metadata)),
-//        store(std::make_shared<kv_store_wiredtiger>(merge_metadata)),
-//        store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata)),
-//        store(std::make_shared<kv_store_memory<std::string>>(merge_metadata)),
+        store(std::make_shared<kv_store_leveldb>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
+//        store(std::make_shared<kv_store_wiredtiger>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
+//        store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
+//        store(std::make_shared<kv_store_memory<std::string>>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
         group_c(ip, pss_port, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),
         cyclon(peer::boot_ip, peer::boot_port, ip, pss_port, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
         listener("127.0.0.1", pss_port, &(this->cyclon)),
@@ -145,6 +146,9 @@ int main(int argc, char* argv []){
     float reply_chance = main_confs["reply_chance"].as<float>();
     bool smart = main_confs["smart"].as<bool>();
     std::string log_level = main_confs["log_level"].as<std::string>();
+    long seen_log_garbage_at = main_confs["seen_log_garbage_at"].as<long>();
+    long request_log_garbage_at = main_confs["request_log_garbage_at"].as<long>();
+    long anti_entropy_log_garbage_at = main_confs["anti_entropy_log_garbage_at"].as<long>();
 
     std::shared_ptr<spdlog::logger> logger;
     try
@@ -179,7 +183,7 @@ int main(int argc, char* argv []){
     int boot_time = rand() % 10 + 2;
 
     g_peer_impl = std::make_shared<peer>(id,"127.0.0.1",pss_port,data_port,pos,boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
-            database_dir, rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, logger);
+            database_dir, rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, logger, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at);
     g_peer_impl->start();
     g_peer_impl->join();
 }

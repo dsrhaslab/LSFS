@@ -334,8 +334,10 @@ void pss::process_msg(proto::pss_message pss_msg){
         current_view.push_back(std::move(myself));
 
         this->send_pss_msg(pss_msg.sender_port(), current_view, proto::pss_message_Type::pss_message_Type_LOADBALANCE);
-    }
-    else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_NORMAL){
+    }else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_LOADBALANCE_LOCAL){
+        std::string target_ip = pss_msg.sender_ip();
+        this->group_c->send_local_message(target_ip, pss_msg.sender_port());
+    }else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_NORMAL){
         std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
         this->incorporate_last_sent_view();
         //1- seleciona uma vista para enviar (removendo tais nodos da sua vista, isto

@@ -52,7 +52,7 @@ private:
 
 public:
     ~kv_store_leveldb();
-    explicit kv_store_leveldb(std::string(*f)(std::string&, std::string&));
+    kv_store_leveldb(std::string(*f)(std::string&, std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at);
     int init(void*, long id) override ;
     void close() override ;
     std::string db_name() const override;
@@ -69,8 +69,11 @@ public:
     void print_store() override;
 };
 
-kv_store_leveldb::kv_store_leveldb(std::string (*f)(std::string&, std::string&)) {
+kv_store_leveldb::kv_store_leveldb(std::string (*f)(std::string&, std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at) {
     this->merge_function = f;
+    this->seen_log_garbage_at = seen_log_garbage_at;
+    this->request_log_garbage_at = request_log_garbage_at;
+    this->anti_entropy_log_garbage_at = anti_entropy_log_garbage_at;
 }
 
 kv_store_leveldb::~kv_store_leveldb() {
@@ -250,6 +253,9 @@ std::unique_ptr<long> kv_store_leveldb::get_client_id_from_key_version(std::stri
         int res = split_composite_key(comp_key, &current_key, &current_version, &current_client_id);
         
         if(res == 0){
+            long a = 23456789;
+            long b = 0;
+            std::cout << "version" << a << " client_id:" << b << std::endl;
             auto temp_version = kv_store_key_version(current_version, current_client_id);
             if(temp_version >= current_max_version){
                 current_max_version = temp_version;

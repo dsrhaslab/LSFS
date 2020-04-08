@@ -24,6 +24,12 @@ protected:
     std::recursive_mutex req_log_mutex;
     std::recursive_mutex anti_entropy_log_mutex;
     std::string(*merge_function) (std::string& bytes, std::string& new_bytes);
+    std::atomic<long> seen_count = 0;
+    std::atomic<long> req_count = 0;
+    std::atomic<long> anti_entropy_count = 0;
+    long seen_log_garbage_at;
+    long request_log_garbage_at;
+    long anti_entropy_log_garbage_at;
 
 public:
 
@@ -47,14 +53,17 @@ public:
     bool have_seen(T key, long version, long client_id);
     void seen_it(T key, long version, long client_id);
     void unseen_it(T key, long version, long client_id);
+    void clear_seen_log();
     int get_slice();
     void set_slice(int slice);
     int get_nr_slices();
     void set_nr_slices(int nr_slices);
     bool in_log(std::string req_id);
     void log_req(std::string req_id);
+    void clear_request_log();
     bool in_anti_entropy_log(std::string req_id);
     void log_anti_entropy_req(std::string req_id);
+    void clear_anti_entropy_log();
 };
 
 template <typename T>
@@ -84,6 +93,14 @@ int kv_store<T>::get_slice_for_key(T key) {
     return slice;
 }
 
+
+
+template <typename T>
+void kv_store<T>::clear_seen_log() {
+    std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
+    this->seen.clear();
+}
+
 template <typename T>
 bool kv_store<T>::have_seen(T key, long version, long client_id) {
     kv_store_key<T> key_to_check({key, kv_store_key_version(version, client_id)});
@@ -99,8 +116,13 @@ bool kv_store<T>::have_seen(T key, long version, long client_id) {
 
 template <typename T>
 void kv_store<T>::seen_it(T key, long version, long client_id) {
+    seen_count +=1 ;
     kv_store_key<T> key_to_insert({key, kv_store_key_version(version, client_id)});
     std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
+    if(seen_count % seen_log_garbage_at == 0){
+        this->clear_seen_log();
+        seen_count = 0;
+    }
     this->seen.insert_or_assign(std::move(key_to_insert), true);
 }
 
@@ -132,6 +154,12 @@ void kv_store<T>::set_nr_slices(int nr_slices) {
 }
 
 template <typename T>
+void kv_store<T>::clear_request_log() {
+    std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
+    this->request_log.clear();
+}
+
+template <typename T>
 bool kv_store<T>::in_log(std::string req_id) {
     std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
     return !(this->request_log.find(req_id) == this->request_log.end());
@@ -139,7 +167,12 @@ bool kv_store<T>::in_log(std::string req_id) {
 
 template <typename T>
 void kv_store<T>::log_req(std::string req_id) {
+    req_count +=1 ;
     std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
+    if(req_count % request_log_garbage_at == 0){
+        this->clear_request_log();
+        req_count = 0;
+    }
     this->request_log.insert_or_assign(req_id, true);
 }
 
@@ -151,8 +184,19 @@ bool kv_store<T>::in_anti_entropy_log(std::string req_id) {
 
 template <typename T>
 void kv_store<T>::log_anti_entropy_req(std::string req_id) {
+    anti_entropy_count += 1;
     std::scoped_lock<std::recursive_mutex> lk(this->anti_entropy_log_mutex);
+    if(anti_entropy_count % request_log_garbage_at == 0){
+        this->clear_anti_entropy_log();
+        anti_entropy_count = 0;
+    }
     this->anti_entropy_log.insert_or_assign(req_id, true);
+}
+
+template <typename T>
+void kv_store<T>::clear_anti_entropy_log() {
+    std::scoped_lock<std::recursive_mutex> lk(this->anti_entropy_log_mutex);
+    this->anti_entropy_log.clear();
 }
 
 #endif //P2PFS_KV_STORE_H

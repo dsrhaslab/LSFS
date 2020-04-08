@@ -65,7 +65,9 @@ public:
 
     void print_view();
 
-    void send_pss_msg(int target_port, std::string &msg_string);
+    void send_pss_msg(std::string& target_ip, int target_port, std::string &msg_string);
+
+    void send_local_message(std::string& target_ip, int target_port);
 };
 
 

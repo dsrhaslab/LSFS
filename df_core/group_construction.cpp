@@ -252,7 +252,7 @@ void group_construction::receive_message(std::vector<peer_data> received) {
         for(peer_data& peer : to_send){
             if(peer.id != this->id){
                 //SEND MESSAGE
-                this->send_pss_msg(peer.port, buf);
+                this->send_pss_msg(peer.ip , peer.port, buf);
             }
         }
     }
@@ -370,14 +370,14 @@ void group_construction::receive_message(std::vector<peer_data> received) {
 //    }
 //}
 
-void group_construction::send_pss_msg(int target_port, std::string& msg_string){
+void group_construction::send_pss_msg(std::string& target_ip, int target_port, std::string &msg_string){
     try {
         struct sockaddr_in serverAddr;
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
         serverAddr.sin_port = htons(target_port);
-        serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+        serverAddr.sin_addr.s_addr = inet_addr(target_ip.c_str());
 
         int res = sendto(this->sender_socket, msg_string.data(), msg_string.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
@@ -390,6 +390,46 @@ void group_construction::send_pss_msg(int target_port, std::string& msg_string){
         spdlog::error("=============================== Não consegui enviar =================");
 //            std::cout <<"=============================== Não consegui enviar =================" << std::endl;
     }
+}
+
+void group_construction::send_local_message(std::string& target_ip, int target_port) {
+    std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
+    std::vector<peer_data> to_send;
+    peer_data myself = {
+            this->ip,
+            this->port,
+            0,
+            this->id,
+            this->nr_groups,
+            this->position,
+            this->my_group,
+    };
+
+    to_send.push_back(myself);
+    for(auto [port, peer]: this->local_view){
+        to_send.push_back(peer);
+    }
+
+    proto::pss_message pss_message;
+    pss_message.set_sender_ip(this->ip);
+    pss_message.set_sender_port(this->port);
+    pss_message.set_type(proto::pss_message_Type::pss_message_Type_LOCAL);
+
+    for(auto& peer: to_send){
+        proto::peer_data* peer_data = pss_message.add_view();
+        peer_data->set_ip(peer.ip);
+        peer_data->set_port(peer.port);
+        peer_data->set_age(peer.age);
+        peer_data->set_id(peer.id);
+        peer_data->set_pos(peer.pos);
+        peer_data->set_nr_slices(peer.nr_slices);
+        peer_data->set_slice(peer.slice);
+    }
+
+    std::string buf;
+    pss_message.SerializeToString(&buf);
+
+    this->send_pss_msg(target_ip, target_port, buf);
 }
 
 

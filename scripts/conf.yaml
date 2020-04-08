@@ -20,6 +20,9 @@ main_confs:
   reply_chance: 1
   smart: true
   log_level: off
+  seen_log_garbage_at: 100
+  request_log_garbage_at: 100
+  anti_entropy_log_garbage_at: 100
   ######################################
   #               Client               #
   ######################################
