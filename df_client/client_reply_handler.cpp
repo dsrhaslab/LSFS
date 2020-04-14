@@ -9,8 +9,8 @@
 #include <spdlog/spdlog.h>
 
 
-client_reply_handler::client_reply_handler(std::string ip, int port, long wait_timeout):
-        ip(ip), port(port), wait_timeout(wait_timeout)
+client_reply_handler::client_reply_handler(std::string ip/*, int port*/, long wait_timeout):
+        ip(ip)/*, port(port)*/, wait_timeout(wait_timeout)
 {}
 
 long client_reply_handler::register_put(std::string key, long version) {

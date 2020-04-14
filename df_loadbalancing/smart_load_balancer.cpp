@@ -16,7 +16,7 @@
 #include <boost/concept_check.hpp>
 #include <df_client/client.h>
 
-smart_load_balancer::smart_load_balancer(std::string boot_ip, int boot_port, std::string ip/*, int port*/,long sleep_interval):
+smart_load_balancer::smart_load_balancer(std::string boot_ip/*, int boot_port*/, std::string ip/*, int port*/,long sleep_interval):
         ip(ip)/*, port(port)*/, sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {
     std::random_device rd;     // only used once to initialise (seed) engine
@@ -43,7 +43,7 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, int boot_port, std
 
     while(!recovered){
         try {
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), boot_port, capnp_serializer);
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::lb_port, capnp_serializer);
 
             //sending announce msg
             pss_message pss_get_view_msg;

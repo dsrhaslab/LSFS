@@ -32,8 +32,8 @@ int main(int argc, char **argv) {
     std::string ip2 = "127.0.0.1";
     long id2 = 3;
 
-    client cli = client(ip, id, kv_port, lb_port, "../scripts/conf.yaml");
-    client cli2 = client(ip2, id2, kv_port2, lb_port2, "../scripts/conf.yaml");
+    client cli = client(ip, "127.0.0.1", id/*, kv_port, lb_port*/, "../scripts/conf.yaml");
+    client cli2 = client(ip2,"127.0.0.1", id2/*, kv_port2, lb_port2*/, "../scripts/conf.yaml");
 
 
 //    cli.put("/", 0, "ole", 3);

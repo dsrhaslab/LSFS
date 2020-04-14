@@ -30,7 +30,7 @@ extern std::shared_ptr<spdlog::logger> logger;
 class lsfs_impl : public fuse_wrapper::fuse<lsfs_impl>{
 
 public:
-    lsfs_impl();
+    lsfs_impl(std::string boot_ip, std::string ip);
     ~lsfs_impl() = default;
 
     /* ---------------------------- ops_createdelete.cpp ----------------------*/

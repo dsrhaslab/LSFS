@@ -19,7 +19,7 @@
 class client_reply_handler {
 
 protected:
-    int port;
+    //int port;
     std::string ip;
     std::unordered_map<std::string, std::vector<std::pair<kv_store_key_version, std::shared_ptr<std::string>>>> get_replies; //par versão-valor
     std::unordered_map<kv_store_key<std::string>, std::set<long>> put_replies;
@@ -30,7 +30,7 @@ protected:
     std::map<kv_store_key<std::string>, std::pair<std::unique_ptr<std::mutex>, std::unique_ptr<std::condition_variable>>> put_mutexes;
 
 public:
-    client_reply_handler(std::string ip, int port, long wait_timeout);
+    client_reply_handler(std::string ip/*, int port*/, long wait_timeout);
 
     long register_put(std::string key, long version);
     std::unique_ptr<std::set<long>> wait_for_put(kv_store_key<std::string> key, int wait_for);

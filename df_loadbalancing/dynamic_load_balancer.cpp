@@ -12,7 +12,7 @@
 #include <df_client/client.h>
 #include "dynamic_load_balancer.h"
 
-dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, int boot_port, std::string ip/*, int port*/, long sleep_interval):
+dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip/*, int boot_port*/, std::string ip/*, int port*/, long sleep_interval):
     ip(ip)/*, port(port)*/, sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {
 
@@ -24,7 +24,7 @@ dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, int boot_port,
 
     while(!recovered){
         try {
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), boot_port, capnp_serializer);
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::lb_port, capnp_serializer);
 
             //sending announce msg
             pss_message pss_get_view_msg;

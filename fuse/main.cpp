@@ -8,8 +8,48 @@
 
 // sudo ./lsfs_exe /home/danielsf97/Desktop/Tese/P2P-Filesystem/Teste/InnerFolder/ /home/danielsf97/Desktop/Tese/P2P-Filesystem/Teste/InnerFolder2/
 
+std::string get_local_ip_address(){
+    int sock = socket(PF_INET, SOCK_DGRAM, 0);
+    sockaddr_in loopback;
+
+    if (sock == -1) {
+        throw "ERROR CREATING SOCKET";
+    }
+
+    std::memset(&loopback, 0, sizeof(loopback));
+    loopback.sin_family = AF_INET;
+    loopback.sin_addr.s_addr = INADDR_LOOPBACK;   // using loopback ip address
+    loopback.sin_port = htons(9);                 // using debug port
+
+    if (connect(sock, reinterpret_cast<sockaddr*>(&loopback), sizeof(loopback)) == -1) {
+        close(sock);
+        throw "ERROR COULD NOT CONNECT";
+    }
+
+    socklen_t addrlen = sizeof(loopback);
+    if (getsockname(sock, reinterpret_cast<sockaddr*>(&loopback), &addrlen) == -1) {
+        close(sock);
+        throw "ERROR COULD NOT GETSOCKNAME";
+    }
+
+    close(sock);
+
+    char buf[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &loopback.sin_addr, buf, INET_ADDRSTRLEN) == 0x0) {
+        throw "ERROR COULD NOT INET_NTOP";
+    } else {
+        return std::string(buf);
+    }
+}
+
 int main(int argc, char *argv[])
 {
+
+    if(argc < 1){
+        exit(1);
+    }
+
+    const char* boot_ip = argv[1];
 
     { // Setting Log Level
         YAML::Node config = YAML::LoadFile("../scripts/conf.yaml");
@@ -33,7 +73,15 @@ int main(int argc, char *argv[])
         spdlog::set_pattern( "%v");
     }
 
-    lsfs_impl fs;
+    std::string ip;
+    try{
+        ip = get_local_ip_address();
+    }catch(const char* e){
+        std::cerr << "Error Obtaining IP Address: " << e << std::endl;
+        exit(1);
+    }
+
+    lsfs_impl fs(boot_ip, ip);
     int status = fs.run(argc, argv, NULL);
 
     return status;

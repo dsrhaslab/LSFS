@@ -20,11 +20,12 @@
 class client {
 public:
     inline const static int lb_port = 12345;
+    inline const static int kv_port = 12346;
 
 private:
     std::string ip;
     long id;
-    int port;
+    //int port;
     int sender_socket;
     std::atomic<long> request_count;
     int nr_puts_required;
@@ -42,7 +43,7 @@ private:
     std::thread handler_th;
 
 public:
-    client(std::string ip, long id, int port, int lb_port, const char* conf_filename);
+    client(std::string ip, std::string boot_ip, long id/*, int port, int lb_port*/, const char* conf_filename);
     void stop();
     std::set<long> put(std::string key, long version, const char* data, size_t size, int wait_for);
     inline std::set<long> put(std::string key, long version, const char* data, size_t size) {

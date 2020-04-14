@@ -15,8 +15,8 @@
 #include "client_reply_handler_mt.h"
 #include "exceptions/custom_exceptions.h"
 
-client::client(std::string ip, long id, int port, int lb_port, const char* conf_filename):
-    ip(ip), id(id), port(port), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
+client::client(std::string ip, std::string boot_ip, long id/*, int port, int lb_port*/, const char* conf_filename):
+    ip(ip), id(id)/*, port(port)*/, sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
     , request_count(0)
 {
     YAML::Node config = YAML::LoadFile(conf_filename);
@@ -29,17 +29,17 @@ client::client(std::string ip, long id, int port, int lb_port, const char* conf_
     long wait_timeout = main_confs["client_wait_timeout"].as<long>();
     long lb_interval = main_confs["lb_interval"].as<long>();
 
-    this->lb = std::make_shared<dynamic_load_balancer>(peer::boot_ip, peer::boot_port, ip, lb_port, lb_interval);
-    this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip, lb_port);
+    this->lb = std::make_shared<dynamic_load_balancer>(boot_ip/*, client::lb_port*/, ip/*, lb_port*/, lb_interval);
+    this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip/*, lb_port*/);
 
     this->lb_th = std::thread (std::ref(*this->lb));
     this->lb_listener_th = std::thread (std::ref(*this->lb_listener));
 
     if(mt_client_handler){
         int nr_workers = main_confs["nr_client_handler_ths"].as<int>();
-        this->handler = std::make_shared<client_reply_handler_mt>(ip, port, wait_timeout, nr_workers);
+        this->handler = std::make_shared<client_reply_handler_mt>(ip/*, port*/, wait_timeout, nr_workers);
     }else{
-        this->handler = std::make_shared<client_reply_handler_st>(ip, port, wait_timeout);
+        this->handler = std::make_shared<client_reply_handler_st>(ip/*, port*/, wait_timeout);
     }
     this->handler_th = std::thread (std::ref(*this->handler));
 }
@@ -70,7 +70,7 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(target_peer.port + 1);
+        serverAddr.sin_port = htons(client::kv_port);
         serverAddr.sin_addr.s_addr = inet_addr(target_peer.ip.c_str());
 
         std::string buf;
@@ -90,7 +90,7 @@ int client::send_get(peer_data &peer, std::string key, long* version, std::strin
     proto::kv_message msg;
     auto* message_content = new proto::get_message();
     message_content->set_ip(this->ip);
-    message_content->set_port(this->port);
+    //message_content->set_port(this->port);
     message_content->set_id(this->id);
     message_content->set_key(key);
     if(version != nullptr){
@@ -109,7 +109,7 @@ int client::send_get_latest_version(peer_data &peer, std::string key, std::strin
     proto::kv_message msg;
     auto* message_content = new proto::get_latest_version_message();
     message_content->set_ip(this->ip);
-    message_content->set_port(this->port);
+    //message_content->set_port(this->port);
     message_content->set_id(this->id);
     message_content->set_key(key);
     message_content->set_reqid(req_id);
@@ -122,7 +122,7 @@ int client::send_put(peer_data &peer, std::string key, long version, const char 
     proto::kv_message msg;
     auto* message_content = new proto::put_message();
     message_content->set_ip(this->ip);
-    message_content->set_port(this->port);
+    //message_content->set_port(this->port);
     message_content->set_id(this->id);
     message_content->set_key(key);
     message_content->set_version(version);
@@ -136,7 +136,7 @@ int client::send_put_with_merge(peer_data &peer, std::string key, long version, 
     proto::kv_message msg;
     auto* message_content = new proto::put_with_merge_message();
     message_content->set_ip(this->ip);
-    message_content->set_port(this->port);
+    //message_content->set_port(this->port);
     message_content->set_id(this->id);
     message_content->set_key(key);
     message_content->set_version(version);
@@ -200,7 +200,7 @@ std::set<long> client::put_with_merge(std::string key, long version, const char 
 
 std::shared_ptr<std::string> client::get(std::string key, int wait_for, long* version_ptr) {
     long req_id = this->inc_and_get_request_count();
-    std::string req_id_str = std::to_string(this->id) +":" + this->ip + ":" + std::to_string(this->port) + ":" + std::to_string(req_id);
+    std::string req_id_str = std::to_string(this->id) +":" + this->ip /*+ ":" + std::to_string(this->port)*/ + ":" + std::to_string(req_id);
     this->handler->register_get(req_id_str);
     std::shared_ptr<std::string> res (nullptr);
 
@@ -227,7 +227,7 @@ std::shared_ptr<std::string> client::get(std::string key, int wait_for, long* ve
 
 long client::get_latest_version(std::string key, int wait_for) {
     long req_id = this->inc_and_get_request_count();
-    std::string req_id_str = std::to_string(this->id) +":" + this->ip + ":" + std::to_string(this->port) + ":" + std::to_string(req_id);
+    std::string req_id_str = std::to_string(this->id) +":" + this->ip /*+ ":" + std::to_string(this->port)*/ + ":" + std::to_string(req_id);
     this->handler->register_get_latest_version(req_id_str);
     std::unique_ptr<long> res (nullptr);
 
