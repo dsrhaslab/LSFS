@@ -32,11 +32,11 @@ private:
     boost::asio::io_service io_service;
     boost::thread_group thread_pool;
     pss* pss_ptr;
-    const char* ip;
-    int port;
+//    const char* ip;
+//    int port;
 
 public:
-    pss_listener(const char*  ip, int port, pss* pss);
+    pss_listener(/*const char*  ip, int port,*/ pss* pss);
     void operator ()();
 // uncomment this for first version
 //    void pss_listener_worker(ArrayWrapper arr, int size);

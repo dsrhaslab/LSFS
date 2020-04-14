@@ -3,6 +3,7 @@
 //
 
 #include "group_construction.h"
+#include "peer.h"
 #include <netinet/in.h>
 #include <vector>
 #include <math.h>
@@ -14,7 +15,7 @@
 
 //ou tem de se esperar mais tempo ou o numero de grupos n está a ser calculado corretamente
 
-group_construction::group_construction(std::string ip,int port, long id, double position, int replication_factor_min,
+group_construction::group_construction(std::string ip/*,int port*/, long id, double position, int replication_factor_min,
         int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store<std::string>> store, std::shared_ptr<spdlog::logger> logger){
     this->first_message = true;
     this->id = id;
@@ -28,7 +29,7 @@ group_construction::group_construction(std::string ip,int port, long id, double 
     this->local_interval = local_interval;
     this->cycle = 1;
     this->ip = ip;
-    this->port = port;
+    //this->port = port;
     this->store = std::move(store);
     this->logger = std::move(logger);
 
@@ -94,25 +95,25 @@ void group_construction::receive_local_message(std::vector<peer_data> received) 
     this->logger->info("[Group Construction] Received LOCAL Message");
     for(peer_data& peer: received){
         if(group(peer.pos) == this->my_group && !(peer.id == this->id)){
-            auto current_it = this->local_view.find(peer.port);
+            auto current_it = this->local_view.find(peer.ip/*peer.port*/);
             if(current_it != this->local_view.end()){ //o elemento existe no mapa
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second.age = peer.age;
 
             }else{
-                this->local_view.insert(std::make_pair(peer.port, peer));
+                this->local_view.insert(std::make_pair(peer.ip/*peer.port*/, peer));
             }
         }
     }
 }
 
 void group_construction::print_view() {
-    spdlog::debug("====== My View[" + std::to_string(this->port) + "] ====");
+    spdlog::debug("====== My View[" + this->ip /*std::to_string(this->port)*/ + "] ====");
 //    std::cout << "====== My View[" + std::to_string(this->port) + "] ====" << std::endl;
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(auto const& [key, peer] : this->local_view){
-        spdlog::debug(peer.ip + "(" + std::to_string(peer.port) + ") : " + std::to_string(peer.age)  + " -> " + std::to_string(peer.pos) + ":" + std::to_string(group(peer.pos)));
+        spdlog::debug(peer.ip + /*"(" + std::to_string(peer.port) + ")*/" : " + std::to_string(peer.age)  + " -> " + std::to_string(peer.pos) + ":" + std::to_string(group(peer.pos)));
 //        std::cout << peer.ip << "(" << peer.port << ") : " << peer.age  << " -> " << peer.pos << ":" << group(peer.pos) << std::endl;
     }
     spdlog::debug("==========================");
@@ -141,14 +142,14 @@ void group_construction::receive_message(std::vector<peer_data> received) {
             }
         }
         if(group(peer.pos) == this->my_group && peer.id != this->id){
-            auto current_it = this->local_view.find(peer.port);
+            auto current_it = this->local_view.find(peer.ip /*peer.port*/);
             if(current_it != this->local_view.end()){ //o elemento existe no mapa
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second = peer;
 
             }else{
-                this->local_view.insert(std::make_pair(peer.port, peer));
+                this->local_view.insert(std::make_pair(peer.ip/*peer.port*/, peer));
             }
         }else{
             not_added.push_back(peer);
@@ -156,20 +157,20 @@ void group_construction::receive_message(std::vector<peer_data> received) {
     }
 
     //CLEAN VIEW
-    std::vector<int> to_rem;
-    for (auto& [port,peer] : this->local_view){
+    std::vector<std::string /*int*/> to_rem;
+    for (auto& [/*port*/ ip, peer] : this->local_view){
         if(group(peer.pos) != this->my_group){
-            to_rem.push_back(port);
+            to_rem.push_back(ip /*port*/);
             not_added.push_back(peer);
         }
         else{
             if(peer.age > max_age){
-                to_rem.push_back(port);
+                to_rem.push_back(ip /*port*/);
             }
         }
     }
-    for(int port : to_rem){
-        this->local_view.erase(port);
+    for(/*int port*/ std::string ip : to_rem){
+        this->local_view.erase(ip /*port*/);
     }
 
     //SEARCH FOR VIOLATIONS
@@ -182,7 +183,6 @@ void group_construction::receive_message(std::vector<peer_data> received) {
         }
     }
     if((estimation + 1) > this->replication_factor_max){
-        if(this->nr_groups*2 > 16) this->print_view();
         this->set_nr_groups(this->nr_groups*2);
     }
     if(this->first_message){
@@ -194,7 +194,7 @@ void group_construction::receive_message(std::vector<peer_data> received) {
 
     std::string local_view_str = "{";
     for(auto& [port, peer] : this->local_view){
-        local_view_str += std::to_string(peer.port) + ":" + std::to_string(peer.age) + ", ";
+        local_view_str += peer.ip /*std::to_string(peer.port)*/ + ":" + std::to_string(peer.age) + ", ";
     }
     local_view_str +=  "} -> {";
 
@@ -202,13 +202,13 @@ void group_construction::receive_message(std::vector<peer_data> received) {
     //to the current group match now the group in question
     for(auto& peer : not_added){
         if(group(peer.pos) == this->my_group && peer.id != this->id) {
-            this->local_view.insert(std::make_pair(peer.port, peer));
+            this->local_view.insert(std::make_pair(peer.ip /*peer.port*/, peer));
         }
     }
 
 
-    for(auto& [port, peer] : this->local_view){
-        local_view_str += std::to_string(peer.port) + ":" + std::to_string(peer.age) + ", ";
+    for(auto& [/*port*/ ip, peer] : this->local_view){
+        local_view_str += /*std::to_string(peer.port)*/ ip + ":" + std::to_string(peer.age) + ", ";
     }
     this->logger->info("[Group Construction] Received Message " + local_view_str + "}");
 
@@ -217,7 +217,7 @@ void group_construction::receive_message(std::vector<peer_data> received) {
         std::vector<peer_data> to_send;
         peer_data myself = {
                 this->ip,
-                this->port,
+                //this->port,
                 0,
                 this->id,
                 this->nr_groups,
@@ -226,19 +226,19 @@ void group_construction::receive_message(std::vector<peer_data> received) {
         };
 
         to_send.push_back(myself);
-        for(auto [port, peer]: this->local_view){
+        for(auto [/*port*/ ip, peer]: this->local_view){
             to_send.push_back(peer);
         }
 
         proto::pss_message pss_message;
         pss_message.set_sender_ip(this->ip);
-        pss_message.set_sender_port(this->port);
+        //pss_message.set_sender_port(this->port);
         pss_message.set_type(proto::pss_message_Type::pss_message_Type_LOCAL);
 
         for(auto& peer: to_send){
             proto::peer_data* peer_data = pss_message.add_view();
             peer_data->set_ip(peer.ip);
-            peer_data->set_port(peer.port);
+            //peer_data->set_port(peer.port);
             peer_data->set_age(peer.age);
             peer_data->set_id(peer.id);
             peer_data->set_pos(peer.pos);
@@ -252,7 +252,7 @@ void group_construction::receive_message(std::vector<peer_data> received) {
         for(peer_data& peer : to_send){
             if(peer.id != this->id){
                 //SEND MESSAGE
-                this->send_pss_msg(peer.ip , peer.port, buf);
+                this->send_pss_msg(peer.ip /*, peer.port*/, buf);
             }
         }
     }
@@ -370,13 +370,13 @@ void group_construction::receive_message(std::vector<peer_data> received) {
 //    }
 //}
 
-void group_construction::send_pss_msg(std::string& target_ip, int target_port, std::string &msg_string){
+void group_construction::send_pss_msg(std::string& target_ip/*, int target_port*/, std::string &msg_string){
     try {
         struct sockaddr_in serverAddr;
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(target_port);
+        serverAddr.sin_port = htons(peer::pss_port/*target_port*/);
         serverAddr.sin_addr.s_addr = inet_addr(target_ip.c_str());
 
         int res = sendto(this->sender_socket, msg_string.data(), msg_string.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
@@ -392,12 +392,12 @@ void group_construction::send_pss_msg(std::string& target_ip, int target_port, s
     }
 }
 
-void group_construction::send_local_message(std::string& target_ip, int target_port) {
+void group_construction::send_local_message(std::string& target_ip/*, int target_port*/) {
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     std::vector<peer_data> to_send;
     peer_data myself = {
             this->ip,
-            this->port,
+            //this->port,
             0,
             this->id,
             this->nr_groups,
@@ -406,19 +406,19 @@ void group_construction::send_local_message(std::string& target_ip, int target_p
     };
 
     to_send.push_back(myself);
-    for(auto [port, peer]: this->local_view){
+    for(auto [/*port*/ ip, peer]: this->local_view){
         to_send.push_back(peer);
     }
 
     proto::pss_message pss_message;
     pss_message.set_sender_ip(this->ip);
-    pss_message.set_sender_port(this->port);
+    //pss_message.set_sender_port(this->port);
     pss_message.set_type(proto::pss_message_Type::pss_message_Type_LOCAL);
 
     for(auto& peer: to_send){
         proto::peer_data* peer_data = pss_message.add_view();
         peer_data->set_ip(peer.ip);
-        peer_data->set_port(peer.port);
+        //peer_data->set_port(peer.port);
         peer_data->set_age(peer.age);
         peer_data->set_id(peer.id);
         peer_data->set_pos(peer.pos);
@@ -429,7 +429,7 @@ void group_construction::send_local_message(std::string& target_ip, int target_p
     std::string buf;
     pss_message.SerializeToString(&buf);
 
-    this->send_pss_msg(target_ip, target_port, buf);
+    this->send_pss_msg(target_ip/*, target_port*/, buf);
 }
 
 

@@ -18,10 +18,11 @@
 class group_construction {
 private:
     std::recursive_mutex view_mutex;
-    std::unordered_map<int, peer_data> local_view; //port -> age
+    //std::unordered_map<int, peer_data> local_view; //port -> age
+    std::unordered_map<std::string, peer_data> local_view; //port -> age
     long id;
     std::string ip;
-    int port;
+    //int port;
     double position;
     std::atomic<int> nr_groups;
     std::atomic<int> my_group;
@@ -37,7 +38,7 @@ private:
     std::shared_ptr<spdlog::logger> logger;
 
 public:
-    group_construction(std::string ip, int port, long id, double position, int replication_factor_min,
+    group_construction(std::string ip/*, int port*/, long id, double position, int replication_factor_min,
                        int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store<std::string>> store, std::shared_ptr<spdlog::logger> logger);
 
     std::vector<peer_data> get_local_view();
@@ -65,9 +66,9 @@ public:
 
     void print_view();
 
-    void send_pss_msg(std::string& target_ip, int target_port, std::string &msg_string);
+    void send_pss_msg(std::string& target_ip/*, int target_port*/, std::string &msg_string);
 
-    void send_local_message(std::string& target_ip, int target_port);
+    void send_local_message(std::string& target_ip/*, int target_port*/);
 };
 
 

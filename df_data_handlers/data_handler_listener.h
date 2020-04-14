@@ -20,12 +20,12 @@ private:
     pss* pss_ptr;
     long id;
     std::string ip;
-    int port;
+    //int port;
     float chance;
     bool smart;
 
 public:
-    data_handler_listener(std::string ip, int port, long id, float chance, pss* pss, std::shared_ptr<kv_store<std::string>> store, bool smart);
+    data_handler_listener(std::string ip/*, int port*/, long id, float chance, pss* pss, std::shared_ptr<kv_store<std::string>> store, bool smart);
     void stop_thread();
     void operator()();
 };

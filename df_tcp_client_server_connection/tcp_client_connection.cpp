@@ -11,7 +11,7 @@
 #include <string>
 #include "tcp_client_server_connection.h"
 #include <netinet/in.h>
-#include "df_serializer/capnp/packet.capnp.h"
+//#include "df_serializer/capnp/packet.capnp.h"
 #include <unistd.h>
 #include <memory>
 #include <utility>

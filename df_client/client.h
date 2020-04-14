@@ -18,6 +18,9 @@
 #include "client_reply_handler_mt.h"
 
 class client {
+public:
+    inline const static int lb_port = 12345;
+
 private:
     std::string ip;
     long id;

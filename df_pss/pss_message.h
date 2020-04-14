@@ -20,7 +20,7 @@ struct pss_message {
 
     Type type;
     std::string sender_ip;
-    int sender_port;
+    //int sender_port;
     std::vector<peer_data> view;
 };
 

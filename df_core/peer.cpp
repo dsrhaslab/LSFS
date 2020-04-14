@@ -23,18 +23,18 @@ extern std::string merge_metadata(std::string&, std::string&);
 
 std::shared_ptr<peer> g_peer_impl;
 
-peer::peer(long id, std::string ip, int pss_port, int data_port, double position, std::shared_ptr<spdlog::logger> logger):
-    id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position), logger(logger), view_logger_enabled(false),
+peer::peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int data_port*/, double position, std::shared_ptr<spdlog::logger> logger):
+    id(id), ip(ip)/*, pss_port(pss_port)*/, data_port(data_port), position(position), logger(logger), view_logger_enabled(false),
 //    store(std::make_shared<kv_store_leveldb>(merge_metadata, 100, 100, 100)),
 //    store(std::make_shared<kv_store_wiredtiger>(merge_metadata, 100, 100, 100)),
     store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata, 100, 100, 100)),
 //    store(std::make_shared<kv_store_memory<std::string>>(merge_metadata, 100, 100, 100)),
-    group_c(ip, pss_port, id, position, 5, 10, 40, true, 15, this->store, logger),
-    cyclon(peer::boot_ip, peer::boot_port, ip, pss_port, id, position,2,8,10,7, &(this->group_c)),
-    listener("127.0.0.1", this->pss_port, &(this->cyclon) ),
-    v_logger(this->pss_port, &(this->cyclon),60, "../logging/"),
-    data_handler(ip, data_port, id, 1, &(this->cyclon), this->store, false),
-    anti_ent(ip, data_port, id, &(this->cyclon), this->store, 20)
+    group_c(ip/*, pss_port*/, id, position, 5, 10, 40, true, 15, this->store, logger),
+    cyclon(boot_ip.c_str()/*, peer::boot_port*/, ip/*, pss_port*/, id, position,2,8,10,7, &(this->group_c)),
+    listener(/*"127.0.0.1", this->pss_port,*/ &(this->cyclon) ),
+    v_logger(/*this->pss_port,*/ &(this->cyclon),60, "../logging/"),
+    data_handler(ip/*, data_port*/, id, 1, &(this->cyclon), this->store, false),
+    anti_ent(ip/*, data_port*/, id, &(this->cyclon), this->store, 20)
 {
     std::string database_folder = std::string("/home/danielsf97/Desktop/") + this->store->db_name() + "/";
     int res = this->store->init((void*) database_folder.c_str(), id);
@@ -43,21 +43,21 @@ peer::peer(long id, std::string ip, int pss_port, int data_port, double position
     }
 }
 
-peer::peer(long id, std::string ip, int pss_port, int data_port,double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
+peer::peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int data_port*/,double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
         int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval,
         float reply_chance, bool smart, std::shared_ptr<spdlog::logger> logger, long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at)
-    :   id(id), ip(ip), pss_port(pss_port), data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
+    :   id(id), ip(ip)/*, pss_port(pss_port)*/, data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
         view_logger_enabled(view_logger_enabled), local_interval(local_interval), reply_chance(reply_chance),
         store(std::make_shared<kv_store_leveldb>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
 //        store(std::make_shared<kv_store_wiredtiger>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
 //        store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
 //        store(std::make_shared<kv_store_memory<std::string>>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
-        group_c(ip, pss_port, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),
-        cyclon(peer::boot_ip, peer::boot_port, ip, pss_port, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
-        listener("127.0.0.1", pss_port, &(this->cyclon)),
-        v_logger(pss_port, &(this->cyclon), logging_interval, logging_dir),
-        data_handler(ip, data_port, id, reply_chance, &(this->cyclon), this->store, smart),
-        anti_ent(ip, data_port, id, &(this->cyclon), this->store, anti_entropy_interval)
+        group_c(ip/*, pss_port*/, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),
+        cyclon(boot_ip.c_str()/*, peer::boot_port*/, ip/*, pss_port*/, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
+        listener(/*"127.0.0.1", pss_port,*/ &(this->cyclon)),
+        v_logger(/*pss_port,*/ &(this->cyclon), logging_interval, logging_dir),
+        data_handler(ip/*, data_port*/, id, reply_chance, &(this->cyclon), this->store, smart),
+        anti_ent(ip/*, data_port*/, id, &(this->cyclon), this->store, anti_entropy_interval)
 {
     std::string database_folder = database_dir + this->store->db_name() + "/";
     int res = this->store->init((void*) database_folder.c_str(), id);
@@ -113,6 +113,40 @@ void term_handler(int i){
 }
 
 
+std::string get_local_ip_address(){
+    int sock = socket(PF_INET, SOCK_DGRAM, 0);
+    sockaddr_in loopback;
+
+    if (sock == -1) {
+        throw "ERROR CREATING SOCKET";
+    }
+
+    std::memset(&loopback, 0, sizeof(loopback));
+    loopback.sin_family = AF_INET;
+    loopback.sin_addr.s_addr = INADDR_LOOPBACK;   // using loopback ip address
+    loopback.sin_port = htons(9);                 // using debug port
+
+    if (connect(sock, reinterpret_cast<sockaddr*>(&loopback), sizeof(loopback)) == -1) {
+        close(sock);
+        throw "ERROR COULD NOT CONNECT";
+    }
+
+    socklen_t addrlen = sizeof(loopback);
+    if (getsockname(sock, reinterpret_cast<sockaddr*>(&loopback), &addrlen) == -1) {
+        close(sock);
+        throw "ERROR COULD NOT GETSOCKNAME";
+    }
+
+    close(sock);
+
+    char buf[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &loopback.sin_addr, buf, INET_ADDRSTRLEN) == 0x0) {
+        throw "ERROR COULD NOT INET_NTOP";
+    } else {
+        return std::string(buf);
+    }
+}
+
 int main(int argc, char* argv []){
 
     if(argc < 4){
@@ -121,12 +155,20 @@ int main(int argc, char* argv []){
 
     signal(SIGTERM, term_handler);
 
-    int pss_port = atoi(argv[1]);
-    int data_port = atoi(argv[2]);
-    long id = atol(argv[3]);
-    double pos = atof(argv[4]);
-    const char* conf_filename = argv[5];
+    //int pss_port = atoi(argv[1]);
+    //int data_port = atoi(argv[2]);
+    long id = atol(argv[1]);
+    double pos = atof(argv[2]);
+    const char* conf_filename = argv[3];
+    const char* boot_ip = argv[4];
+    std::string ip;
 
+    try{
+        ip = get_local_ip_address();
+    }catch(const char* e){
+        std::cerr << "Error Obtaining IP Address: " << e << std::endl;
+        exit(1);
+    }
 
     YAML::Node config = YAML::LoadFile(conf_filename);
     auto main_confs = config["main_confs"];
@@ -153,7 +195,7 @@ int main(int argc, char* argv []){
     std::shared_ptr<spdlog::logger> logger;
     try
     {
-        logger = spdlog::basic_logger_mt("basic_logger", "logs/" + std::to_string(pss_port) + ".txt");
+        logger = spdlog::basic_logger_mt("basic_logger", "logs/" + std::string("debug_logs") /*std::to_string(pss_port)*/ + ".txt");
         logger->set_level(spdlog::level::info);
     }
     catch (const spdlog::spdlog_ex &ex)
@@ -182,7 +224,7 @@ int main(int argc, char* argv []){
     srand (time(NULL));
     int boot_time = rand() % 10 + 2;
 
-    g_peer_impl = std::make_shared<peer>(id,"127.0.0.1",pss_port,data_port,pos,boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
+    g_peer_impl = std::make_shared<peer>(id,ip,boot_ip/*,pss_port,data_port*/,pos,boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
             database_dir, rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, logger, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at);
     g_peer_impl->start();
     g_peer_impl->join();

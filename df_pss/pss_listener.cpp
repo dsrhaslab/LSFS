@@ -37,18 +37,18 @@ public:
     }
 };
 
-pss_listener::pss_listener(const char* ip, int port, pss* pss)
+pss_listener::pss_listener(/*const char* ip, int port,*/ pss* pss)
 {
 //    std::cerr << "[pss_listener] function: constructor [Creating Server Connection]" << std::endl;
     this->pss_ptr = pss;
-    this->ip = ip;
-    this->port = port;
+//    this->ip = ip;
+//    this->port = port;
 }
 
 void pss_listener::operator()() {
     try {
         pss_listener_worker worker(this->pss_ptr);
-        udp_async_server server(this->io_service, this->port,(udp_handler*) &worker);
+        udp_async_server server(this->io_service, peer::pss_port/*this->port*/,(udp_handler*) &worker);
 
         for (unsigned i = 0; i < this->nr_worker_threads; ++i)
             this->thread_pool.create_thread(bind(&asio::io_service::run, ref(this->io_service)));

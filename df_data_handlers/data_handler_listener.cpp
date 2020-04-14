@@ -20,7 +20,7 @@ class data_handler_listener_worker : public udp_handler{
     //Esta classe é partilhada por todas as threads
 private:
     std::string ip;
-    int port;
+    //int port;
     long id;
     std::shared_ptr<kv_store<std::string>> store;
     pss* pss_ptr;
@@ -31,8 +31,8 @@ private:
     std::atomic<long> anti_entropy_req_count = 0;
 
 public:
-    data_handler_listener_worker(std::string ip, int port, long id,std::shared_ptr<kv_store<std::string>> store, pss *pssPtr, float chance, bool smart_forward)
-        : ip(std::move(ip)), port(port), id(id), chance(chance), pss_ptr(pssPtr), store(std::move(store)), socket_send(socket(PF_INET, SOCK_DGRAM, 0)), smart_forward(smart_forward)
+    data_handler_listener_worker(std::string ip/*, int port*/, long id,std::shared_ptr<kv_store<std::string>> store, pss *pssPtr, float chance, bool smart_forward)
+        : ip(std::move(ip))/*, port(port)*/, id(id), chance(chance), pss_ptr(pssPtr), store(std::move(store)), socket_send(socket(PF_INET, SOCK_DGRAM, 0)), smart_forward(smart_forward)
     {
         srand (static_cast <unsigned int> ((time(nullptr) % 1000))*getpid()); //random seed
     }
@@ -70,13 +70,13 @@ public:
 
 private:
 
-    void reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port){
+    void reply_client(proto::kv_message& message, const std::string& sender_ip/*, int sender_port*/){
         try{
             struct sockaddr_in serverAddr;
             memset(&serverAddr, '\0', sizeof(serverAddr));
 
             serverAddr.sin_family = AF_INET;
-            serverAddr.sin_port = htons(sender_port); // não é necessário +1 porque vou responder para a port de onde o pedido proveio
+            serverAddr.sin_port = htons(peer::kv_port/*sender_port*/); // não é necessário +1 porque vou responder para a port de onde o pedido proveio
             serverAddr.sin_addr.s_addr = inet_addr(sender_ip.c_str());
 
             std::string buf;
@@ -103,7 +103,7 @@ private:
                 memset(&serverAddr, '\0', sizeof(serverAddr));
 
                 serverAddr.sin_family = AF_INET;
-                serverAddr.sin_port = htons(peer.port + 1); // +1 porque as portas da vista são do df_pss
+                serverAddr.sin_port = htons(peer::kv_port/*peer.port + 1*/); // +1 porque as portas da vista são do df_pss
                 serverAddr.sin_addr.s_addr = inet_addr(peer.ip.c_str());
 
                 std::string buf;
@@ -126,7 +126,7 @@ private:
     void process_get_message(const proto::kv_message &msg) {
         proto::get_message message = msg.get_msg();
         std::string sender_ip = message.ip();
-        int sender_port = message.port();
+        //int sender_port = message.port();
         std::string key = message.key();
         std::string req_id = message.reqid();
         std::shared_ptr<std::string> data(nullptr); //*data = undefined
@@ -174,7 +174,7 @@ private:
                     proto::kv_message reply_message;
                     auto* message_content = new proto::get_reply_message();
                     message_content->set_ip(this->ip);
-                    message_content->set_port(this->port);
+                    //message_content->set_port(this->port);
                     message_content->set_id(this->id);
                     message_content->set_key(key);
                     message_content->set_version(version.version);
@@ -186,7 +186,7 @@ private:
                     spdlog::debug("GET REPLY(\033[1;31m" + std::to_string(this->id) + "\033[0m) " + req_id + " ==================================>");
 //                    std::cout << "GET REPLY(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
-                    this->reply_client(reply_message, sender_ip, sender_port);
+                    this->reply_client(reply_message, sender_ip/*, sender_port*/);
                     // forward to other peers from my slice if is the right slice for the key
                     // trying to speed up quorum
                     int obj_slice = this->store->get_slice_for_key(key);
@@ -238,7 +238,7 @@ private:
                         proto::kv_message reply_message;
                         auto* message_content = new proto::get_reply_message();
                         message_content->set_ip(this->ip);
-                        message_content->set_port(this->port);
+                        //message_content->set_port(this->port);
                         message_content->set_id(this->id);
                         message_content->set_key(key);
                         message_content->set_version(version);
@@ -252,7 +252,7 @@ private:
                         }
                         reply_message.set_allocated_get_reply_msg(message_content);
 
-                        this->reply_client(reply_message, sender_ip, sender_port);
+                        this->reply_client(reply_message, sender_ip/*, sender_port*/);
                     }else{
                         //se não possuo o valor da chave, fazer forward
                         std::vector<peer_data> view = this->pss_ptr->get_view();
@@ -290,12 +290,12 @@ private:
 
         std::string sender_ip, key, data;
         long version, client_id;
-        int sender_port;
+        //int sender_port;
 
         if(with_merge){
             const auto& message = msg.put_with_merge_msg();
             sender_ip = message.ip();
-            sender_port = message.port();
+            //sender_port = message.port();
             key = message.key();
             version = message.version();
             client_id = message.id();
@@ -303,7 +303,7 @@ private:
         }else{
             const auto& message = msg.put_msg();
             sender_ip = message.ip();
-            sender_port = message.port();
+            //sender_port = message.port();
             key = message.key();
             version = message.version();
             client_id = message.id();
@@ -333,7 +333,7 @@ private:
                     proto::kv_message reply_message;
                     auto *message_content = new proto::put_reply_message();
                     message_content->set_ip(this->ip);
-                    message_content->set_port(this->port);
+                    //message_content->set_port(this->port);
                     message_content->set_id(this->id);
                     message_content->set_key(key);
                     message_content->set_version(version);
@@ -341,7 +341,7 @@ private:
 
                     spdlog::debug("PUT REPLY (\033[1;31m" + std::to_string(this->id) + "\033[0m) " + key + " : " + std::to_string(version) + " ==================================>");
 //                    std::cout << "PUT REPLY (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << " ==================================>" << std::endl;
-                    this->reply_client(reply_message, sender_ip, sender_port);
+                    this->reply_client(reply_message, sender_ip/*, sender_port*/);
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 } else {
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
@@ -406,7 +406,7 @@ private:
                 proto::kv_message get_msg;
                 auto *message_content = new proto::get_message();
                 message_content->set_ip(this->ip);
-                message_content->set_port(this->port);
+                //message_content->set_port(this->port);
                 message_content->set_id(this->id);
                 message_content->set_key(key.key);
                 message_content->set_version(key.key_version.version);
@@ -415,7 +415,7 @@ private:
                         "intern" + to_string(this->id) + ":" + to_string(this->get_anti_entropy_req_count()));
                 get_msg.set_allocated_get_msg(message_content);
 
-                this->reply_client(get_msg, message.ip(), message.port());
+                this->reply_client(get_msg, message.ip()/*, message.port()*/);
             }
         }catch (std::exception e){
             // Unable to Get Keys
@@ -427,7 +427,7 @@ private:
     void process_get_latest_version_msg(proto::kv_message msg) {
         proto::get_latest_version_message message = msg.get_latest_version_msg();
         std::string sender_ip = message.ip();
-        int sender_port = message.port();
+        //int sender_port = message.port();
         std::string key = message.key();
         std::string req_id = message.reqid();
         std::unique_ptr<long> version(nullptr);
@@ -477,13 +477,13 @@ private:
                 proto::kv_message reply_message;
                 auto* message_content = new proto::get_latest_version_reply_message();
                 message_content->set_ip(this->ip);
-                message_content->set_port(this->port);
+                //message_content->set_port(this->port);
                 message_content->set_id(this->id);
                 message_content->set_version(*version);
                 message_content->set_reqid(req_id);
                 reply_message.set_allocated_get_latest_version_reply_msg(message_content);
 
-                this->reply_client(reply_message, sender_ip, sender_port);
+                this->reply_client(reply_message, sender_ip/*, sender_port*/);
                 spdlog::debug("GET REPLY Version(\033[1;31m" + std::to_string(this->id) + "\033[0m) " + req_id + " ==================================>");
 //                std::cout << "GET REPLY Version(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
@@ -502,13 +502,13 @@ private:
     }
 };
 
-data_handler_listener::data_handler_listener(std::string ip, int port, long id, float chance, pss *pss, std::shared_ptr<kv_store<std::string>> store, bool smart)
-    : ip(std::move(ip)), port(port), id(id), chance(chance), pss_ptr(pss), store(std::move(store)), smart(smart) {}
+data_handler_listener::data_handler_listener(std::string ip/*, int port*/, long id, float chance, pss *pss, std::shared_ptr<kv_store<std::string>> store, bool smart)
+    : ip(std::move(ip))/*, port(port)*/, id(id), chance(chance), pss_ptr(pss), store(std::move(store)), smart(smart) {}
 
 void data_handler_listener::operator()() {
     try {
-        data_handler_listener_worker worker(this->ip, this->port, this->id, this->store, this->pss_ptr, this->chance, this->smart);
-        udp_async_server server(this->io_service, this->port, (udp_handler*) &worker);
+        data_handler_listener_worker worker(this->ip/*, this->port*/, this->id, this->store, this->pss_ptr, this->chance, this->smart);
+        udp_async_server server(this->io_service, peer::kv_port/*this->port*/, (udp_handler*) &worker);
 
         for (unsigned i = 0; i < this->nr_worker_threads; ++i)
             this->thread_pool.create_thread(bind(&asio::io_service::run, ref(this->io_service)));

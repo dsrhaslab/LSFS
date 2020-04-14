@@ -39,7 +39,7 @@ add_executable(bootstrapper_exe
         )
 target_link_libraries(bootstrapper_exe PRIVATE CapnProto::capnp)
 target_include_directories(bootstrapper_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-#target_include_directories(bootstrapper_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(bootstrapper_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bootstrapper_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_link_libraries(bootstrapper_exe PUBLIC ${Boost_LIBRARIES})
 target_link_libraries(bootstrapper_exe PRIVATE yaml-cpp)

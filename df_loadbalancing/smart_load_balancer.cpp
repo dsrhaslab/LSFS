@@ -14,9 +14,10 @@
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/yaml.h>
 #include <boost/concept_check.hpp>
+#include <df_client/client.h>
 
-smart_load_balancer::smart_load_balancer(std::string boot_ip, int boot_port, std::string ip, int port,long sleep_interval):
-        ip(ip), port(port), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
+smart_load_balancer::smart_load_balancer(std::string boot_ip, int boot_port, std::string ip/*, int port*/,long sleep_interval):
+        ip(ip)/*, port(port)*/, sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {
     std::random_device rd;     // only used once to initialise (seed) engine
     this->random_eng = std::mt19937(rd());
@@ -47,7 +48,7 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, int boot_port, std
             //sending announce msg
             pss_message pss_get_view_msg;
             pss_get_view_msg.sender_ip = ip;
-            pss_get_view_msg.sender_port = port;
+            //pss_get_view_msg.sender_port = port;
             pss_get_view_msg.type = pss_message::Type::GetView;
             connection.send_pss_msg(pss_get_view_msg);
 
@@ -88,7 +89,7 @@ void insert_peer_data_with_order(std::unique_ptr<std::vector<peer_data>>& view, 
     bool inserted = false;
 
     for(auto it = view->begin(); it != view->end(); ++it){
-        if(it->port == peer.port){
+        if(it->ip != peer.ip/*it->port == peer.port*/){
             if(it->age > peer.age)
                 it->age = peer.age;
             return;
@@ -148,7 +149,7 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
     int nr_groups_from_peers = 1;
 
     //AGING LOCAL VIEW
-    for(auto& [port, peer]: this->local_view){
+    for(auto& [/*port*/ ip, peer]: this->local_view){
         peer.age += 1;
     }
 
@@ -162,14 +163,14 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
             }
         }
         if(group(peer.pos) == this->my_group){
-            auto current_it = this->local_view.find(peer.port);
+            auto current_it = this->local_view.find(peer.ip/*peer.port*/);
             if(current_it != this->local_view.end()){ //o elemento existe no mapa
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second = peer;
 
             }else{
-                this->local_view.insert(std::make_pair(peer.port, peer));
+                this->local_view.insert(std::make_pair(peer.ip /*peer.port*/, peer));
             }
         }else{
             not_added.push_back(peer);
@@ -177,20 +178,20 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
     }
 
     //CLEAN LOCAL VIEW
-    std::vector<int> to_rem;
-    for (auto& [port,peer] : this->local_view){
+    std::vector</*int*/ std::string> to_rem;
+    for (auto& [ip /*port*/,peer] : this->local_view){
         if(group(peer.pos) != this->my_group){
-            to_rem.push_back(port);
+            to_rem.push_back(ip /*port*/);
             not_added.push_back(peer);
         }
         else{
             if(peer.age > max_age){
-                to_rem.push_back(port);
+                to_rem.push_back(ip /*port*/);
             }
         }
     }
-    for(int port : to_rem){
-        this->local_view.erase(port);
+    for(/*int port*/ std::string ip : to_rem){
+        this->local_view.erase(ip /*port*/);
     }
 
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
@@ -234,13 +235,13 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
     //to the current group match now the group in question
     for(auto& peer : not_added){
         if(group(peer.pos) == this->my_group) {
-            auto current_it = this->local_view.find(peer.port);
+            auto current_it = this->local_view.find(peer.ip/*peer.port*/);
             if(current_it != this->local_view.end()){ //o elemento existe no mapa
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second = peer;
             }else{
-                this->local_view.insert(std::make_pair(peer.port, peer));
+                this->local_view.insert(std::make_pair(peer.ip /*peer.port*/, peer));
             }
         }
     }
@@ -337,14 +338,14 @@ void smart_load_balancer::receive_local_message(std::vector<peer_data> received)
     std::scoped_lock<std::recursive_mutex> lk (this->local_view_mutex);
     for(peer_data& peer: received){
         if(group(peer.pos) == this->my_group){
-            auto current_it = this->local_view.find(peer.port);
+            auto current_it = this->local_view.find(peer.ip /*peer.port*/);
             if(current_it != this->local_view.end()){ //o elemento existe no mapa
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second.age = peer.age;
 
             }else{
-                this->local_view.insert(std::make_pair(peer.port, peer));
+                this->local_view.insert(std::make_pair(peer.ip /*peer.port*/, peer));
             }
         }
     }
@@ -355,7 +356,7 @@ void smart_load_balancer::process_msg(proto::pss_message &pss_msg) {
     for(auto& peer: pss_msg.view()){
         peer_data peer_data;
         peer_data.ip = peer.ip();
-        peer_data.port = peer.port();
+        //peer_data.port = peer.port();
         peer_data.age = peer.age();
         peer_data.id = peer.id();
         peer_data.slice = peer.slice();
@@ -385,7 +386,7 @@ void smart_load_balancer::operator()() {
 
                     proto::pss_message pss_message;
                     pss_message.set_sender_ip(this->ip);
-                    pss_message.set_sender_port(this->port);
+                    //pss_message.set_sender_port(this->port);
                     pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE_LOCAL);
                     this->send_msg(target_peer, pss_message);
                 }else{
@@ -394,7 +395,7 @@ void smart_load_balancer::operator()() {
 
                     proto::pss_message pss_message;
                     pss_message.set_sender_ip(this->ip);
-                    pss_message.set_sender_port(this->port);
+                    //pss_message.set_sender_port(this->port);
                     pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE);
                     this->send_msg(target_peer, pss_message);
                 }
@@ -418,7 +419,7 @@ void smart_load_balancer::send_msg(peer_data &target_peer, proto::pss_message &m
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(target_peer.port);
+        serverAddr.sin_port = htons(client::lb_port/*target_peer.port*/);
         serverAddr.sin_addr.s_addr = inet_addr(target_peer.ip.c_str());
 
         std::string buf;

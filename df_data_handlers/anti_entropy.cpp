@@ -10,10 +10,11 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <spdlog/spdlog.h>
+#include <df_core/peer.h>
 #include "anti_entropy.h"
 
-anti_entropy::anti_entropy(std::string ip, int respond_to_port, long id, pss *pss_ptr,
-        std::shared_ptr<kv_store<std::string>> store, long sleep_interval): ip(std::move(ip)), respond_to_port(respond_to_port), id(id), pss_ptr(pss_ptr),
+anti_entropy::anti_entropy(std::string ip/*, int respond_to_port*/, long id, pss *pss_ptr,
+        std::shared_ptr<kv_store<std::string>> store, long sleep_interval): ip(std::move(ip))/*, respond_to_port(respond_to_port)*/, id(id), pss_ptr(pss_ptr),
         store(std::move(store)), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {}
 
@@ -29,7 +30,7 @@ void anti_entropy::send_peer_keys(std::vector<peer_data>& target_peers, proto::k
     serverAddr.sin_family = AF_INET;
 
     for(auto& peer: target_peers){
-        serverAddr.sin_port = htons(peer.port + 1);
+        serverAddr.sin_port = htons(peer::kv_port/*peer.port + 1*/);
         serverAddr.sin_addr.s_addr = inet_addr(peer.ip.c_str());
 
         try {
@@ -59,7 +60,7 @@ void anti_entropy::operator()() {
                 proto::kv_message message;
                 auto *message_content = new proto::anti_entropy_message();
                 message_content->set_ip(this->ip);
-                message_content->set_port(this->respond_to_port);
+                //message_content->set_port(this->respond_to_port);
                 message_content->set_id(this->id);
                 for (auto &key : this->store->get_keys()) {
                     proto::kv_store_key *kv_key = message_content->add_keys();

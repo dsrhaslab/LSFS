@@ -31,20 +31,25 @@ private:
 
     boost::asio::io_service io_service;
     boost::thread_group thread_pool;
-    std::shared_mutex alive_ports_mutex;
+    //std::shared_mutex alive_ports_mutex;
+    std::shared_mutex alive_ips_mutex;
     std::recursive_mutex fila_mutex;
-    std::unordered_set<int> alivePorts;
-    std::unordered_map<int, long> aliveIds;
-    std::unordered_map<int, double> alivePos;
-    std::queue<std::vector<int>> fila; //era concurrent linked queue
+    //std::unordered_set<int> alivePorts;
+    std::unordered_set<std::string> aliveIps;
+    //std::unordered_map<int, long> aliveIds;
+    std::unordered_map<std::string, long> aliveIds;
+    //std::unordered_map<int, double> alivePos;
+    std::unordered_map<std::string, double> alivePos;
+    //std::queue<std::vector<int>> fila; //era concurrent linked queue
+    std::queue<std::vector<std::string>> fila; //era concurrent linked queue
 
     int viewsize;
     int initialnodes;
-    int port;
+    //int port;
     const char* ip;
 
 public:
-    BootstrapperImpl(int viewsize, const char* ip, int port);
+    BootstrapperImpl(int viewsize, const char* ip/*, int port*/);
     void run();
     //void addIP(std::string ip, long id, double pos);
     //void removeIP(std::string ip);
@@ -52,8 +57,8 @@ public:
     std::vector<peer_data> get_view();
 
     void boot_worker(int* socket);
-    void add_peer(std::string ip,int port, long id, double pos);
-    void remove_peer(int port);
+    void add_peer(std::string ip/*,int port*/, long id, double pos);
+    void remove_peer(/*int port*/ std::string ip);
 
     tcp_client_server_connection::tcp_server_connection* get_connection();
     void stopThread();
@@ -63,7 +68,7 @@ public:
 
     std::string get_ip();
 
-    int get_port();
+    //int get_port();
 };
 
 #endif //DATAFLASKSCPP_BOOTSTRAPPER_IMPL_H

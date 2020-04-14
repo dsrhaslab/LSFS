@@ -5,21 +5,21 @@ $Cxx.namespace("packet");
 
 struct Peer {
     host @0 :Text;
-    port @1 :Int32;
-    age  @2 :Int32;
-    id   @3 :Int64;
-    pos  @4 :Float64;
+#    port @1 :Int32;
+    age  @1 :Int32;
+    id   @2 :Int64;
+    pos  @3 :Float64;
 }
 
 struct Packet {
 
     type @0 :Type;
     senderIP @1 :Text;
-    senderPort @2 :Int32; #será identificado para já pela porta
+#senderPort @2 :Int32; #será identificado para já pela porta
 
     payload :union {
-       nothing @3 :Void;
-       view @4 :List(Peer);
+       nothing @2 :Void;
+       view @3 :List(Peer);
     }
 
     enum Type {

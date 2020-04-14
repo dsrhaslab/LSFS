@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <memory>
 #include <spdlog/spdlog.h>
+#include <df_core/peer.h>
 
 
 using json = nlohmann::json;
@@ -28,7 +29,7 @@ using json = nlohmann::json;
 
 //my_port é necessário para poder enviar a nossa identidade (que é a porta)
 //no futuro, com endereços, não será necessário.
-pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, long my_id, double my_pos)
+pss::pss(const char *boot_ip/*, int boot_port*/, std::string my_ip/*, int my_port*/, long my_id, double my_pos)
 {
     //TODO acrescentar loop para tentar reconexão caso falhe
 
@@ -37,16 +38,16 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, lon
 
     while(!recovered){
         try {
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip, boot_port, capnp_serializer);
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip, peer::pss_port /*boot_port*/, capnp_serializer);
 
             //sending announce msg
             pss_message pss_announce_msg;
             pss_announce_msg.sender_ip = my_ip;
-            pss_announce_msg.sender_port = my_port;
+            //pss_announce_msg.sender_port = my_port;
             pss_announce_msg.type = pss_message::Type::Announce;
             pss_announce_msg.view.push_back({
                 my_ip,
-                my_port,
+                //my_port,
                 0,
                 my_id,
                 0,
@@ -69,7 +70,7 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, lon
 
             //process received view
             for (peer_data &peer : pss_view_msg_rcv.view) {
-                this->view.insert(std::make_pair(peer.port, std::move(peer)));
+                this->view.insert(std::make_pair(peer.ip /*peer.port*/, std::move(peer)));
             }
 
         }catch(const char* e){
@@ -80,8 +81,8 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, lon
 
 }
 
-pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, long id, double pos, long boot_time, int view_size, int sleep, int gossip_size, group_construction* group_c):
-    pss::pss(boot_ip, boot_port, my_ip, my_port, id, pos)
+pss::pss(const char *boot_ip/*, int boot_port*/, std::string my_ip/*, int my_port*/, long id, double pos, long boot_time, int view_size, int sleep, int gossip_size, group_construction* group_c):
+    pss::pss(boot_ip/*, boot_port*/, my_ip/*, my_port*/, id, pos)
 {
     this->running = true;
     this->sleep_interval = sleep;
@@ -89,20 +90,20 @@ pss::pss(const char *boot_ip, int boot_port, std::string my_ip, int my_port, lon
     this->view_size = view_size;
     this->gossip_size = gossip_size;
     this->ip = my_ip;
-    this->port = my_port;
+    //this->port = my_port;
     this->id = id;
     this->pos = pos;
     this->boot_ip = boot_ip;
-    this->boot_port = boot_port;
+    //this->boot_port = boot_port;
     this->socket_send = socket(PF_INET, SOCK_DGRAM, 0);
     this->group_c = group_c;
 }
 
-std::vector<peer_data> pss::select_view_to_send(int target_port) {
+std::vector<peer_data> pss::select_view_to_send(/*int target_port*/ std::string target_ip) {
     std::vector<peer_data> res;
     peer_data myself = {
             this->ip,
-            this->port,
+            //this->port,
             0,
             this->id,
             this->group_c->get_nr_groups(),
@@ -115,8 +116,8 @@ std::vector<peer_data> pss::select_view_to_send(int target_port) {
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
 
     std::vector<peer_data> my_view_elements;
-    for(auto& [port, peer]: this->view){
-        if(port != target_port) {
+    for(auto& [ip /*port*/, peer]: this->view){
+        if(ip != target_ip/*port != target_port*/) {
             my_view_elements.push_back(peer);
         }
     }
@@ -127,7 +128,7 @@ std::vector<peer_data> pss::select_view_to_send(int target_port) {
     for(peer_data& peer: my_view_elements){
         if(res.size() < this->gossip_size){
             res.push_back(std::move(peer));
-            this->view.erase(peer.port);
+            this->view.erase(peer.ip/*peer.port*/);
         }
     }
 
@@ -160,7 +161,7 @@ std::vector<peer_data> pss::get_view(){
     return res;
 }
 
-void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, proto::pss_message_Type msg_type){
+void pss::send_pss_msg(/*int target_port*/ std::string target_ip, std::vector<peer_data>& view_to_send, proto::pss_message_Type msg_type){
     //TODO lidar com o caso de não conseguir conexão
     try {
 //        std::cerr << "[df_pss] function: send_response_msg [Creating Connection]" << std::endl;
@@ -170,18 +171,18 @@ void pss::send_pss_msg(int target_port, std::vector<peer_data>& view_to_send, pr
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(target_port);
-        serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+        serverAddr.sin_port = htons(peer::pss_port);
+        serverAddr.sin_addr.s_addr = inet_addr(target_ip.c_str());
 
         proto::pss_message pss_message;
         pss_message.set_sender_ip(this->ip);
-        pss_message.set_sender_port(this->port);
+        //pss_message.set_sender_port(this->port);
         pss_message.set_type(msg_type);
 
         for(auto& peer: view_to_send){
             proto::peer_data* peer_data = pss_message.add_view();
             peer_data->set_ip(peer.ip);
-            peer_data->set_port(peer.port);
+            //peer_data->set_port(peer.port);
             peer_data->set_age(peer.age);
             peer_data->set_id(peer.id);
             peer_data->set_pos(peer.pos);
@@ -228,16 +229,16 @@ void pss::operator()() {
 
             if(target_ptr != nullptr){
                 peer_data target = *target_ptr;
-                this->view.erase(target.port);
-                std::vector<peer_data> view_to_send = this->select_view_to_send(target.port); //older_member.first = target_port
+                this->view.erase(/*target.port*/ target.ip);
+                std::vector<peer_data> view_to_send = this->select_view_to_send(/*target.port*/ target.ip); //older_member.first = target_port
 
                 this->last_sent_view = std::vector<peer_data>();
                 for(peer_data& peer : view_to_send){
-                    if(peer.port != this->port)
+                    if(peer.ip != this->ip /*peer.port != this->port*/)
                         this->last_sent_view.push_back(peer);
                 }
 
-                this->send_pss_msg(target.port, view_to_send, proto::pss_message_Type::pss_message_Type_NORMAL);
+                this->send_pss_msg(/*target.port*/ target.ip, view_to_send, proto::pss_message_Type::pss_message_Type_NORMAL);
             }
 //            this->print_view();
         }
@@ -247,10 +248,10 @@ void pss::operator()() {
 
 void pss::print_view() {
 //    std::cout << "====== My View[" + std::to_string(this->port) + "] ====" << std::endl;
-    spdlog::debug("====== My View[" + std::to_string(this->port) + "] ====" );
+    spdlog::debug("====== My View[" + this->ip /*std::to_string(this->port)*/ + "] ====" );
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(auto const& [key, peer] : this->view){
-        spdlog::debug(peer.ip + "(" + std::to_string(peer.port) + ") : " + std::to_string(peer.age) );
+        spdlog::debug(peer.ip + " : " + std::to_string(peer.age) );
 //        std::cout << peer.ip << "(" << peer.port << ") : " << peer.age << std::endl;
     }
     spdlog::debug("==========================");
@@ -283,7 +284,7 @@ int pss::get_nr_groups(){
 
 void pss::age_view_members() {
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
-    for(auto& [port, peer]: this->view){
+    for(auto& [/*port*/ ip, peer]: this->view){
         peer.age += 1;
     }
 }
@@ -292,7 +293,7 @@ peer_data* pss::get_older_from_view() {
     peer_data* older_peer = nullptr;
 
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
-    for(auto& [port, peer] : this->view){
+    for(auto& [/*port*/ ip, peer] : this->view){
         if(older_peer == nullptr || peer.age > (*older_peer).age){
             older_peer = &peer;
         }
@@ -307,7 +308,7 @@ void pss::process_msg(proto::pss_message pss_msg){
     for(auto& peer: pss_msg.view()){
         peer_data peer_data;
         peer_data.ip = peer.ip();
-        peer_data.port = peer.port();
+        //peer_data.port = peer.port();
         peer_data.age = peer.age();
         peer_data.id = peer.id();
         peer_data.slice = peer.slice();
@@ -323,7 +324,7 @@ void pss::process_msg(proto::pss_message pss_msg){
 
         peer_data myself = {
                 this->ip,
-                this->port,
+                //this->port,
                 0,
                 this->id,
                 this->group_c->get_nr_groups(),
@@ -333,21 +334,21 @@ void pss::process_msg(proto::pss_message pss_msg){
 
         current_view.push_back(std::move(myself));
 
-        this->send_pss_msg(pss_msg.sender_port(), current_view, proto::pss_message_Type::pss_message_Type_LOADBALANCE);
+        this->send_pss_msg(/*pss_msg.sender_port()*/pss_msg.sender_ip(), current_view, proto::pss_message_Type::pss_message_Type_LOADBALANCE);
     }else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_LOADBALANCE_LOCAL){
         std::string target_ip = pss_msg.sender_ip();
-        this->group_c->send_local_message(target_ip, pss_msg.sender_port());
+        this->group_c->send_local_message(target_ip/*, pss_msg.sender_port()*/);
     }else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_NORMAL){
         std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
         this->incorporate_last_sent_view();
         //1- seleciona uma vista para enviar (removendo tais nodos da sua vista, isto
         // porque desta forma consegue arranjar espaço para acomodar os nodos que recebeu)
-        std::vector<peer_data> view_to_send = this->select_view_to_send(pss_msg.sender_port());
+        std::vector<peer_data> view_to_send = this->select_view_to_send(pss_msg.sender_ip()/*pss_msg.sender_port()*/);
         //2- desses nodos que selecionou para enviar armazena os diferentes do proprio porque pode ser necessário
         //completar a vista, dado que pode ter recebido menos nodos dos que enviou
         std::vector<peer_data> to_fill_view;
         for(peer_data peer: view_to_send){
-            if(peer.port != this->port)
+            if(peer.ip != this->ip/*peer.port != this->port*/)
                 to_fill_view.push_back(peer);
         }
         //3- insere as vistas, começando pela que recebeu primeiro
@@ -356,7 +357,7 @@ void pss::process_msg(proto::pss_message pss_msg){
 //        lk.unlock();
 
         //4- envia msg de resposta
-        this->send_pss_msg(pss_msg.sender_port(), view_to_send, proto::pss_message_Type::pss_message_Type_RESPONSE);
+        this->send_pss_msg(pss_msg.sender_ip()/*pss_msg.sender_port()*/, view_to_send, proto::pss_message_Type::pss_message_Type_RESPONSE);
 
         //5- pass received peers to gropu construction
         this->group_c->receive_message(recv_view);
@@ -383,15 +384,15 @@ void pss::incorporate_in_view(std::vector<peer_data> source) {
     while(this->view.size() < this->view_size && source.size() > 0){
         peer_data tmp = source.front();
         source.erase(source.begin());
-        if(tmp.port != this->port){
-            auto current_it = this->view.find(tmp.port);
+        if(tmp.ip != this->ip/*tmp.port != this->port*/){
+            auto current_it = this->view.find(tmp.ip/*tmp.port*/);
             if(current_it != this->view.end()){ //o elemento existe no mapa
                 int current_age = current_it->second.age;
                 if(current_age > tmp.age)
                     current_it->second = tmp;
 
             }else{
-                this->view.insert(std::make_pair(tmp.port, tmp));
+                this->view.insert(std::make_pair(/*tmp.port*/ tmp.ip, tmp));
             }
         }
     }
@@ -405,7 +406,7 @@ void pss::complete_view_with_last_sent() {
 
     while(this->view.size() < this->view_size && this->last_sent_view.size() > 0){
 
-        this->view.insert(std::make_pair(it->port, *it));
+        this->view.insert(std::make_pair(/*it->port*/ it->ip, *it));
         it = this->last_sent_view.erase(it);
     }
 
@@ -415,33 +416,33 @@ void pss::incorporate_last_sent_view() {
     std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
     while(this->view.size() < this->view_size && this->last_sent_view.size() > 0){
         peer_data tmp = this->last_sent_view.front();
-        this->view.insert(std::make_pair(tmp.port, tmp));
+        this->view.insert(std::make_pair(/*tmp.port*/tmp.ip, tmp));
         this->last_sent_view.erase(this->last_sent_view.begin());
     }
 }
 
-std::vector<int> pss::get_peers_from_view() {
-    std::vector<int> res;
+std::vector<std::string/*int*/> pss::get_peers_from_view() {
+    std::vector</*int*/ std::string> res;
 
     std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
-    for (auto&[port, peer]: this->view) {
-        res.push_back(port);
+    for (auto&[/*port*/ ip, peer]: this->view) {
+        res.push_back(/*port*/ ip);
     }
 
     auto it = this->last_sent_view.begin();
     while (res.size() < this->view_size && it != this->last_sent_view.end()) {
-        res.push_back(it->port);
+        res.push_back(/*it->port*/ it->ip);
         ++it;
     }
 
     return std::move(res);
 }
 
-std::vector<int> pss::get_group_view() {
+std::vector</*int*/ std::string> pss::get_group_view() {
     auto peers =  this->group_c->get_local_view();
-    std::vector<int> res;
+    std::vector</*int*/ std::string> res;
     for(auto& peer: peers)
-        res.push_back(peer.port);
+        res.push_back(/*peer.port*/ peer.ip);
     return std::move(res);
 }
 
@@ -456,13 +457,13 @@ void pss::stop_thread() {
 void pss::bootstrapper_termination_alerting() {
     try {
         std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
-        tcp_client_server_connection::tcp_client_connection connection(this->boot_ip, this->boot_port,
+        tcp_client_server_connection::tcp_client_connection connection(this->boot_ip, peer::pss_port/*this->boot_port*/,
                                                                        std::move(capnp_serializer));
 
         //sending announce msg
         pss_message pss_termination_msg;
         pss_termination_msg.sender_ip = this->ip;
-        pss_termination_msg.sender_port = this->port;
+        //pss_termination_msg.sender_port = this->port;
         pss_termination_msg.type = pss_message::Type::Termination;
         connection.send_pss_msg(pss_termination_msg);
     }catch(const char* e){

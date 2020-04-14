@@ -40,7 +40,7 @@ void Capnp_Serializer::recv_pss_message(int* socket, pss_message& pss_msg){
         bool has_view = true;
 
         pss_msg.sender_ip = packet.getSenderIP();
-        pss_msg.sender_port = packet.getSenderPort();
+        //pss_msg.sender_port = packet.getSenderPort();
 
         switch (packet.getType()) {
             case packet::Packet::Type::NORMAL:
@@ -65,7 +65,7 @@ void Capnp_Serializer::recv_pss_message(int* socket, pss_message& pss_msg){
         if (has_view) {
             auto view = packet.getPayload().getView();
             for (auto peer: view) {
-                pss_msg.view.push_back({std::string(peer.getHost().cStr()), peer.getPort(), peer.getAge(), peer.getId(), 0, peer.getPos(), 0});
+                pss_msg.view.push_back({std::string(peer.getHost().cStr())/*, peer.getPort()*/, peer.getAge(), peer.getId(), 0, peer.getPos(), 0});
             }
         }
     }catch(...){throw;}
@@ -76,7 +76,7 @@ void Capnp_Serializer::send_pss_message(int* socket, pss_message& pss_msg){
     ::capnp::MallocMessageBuilder message;
     ::packet::Packet::Builder packet = message.initRoot<packet::Packet>();
     packet.setSenderIP(pss_msg.sender_ip);
-    packet.setSenderPort(pss_msg.sender_port);
+    //packet.setSenderPort(pss_msg.sender_port);
 
     bool has_view = true;
 
@@ -110,7 +110,7 @@ void Capnp_Serializer::send_pss_message(int* socket, pss_message& pss_msg){
         for(peer_data peer: pss_msg.view){
             ::packet::Peer::Builder peer_builder = payload[peer_idx];
             peer_builder.setHost(peer.ip);
-            peer_builder.setPort(peer.port);
+            //peer_builder.setPort(peer.port);
             peer_builder.setAge(peer.age);
             peer_builder.setId(peer.id);
             peer_builder.setPos(peer.pos);

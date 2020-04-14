@@ -4,7 +4,7 @@ package proto;
 
 message get_latest_version_message {
   string ip = 1;
-  int32 port = 2;
+//  int32 port = 2;
   int64 id = 3;
   string key = 4;
   string reqid = 5;
@@ -12,7 +12,7 @@ message get_latest_version_message {
 
 message get_latest_version_reply_message {
   string ip = 1;
-  int32 port = 2;
+//  int32 port = 2;
   int64 id = 3;
   string reqid = 4;
   int64 version = 5;
@@ -20,7 +20,7 @@ message get_latest_version_reply_message {
 
 message get_message {
   string ip = 1;
-  int32 port = 2;
+//  int32 port = 2;
   int64 id = 3;
   string key = 4;
   oneof version_avail {
@@ -33,7 +33,7 @@ message get_message {
 
 message get_reply_message {
   string ip = 1;
-  int32 port = 2;
+//  int32 port = 2;
   int64 id = 3;
   string key = 4;
   int64 version = 5;
@@ -45,7 +45,7 @@ message get_reply_message {
 
 message put_message {
   string ip = 1;
-  int32 port = 2;
+//  int32 port = 2;
   int64 id = 3;
   string key = 4;
   int64 version = 5;
@@ -54,7 +54,7 @@ message put_message {
 
 message put_with_merge_message {
   string ip = 1;
-  int32 port = 2;
+//  int32 port = 2;
   int64 id = 3;
   string key = 4;
   int64 version = 5;
@@ -63,7 +63,7 @@ message put_with_merge_message {
 
 message put_reply_message {
   string ip = 1;
-  int32 port = 2;
+//  int32 port = 2;
   int64 id = 3;
   string key = 4;
   int64 version = 5;
@@ -77,7 +77,7 @@ message kv_store_key {
 
 message anti_entropy_message {
   string ip = 1;
-  int32 port = 2;
+//  int32 port = 2;
   int64 id = 3;
   repeated kv_store_key keys = 4;
 }

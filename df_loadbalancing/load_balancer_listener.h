@@ -6,6 +6,7 @@
 #define P2PFS_LOAD_BALANCER_LISTENER_H
 
 
+#include <memory>
 #include "dynamic_load_balancer.h"
 
 class load_balancer_listener {
@@ -17,7 +18,7 @@ private:
     int port;
 
 public:
-    load_balancer_listener(std::shared_ptr<load_balancer> lb, std::string ip, int port);
+    load_balancer_listener(std::shared_ptr<load_balancer> lb, std::string ip/*, int port*/);
     ~load_balancer_listener();
     void stop();
     void operator()();

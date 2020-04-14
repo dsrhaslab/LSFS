@@ -25,24 +25,24 @@ class view_logger {
 private:
     std::atomic<bool> running;
     pss* cyclon_ptr;
-    int port;
+//    int port;
     int logging_interval;
     std::string logging_dir;
 
 public:
 
-    view_logger(int port, pss* pss, int logging_interval, std::string logging_dir)
+    view_logger(/*int port,*/ pss* pss, int logging_interval, std::string logging_dir)
     {
         this->cyclon_ptr = pss;
         this->running = true;
-        this->port = port;
+        //this->port = port;
         this->logging_interval = logging_interval;
         this->logging_dir = logging_dir;
     }
 
     void operator ()(){
         int cycles = 0;
-        std::string filename = this->logging_dir + std::to_string(this->port) + ".txt";
+        std::string filename = this->logging_dir + /*std::to_string(this->port)*/ "df_logger" + ".txt";
 
         std::shared_ptr<spdlog::logger> logger;
         try
@@ -74,9 +74,9 @@ public:
             timed_json += "\"group\":" + std::to_string(this->cyclon_ptr->get_my_group()) + ",";
             timed_json += "\"group_view\":[";
             int i = 0;
-            for(auto& port: this->cyclon_ptr->get_group_view()){
+            for(auto& ip /*port*/: this->cyclon_ptr->get_group_view()){
                 if (i != 0) timed_json += ",";
-                timed_json += std::to_string(port);
+                timed_json += ip/*std::to_string(port)*/;
                 i++;
             }
             timed_json += "],";
@@ -85,9 +85,9 @@ public:
             timed_json += "\"time\":\"" + std::to_string(localTime->tm_hour) + ":" + std::to_string(localTime->tm_min) + ":" + std::to_string(localTime->tm_sec) + "\",";
             timed_json += "\"view\":[";
             i = 0;
-            for(auto& port: this->cyclon_ptr->get_peers_from_view()){
+            for(auto& ip/*port*/: this->cyclon_ptr->get_peers_from_view()){
                 if (i != 0) timed_json += ",";
-                timed_json += std::to_string(port);
+                timed_json += ip/*std::to_string(port)*/;
                 i++;
             }
             timed_json += "]}";

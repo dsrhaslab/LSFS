@@ -19,11 +19,11 @@ private:
     long sleep_interval;
     int sender_socket;
     std::string ip;
-    int respond_to_port;
+    //int respond_to_port;
     long id;
 
 public:
-    anti_entropy(std::string ip, int respond_to_port, long id, pss* pss_ptr, std::shared_ptr<kv_store<std::string>> store, long sleep_interval);
+    anti_entropy(std::string ip/*, int respond_to_port*/, long id, pss* pss_ptr, std::shared_ptr<kv_store<std::string>> store, long sleep_interval);
     void operator()();
     void stop_thread();
 

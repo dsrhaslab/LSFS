@@ -18,13 +18,13 @@
 
 class peer {
 public:
-    inline const static char* boot_ip = "127.0.0.1";
-    inline const static int boot_port = 12345;
     inline const static int pss_listener_thread_loop_size = 3;
+    inline const static int pss_port = 12345;
+    inline const static int kv_port = 12346;
 
 private:
     long id;
-    int pss_port;
+//    int pss_port;
     int data_port;
     std::string ip;
     double position;
@@ -59,8 +59,8 @@ private:
 
 
 public:
-    peer(long id, std::string ip, int pss_port, int data_port, double position, std::shared_ptr<spdlog::logger> logger);
-    peer(long id, std::string ip, int pss_port, int data_port, double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
+    peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int data_port*/, double position, std::shared_ptr<spdlog::logger> logger);
+    peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int data_port*/, double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
             int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval,
             float reply_chance, bool smart, std::shared_ptr<spdlog::logger> logger, long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at);
     void print_view();
