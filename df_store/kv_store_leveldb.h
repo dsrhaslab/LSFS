@@ -20,6 +20,7 @@
 #include <iostream>
 #include <cstring>
 #include <functional>
+#include <filesystem>
 
 #include <sstream>
 #include <iostream>
@@ -27,8 +28,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <random>
-
-namespace fs = std::filesystem;
 
 /*
  * Notes on LevelDB
@@ -92,6 +91,8 @@ std::string kv_store_leveldb::db_name() const {
 int kv_store_leveldb::init(void* path, long id){
     this->id = id;
     this->path = std::string((char*) path);
+
+    std::filesystem::create_directories(this->path);
 
     leveldb::Options options;
     options.create_if_missing = true;

@@ -19,7 +19,6 @@
 #define LOG(X) std::cout << X << std::endl;
 
 BootstrapperImpl::BootstrapperImpl(int viewsize, const char* ip/*, int port*/):
-
     connection(tcp_client_server_connection::tcp_server_connection(ip, boot_port/*port*/, std::unique_ptr<Serializer>(new Capnp_Serializer))),
     viewsize(viewsize),
     ip(ip)
@@ -29,6 +28,7 @@ BootstrapperImpl::BootstrapperImpl(int viewsize, const char* ip/*, int port*/):
 //    std::cerr << "[df_bootstrapper] function: constructor [Creating Server Connection]" << std::endl;
     this->initialnodes = 10;
     this->running = true;
+    std::cout << ip << ":" << boot_port << std::endl;
 }
 
 void BootstrapperImpl::stopThread(){

@@ -23,7 +23,6 @@
 #include <fstream>
 #include <cstdlib>
 #include <filesystem>
-namespace fs = std::filesystem;
 
 /*
  * TODO: Melhorar isto: get latest e get latest version estão a percorrer a db toda
@@ -121,6 +120,9 @@ void kv_store_wiredtiger::error_check(int call){
 int kv_store_wiredtiger::init(void* path, long id){
     this->id = id;
     this->path = std::string((char*) path);
+
+    std::filesystem::create_directories(this->path);
+
     std::string database_path = (char*) path +  std::to_string(id);
     try{
         std::filesystem::create_directories(database_path.c_str());
