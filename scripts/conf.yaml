@@ -6,10 +6,10 @@ main_confs:
   exec_time_sec: 4000
   base_port: 12350
   peer_instantiation_interval_sec: 0.01
-  view_logger_enabled: false
+  view_logger_enabled: true
   log_interval_sec: 5
-  logging_dir: /P2P-Filesystem/logging/logging3_extra18/
-  results_dir: /P2P-Filesystem/results/results3_extra18_age40_local8/
+  logging_dir: /P2P-Filesystem/logging/
+  results_dir: /P2P-Filesystem/results/
   database_base_path: /P2P-Filesystem/
   rep_max: 10
   rep_min: 5

@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
+#include <filesystem>
 
 #define LOG(X) std::cout << X << std::endl;
 
@@ -42,6 +43,9 @@ public:
 
     void operator ()(){
         int cycles = 0;
+
+        std::filesystem::create_directories(this->logging_dir);
+
         std::string filename = this->logging_dir + /*std::to_string(this->port)*/ "df_logger" + ".txt";
 
         std::shared_ptr<spdlog::logger> logger;
