@@ -43,7 +43,7 @@ private:
     std::thread handler_th;
 
 public:
-    client(std::string ip, std::string boot_ip, long id/*, int port, int lb_port*/, std::string conf_filename);
+    client(std::string boot_ip, std::string ip, long id/*, int port, int lb_port*/, std::string conf_filename);
     void stop();
     std::set<long> put(std::string key, long version, const char* data, size_t size, int wait_for);
     inline std::set<long> put(std::string key, long version, const char* data, size_t size) {

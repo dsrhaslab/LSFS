@@ -15,7 +15,7 @@
 #include "client_reply_handler_mt.h"
 #include "exceptions/custom_exceptions.h"
 
-client::client(std::string ip, std::string boot_ip, long id/*, int port, int lb_port*/, std::string conf_filename):
+client::client(std::string boot_ip, std::string ip, long id/*, int port, int lb_port*/, std::string conf_filename):
     ip(ip), id(id)/*, port(port)*/, sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
     , request_count(0)
 {
