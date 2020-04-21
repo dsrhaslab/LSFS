@@ -9,9 +9,9 @@ std::unique_ptr<lsfs_state> state;
 std::shared_ptr<client> df_client;
 std::shared_ptr<spdlog::logger> logger;
 
-lsfs_impl::lsfs_impl(std::string boot_ip, std::string ip){
+lsfs_impl::lsfs_impl(std::string boot_ip, std::string ip, long client_id, std::string config_filename){
 
-    df_client = std::make_shared<client>(boot_ip, ip, 0/* kv_port, lb_port*/, "../scripts/conf.yaml");
+    df_client = std::make_shared<client>(boot_ip, ip, client_id, config_filename);
 
     try
     {

@@ -45,14 +45,16 @@ std::string get_local_ip_address(){
 int main(int argc, char *argv[])
 {
 
-    if(argc < 1){
+    if(argc < 6){
         exit(1);
     }
 
     const char* boot_ip = argv[1];
+    long client_id = atol(argv[2]);
+    const char* config_filename = argv[3];
 
     { // Setting Log Level
-        YAML::Node config = YAML::LoadFile("../scripts/conf.yaml");
+        YAML::Node config = YAML::LoadFile(config_filename);
         auto main_confs = config["main_confs"];
         std::string log_level = main_confs["log_level"].as<std::string>();
 
@@ -81,8 +83,8 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    lsfs_impl fs(boot_ip, ip);
-    int status = fs.run(argc, argv, NULL);
+    lsfs_impl fs(boot_ip, ip, client_id, config_filename);
+    int status = fs.run(argc - 3, argv + 3, NULL);
 
     return status;
 }
