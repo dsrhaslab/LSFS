@@ -12,57 +12,7 @@ lsfs_state::lsfs_state(std::shared_ptr<client> df_client, std::shared_ptr<spdlog
         df_client(std::move(df_client)), logger(std::move(logger))
 {}
 
-long lsfs_state::increment_version_and_get(std::string path){
-    std::scoped_lock<std::mutex> lk (version_tracker_mutex);
-    auto it = version_tracker.find(path);
-    if(it == version_tracker.end()){
-        //não existe o path
-        version_tracker.emplace(std::move(path), 1);
-        return 1;
-    }else{
-        it->second += 1;
-        return it->second;
-    }
-}
-
-long lsfs_state::get_version(std::string path){
-    std::scoped_lock<std::mutex> lk (version_tracker_mutex);
-    auto it = version_tracker.find(path);
-    if(it == version_tracker.end()){
-        //não existe o path
-        return -1;
-    }else{
-        return it->second;
-    }
-}
-
-int lsfs_state::open_and_read_size(
-        const char *path,
-        size_t* size
-)
-{
-    //open file descriptor
-    int fh = open(path, O_RDONLY);
-
-    if (fh == -1)
-        return -errno;
-
-    //read previously written size of data in kv
-    char buf [20];
-    const int result_read = pread(fh, buf, 20, 0);
-
-    //close file descriptor
-    if(close(fh) != 0) return -errno;
-
-    if (result_read == -1)
-        return -errno;
-
-    *size = atol(buf);
-
-    return 0;
-}
-
-int lsfs_state::put_block(const char* path, const char* buf, size_t size, bool timestamp_version) {
+int lsfs_state::put_block(const std::string& path, const char* buf, size_t size, bool timestamp_version) {
     int return_value;
 
     try{
@@ -92,13 +42,13 @@ int lsfs_state::put_block(const char* path, const char* buf, size_t size, bool t
     return return_value;
 }
 
-int lsfs_state::put_metadata(metadata& met, const char* path, bool timestamp_version){
+int lsfs_state::put_metadata(metadata& met, const std::string& path, bool timestamp_version){
     // serialize metadata object
     std::string metadata_str = metadata::serialize_to_string(met);
     return this->put_block(path, metadata_str.data(), metadata_str.size(), timestamp_version);
 }
 
-int lsfs_state::put_with_merge_metadata(metadata& met, const char* path){
+int lsfs_state::put_with_merge_metadata(metadata& met, const std::string& path){
     // serialize metadata object
     std::string metadata_str = metadata::serialize_to_string(met);
     int return_value;
@@ -125,7 +75,7 @@ int lsfs_state::put_with_merge_metadata(metadata& met, const char* path){
     return return_value;
 }
 
-std::unique_ptr<metadata> lsfs_state::get_metadata(const char* path){
+std::unique_ptr<metadata> lsfs_state::get_metadata(const std::string& path){
 //    long version = get_version(path);
     std::unique_ptr<metadata> res = nullptr;
     try{
@@ -133,7 +83,6 @@ std::unique_ptr<metadata> lsfs_state::get_metadata(const char* path){
         if(version == -1){
             errno = ENOENT;
         }else{
-            spdlog::debug(std::string("######################") + path + " VERSIONG: " + std::to_string(version) + "#################################");
             //Fazer um get de metadados ao dataflasks
             std::shared_ptr<std::string> data = df_client->get(path, 1, &version);
             res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
@@ -145,7 +94,7 @@ std::unique_ptr<metadata> lsfs_state::get_metadata(const char* path){
     return res;
 }
 
-void lsfs_state::add_or_refresh_working_directory(const char *path, metadata &met) {
+void lsfs_state::add_or_refresh_working_directory(const std::string& path, metadata &met) {
     std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
 
 
@@ -161,7 +110,7 @@ void lsfs_state::add_or_refresh_working_directory(const char *path, metadata &me
     this->working_directories.emplace_back(path, std::make_unique<metadata>(met));
 }
 
-std::unique_ptr<metadata> lsfs_state::add_child_to_working_dir_and_retreive(const char* parent_path, const char* child_name, bool is_dir){
+std::unique_ptr<metadata> lsfs_state::add_child_to_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir){
     std::unique_ptr<metadata> res(nullptr);
     std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
     for(auto & working_directory : working_directories){
@@ -175,7 +124,7 @@ std::unique_ptr<metadata> lsfs_state::add_child_to_working_dir_and_retreive(cons
 }
 
 
-int lsfs_state::add_child_to_parent_dir(const char *path, bool is_dir) {
+int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
     std::unique_ptr<std::string> parent_path = get_parent_dir(path);
     std::unique_ptr<std::string> child_name = get_child_name(path);
     if(parent_path != nullptr){
@@ -188,11 +137,11 @@ int lsfs_state::add_child_to_parent_dir(const char *path, bool is_dir) {
         //Fazer um get de metadados ao dataflasks
 
         std::unique_ptr<metadata> met(nullptr);
-        met = this->add_child_to_working_dir_and_retreive(parent_path.get()->c_str(), child_name.get()->c_str(), is_dir);
+        met = this->add_child_to_working_dir_and_retreive(*parent_path, *child_name, is_dir);
         if(met == nullptr){
             //parent folder is not a working directory
             try {
-                std::shared_ptr<std::string> data = df_client->get(parent_path->c_str() /*, &version*/);
+                std::unique_ptr<std::string> data = df_client->get(*parent_path /*, &version*/);
                 // reconstruir a struct stat com o resultado
                 met = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
                 // remove last version added/removed child log
@@ -201,7 +150,7 @@ int lsfs_state::add_child_to_parent_dir(const char *path, bool is_dir) {
                 met->add_child(*child_name, is_dir);
 
                 if(*parent_path != "/"){
-                    add_or_refresh_working_directory(parent_path.get()->c_str(), *met);
+                    add_or_refresh_working_directory(*parent_path, *met);
                 }
             }catch(TimeoutException& e){
                 errno = EHOSTUNREACH; // Not Reachable Host
@@ -209,16 +158,16 @@ int lsfs_state::add_child_to_parent_dir(const char *path, bool is_dir) {
             }
         }
 
-        if(is_working_directory(parent_path->c_str())){
+        if(is_working_directory(*parent_path)){
             // put metadata
-            int res = put_metadata(*met, parent_path->c_str(), true);
+            int res = put_metadata(*met, *parent_path, true);
             if(res != 0){
                 return -errno;
             }
             //on successful put metadata clear add remove childs log
-            this->reset_working_directory_add_remove_log(parent_path->c_str());
+            this->reset_working_directory_add_remove_log(*parent_path);
         }else{
-            int res = put_with_merge_metadata(*met, parent_path->c_str());
+            int res = put_with_merge_metadata(*met, *parent_path);
             if(res != 0){
                 return -errno;
             }
@@ -232,15 +181,15 @@ int lsfs_state::add_child_to_parent_dir(const char *path, bool is_dir) {
     return 0;
 }
 
-void lsfs_state::add_open_file(const char* path, struct stat& stbuf, FileAccess::FileAccess access){
+void lsfs_state::add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
     if(it == open_files.end()) {
-        open_files.emplace(std::string(path), std::make_pair(access, std::make_shared<struct stat>(stbuf)));
+        open_files.emplace(path, std::make_pair(access, std::make_shared<struct stat>(stbuf)));
     }
 }
 
-bool lsfs_state::is_file_opened(const char* path){
+bool lsfs_state::is_file_opened(const std::string& path){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
     if(it != open_files.end()) {
@@ -249,7 +198,7 @@ bool lsfs_state::is_file_opened(const char* path){
     return false;
 }
 
-bool lsfs_state::is_working_directory(const char* path){
+bool lsfs_state::is_working_directory(const std::string& path){
     std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
     for(auto & working_directory : working_directories){
         if(working_directory.first == path){
@@ -269,7 +218,7 @@ bool lsfs_state::is_working_directory(const char* path){
 //    return nullptr;
 //}
 
-bool lsfs_state::update_open_file_metadata(const char* path, struct stat& stbuf){
+bool lsfs_state::update_open_file_metadata(const std::string& path, struct stat& stbuf){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
     if(it != open_files.end()) {
@@ -325,7 +274,7 @@ bool lsfs_state::update_open_file_metadata(const char* path, struct stat& stbuf)
     return false;
 }
 
-bool lsfs_state::update_file_size_if_opened(const char* path, size_t size){
+bool lsfs_state::update_file_size_if_opened(const std::string& path, size_t size){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     struct stat stbuf;
     bool file_is_opened = get_metadata_if_file_opened(path, &stbuf);
@@ -345,7 +294,7 @@ bool lsfs_state::update_file_size_if_opened(const char* path, size_t size){
     }
 }
 
-bool lsfs_state::update_file_time_if_opened(const char* path, const struct timespec ts[2]){
+bool lsfs_state::update_file_time_if_opened(const std::string& path, const struct timespec ts[2]){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     struct stat stbuf;
     bool file_is_opened = get_metadata_if_file_opened(path, &stbuf);
@@ -360,7 +309,7 @@ bool lsfs_state::update_file_time_if_opened(const char* path, const struct times
     }
 }
 
-bool lsfs_state::get_metadata_if_file_opened(const char* path, struct stat* stbuf){
+bool lsfs_state::get_metadata_if_file_opened(const std::string& path, struct stat* stbuf){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
     if(it != open_files.end()) {
@@ -371,7 +320,7 @@ bool lsfs_state::get_metadata_if_file_opened(const char* path, struct stat* stbu
     return false;
 }
 
-bool lsfs_state::get_metadata_if_dir_opened(const char* path, struct stat* stbuf){
+bool lsfs_state::get_metadata_if_dir_opened(const std::string& path, struct stat* stbuf){
     std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
     for(auto & working_directorie : working_directories){
         if(working_directorie.first == path){
@@ -383,7 +332,7 @@ bool lsfs_state::get_metadata_if_dir_opened(const char* path, struct stat* stbuf
     return false;
 }
 
-int lsfs_state::flush_open_file(const char* path){
+int lsfs_state::flush_open_file(const std::string& path){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
     if(it != open_files.end()){
@@ -416,7 +365,7 @@ int lsfs_state::flush_open_file(const char* path){
     return -errno;
 }
 
-int lsfs_state::flush_and_release_open_file(const char* path) {
+int lsfs_state::flush_and_release_open_file(const std::string& path) {
     std::scoped_lock<std::recursive_mutex> lk(open_files_mutex);
     int res = flush_open_file(path);
     if(res != 0){
@@ -434,7 +383,7 @@ void lsfs_state::clear_working_directories_cache() {
     this->working_directories.clear();
 }
 
-void lsfs_state::reset_working_directory_add_remove_log(const char* path){
+void lsfs_state::reset_working_directory_add_remove_log(const std::string& path){
     std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
     for(auto & working_directory : working_directories){
         if(working_directory.first == path){

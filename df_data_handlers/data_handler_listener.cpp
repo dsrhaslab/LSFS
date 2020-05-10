@@ -96,8 +96,13 @@ private:
 
     }
 
-    void forward_message(std::vector<peer_data> view_to_send, proto::kv_message& message){
-        for(peer_data& peer: view_to_send){
+    void forward_message(const std::vector<peer_data>& view_to_send, proto::kv_message& message){
+        std::string buf;
+        message.SerializeToString(&buf);
+        const char* data = buf.data();
+        size_t data_size = buf.size();
+
+        for(const peer_data& peer: view_to_send){
             try {
                 struct sockaddr_in serverAddr;
                 memset(&serverAddr, '\0', sizeof(serverAddr));
@@ -106,11 +111,8 @@ private:
                 serverAddr.sin_port = htons(peer::kv_port/*peer.port + 1*/); // +1 porque as portas da vista são do df_pss
                 serverAddr.sin_addr.s_addr = inet_addr(peer.ip.c_str());
 
-                std::string buf;
-                message.SerializeToString(&buf);
-
                 std::scoped_lock<std::recursive_mutex> lk (socket_send_mutex);
-                int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+                int res = sendto(this->socket_send, data, data_size, 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
                 if(res == -1){
                     spdlog::error("Oh dear, something went wrong with send()! %s\n", strerror(errno));
 
@@ -124,12 +126,12 @@ private:
     }
 
     void process_get_message(const proto::kv_message &msg) {
-        proto::get_message message = msg.get_msg();
-        std::string sender_ip = message.ip();
+        const proto::get_message& message = msg.get_msg();
+        const std::string& sender_ip = message.ip();
         //int sender_port = message.port();
-        std::string key = message.key();
-        std::string req_id = message.reqid();
-        std::shared_ptr<std::string> data(nullptr); //*data = undefined
+        const std::string& key = message.key();
+        const std::string& req_id = message.reqid();
+        std::unique_ptr<std::string> data(nullptr); //*data = undefined
 
         //se o pedido ainda não foi processado e não é um pedido interno (não começa com intern)
         if(!this->store->in_log(req_id) && req_id.rfind("intern", 0) != 0){
@@ -157,18 +159,14 @@ private:
             }
 
 
-            spdlog::debug("<=============(" + std::to_string((data != nullptr)) + ")================== GET (\033[1;31m" + std::to_string(this->id) + "\033[0m) " + req_id + " " + key + " : " + std::to_string(version.version));
+//            spdlog::debug("<=============(" + std::to_string((data != nullptr)) + ")================== GET (\033[1;31m" + std::to_string(this->id) + "\033[0m) " + req_id + " " + key + " : " + std::to_string(version.version));
 
 //            std::cout << "<=============(" << (data != nullptr) << ")================== " << "GET (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << " : " << version.version << std::endl;
 
             if(data != nullptr){
                 //se tenho o conteudo da chave
-                auto data_size = data->size();
-                char buf[data_size];
-                data->copy(buf, data_size);
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
-//                std::cout << achance << " <= " << chance << std::endl;
+//                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
                 if(achance <= this->chance){
                     //a probabilidade ditou para responder à mensagem com o conteudo para a chave
                     proto::kv_message reply_message;
@@ -180,10 +178,9 @@ private:
                     message_content->set_version(version.version);
                     message_content->set_version_client_id(version.client_id);
                     message_content->set_reqid(req_id);
-                    message_content->set_data(buf, data_size);
+                    message_content->set_data(data->data(), data->size());
                     reply_message.set_allocated_get_reply_msg(message_content);
 
-                    spdlog::debug("GET REPLY(\033[1;31m" + std::to_string(this->id) + "\033[0m) " + req_id + " ==================================>");
 //                    std::cout << "GET REPLY(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
                     this->reply_client(reply_message, sender_ip/*, sender_port*/);
@@ -206,7 +203,7 @@ private:
                     }
                 }
             }else{
-                spdlog::debug("===================== DONT HAVEEEEEE =================");
+//                spdlog::debug("===================== DONT HAVEEEEEE =================");
 //                std::cout << "===================== DONT HAVEEEEEE =================" << std::endl;
 
                 //se não tenho o conteudo da chave -> fazer forward
@@ -231,10 +228,6 @@ private:
                     data = this->store->get_anti_entropy(get_key, &is_merge);
 
                     if(data != nullptr){
-                        auto data_size = data->size();
-                        char buf[data_size];
-                        data->copy(buf, data_size);
-
                         proto::kv_message reply_message;
                         auto* message_content = new proto::get_reply_message();
                         message_content->set_ip(this->ip);
@@ -244,12 +237,8 @@ private:
                         message_content->set_version(version);
                         message_content->set_version_client_id(message.version_client_id());
                         message_content->set_reqid(req_id);
-                        message_content->set_data(buf, data_size);
-                        if(is_merge){
-                            message_content->set_merge(true);
-                        }else{
-                            message_content->set_merge(false);
-                        }
+                        message_content->set_data(data->data(), data->size());
+                        message_content->set_merge(is_merge);
                         reply_message.set_allocated_get_reply_msg(message_content);
 
                         this->reply_client(reply_message, sender_ip/*, sender_port*/);
@@ -265,14 +254,14 @@ private:
     }
 
     void process_get_reply_message(const proto::kv_message &msg) {
-        proto::get_reply_message message = msg.get_reply_msg();
-        std::string key = message.key();
+        const proto::get_reply_message& message = msg.get_reply_msg();
+        const std::string& key = message.key();
         long version = message.version();
         long client_id = message.version_client_id();
-        std::string data = message.data();
+        const std::string& data = message.data();
         bool is_merge = message.merge();
 
-        spdlog::debug("GET REPLY(\033[1;31m" + std::to_string(this->id) + "\033[0m) " + key + ":" + std::to_string(version) + " <==================================");
+//        spdlog::debug("GET REPLY(\033[1;31m" + std::to_string(this->id) + "\033[0m) " + key + ":" + std::to_string(version) + " <==================================");
 //        std::cout << "GET REPLY(\033[1;31m" << this->id << "\033[0m) " << key << ":" << version << " <==================================" << std::endl;
 
         if (!this->store->have_seen(key, version, client_id)) {
@@ -282,52 +271,33 @@ private:
                 }else{
                     bool stored = this->store->put(key, version, client_id, data);
                 }
-            }catch(std::exception e){}
+            }catch(std::exception& e){}
         }
     }
 
     void process_put_message(const proto::kv_message &msg, bool with_merge = false) {
 
-        std::string sender_ip, key, data;
-        long version, client_id;
-        //int sender_port;
+        const auto& message = msg.put_msg();
+        const std::string& sender_ip = message.ip();
+        const std::string& key = message.key();
+        long version = message.version();
+        long client_id = message.id();
+        const std::string& data = message.data();
 
-        if(with_merge){
-            const auto& message = msg.put_with_merge_msg();
-            sender_ip = message.ip();
-            //sender_port = message.port();
-            key = message.key();
-            version = message.version();
-            client_id = message.id();
-            data = message.data();
-        }else{
-            const auto& message = msg.put_msg();
-            sender_ip = message.ip();
-            //sender_port = message.port();
-            key = message.key();
-            version = message.version();
-            client_id = message.id();
-            data = message.data();
-        }
 
         if (!this->store->have_seen(key, version, client_id)) {
             bool stored;
             try {
-                if(with_merge) {
-                    stored = this->store->put_with_merge(key, version, client_id, data);
-                }else{
-                    stored = this->store->put(key, version, client_id, data);
-                }
+                stored = this->store->put(key, version, client_id, data);
             }catch(std::exception& e){
                 stored = false;
             }
-            spdlog::debug("<==========(" + std::to_string(stored) + ")============== PUT (\033[1;31m" + std::to_string(this->id) + "\033[0m) " + key + " : " + std::to_string(version));
 
 //            std::cout << "<==========(" << std::to_string(stored) <<")============== " << "PUT (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << std::endl;
             if (stored) {
                 float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 //                std::cout << achance << " <= " << chance << std::endl;
-                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
+//                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
                 std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
                 if (achance <= this->chance) {
                     proto::kv_message reply_message;
@@ -339,7 +309,6 @@ private:
                     message_content->set_version(version);
                     reply_message.set_allocated_put_reply_msg(message_content);
 
-                    spdlog::debug("PUT REPLY (\033[1;31m" + std::to_string(this->id) + "\033[0m) " + key + " : " + std::to_string(version) + " ==================================>");
 //                    std::cout << "PUT REPLY (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << " ==================================>" << std::endl;
                     this->reply_client(reply_message, sender_ip/*, sender_port*/);
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
@@ -391,8 +360,7 @@ private:
     }
 
     void process_anti_entropy_message(const proto::kv_message &msg) {
-        proto::anti_entropy_message message = msg.anti_entropy_msg();
-
+        const proto::anti_entropy_message& message = msg.anti_entropy_msg();
 
         try {
 
@@ -401,6 +369,10 @@ private:
                 keys_to_request.insert({key.key(), kv_store_key_version(key.version(), key.client_id())});
             }
             this->store->remove_from_set_existent_keys(keys_to_request);
+
+            std::string req_id;
+            req_id.reserve(50);
+            req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
 
             for (auto &key: keys_to_request) {
                 proto::kv_message get_msg;
@@ -411,13 +383,12 @@ private:
                 message_content->set_key(key.key);
                 message_content->set_version(key.key_version.version);
                 message_content->set_version_client_id(key.key_version.client_id);
-                message_content->set_reqid(
-                        "intern" + to_string(this->id) + ":" + to_string(this->get_anti_entropy_req_count()));
+                message_content->set_reqid(req_id);
                 get_msg.set_allocated_get_msg(message_content);
 
                 this->reply_client(get_msg, message.ip()/*, message.port()*/);
             }
-        }catch (std::exception e){
+        }catch (std::exception& e){
             // Unable to Get Keys
             return;
         }
@@ -425,11 +396,11 @@ private:
 
     //TODO eu acho que a cena da chance devia ser, se for menor que o this->chance responde e faz forward, se não só responde
     void process_get_latest_version_msg(proto::kv_message msg) {
-        proto::get_latest_version_message message = msg.get_latest_version_msg();
-        std::string sender_ip = message.ip();
+        const proto::get_latest_version_message& message = msg.get_latest_version_msg();
+        const std::string& sender_ip = message.ip();
         //int sender_port = message.port();
-        std::string key = message.key();
-        std::string req_id = message.reqid();
+        const std::string& key = message.key();
+        const std::string& req_id = message.reqid();
         std::unique_ptr<long> version(nullptr);
 
         //se o pedido ainda não foi processado
@@ -453,7 +424,6 @@ private:
                 }
             }
 
-            spdlog::debug("<=============(" + std::to_string((version != nullptr)) + ")================== " + "GET Version (\033[1;31m" + std::to_string(this->id) + "\033[0m) " + req_id + " " + key);
 //            std::cout << "<=============(" << (version != nullptr) << ")================== " << "GET Version (\033[1;31m" << this->id << "\033[0m) " << req_id << " " << key << std::endl;
 
 
@@ -484,7 +454,6 @@ private:
                 reply_message.set_allocated_get_latest_version_reply_msg(message_content);
 
                 this->reply_client(reply_message, sender_ip/*, sender_port*/);
-                spdlog::debug("GET REPLY Version(\033[1;31m" + std::to_string(this->id) + "\033[0m) " + req_id + " ==================================>");
 //                std::cout << "GET REPLY Version(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
             }else{

@@ -19,10 +19,10 @@
 /* -------------------------------------------------------------------------- */
 
 static int create_or_open(
-    bool create,
-    const char *path, mode_t mode,
-    struct fuse_file_info *fi
-    )
+        bool create,
+        const char *path, mode_t mode,
+        struct fuse_file_info *fi
+)
 {
     if (fi->flags & O_DIRECT)
     {
@@ -53,9 +53,9 @@ static int create_or_open(
 /* -------------------------------------------------------------------------- */
 
 int lsfs_impl::_create(
-    const char *path, mode_t mode,
-    struct fuse_file_info *fi
-    )
+        const char *path, mode_t mode,
+        struct fuse_file_info *fi
+)
 {
     if (!fuse_pt_impersonate_calling_process_highlevel(&mode))
         return -errno;
@@ -87,13 +87,13 @@ int lsfs_impl::_create(
         return_value = create_or_open(true, path, mode, fi);
     }
 
-    if (path){
-        logger->info("CREATE " + std::string(path));
-        logger->flush();
-    }else{
-        logger->info("CREATE FD:");
-        logger->flush();
-    }
+//    if (path){
+//        logger->info("CREATE " + std::string(path));
+//        logger->flush();
+//    }else{
+//        logger->info("CREATE FD:");
+//        logger->flush();
+//    }
 
     fuse_pt_unimpersonate();
 
@@ -101,9 +101,9 @@ int lsfs_impl::_create(
 }
 
 int lsfs_impl::_open(
-    const char *path,
-    struct fuse_file_info *fi
-    )
+        const char *path,
+        struct fuse_file_info *fi
+)
 {
 
     int return_value;
@@ -141,13 +141,13 @@ int lsfs_impl::_open(
         return_value = create_or_open(false, path, 0, fi);
     }
 
-    if (path){
-        logger->info("OPEN " + std::string(path));
-        logger->flush();
-    }else{
-        logger->info("OPEN");
-        logger->flush();
-    }
+//    if (path){
+//        logger->info("OPEN " + std::string(path));
+//        logger->flush();
+//    }else{
+//        logger->info("OPEN");
+//        logger->flush();
+//    }
 
     return return_value;
 }
@@ -155,13 +155,13 @@ int lsfs_impl::_open(
 int lsfs_impl::_flush(const char *path, struct fuse_file_info *fi){
     const int fd = (int)fi->fh;
 
-    if (path){
-        logger->info("FLUSH " + std::string(path) + " FD:" + std::to_string(fd));
-        logger->flush();
-    }else{
-        logger->info("FLUSH FD:" + std::to_string(fd));
-        logger->flush();
-    }
+//    if (path){
+//        logger->info("FLUSH " + std::string(path) + " FD:" + std::to_string(fd));
+//        logger->flush();
+//    }else{
+//        logger->info("FLUSH FD:" + std::to_string(fd));
+//        logger->flush();
+//    }
 
     (void)path;
 
@@ -173,19 +173,19 @@ int lsfs_impl::_flush(const char *path, struct fuse_file_info *fi){
 }
 
 int lsfs_impl::_release(
-    const char *path,
-    struct fuse_file_info *fi
-    )
+        const char *path,
+        struct fuse_file_info *fi
+)
 {
     const int fd = (int)fi->fh;
 
-    if (path){
-        logger->info("RELEASE " + std::string(path) + " FD:" + std::to_string(fd));
-        logger->flush();
-    }else{
-        logger->info("RELEASE FD:" + std::to_string(fd));
-        logger->flush();
-    }
+//    if (path){
+//        logger->info("RELEASE " + std::string(path) + " FD:" + std::to_string(fd));
+//        logger->flush();
+//    }else{
+//        logger->info("RELEASE FD:" + std::to_string(fd));
+//        logger->flush();
+//    }
 
     (void)path;
 
@@ -197,19 +197,19 @@ int lsfs_impl::_release(
 }
 
 int lsfs_impl::_fsync(
-    const char *path, int isdatasync,
-    struct fuse_file_info *fi
-    )
+        const char *path, int isdatasync,
+        struct fuse_file_info *fi
+)
 {
     const int fd = (int)fi->fh;
 
-    if (path){
-        logger->info("FSYNC " + std::string(path));
-        logger->flush();
-    }else{
-        logger->info("FSYNC " + std::to_string(fd));
-        logger->flush();
-    }
+//    if (path){
+//        logger->info("FSYNC " + std::string(path));
+//        logger->flush();
+//    }else{
+//        logger->info("FSYNC " + std::to_string(fd));
+//        logger->flush();
+//    }
 
     (void)path;
 
@@ -230,25 +230,23 @@ int lsfs_impl::_fsync(
 }
 
 int lsfs_impl::_read(
-    const char *path, char *buf, size_t size, off_t offset,
-    struct fuse_file_info *fi
-    )
+        const char *path, char *buf, size_t size, off_t offset,
+        struct fuse_file_info *fi
+)
 {
-    if (path){
-        logger->info("READ " + std::string(path) + " SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset));
-        logger->flush();
-    }else{
-        logger->info("READ SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset));
-        logger->flush();
-    }
+//    if (path){
+//        logger->info("READ " + std::string(path) + " SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset));
+//        logger->flush();
+//    }else{
+//        logger->info("READ SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset));
+//        logger->flush();
+//    }
 
     (void)path;
 
     size_t bytes_count;
 
     if (!is_temp_file(path)) {
-
-        //TODO fazer caching com stack de getattr's
 
         // get file info
         struct stat stbuf;
@@ -283,7 +281,9 @@ int lsfs_impl::_read(
 
             while (bytes_count < size && bytes_count < (file_size - offset)) {
                 current_blk++;
-                std::string blk_path = std::string(path) + ":" + std::to_string(current_blk);
+                std::string blk_path;
+                blk_path.reserve(100);
+                blk_path.append(path).append(":").append(std::to_string(current_blk));
 //                long version = get_version(blk_path);
 //                if (version == -1){
 //                    errno = ENOENT;
@@ -318,18 +318,10 @@ int lsfs_impl::_read(
 }
 
 int lsfs_impl::_write(
-    const char *path, const char *buf, size_t size, off_t offset,
-    struct fuse_file_info *fi
-    )
+        const char *path, const char *buf, size_t size, off_t offset,
+        struct fuse_file_info *fi
+)
 {
-    if (path){
-        logger->info("WRITE " + std::string(path) + " SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset) + " BUF:" + buf);
-        logger->flush();
-    }else{
-        logger->info("WRITE SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset));
-        logger->flush();
-    }
-
     (void)path;
     int result;
 
@@ -339,6 +331,7 @@ int lsfs_impl::_write(
 
         // get file info
         struct stat stbuf;
+
         int res = lsfs_impl::_getattr(path, &stbuf,NULL);
         if(res != 0){
             return -errno; //res = -errno
@@ -371,8 +364,10 @@ int lsfs_impl::_write(
                         memcpy(&put_buf[off_blk], &buf[read_off], (first_block_size - off_blk) * sizeof(char));
                         read_off += (first_block_size - off_blk);
                         current_blk++;
-                        std::string blk_path = std::string(path) + ":" + std::to_string(current_blk);
-                        int res = state->put_block(blk_path.c_str(), buf, size, true);
+                        std::string blk_path;
+                        blk_path.reserve(100);
+                        blk_path.append(path).append(":").append(std::to_string(current_blk));
+                        int res = state->put_block(blk_path, buf, size, true);
                         if(res == -1){
                             return -errno;
                         }
@@ -387,14 +382,15 @@ int lsfs_impl::_write(
             while (read_off < size) {
                 size_t write_size = (read_off + BLK_SIZE) > size ? (size - read_off) : BLK_SIZE;
                 current_blk++;
-                std::string blk_path = std::string(path) + ":" + std::to_string(current_blk);
-                int res = state->put_block(blk_path.c_str(), &buf[read_off], write_size, true);
+                std::string blk_path;
+                blk_path.reserve(100);
+                blk_path.append(path).append(":").append(std::to_string(current_blk));
+                int res = state->put_block(blk_path, &buf[read_off], write_size, true);
                 if(res == -1){
                     return -errno;
                 }
                 read_off += BLK_SIZE;
             }
-
             //TODO SET NEW GETATTR
             stbuf.st_size = next_size;
             stbuf.st_blocks = current_blk + 1;

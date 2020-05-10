@@ -20,7 +20,6 @@
 #include <iostream>
 #include <cstring>
 #include <functional>
-#include <filesystem>
 
 #include <sstream>
 #include <iostream>
@@ -28,6 +27,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include <random>
+
+namespace fs = std::filesystem;
 
 /*
  * Notes on LevelDB
@@ -46,29 +47,29 @@ private:
     inline const static int anti_entropy_max_keys = 20;
 
 private:
-    std::unique_ptr<long> get_client_id_from_key_version(std::string key, long version);
+    std::unique_ptr<long> get_client_id_from_key_version(const std::string& key, long version);
     void refresh_nr_keys_count();
 
 public:
     ~kv_store_leveldb();
-    kv_store_leveldb(std::string(*f)(std::string&, std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at);
+    kv_store_leveldb(std::string(*f)(const std::string&, const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at);
     int init(void*, long id) override ;
     void close() override ;
     std::string db_name() const override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<std::string>> get_keys() override;
-    bool put(std::string key, long version, long client_id, std::string bytes, bool is_merge = false) override; // use string.c_str() to convert string to const char*
-    bool put_with_merge(std::string key, long version, long client_id, std::string bytes);
-    std::shared_ptr<std::string> get(kv_store_key<std::string>& key) override;
-    std::shared_ptr<std::string> remove(kv_store_key<std::string> key) override;
-    std::shared_ptr<std::string> get_latest(std::string key, kv_store_key_version* kv_version) override;
-    std::unique_ptr<long> get_latest_version(std::string key) override;
-    std::shared_ptr<std::string> get_anti_entropy(kv_store_key<std::string> key, bool* is_merge) override;
+    bool put(const std::string& key, long version, long client_id, const std::string& bytes, bool is_merge) override; // use string.c_str() to convert string to const char*
+    bool put_with_merge(const std::string& key, long version, long client_id, const std::string& bytes);
+    std::unique_ptr<std::string> get(kv_store_key<std::string>& key) override;
+    std::unique_ptr<std::string> remove(const kv_store_key<std::string>& key) override;
+    std::unique_ptr<std::string> get_latest(const std::string& key, kv_store_key_version* kv_version) override;
+    std::unique_ptr<long> get_latest_version(const std::string& key) override;
+    std::unique_ptr<std::string> get_anti_entropy(const kv_store_key<std::string>& key, bool* is_merge) override;
     void remove_from_set_existent_keys(std::unordered_set<kv_store_key<std::string>>& keys) override;
     void print_store() override;
 };
 
-kv_store_leveldb::kv_store_leveldb(std::string (*f)(std::string&, std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at) {
+kv_store_leveldb::kv_store_leveldb(std::string (*f)(const std::string&,const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at) {
     this->merge_function = f;
     this->seen_log_garbage_at = seen_log_garbage_at;
     this->request_log_garbage_at = request_log_garbage_at;
@@ -91,8 +92,6 @@ std::string kv_store_leveldb::db_name() const {
 int kv_store_leveldb::init(void* path, long id){
     this->id = id;
     this->path = std::string((char*) path);
-
-    std::filesystem::create_directories(this->path);
 
     leveldb::Options options;
     options.create_if_missing = true;
@@ -125,7 +124,7 @@ int kv_store_leveldb::init(void* path, long id){
 void kv_store_leveldb::update_partition(int p, int np) {
 
     if(np != this->nr_slices){
-        std::cout << "UPDATE_PARTITION " << std::to_string(np) << std::endl;
+//        std::cout << "UPDATE_PARTITION " << std::to_string(np) << std::endl;
         this->nr_slices = np;
         this->slice = p;
         //clear memory to allow new keys to be stored
@@ -206,8 +205,10 @@ std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_keys() {
 void kv_store_leveldb::remove_from_set_existent_keys(std::unordered_set<kv_store_key<std::string>>& keys){
     leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
 
+    std::string prefix;
     for (auto it_keys = keys.begin(); it_keys != keys.end();) {
-        std::string prefix = it_keys->key + "#" + std::to_string(it_keys->key_version.version) + "#" + std::to_string(it_keys->key_version.client_id);
+        prefix.clear();
+        prefix.append(it_keys->key).append("#").append(std::to_string(it_keys->key_version.version)).append("#").append(std::to_string(it_keys->key_version.client_id));
         it->Seek(prefix);
         if(it->Valid() && it->key().ToString() == prefix){
             // se possuimos a chave
@@ -240,7 +241,7 @@ void kv_store_leveldb::refresh_nr_keys_count(){
     record_count = count;
 }
 
-std::unique_ptr<long> kv_store_leveldb::get_client_id_from_key_version(std::string key, long version) {
+std::unique_ptr<long> kv_store_leveldb::get_client_id_from_key_version(const std::string& key, long version) {
     leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
     std::string prefix = key + "#" + std::to_string(version) + "#";
     bool exists = false;
@@ -252,11 +253,11 @@ std::unique_ptr<long> kv_store_leveldb::get_client_id_from_key_version(std::stri
         long current_version;
         long current_client_id;
         int res = split_composite_key(comp_key, &current_key, &current_version, &current_client_id);
-        
+
         if(res == 0){
-            long a = 23456789;
-            long b = 0;
-            std::cout << "version" << a << " client_id:" << b << std::endl;
+//            long a = 23456789;
+//            long b = 0;
+//            std::cout << "version" << a << " client_id:" << b << std::endl;
             auto temp_version = kv_store_key_version(current_version, current_client_id);
             if(temp_version >= current_max_version){
                 current_max_version = temp_version;
@@ -277,7 +278,7 @@ std::unique_ptr<long> kv_store_leveldb::get_client_id_from_key_version(std::stri
     return nullptr;
 }
 
-bool kv_store_leveldb::put(std::string key, long version, long client_id, std::string bytes, bool is_merge) {
+bool kv_store_leveldb::put(const std::string& key, long version, long client_id, const std::string& bytes, bool is_merge) {
 
     this->seen_it(key, version, client_id);
     int k_slice = this->get_slice_for_key(key);
@@ -336,7 +337,7 @@ void kv_store_leveldb::print_store(){
     }
 }
 
-std::shared_ptr<std::string> kv_store_leveldb::get(kv_store_key<std::string>& key) {
+std::unique_ptr<std::string> kv_store_leveldb::get(kv_store_key<std::string>& key) {
 
     if(key.key_version.client_id == -1){
         std::unique_ptr<long> current_max_client_id(nullptr);
@@ -352,29 +353,33 @@ std::shared_ptr<std::string> kv_store_leveldb::get(kv_store_key<std::string>& ke
     }
 
     std::string value;
-    std::string comp_key = key.key + "#" + std::to_string(key.key_version.version) + "#" + std::to_string(key.key_version.client_id);
+    std::string comp_key;
+    comp_key.reserve(50);
+    comp_key.append(key.key).append("#").append(std::to_string(key.key_version.version)).append("#").append(std::to_string(key.key_version.client_id));
     leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
 
     if (s.ok()){
-        return std::make_shared<std::string>(std::move(value));
+        return std::make_unique<std::string>(std::move(value));
     }else{
         return nullptr;
     }
 }
 
-std::shared_ptr<std::string> kv_store_leveldb::get_anti_entropy(kv_store_key<std::string> key, bool* is_merge) {
+std::unique_ptr<std::string> kv_store_leveldb::get_anti_entropy(const kv_store_key<std::string>& key, bool* is_merge) {
     std::string value;
-    std::string comp_key = key.key + "#" + std::to_string(key.key_version.version) + "#" + std::to_string(key.key_version.client_id);
+    std::string comp_key;
+    comp_key.reserve(50);
+    comp_key.append(key.key).append("#").append(std::to_string(key.key_version.version)).append("#").append(std::to_string(key.key_version.client_id));
     leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value);
     if(s.ok()){
         std::istringstream(value) >> *is_merge;
-        return this->get(key);
+        return this->get(const_cast<kv_store_key<std::string> &>(key));
     }
 
     return nullptr;
 }
 
-std::shared_ptr<std::string> kv_store_leveldb::get_latest(std::string key, kv_store_key_version* kv_version) {
+std::unique_ptr<std::string> kv_store_leveldb::get_latest(const std::string& key, kv_store_key_version* kv_version) {
 
     leveldb::Iterator *it = db->NewIterator(leveldb::ReadOptions());
     std::string prefix = key + "#";
@@ -387,7 +392,7 @@ std::shared_ptr<std::string> kv_store_leveldb::get_latest(std::string key, kv_st
         long current_version;
         long current_client_id;
         int res = split_composite_key(comp_key, &current_key, &current_version, &current_client_id);
-        std::cout << "version: " << current_version << " client_id: " << current_client_id << std::endl;
+//        std::cout << "version: " << current_version << " client_id: " << current_client_id << std::endl;
         auto temp_version = kv_store_key_version(current_version, current_client_id);
         if (res == 0 && temp_version >= current_max_version) {
             current_max_version = temp_version;
@@ -410,7 +415,7 @@ std::shared_ptr<std::string> kv_store_leveldb::get_latest(std::string key, kv_st
     return nullptr;
 }
 
-std::unique_ptr<long> kv_store_leveldb::get_latest_version(std::string key) {
+std::unique_ptr<long> kv_store_leveldb::get_latest_version(const std::string& key) {
     leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
 
     std::string prefix = key + "#";
@@ -440,10 +445,12 @@ std::unique_ptr<long> kv_store_leveldb::get_latest_version(std::string key) {
     return nullptr;
 }
 
-std::shared_ptr<std::string> kv_store_leveldb::remove(kv_store_key<std::string> key) {
+std::unique_ptr<std::string> kv_store_leveldb::remove(const kv_store_key<std::string>& key) {
 
     std::string value;
-    std::string comp_key = key.key + "#" + std::to_string(key.key_version.version) + "#" + std::to_string(key.key_version.client_id);
+    std::string comp_key;
+    comp_key.reserve(50);
+    comp_key.append(key.key).append("#").append(std::to_string(key.key_version.version)).append("#").append(std::to_string(key.key_version.client_id));
     leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
 
     if (s.ok()){
@@ -453,13 +460,13 @@ std::shared_ptr<std::string> kv_store_leveldb::remove(kv_store_key<std::string> 
         s = db_merge_log->Delete(leveldb::WriteOptions(), comp_key);
         if(!s.ok()) throw LevelDBException();
 
-        return std::make_shared<std::string>(std::move(value));
+        return std::make_unique<std::string>(std::move(value));
     }else{
         return nullptr;
     }
 }
 
-bool kv_store_leveldb::put_with_merge(std::string key, long version, long client_id, std::string bytes) {
+bool kv_store_leveldb::put_with_merge(const std::string& key, long version, long client_id, const std::string& bytes) {
     try{
 //        std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
 //
@@ -498,7 +505,7 @@ bool kv_store_leveldb::put_with_merge(std::string key, long version, long client
 
         kv_store_key_version kv_version;
         //We only need to merge with latest version
-        std::shared_ptr<std::string> data = get_latest(key, &kv_version);
+        std::unique_ptr<std::string> data = get_latest(key, &kv_version);
         if(data != nullptr){
             if(kv_version.version > version){
                 //if there is a version bigger than mine, use its client_id

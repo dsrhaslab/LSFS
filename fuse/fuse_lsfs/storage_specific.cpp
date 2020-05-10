@@ -5,7 +5,7 @@
 #include "metadata.h"
 #include "util.h"
 
-std::string merge_metadata(std::string& bytes, std::string& new_bytes){
+std::string merge_metadata(const std::string& bytes, const std::string& new_bytes){
     metadata met1 = metadata::deserialize_from_string(bytes);
     metadata met2 = metadata::deserialize_from_string(new_bytes);
 

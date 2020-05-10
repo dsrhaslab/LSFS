@@ -26,7 +26,7 @@ std::string metadata::serialize_to_string(metadata& met){
     return std::move(metadata_str);
 }
 
-metadata metadata::deserialize_from_string(std::string& serial_str) {
+metadata metadata::deserialize_from_string(const std::string& serial_str) {
     boost::iostreams::basic_array_source<char> device(serial_str.data(), serial_str.size());
     boost::iostreams::stream<boost::iostreams::basic_array_source<char> > s_u(device);
     boost::archive::binary_iarchive ia(s_u);

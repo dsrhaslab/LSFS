@@ -45,30 +45,30 @@ private:
 public:
     client(std::string boot_ip, std::string ip, long id/*, int port, int lb_port*/, std::string conf_filename);
     void stop();
-    std::set<long> put(std::string key, long version, const char* data, size_t size, int wait_for);
-    inline std::set<long> put(std::string key, long version, const char* data, size_t size) {
-        return put(std::move(key), version, data, size, nr_puts_required);
+    void put(const std::string& key, long version, const char* data, size_t size, int wait_for);
+    inline void put(const std::string& key, long version, const char* data, size_t size) {
+        put(key, version, data, size, nr_puts_required);
     };
-    std::set<long> put_with_merge(std::string key, long version, const char* data, size_t size, int wait_for);
-    inline std::set<long> put_with_merge(std::string key, long version, const char* data, size_t size) {
-        return put_with_merge(std::move(key), version, data, size, nr_puts_required);
+    void put_with_merge(const std::string& key, long version, const char* data, size_t size, int wait_for);
+    inline void put_with_merge(const std::string& key, long version, const char* data, size_t size) {
+        put_with_merge(key, version, data, size, nr_puts_required);
     };
-    std::shared_ptr<std::string> get(std::string key, int wait_for, long* version = nullptr);
-    inline std::shared_ptr<std::string> get(std::string key, long* version = nullptr){
-      return get(std::move(key), nr_gets_required, version);
+    std::unique_ptr<std::string> get(const std::string& key, int wait_for, long* version = nullptr);
+    inline std::unique_ptr<std::string> get(const std::string& key, long* version = nullptr){
+        return get(key, nr_gets_required, version);
     };
-    long get_latest_version(std::string key, int wait_for);
-    inline long get_latest_version(std::string key){
-        return get_latest_version(std::move(key), nr_gets_version_required);
+    long get_latest_version(const std::string& key, int wait_for);
+    inline long get_latest_version(const std::string& key){
+        return get_latest_version(key, nr_gets_version_required);
     };
 
 private:
     long inc_and_get_request_count();
     int send_msg(peer_data& target_peer, proto::kv_message& msg);
-    int send_get(peer_data &peer, std::string key, long* version, std::string req_id);
-    int send_put(peer_data& peer, std::string key, long version, const char* data, size_t size);
-    int send_put_with_merge(peer_data& peer, std::string key, long version, const char* data, size_t size);
-    int send_get_latest_version(peer_data &peer, std::string key, std::string req_id);
+    int send_get(peer_data &peer, const std::string& key, long* version, const std::string& req_id);
+    int send_put(peer_data& peer, const std::string& key, long version, const char* data, size_t size);
+    int send_put_with_merge(peer_data& peer, const std::string& key, long version, const char* data, size_t size);
+    int send_get_latest_version(peer_data &peer, const std::string& key, const std::string& req_id);
 };
 
 
