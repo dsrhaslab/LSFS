@@ -32,8 +32,8 @@ void*  lsfs_impl::_init(
     )
 {
 
-    logger->info("INIT");
-    logger->flush();
+//    logger->info("INIT");
+//    logger->flush();
 
     // clear umask
 
@@ -93,8 +93,8 @@ void lsfs_impl::_destroy(
     void *private_data
     )
 {
-    logger->info("Destroy");
-    logger->flush();
+//    logger->info("Destroy");
+//    logger->flush();
 
     (void)private_data;
 }

@@ -16,12 +16,7 @@
 #include "metadata.h"
 #include "util.h"
 #include "exceptions/custom_exceptions.h"
-
-/* ================ MACROS ==================*/
-
-#define BLK_SIZE (size_t) 4096
-
-/* ==========================================*/
+#include "fuse/fuse_common/macros.h"
 
 namespace FileAccess{
     enum FileAccess {CREATED, MODIFIED, ACCESSED};
@@ -40,10 +35,11 @@ public:
     std::recursive_mutex working_directories_mutex;
     std::vector<std::pair<std::string, std::unique_ptr<metadata>>> working_directories;
     std::shared_ptr<client> df_client;
-    std::shared_ptr<spdlog::logger> logger;
+    size_t max_parallel_write_size;
+    size_t max_parallel_read_size;
 
 public:
-    lsfs_state(std::shared_ptr<client> df_client, std::shared_ptr<spdlog::logger> logger);
+    lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size);
     int add_child_to_parent_dir(const std::string& path, bool is_dir);
     std::unique_ptr<metadata> add_child_to_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir);
     int put_block(const std::string& path, const char* buf, size_t size, bool timestamp_version = false);
@@ -63,7 +59,10 @@ public:
     void add_or_refresh_working_directory(const std::string& path, metadata& met);
     void clear_working_directories_cache();
     void reset_working_directory_add_remove_log(const std::string& path);
+    int put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk,  bool timestamp_version = false );
+    int put_fixed_size_blocks_from_buffer_limited_paralelization(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk,  bool timestamp_version = false );
+    size_t read_fixed_size_blocks_to_buffer(char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk);
+    size_t read_fixed_size_blocks_to_buffer_limited_paralelization(char *buf, size_t size, size_t block_size, const char *base_path, size_t current_blk);
 };
-
 
 #endif //P2PFS_LSFS_STATE_H

@@ -26,7 +26,7 @@ client::client(std::string boot_ip, std::string ip, long id/*, int port, int lb_
     this->nr_gets_version_required = main_confs["nr_gets_version_required"].as<int>();
     this->max_timeouts = main_confs["max_nr_requests_timeouts"].as<int>();
     bool mt_client_handler = main_confs["mt_client_handler"].as<bool>();
-    long wait_timeout = main_confs["client_wait_timeout"].as<long>();
+    this->wait_timeout = main_confs["client_wait_timeout"].as<long>();
     long lb_interval = main_confs["lb_interval"].as<long>();
 
     this->lb = std::make_shared<dynamic_load_balancer>(boot_ip/*, client::lb_port*/, ip/*, lb_port*/, lb_interval);
@@ -37,26 +37,21 @@ client::client(std::string boot_ip, std::string ip, long id/*, int port, int lb_
 
     if(mt_client_handler){
         int nr_workers = main_confs["nr_client_handler_ths"].as<int>();
-        this->handler = std::make_shared<client_reply_handler_mt>(ip/*, port*/, wait_timeout, nr_workers);
+        this->handler = std::make_shared<client_reply_handler_mt>(ip/*, port*/, this->wait_timeout, nr_workers);
     }else{
-        this->handler = std::make_shared<client_reply_handler_st>(ip/*, port*/, wait_timeout);
+        this->handler = std::make_shared<client_reply_handler_st>(ip/*, port*/, this->wait_timeout);
     }
     this->handler_th = std::thread (std::ref(*this->handler));
 }
 
 void client::stop(){
     lb->stop();
-//    spdlog::info("stopped load balancer");
     lb_listener->stop();
-//    spdlog::info("stopped load balancer listener");
     lb_th.join();
-//    spdlog::info("stopped load balancer thread");
     lb_listener_th.join();
-//    spdlog::info("stopped load balancer listener thread");
     close(sender_socket);
     handler->stop();
     handler_th.join();
-//    spdlog::info("stopped df_client");
 }
 
 long client::inc_and_get_request_count() {
@@ -77,7 +72,9 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
         msg.SerializeToString(&buf);
 //        std::cout << "BUFFER SIZE: " << buf.size() << std::endl;
 //        spdlog::debug("Client sent msg with size of buffer: " + std::to_string(buf.size()));
+        std::unique_lock<std::mutex> lock(this->sender_socket_mutex);
         int res = sendto(this->sender_socket, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+        lock.unlock();
 
         if(res == -1){spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));}
         else{ return 0; }
@@ -167,6 +164,57 @@ void client::put(const std::string& key, long version, const char *data, size_t 
     }
 }
 
+void client::put_batch(const std::vector<std::string> &keys, const std::vector<long> &versions,
+                       const std::vector<const char *> &datas, const std::vector<size_t> &sizes, int wait_for) {
+
+    long nr_writes = keys.size();
+    std::vector<bool> completed(nr_writes, false);
+
+    //register all the keys and send first put
+    for(size_t i = 0; i < keys.size(); i++){
+        this->handler->register_put(keys[i], versions[i]); // throw const char* (Escritas concorrentes sobre a mesma chave)
+        peer_data peer = this->lb->get_peer(keys[i]); //throw exception
+        this->send_put(peer, keys[i], versions[i], datas[i], sizes[i]);
+    }
+
+    long remain_timeouts = nr_writes * this->max_timeouts;
+    bool all_completed = false;
+
+    do{
+        auto wait_until = std::chrono::system_clock::now() + std::chrono::seconds(this->wait_timeout);
+        for(size_t i = 0; i < completed.size(); i++){
+            if(!completed[i]){
+                try{
+                    kv_store_key<std::string> comp_key = {keys[i], kv_store_key_version(versions[i])};
+                    completed[i] = this->handler->wait_for_put_until(comp_key, wait_for, wait_until);
+                    // if completed i can at least decrease a timeout that belongs to this key
+                    remain_timeouts--;
+                }catch(TimeoutException& e){
+                    std::cout << "Timeout" << std::endl;
+                    peer_data peer = this->lb->get_peer(keys[i]); //throw exception
+                    this->send_put(peer, keys[i], versions[i], datas[i], sizes[i]);
+                    remain_timeouts--;
+                }
+            }
+        }
+        all_completed = std::find(completed.begin(), completed.end(), false) == completed.end();
+    }while( !all_completed && remain_timeouts > 0); // do while there are incompleted puts
+
+    // clear not succeded keys from put maps
+    std::vector<kv_store_key<std::string>> erasing_keys;
+    for(size_t i = 0; i < completed.size(); i++){
+        if(!completed[i]){
+            erasing_keys.push_back({keys[i], kv_store_key_version(versions[i])});
+        }
+    }
+    this->handler->clear_put_keys_entries(erasing_keys);
+
+    if(!all_completed){
+        // Nr of timeouts exceeded
+        throw TimeoutException();
+    }
+}
+
 void client::put_with_merge(const std::string& key, long version, const char *data, size_t size, int wait_for) {
     this->handler->register_put(key, version); // throw const char* (Escritas concorrentes sobre a mesma chave)
     kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
@@ -186,6 +234,63 @@ void client::put_with_merge(const std::string& key, long version, const char *da
     }
 
     if(!succeed){
+        throw TimeoutException();
+    }
+}
+
+void client::get_batch(const std::vector<std::string> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for) {
+
+    long nr_reads = keys.size();
+    std::vector<std::string> req_ids(nr_reads);
+
+    //register all the keys and send first get
+    for(size_t i = 0; i < keys.size(); i++){
+        long req_id = this->inc_and_get_request_count();
+        req_ids[i].reserve(100);
+        req_ids[i].append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+        this->handler->register_get(req_ids[i]);
+        peer_data peer = this->lb->get_peer(keys[i]); //throw exception (empty view)
+        this->send_get(peer, keys[i], nullptr, req_ids[i]);
+    }
+
+    long remain_timeouts = nr_reads * this->max_timeouts;
+    bool all_completed = false;
+
+    do{
+        auto wait_until = std::chrono::system_clock::now() + std::chrono::seconds(this->wait_timeout);
+        for(size_t i = 0; i < data_strs.size(); i++){
+            if(data_strs[i] == nullptr){
+                try{
+                    data_strs[i] = this->handler->wait_for_get_until(req_ids[i], wait_for, wait_until);
+                    // if completed i can at least decrease a timeout that belongs to this key
+                    remain_timeouts--;
+                }catch(TimeoutException& e){
+                    std::cout << "Timeout key: " << keys[i] << std::endl;
+                    peer_data peer = this->lb->get_peer(keys[i]); //throw exception (empty view)
+                    this->send_get(peer, keys[i], nullptr, req_ids[i]);
+                    remain_timeouts--;
+                }
+            }
+        }
+        all_completed = std::find(data_strs.begin(), data_strs.end(), nullptr) == data_strs.end();
+    }while( !all_completed && remain_timeouts > 0); // do while there are incompleted puts
+
+    // clear not succeded keys from put maps
+    auto it_req_ids = req_ids.begin();
+    for(size_t i = 0; i < data_strs.size(); i++){
+        if(data_strs[i] != nullptr){
+            // se a leitura do bloco foi completa, remove a entrada dos req_ids
+            // uma vez que não vai ser necessário remover essa chave dos mapas dos gets
+            it_req_ids = req_ids.erase(it_req_ids);
+        }else{
+            ++it_req_ids;
+        }
+    }
+
+    this->handler->clear_get_keys_entries(req_ids);
+
+    if(!all_completed){
+        // Nr of timeouts exceeded
         throw TimeoutException();
     }
 }

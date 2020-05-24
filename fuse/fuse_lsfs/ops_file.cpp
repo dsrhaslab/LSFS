@@ -259,44 +259,52 @@ int lsfs_impl::_read(
         //Verificar em que bloco se posiciona o offset
         // -> caso coincida no meio de um bloco escrito
         // -> ver a versão desse bloco e ir busca-lo
-        int nr_b_blks = offset / BLK_SIZE;
+        size_t nr_b_blks = offset / BLK_SIZE;
         size_t off_blk = offset % BLK_SIZE;
         bytes_count = 0;
-        int current_blk = nr_b_blks - 1;
+        size_t current_blk = nr_b_blks - 1;
 
         try {
+            // alinhar leitura de acordo com o block size
             if (off_blk != 0) {
                 //middle of block -> i doubt ever happen
                 size_t off_ini_blk = nr_b_blks * BLK_SIZE;
                 char ini_buf [BLK_SIZE];
                 int bytes_read = lsfs_impl::_read(path, ini_buf, BLK_SIZE, off_ini_blk, NULL);
-                if (res < 0) return -errno;
+                if (bytes_read < 0) return -errno;
                 else {
-                    size_t ini_size = (size > bytes_read)? bytes_read : size;
+                    size_t ini_size = (size <= bytes_read)? size : std::min((int)(BLK_SIZE - off_blk), bytes_read);
                     memcpy(&buf[bytes_count], &ini_buf[off_blk], ini_size * sizeof(char));
                     bytes_count += ini_size;
                 }
 
             }
 
-            while (bytes_count < size && bytes_count < (file_size - offset)) {
-                current_blk++;
-                std::string blk_path;
-                blk_path.reserve(100);
-                blk_path.append(path).append(":").append(std::to_string(current_blk));
-//                long version = get_version(blk_path);
-//                if (version == -1){
-//                    errno = ENOENT;
-//                    return -errno;
-//                }
-                std::shared_ptr<std::string> data = df_client->get(blk_path /*, &version*/);
-
-                size_t max_read = (bytes_count + BLK_SIZE) > size ? (size - bytes_count) : BLK_SIZE;
-                size_t actually_read = (file_size - offset) > max_read ? max_read : (file_size - offset);
-
-                data->copy(&buf[bytes_count], actually_read);
-                bytes_count += actually_read;
+            // O que falta ler é o mínimo entre o que supostamente me falta ler
+            // e o tamanho do ficheiro a partir do ponto que me encontro a ler
+            size_t missing_read_size = std::min((size - bytes_count),(file_size - offset - bytes_count));
+            if(missing_read_size > 0){
+                bytes_count += state->read_fixed_size_blocks_to_buffer_limited_paralelization(&buf[bytes_count], missing_read_size, BLK_SIZE, path, current_blk);
             }
+
+//            while (bytes_count < size && bytes_count < (file_size - offset)) {
+//                current_blk++;
+//                std::string blk_path;
+//                blk_path.reserve(100);
+//                blk_path.append(path).append(":").append(std::to_string(current_blk));
+////                long version = get_version(blk_path);
+////                if (version == -1){
+////                    errno = ENOENT;
+////                    return -errno;
+////                }
+//                std::shared_ptr<std::string> data = df_client->get(blk_path /*, &version*/);
+//
+//                size_t max_read = (bytes_count + BLK_SIZE) > size ? (size - bytes_count) : BLK_SIZE;
+//                size_t actually_read = (file_size - offset) > max_read ? max_read : (file_size - offset);
+//
+//                data->copy(&buf[bytes_count], actually_read);
+//                bytes_count += actually_read;
+//            }
 
         }catch (EmptyViewException& e) {
             // empty view -> nothing to do
@@ -343,10 +351,10 @@ int lsfs_impl::_write(
         //Verificar em que bloco se posiciona o offset
         // -> caso coincida no meio de um bloco escrito
         // -> ver a versão desse bloco e ir busca-lo
-        int nr_b_blks = offset / BLK_SIZE;
+        size_t nr_b_blks = offset / BLK_SIZE;
         size_t off_blk = offset % BLK_SIZE;
         size_t read_off = 0;
-        int current_blk = nr_b_blks - 1;
+        size_t current_blk = nr_b_blks - 1;
 
         char put_buf [BLK_SIZE];
 
@@ -379,18 +387,26 @@ int lsfs_impl::_write(
             }
 
 
-            while (read_off < size) {
-                size_t write_size = (read_off + BLK_SIZE) > size ? (size - read_off) : BLK_SIZE;
-                current_blk++;
-                std::string blk_path;
-                blk_path.reserve(100);
-                blk_path.append(path).append(":").append(std::to_string(current_blk));
-                int res = state->put_block(blk_path, &buf[read_off], write_size, true);
-                if(res == -1){
-                    return -errno;
-                }
-                read_off += BLK_SIZE;
+            res = state->put_fixed_size_blocks_from_buffer_limited_paralelization(&buf[read_off], size-read_off, BLK_SIZE, path, current_blk, true);
+            if(res == -1){
+                return -errno;
+            }else{
+                current_blk += (size / BLK_SIZE) + (size % BLK_SIZE == 0 ? 0 : 1);
             }
+
+//            while (read_off < size) {
+//                size_t write_size = (read_off + BLK_SIZE) > size ? (size - read_off) : BLK_SIZE;
+//                current_blk++;
+//                std::string blk_path;
+//                blk_path.reserve(100);
+//                blk_path.append(path).append(":").append(std::to_string(current_blk));
+//                int res = state->put_block(blk_path, &buf[read_off], write_size, true);
+//                if(res == -1){
+//                    return -errno;
+//                }
+//                read_off += BLK_SIZE;
+//            }
+
             //TODO SET NEW GETATTR
             stbuf.st_size = next_size;
             stbuf.st_blocks = current_blk + 1;

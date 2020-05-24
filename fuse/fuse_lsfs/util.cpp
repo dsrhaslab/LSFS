@@ -47,3 +47,45 @@ bool operator <(const timespec& lhs, const timespec& rhs){
     else
         return lhs.tv_sec < rhs.tv_sec;
 }
+
+size_t convert_string_size_to_num_bytes(const std::string &format_size) {
+    boost::cmatch match;
+    auto res = boost::regex_search(format_size.c_str(), match, string_capacity_size_regex);
+
+    size_t size;
+    char unit;
+
+
+    try{
+        if(match.size() > 2){
+            size = std::stoi(match[1].str());
+            unit = (char) toupper((unsigned char) match[2].str()[0]);
+        }else{
+            throw "Bad read/write parallelization config format!!";
+        }
+    }catch(std::invalid_argument& e){
+        throw "Bad read/write parallelization config format!!";
+    }
+
+    switch(unit){
+        case 'B':
+            break;
+        case 'K':
+            size *= 1024;
+            break;
+        case 'M':
+            size *= (1024 * pow (10, 3));
+            break;
+        case 'G':
+            size *= (1024 * pow (10, 6));
+            break;
+        default:
+            break;
+    }
+
+    if(size % BLK_SIZE != 0)
+        throw "Read/write parallelization value should be a multiple of Block Size!!";
+
+    return size;
+
+}

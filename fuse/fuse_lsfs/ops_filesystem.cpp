@@ -12,8 +12,8 @@ int lsfs_impl::_statfs(
     const char *path, struct statvfs *stbuf
     )
 {
-    logger->info("STATFS " + std::string(path));
-    logger->flush();
+//    logger->info("STATFS " + std::string(path));
+//    logger->flush();
 
     return (statvfs(path, stbuf) == 0) ? 0 : -errno;
 }

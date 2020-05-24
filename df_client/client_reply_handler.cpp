@@ -12,7 +12,10 @@
 
 client_reply_handler::client_reply_handler(std::string ip, long wait_timeout):
         ip(std::move(ip)), wait_timeout(wait_timeout)
-{}
+{
+    this->put_replies.reserve(100);
+    this->put_mutexes.reserve(100);
+}
 
 long client_reply_handler::register_put(const std::string& key, long version) {
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
@@ -92,6 +95,81 @@ bool client_reply_handler::wait_for_put(const kv_store_key<std::string>& key, in
     return succeed;
 }
 
+bool client_reply_handler::wait_for_put_until(const kv_store_key<std::string>& key, int wait_for, std::chrono::system_clock::time_point& wait_until){
+    bool succeed = false;
+
+    std::unique_lock<std::mutex> lock(this->put_global_mutex);
+
+    bool timeout_happened = false;
+
+    //std::cout << "waiting put key: " << key.key << std::endl;
+    auto it = this->put_replies.find(key);
+    if(it != this->put_replies.end()) {
+        // se a chave existe, fazer lock da chave
+        auto it_key = this->put_mutexes.find(key);
+
+        // Já tenho o apontador para o map das replies e dos mutexes logo posso fazer unlock
+        // que como a única thread que pode tirar a chave do mapa é a própria, e os iteradores
+        // não se invalidam com outras remoções, é certo que os apontadores permanecem válidos
+        lock.unlock();
+
+        auto &sync_pair = it_key->second;
+        std::unique_lock<std::mutex> lock_key(sync_pair->first);
+
+        if (it->second.size() < wait_for) {
+            // caso ainda não tenhamos o número de respostas necessárias
+
+            // esperar por um notify na chave -> ele faz lock automatico da chave
+            std::cv_status status = sync_pair->second.wait_until(lock_key, wait_until);
+            if(status == std::cv_status::timeout) timeout_happened = true;
+        }
+
+        // verificar se o put já foi realizado com sucesso, já temos o lock da chave
+        succeed = it->second.size() >= wait_for;
+        if (succeed) {
+
+            // fazer o unlock da mutex da key, porque temos de obter os locks por ordem
+            lock_key.unlock();
+            lock.lock();
+            lock_key.lock();
+
+            //std::cout << "Finish put key: " << key.key << std::endl;
+            // se o put já foi realizado com sucesso, como ainda temos os locks
+            // podemos remover as entradas para a chave
+            this->put_replies.erase(it);
+
+            // não é necessário acordar possiveis threads presas na cond variable
+            // porque é certo que apenas uma thread podes estar à espera de uma mesma key
+            lock_key.unlock(); // é estritamente necessário fazer free porque se não ao removermos
+            // como sai do scope ele vai tentar faazer free num mutex inexistente (SIGSEV)
+            this->put_mutexes.erase(it_key);
+
+            lock.unlock();
+        }
+
+    }
+
+    if(!succeed && timeout_happened)
+        throw TimeoutException();
+
+    return succeed;
+}
+
+void client_reply_handler::clear_put_keys_entries(std::vector<kv_store_key<std::string>>& erasing_keys){
+    std::scoped_lock<std::mutex> lock(this->put_global_mutex);
+    for(auto& key : erasing_keys) {
+        auto it = this->put_replies.find(key);
+        if (it != this->put_replies.end()) {
+            // se a chave existe, fazer lock da chave
+            auto it_key = this->put_mutexes.find(key);
+            std::unique_lock<std::mutex> lock_key(it_key->second->first);
+            this->put_replies.erase(it);
+            lock_key.unlock();
+            this->put_mutexes.erase(it_key);
+        }
+    }
+}
+
 void client_reply_handler::register_get(const std::string& req_id) {
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
@@ -100,7 +178,8 @@ void client_reply_handler::register_get(const std::string& req_id) {
         // a chave não existe
         std::vector<std::pair<kv_store_key_version, std::unique_ptr<std::string>>> temp;
         this->get_replies.emplace(req_id, std::move(temp));
-        this->get_mutexes.emplace(req_id, std::make_pair(std::make_unique<std::mutex>(), std::make_unique<std::condition_variable>()));
+        auto sync_pair = std::make_unique<std::pair<std::mutex, std::condition_variable>>();
+        this->get_mutexes.emplace(req_id, std::move(sync_pair));
     }else{
         //É impossível isto acontecer (registar uma mesma key)
     }
@@ -120,7 +199,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::strin
     if(it != this->get_replies.end()) {
         //se existe entrada para a chave, fazer lock dessa entrada
         auto &sync_pair = this->get_mutexes.find(req_id)->second;
-        std::unique_lock<std::mutex> lock_key(*sync_pair.first);
+        std::unique_lock<std::mutex> lock_key(sync_pair->first);
 
         if (it->second.size() < wait_for) {
             // caso ainda não tenhamos o número de respostas necessárias
@@ -128,7 +207,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::strin
             // fazer unlock do global get lock
             lock.unlock();
             // esperar por um notify na chave -> ele faz lock automatico da chave
-            std::cv_status status = sync_pair.second->wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
+            std::cv_status status = sync_pair->second.wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
             waited = true;
             if(status == std::cv_status::timeout) timeout_happened = true;
             // fazer o unlock da mutex da key, porque temos de obter os locks por ordem
@@ -171,6 +250,83 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::strin
     return res;
 }
 
+std::unique_ptr<std::string> client_reply_handler::wait_for_get_until(const std::string &req_id, int wait_for,
+                                                                      std::chrono::system_clock::time_point &wait_until){
+    std::unique_ptr<std::string> res (nullptr);
+
+    std::unique_lock<std::mutex> lock(this->get_global_mutex);
+
+    bool timeout_happened = false;
+
+    auto it = this->get_replies.find(req_id);
+    if(it != this->get_replies.end()) {
+        //se existe entrada para a chave, fazer lock dessa entrada
+        auto it_key = this->get_mutexes.find(req_id);
+
+        // Já tenho o apontador para o map das replies e dos mutexes logo posso fazer unlock
+        // que como a única thread que pode tirar a chave do mapa é a própria, e os iteradores
+        // não se invalidam com outras remoções, é certo que os apontadores permanecem válidos
+        lock.unlock();
+
+        auto &sync_pair = it_key->second;
+        std::unique_lock<std::mutex> lock_key(sync_pair->first);
+
+        if (it->second.size() < wait_for) {
+            // caso ainda não tenhamos o número de respostas necessárias
+
+            // esperar por um notify na chave -> ele faz lock automatico da chave
+            std::cv_status status = sync_pair->second.wait_until(lock_key, wait_until);
+            if(status == std::cv_status::timeout) timeout_happened = true;
+        }
+
+        if(it->second.size() >= wait_for){
+
+            // se já temos uma maioria de resposta, como ainda temos os locks
+            // podemos remover as entradas para a chave
+            auto max_version = kv_store_key_version(-1);
+            for(auto& entry : it->second){
+                if(entry.first > max_version){
+                    max_version = entry.first;
+                    res = std::move(entry.second);
+                }
+            }
+
+            // fazer o unlock da mutex da key, porque temos de obter os locks por ordem
+            lock_key.unlock();
+            lock.lock();
+            lock_key.lock();
+
+            this->get_replies.erase(it);
+
+            lock_key.unlock(); // é estritamente necessário fazer free porque se não ao removermos
+            // como sai do scope ele vai tentar faazer free num mutex inexistente (SIGSEV)
+            this->get_mutexes.erase(it_key);
+
+            lock.unlock();
+        }
+    }
+
+    if(res == nullptr && timeout_happened)
+        throw TimeoutException();
+
+    return res;
+}
+
+void client_reply_handler::clear_get_keys_entries(std::vector<std::string>& erasing_keys){
+    std::scoped_lock<std::mutex> lock(this->get_global_mutex);
+    for(auto& key : erasing_keys) {
+        auto it = this->get_replies.find(key);
+        if (it != this->get_replies.end()) {
+            // se a chave existe, fazer lock da chave
+            auto it_key = this->get_mutexes.find(key);
+            std::unique_lock<std::mutex> lock_key(it_key->second->first);
+            this->get_replies.erase(it);
+            lock_key.unlock();
+            this->get_mutexes.erase(it_key);
+        }
+    }
+}
+
 void client_reply_handler::register_get_latest_version(const std::string& req_id) {
     // são utilizadas as mesmas estruturas que para os gets
     register_get(req_id);
@@ -188,7 +344,7 @@ std::unique_ptr<long> client_reply_handler::wait_for_get_latest_version(const st
     if(it != this->get_replies.end()) {
         //se existe entrada para a chave, fazer lock dessa entrada
         auto &sync_pair = this->get_mutexes.find(req_id)->second;
-        std::unique_lock<std::mutex> lock_key(*sync_pair.first);
+        std::unique_lock<std::mutex> lock_key(sync_pair->first);
 
         if (it->second.size() < wait_for) {
             // caso ainda não tenhamos o número de respostas necessárias
@@ -196,7 +352,7 @@ std::unique_ptr<long> client_reply_handler::wait_for_get_latest_version(const st
             // fazer unlock do global get lock
             lock.unlock();
             // esperar por um notify na chave -> ele faz lock automatico da chave
-            std::cv_status status = sync_pair.second->wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
+            std::cv_status status = sync_pair->second.wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
             waited = true;
             if(status == std::cv_status::timeout) timeout_happened = true;
             // fazer o unlock da mutex da key, porque temos de obter os locks por ordem
@@ -254,14 +410,14 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
     if(it != this->get_replies.end()){
         // a chave existe
         auto& sync_pair = this->get_mutexes.find(req_id)->second;
-        std::unique_lock<std::mutex> reqid_lock(*sync_pair.first);
+        std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
         lock.unlock(); //free global get lock
 
         it->second.emplace_back(std::make_pair<kv_store_key_version, std::unique_ptr<std::string>>(
                 kv_store_key_version(msg.version(), msg.version_client_id()),
                 std::make_unique<std::string>(data)
         ));
-        sync_pair.second->notify_all();
+        sync_pair->second.notify_all();
         reqid_lock.unlock();
     }else{
         spdlog::debug("GET REPLY IGNORED - NON EXISTENT KEY");
@@ -309,14 +465,14 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
     if(it != this->get_replies.end()){
         // a chave existe
         auto& sync_pair = this->get_mutexes.find(req_id)->second;
-        std::unique_lock<std::mutex> reqid_lock(*sync_pair.first);
+        std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
         lock.unlock(); //free global get lock
 
         it->second.emplace_back(std::make_pair<kv_store_key_version, std::unique_ptr<std::string>>(
                 kv_store_key_version(msg.version()),
                 nullptr
         ));
-        sync_pair.second->notify_all();
+        sync_pair->second.notify_all();
         reqid_lock.unlock();
     }else{
         spdlog::debug("GET REPLY IGNORED - NON EXISTENT KEY");

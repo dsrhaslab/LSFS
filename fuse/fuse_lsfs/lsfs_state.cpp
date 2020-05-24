@@ -8,9 +8,135 @@
 #include <utility>
 #include <spdlog/spdlog.h>
 
-lsfs_state::lsfs_state(std::shared_ptr<client> df_client, std::shared_ptr<spdlog::logger> logger):
-        df_client(std::move(df_client)), logger(std::move(logger))
+lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size):
+        df_client(std::move(df_client)), max_parallel_read_size(max_parallel_read_size),
+        max_parallel_write_size(max_parallel_write_size)
 {}
+
+int lsfs_state::put_fixed_size_blocks_from_buffer_limited_paralelization(const char *buf, size_t size,
+                                                                         size_t block_size, const char *base_path, size_t current_blk, bool timestamp_version) {
+
+    size_t write_off = 0;
+    while(write_off < size){
+        size_t write_size = std::min(this->max_parallel_write_size, size - write_off);
+        int res = put_fixed_size_blocks_from_buffer(&buf[write_off], write_size, block_size, base_path, current_blk, timestamp_version);
+        if(res == 0){
+            write_off += write_size;
+            current_blk += (write_size / block_size);
+        }else{
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, bool timestamp_version){
+    int return_value;
+    size_t read_off = 0;
+    size_t nr_blocks = (size / block_size) + (size % block_size == 0 ? 0 : 1);
+    // array for the keys
+    std::vector<std::string> keys;
+    keys.reserve(nr_blocks);
+    // array for versions
+    std::vector<long> versions;
+    versions.reserve(nr_blocks);
+    // array for buffer pointers
+    std::vector<const char*> buffers;
+    buffers.reserve(nr_blocks);
+    // array for sizes
+    std::vector<size_t> sizes;
+    sizes.reserve(nr_blocks);
+
+
+    try{
+
+        while (read_off < size) {
+            size_t write_size = (read_off + BLK_SIZE) > size ? (size - read_off) : BLK_SIZE;
+            current_blk++;
+            std::string blk_path;
+            blk_path.reserve(100);
+            blk_path.append(base_path).append(":").append(std::to_string(current_blk));
+
+            long version;
+            if(timestamp_version){
+                version = std::time(nullptr);
+            }else{
+                version = df_client->get_latest_version(blk_path) + 1;
+            }
+
+            keys.emplace_back(std::move(blk_path));
+            versions.emplace_back(version);
+            buffers.emplace_back(&buf[read_off]);
+            sizes.emplace_back(write_size);
+
+            read_off += BLK_SIZE;
+        }
+
+        df_client->put_batch(keys, versions, buffers, sizes);
+
+        return_value = 0;
+    }catch(EmptyViewException& e){
+        // empty view -> nothing to do
+        e.what();
+        errno = EAGAIN; //resource unavailable
+        return_value = -1;
+    }catch(ConcurrentWritesSameKeyException& e){
+        e.what();
+        errno = EPERM; //operation not permitted
+        return_value = -1;
+    }catch(TimeoutException& e){
+        e.what();
+        errno = EHOSTUNREACH;
+        return_value = -1;
+    }
+
+    return return_value;
+
+}
+
+size_t lsfs_state::read_fixed_size_blocks_to_buffer_limited_paralelization(char *buf, size_t size, size_t block_size, const char *base_path, size_t current_blk) {
+    size_t read_off = 0;
+    while(read_off < size){
+        size_t read_size = std::min(this->max_parallel_read_size, size - read_off);
+        size_t actually_read = read_fixed_size_blocks_to_buffer(&buf[read_off], read_size, block_size, base_path, current_blk);
+        read_off += actually_read;
+        current_blk += (actually_read / block_size);
+    }
+    return read_off;
+}
+
+
+size_t lsfs_state::read_fixed_size_blocks_to_buffer(char *buf, size_t size, size_t block_size, const char *base_path, size_t current_blk) {
+    size_t read_off = 0;
+    size_t nr_blocks = (size / block_size) + (size % block_size == 0 ? 0 : 1);
+    // array for the keys
+    std::vector<std::string> keys;
+    keys.reserve(nr_blocks);
+    // array for versions
+    std::vector<std::shared_ptr<std::string>> data_strs;
+    data_strs.reserve(nr_blocks);
+
+    for(int i = 0; i < nr_blocks; i++){
+        current_blk++;
+        std::string blk_path;
+        blk_path.reserve(100);
+        blk_path.append(base_path).append(":").append(std::to_string(current_blk));
+
+        keys.emplace_back(std::move(blk_path));
+        data_strs.emplace_back(nullptr);
+    }
+
+    df_client->get_batch(keys, data_strs);
+
+    for(const std::shared_ptr<std::string>& data_blk: data_strs){
+        size_t blk_write_size = std::min((data_blk->size()), (size - read_off));
+        data_blk->copy(&buf[read_off], blk_write_size);
+        read_off += blk_write_size;
+    }
+
+    return read_off;
+}
 
 int lsfs_state::put_block(const std::string& path, const char* buf, size_t size, bool timestamp_version) {
     int return_value;

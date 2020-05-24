@@ -121,6 +121,7 @@ int kv_store_leveldb::init(void* path, long id){
     return 0;
 }
 
+//TODO este método tem de ser alterado está a criar um mapa com todas as chaves na base de dados
 void kv_store_leveldb::update_partition(int p, int np) {
 
     if(np != this->nr_slices){
@@ -285,27 +286,32 @@ bool kv_store_leveldb::put(const std::string& key, long version, long client_id,
 
     if(this->slice == k_slice){
         leveldb::WriteOptions writeOptions;
-        std::string comp_key = key + "#" + std::to_string(version) + "#" + std::to_string(client_id);
+        std::string comp_key;
+        comp_key.reserve(100);
+        comp_key.append(key).append("#").append(std::to_string(version)).append("#").append(std::to_string(client_id));
         db->Put(writeOptions, comp_key, bytes);
-        db_merge_log->Put(writeOptions, comp_key, std::to_string(is_merge));
+
+        if(is_merge) {
+            db_merge_log->Put(writeOptions, comp_key, std::to_string(is_merge));
+        }
         this->record_count++;
 
-        if(!is_merge){
-            //if is not a merge operation should only respond that put was sucessfully if the
-            //version commited is actualy the current version
-
-            try{
-                std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
-                if(max_client_id == nullptr){
-                    return false;
-                }else{
-                    return  *max_client_id == client_id;
-                }
-            }catch(LevelDBException& e){
-                this->unseen_it(key, version, client_id);
-                throw LevelDBException();
-            }
-        }
+//        if(!is_merge){
+//            //if is not a merge operation should only respond that put was sucessfully if the
+//            //version commited is actualy the current version
+//
+//            try{
+//                std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
+//                if(max_client_id == nullptr){
+//                    return false;
+//                }else{
+//                    return  *max_client_id == client_id;
+//                }
+//            }catch(LevelDBException& e){
+//                this->unseen_it(key, version, client_id);
+//                throw LevelDBException();
+//            }
+//        }
 
         return true;
     }else{
@@ -371,12 +377,9 @@ std::unique_ptr<std::string> kv_store_leveldb::get_anti_entropy(const kv_store_k
     comp_key.reserve(50);
     comp_key.append(key.key).append("#").append(std::to_string(key.key_version.version)).append("#").append(std::to_string(key.key_version.client_id));
     leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value);
-    if(s.ok()){
-        std::istringstream(value) >> *is_merge;
-        return this->get(const_cast<kv_store_key<std::string> &>(key));
-    }
+    *is_merge = s.ok();
 
-    return nullptr;
+    return this->get(const_cast<kv_store_key<std::string> &>(key));
 }
 
 std::unique_ptr<std::string> kv_store_leveldb::get_latest(const std::string& key, kv_store_key_version* kv_version) {

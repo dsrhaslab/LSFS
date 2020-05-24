@@ -26,12 +26,14 @@ private:
     std::string ip;
     long id;
     //int port;
+    std::mutex sender_socket_mutex;
     int sender_socket;
     std::atomic<long> request_count;
     int nr_puts_required;
     int nr_gets_required;
     int nr_gets_version_required;
     int max_timeouts;
+    int wait_timeout;
 
     std::shared_ptr<load_balancer> lb;
     std::thread lb_th;
@@ -46,6 +48,10 @@ public:
     client(std::string boot_ip, std::string ip, long id/*, int port, int lb_port*/, std::string conf_filename);
     void stop();
     void put(const std::string& key, long version, const char* data, size_t size, int wait_for);
+    void put_batch(const std::vector<std::string>& keys, const std::vector<long>& versions, const std::vector<const char*>& datas, const std::vector<size_t>& sizes, int wait_for);
+    inline void put_batch(const std::vector<std::string>& keys, const std::vector<long>& versions, const std::vector<const char*>& datas, const std::vector<size_t>& sizes) {
+        put_batch(keys, versions, datas, sizes, nr_puts_required);
+    };
     inline void put(const std::string& key, long version, const char* data, size_t size) {
         put(key, version, data, size, nr_puts_required);
     };
@@ -53,6 +59,10 @@ public:
     inline void put_with_merge(const std::string& key, long version, const char* data, size_t size) {
         put_with_merge(key, version, data, size, nr_puts_required);
     };
+    void get_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs, int wait_for);
+    inline void get_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs){
+        get_batch(keys, data_strs, nr_gets_required);
+    }
     std::unique_ptr<std::string> get(const std::string& key, int wait_for, long* version = nullptr);
     inline std::unique_ptr<std::string> get(const std::string& key, long* version = nullptr){
         return get(key, nr_gets_required, version);

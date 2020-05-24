@@ -5,8 +5,8 @@
 #include "util.h"
 
 int split_composite_key(std::string comp_key, std::string* key, long* version, long* client_id){
-    std::smatch match;
-    auto res = std::regex_search(comp_key, match, composite_key);
+    boost::cmatch match;
+    auto res = boost::regex_search(comp_key.c_str(), match, composite_key);
 
     try{
         if(match.size() > 3){

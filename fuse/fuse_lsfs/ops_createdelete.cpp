@@ -18,8 +18,8 @@ int lsfs_impl::_mknod(
     const char *path, mode_t mode, dev_t rdev
     )
 {
-    logger->info("MKNOD" + std::string(path));
-    logger->flush();
+//    logger->info("MKNOD" + std::string(path));
+//    logger->flush();
 
     if (!fuse_pt_impersonate_calling_process_highlevel(&mode))
         return -errno;
@@ -35,8 +35,8 @@ int lsfs_impl::_link(
     const char *from, const char *to
     )
 {
-    logger->info("LINK From:" + std::string(from) + " To:" + std::string(to));
-    logger->flush();
+//    logger->info("LINK From:" + std::string(from) + " To:" + std::string(to));
+//    logger->flush();
 
     return (link(from, to) == 0) ? 0 : -errno;
 }
@@ -45,8 +45,8 @@ int lsfs_impl::_unlink(
     const char *path
     )
 {
-    logger->info("UNLINK " + std::string(path));
-    logger->flush();
+//    logger->info("UNLINK " + std::string(path));
+//    logger->flush();
 
     return (unlink(path) == 0) ? 0 : -errno;
 }
@@ -55,8 +55,8 @@ int lsfs_impl::_rename(
     const char *from, const char *to, unsigned int flags
     )
 {
-    logger->info("RENAME From:" + std::string(from) + " To:" + std::string(to));
-    logger->flush();
+//    logger->info("RENAME From:" + std::string(from) + " To:" + std::string(to));
+//    logger->flush();
 
     if (flags != 0)
         return -EINVAL;
@@ -105,8 +105,8 @@ int lsfs_impl::_mkdir(
     const char *path, mode_t mode
     )
 {
-    logger->info("MKDIR " + std::string(path));
-    logger->flush();
+//    logger->info("MKDIR " + std::string(path));
+//    logger->flush();
     
     if (!fuse_pt_impersonate_calling_process_highlevel(&mode))
         return -errno;
@@ -141,8 +141,8 @@ int lsfs_impl::_rmdir(
     const char *path
     )
 {
-    logger->info("RMDIR " + std::string(path));
-    logger->flush();
+//    logger->info("RMDIR " + std::string(path));
+//    logger->flush();
 
     return (rmdir(path) == 0) ? 0 : -errno;
 }

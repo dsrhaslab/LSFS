@@ -12,6 +12,7 @@
 #include "exceptions/custom_exceptions.h"
 #include "client.h"
 #include <regex>
+#include <utility>
 
 /* =====================================================================================================================
 * ======================================== Worker Class ================================================================
@@ -53,7 +54,7 @@ public:
 /*=====================================================================================================================*/
 
 client_reply_handler_mt::client_reply_handler_mt(std::string ip/*, int port*/, long wait_timeout, int nr_workers):
-        client_reply_handler(ip/*, port*/, wait_timeout), nr_worker_threads(nr_workers)
+        client_reply_handler(std::move(ip)/*, port*/, wait_timeout), nr_worker_threads(nr_workers)
 {}
 
 void client_reply_handler_mt::operator()() {
