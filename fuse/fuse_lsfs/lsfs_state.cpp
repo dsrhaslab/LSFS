@@ -60,7 +60,7 @@ int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, 
 
             long version;
             if(timestamp_version){
-                version = std::time(nullptr);
+                version = std::chrono::duration_cast< std::chrono::nanoseconds >( std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 100u;
             }else{
                 version = df_client->get_latest_version(blk_path) + 1;
             }
@@ -144,7 +144,7 @@ int lsfs_state::put_block(const std::string& path, const char* buf, size_t size,
     try{
         long version;
         if(timestamp_version){
-            version = std::time(nullptr);
+            version = std::chrono::duration_cast< std::chrono::nanoseconds >( std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 100u;
         }else{
             version = df_client->get_latest_version(path) + 1;
         }

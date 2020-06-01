@@ -1,0 +1,46 @@
+- name: Get Peers Positions
+  shell: "step=`bc -l <<< 'scale=6; 1/{{ nr_peers - 1 }}'`;for i in `seq 0 ${step} 1`; do echo $i; done;"
+  args:
+    executable: /bin/bash
+  register: result
+
+- debug:
+    msg: "{{ item }}"
+  with_items:
+  - "{{ result.stdout_lines }}"
+
+
+#- name: Create and Start Peers
+#  docker_container:
+#    name: "peer{{ item.0 }}"
+#    state: started
+#    image: peer:0.1.0
+#    command: ["./build/peer_exe", "{{ item.0 }}", "{{ item.1 }}", "scripts/conf.yaml", "{{ bootstrapper_ip }}"]
+#  register: "peer_container{{ item.0 }}"
+#  with_together:
+#    - "{{ range(1, nr_peers + 1) | list }}"
+#    - "{{ result.stdout_lines }}"
+
+- name: Create Peer Pod
+  k8s:
+    kubeconfig: /home/danielsf97/.kube/config
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: "peer{{ item.0 }}"
+        namespace: lsfs
+      spec:
+        containers:
+        - name: peer-container
+          image: lsfsusertemp/lsfs-testing:peer
+          command: ["./build/peer_exe", "{{ item.0 }}", "{{ item.1 }}", "scripts/conf.yaml", "{{ bootstrapper_ip }}"]
+        #ports:
+        #- protocol: TCP
+        #  targetPort: 8000
+        #  name: port-8000-tcp
+        #  port: 8000
+  with_together:
+    - "{{ range(1, nr_peers + 1) | list }}"
+    - "{{ result.stdout_lines }}"

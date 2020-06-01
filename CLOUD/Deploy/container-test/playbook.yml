@@ -1,0 +1,105 @@
+---
+
+- name: Up Filebench Container
+  hosts: node
+  become: yes
+  tasks:
+    - name: copy build files to remote host
+      copy:
+        src: build_image_filebench_nv/
+        dest: /home/build_image_filebench_nv/
+
+    - name: Build filebench image
+      docker_image:
+        name: filebench:0.1.0
+        build:
+          path: /home/build_image_filebench_nv
+        state: present
+        source: build
+
+    # - name: Container present
+    #   docker_container:
+    #     name: filebench
+    #     image: filebench:0.1.0
+    #     command: ["sleep", "infinity"]
+    #     privileged: yes
+
+    # - name: Container present
+    #   docker_container:
+    #     name: filebench
+    #     image: filebench:0.1.0
+    #     command: ["sleep", "infinity"]
+    #     privileged: yes
+    #     mounts:
+    #      - source: storage-volume
+    #        type: volume
+    #        target: /home/gsd/P2P-Filesystem/Teste/InnerFolder
+
+- name: Up Filebench Container
+  hosts: master
+  become: yes
+  tasks:
+    - name: Install openshift python module
+      pip:
+        name: openshift
+
+    - name: Create a k8s namespace
+      k8s:
+        kubeconfig: /home/danielsf97/.kube/config
+        name: lsfs
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    - name: Create Bootstrapper Pod
+      k8s:
+        kubeconfig: /home/danielsf97/.kube/config
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: filebench
+            namespace: lsfs
+            labels:
+              lsfs: filebench 
+          spec:
+            containers:
+            - name: filebench-container
+              image: filebench:0.1.0
+              securityContext:
+                privileged: true
+                # allowPrivilegeEscalation: true
+              command: ["sleep", "infinity"]
+              # privileged: yes
+              volumeMounts:
+              - mountPath: /home/gsd/P2P-Filesystem/Teste/InnerFolder
+                name: filebench-volume
+              ports: [
+                {
+                  containerPort: 12345,
+                  protocol: TCP
+                },
+                {
+                  containerPort: 12346,
+                  protocol: TCP
+                }
+              ]
+            volumes:
+            - name: filebench-volume
+              emptyDir: {}
+            # - hostPath:
+            #     path: /home/danielsf97/filebench
+            #   name: filebench-volume
+      register: filebench_container
+
+    # - name: Pod present
+    #   docker_container:
+    #     name: filebench
+    #     image: filebench:0.1.0
+    #     command: ["sleep", "infinity"]
+    #     privileged: yes
+    #     mounts:
+    #      - source: storage-volume
+    #        type: volume
+    #        target: /home/gsd/P2P-Filesystem/Teste/InnerFolder

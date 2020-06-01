@@ -41,7 +41,7 @@ logs*
 cmake-build-debug/*
 *.cmake
 Makefile
-CMakeFiles/*
+*CMakeFiles/*
 CMakeCache*
 *.cbp
 
@@ -53,6 +53,9 @@ udp_client_server/*
 results*
 technical_stuff/*
 scripts/log*
+
+#Deploy virtualenv
+*.virtualenvs/*
 
 # Capnp auto-generated files
 *.capnp.*

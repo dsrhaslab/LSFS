@@ -1,0 +1,6 @@
+- name: Create a Service object by reading the definition from a file
+  k8s:
+    kubeconfig: /home/gsd/.kube/config
+    namespace: lsfs
+    state: present
+    src: "{{ role_path }}/files/flannel.yml"
