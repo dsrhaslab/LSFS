@@ -93,6 +93,8 @@ int kv_store_leveldb::init(void* path, long id){
     this->id = id;
     this->path = std::string((char*) path);
 
+    std::filesystem::create_directories(this->path);
+
     leveldb::Options options;
     options.create_if_missing = true;
     std::string db_name = this->path + std::to_string(id);
