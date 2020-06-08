@@ -50,8 +50,8 @@ peer::peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int dat
         float reply_chance, bool smart, bool mt_data_handler, std::shared_ptr<spdlog::logger> logger, long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at)
     :   id(id), ip(ip)/*, pss_port(pss_port)*/, data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
         view_logger_enabled(view_logger_enabled), local_interval(local_interval), reply_chance(reply_chance),
-//        store(std::make_shared<kv_store_leveldb>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
-        store(std::make_shared<kv_store_wiredtiger>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
+        store(std::make_shared<kv_store_leveldb>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
+ //       store(std::make_shared<kv_store_wiredtiger>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
 //        store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
 //        store(std::make_shared<kv_store_memory<std::string>>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
         group_c(ip/*, pss_port*/, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),

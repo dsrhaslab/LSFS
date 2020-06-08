@@ -19,7 +19,7 @@
 
 
 data_handler_listener::data_handler_listener(std::string ip/*, int port*/, long id, float chance, pss *pss, std::shared_ptr<kv_store<std::string>> store, bool smart)
-    : ip(std::move(ip))/*, port(port)*/, id(id), chance(chance), pss_ptr(pss), store(std::move(store)), smart_forward(smart) {}
+    : ip(std::move(ip))/*, port(port)*/, id(id), chance(chance), pss_ptr(pss), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
 
 void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip/*, int sender_port*/){
     try{
