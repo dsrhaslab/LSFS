@@ -55,9 +55,12 @@ void pss_listener::operator()() {
 
         this->thread_pool.join_all();
     }
+    catch(const std::system_error& e) {
+        std::cerr << "System Error: Not avaliable resources to create peer (pss_listener)!" << std::endl;
+        exit(1);
+    }
     catch (std::exception& e) {
-        spdlog::error(e.what());
-//        std::cout << e.what() << std::endl;
+        std::cout << e.what() << std::endl;
     }
 }
 

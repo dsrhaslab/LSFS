@@ -78,13 +78,18 @@ void peer::print_view() {
 }
 
 void peer::start() {
-    this->pss_th = std::thread (std::ref(this->cyclon));
-    this->pss_listener_th = std::thread(std::ref(this->listener));
-    if(view_logger_enabled) {
-        this->v_logger_th = std::thread(std::ref(this->v_logger));
+    try{
+        this->pss_th = std::thread (std::ref(this->cyclon));
+        this->pss_listener_th = std::thread(std::ref(this->listener));
+        if(view_logger_enabled) {
+            this->v_logger_th = std::thread(std::ref(this->v_logger));
+        }
+        this->data_handler_th = std::thread(std::ref(*this->data_handler));
+        this->anti_ent_th = std::thread(std::ref(this->anti_ent));
+    }catch(const std::system_error& e) {
+        std::cerr << "System Error: Not avaliable resources to create peer (peer)!" << std::endl;
+        exit(1);
     }
-    this->data_handler_th = std::thread(std::ref(*this->data_handler));
-    this->anti_ent_th = std::thread(std::ref(this->anti_ent));
 }
 
 void peer::stop(){
