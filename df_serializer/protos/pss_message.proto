@@ -11,12 +11,15 @@ message peer_data {
 
 message pss_message {
   enum Type {
-    NORMAL = 0;
-    RESPONSE = 1;
-    LOCAL = 2;
-    REQUEST_LOCAL = 3;
-    LOADBALANCE = 4;
-    LOADBALANCE_LOCAL = 5;
+    ANNOUNCE = 0;
+    GETVIEW = 1;
+    NORMAL = 2;
+    RESPONSE = 3;
+    LOCAL = 4;
+    REQUEST_LOCAL = 5;
+    LOADBALANCE = 6;
+    LOADBALANCE_LOCAL = 7;
+    TERMINATION = 8;
   }
 
   required Type type = 1;

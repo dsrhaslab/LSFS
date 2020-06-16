@@ -5,7 +5,6 @@
 #include "bootstrapper_impl.h"
 #include <iostream>
 #include <memory>
-#include "df_serializer/capnp/capnp_serializer.h"
 #include <thread>
 
 #include <algorithm>    // std::random_shuffle
@@ -13,22 +12,18 @@
 #include <map>
 #include <unistd.h>
 #include <algorithm>
+#include <build/pss_message.pb.h>
 #include "yaml-cpp/yaml.h"
-
 
 #define LOG(X) std::cout << X << std::endl;
 
 BootstrapperImpl::BootstrapperImpl(int viewsize, const char* ip/*, int port*/):
-    connection(tcp_client_server_connection::tcp_server_connection(ip, boot_port/*port*/, std::unique_ptr<Serializer>(new Capnp_Serializer))),
+    connection(tcp_client_server_connection::tcp_server_connection(ip, boot_port)),
     viewsize(viewsize),
     ip(ip)
-    //port(port)
-
 {
-//    std::cerr << "[df_bootstrapper] function: constructor [Creating Server Connection]" << std::endl;
     this->initialnodes = 10;
     this->running = true;
-    std::cout << ip << ":" << boot_port << std::endl;
 }
 
 void BootstrapperImpl::stopThread(){
@@ -136,38 +131,64 @@ void BootstrapperImpl::boot_fila() {
 }
 
 void BootstrapperImpl::boot_worker(int* socket){
-    pss_message recv_pss_msg;
-
     try {
+        char rcv_buf [65500];
 
-        this->connection.recv_pss_msg(socket, recv_pss_msg);
+        int bytes_rcv = connection.recv_msg(socket, rcv_buf); //throw exception
 
-        switch (recv_pss_msg.type){
-            case pss_message::Type::Announce: {
-                pss_message msg_to_send;
-                msg_to_send.view = this->get_view();
-                msg_to_send.sender_ip = this->get_ip();
-                //msg_to_send.sender_port = this->get_port();
-                msg_to_send.type = pss_message::Type::Normal;
+        proto::pss_message rcv_pss_msg;
+        rcv_pss_msg.ParseFromArray(rcv_buf, bytes_rcv);
 
-                this->connection.send_pss_msg(socket, msg_to_send);
+        switch (rcv_pss_msg.type()){
+            case proto::pss_message_Type::pss_message_Type_ANNOUNCE: {
+                proto::pss_message msg_to_send;
+                msg_to_send.set_type(proto::pss_message_Type::pss_message_Type_NORMAL);
+                msg_to_send.set_sender_ip(this->get_ip());
+                msg_to_send.set_sender_pos(0); // not used
 
-                std::cout << recv_pss_msg.view[0].pos << std::endl;
-                this->add_peer(recv_pss_msg.sender_ip/*, recv_pss_msg.sender_port*/, recv_pss_msg.view[0].id, recv_pss_msg.view[0].pos);
+                for(auto& peer: this->get_view()){
+                    proto::peer_data* peer_data = msg_to_send.add_view();
+                    peer_data->set_ip(peer.ip);
+                    peer_data->set_age(peer.age);
+                    peer_data->set_id(peer.id);
+                    peer_data->set_pos(peer.pos);
+                    peer_data->set_nr_slices(0); // not used
+                    peer_data->set_slice(0); // not used
+                }
+
+                std::string buf;
+                msg_to_send.SerializeToString(&buf);
+
+                this->connection.send_msg(socket, buf.data(), buf.size());
+
+                std::cout << rcv_pss_msg.view(0).pos() << std::endl;
+                this->add_peer(rcv_pss_msg.sender_ip(), rcv_pss_msg.view(0).id(), rcv_pss_msg.view(0).pos());
                 break;
             }
-            case pss_message::Type::Termination: {
-                this->remove_peer(recv_pss_msg.sender_ip /*recv_pss_msg.sender_port*/);
+            case proto::pss_message_Type::pss_message_Type_TERMINATION: {
+                this->remove_peer(rcv_pss_msg.sender_ip());
                 break;
             }
-            case pss_message::Type::GetView: {
-                pss_message msg_to_send;
-                msg_to_send.view = this->get_view();
-                msg_to_send.sender_ip = this->get_ip();
-                //msg_to_send.sender_port = this->get_port();
-                msg_to_send.type = pss_message::Type::Normal;
+            case proto::pss_message_Type::pss_message_Type_GETVIEW: {
+                proto::pss_message msg_to_send;
+                msg_to_send.set_type(proto::pss_message_Type::pss_message_Type_NORMAL);
+                msg_to_send.set_sender_ip(this->get_ip());
+                msg_to_send.set_sender_pos(0); // not used
 
-                this->connection.send_pss_msg(socket, msg_to_send);
+                for(auto& peer: this->get_view()){
+                    proto::peer_data* peer_data = msg_to_send.add_view();
+                    peer_data->set_ip(peer.ip);
+                    peer_data->set_age(peer.age);
+                    peer_data->set_id(peer.id);
+                    peer_data->set_pos(peer.pos);
+                    peer_data->set_nr_slices(0); // not used
+                    peer_data->set_slice(0); // not used
+                }
+
+                std::string buf;
+                msg_to_send.SerializeToString(&buf);
+
+                this->connection.send_msg(socket, buf.data(), buf.size());
                 break;
             }
         }
@@ -234,8 +255,6 @@ std::string get_local_ip_address(){
 }
 
 int main(int argc, char *argv[]) {
-
-//    std::cout << "Starting Bootstrapper" << std::endl;
 
     if(argc < 2){
         exit(1);

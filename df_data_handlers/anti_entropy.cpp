@@ -2,7 +2,6 @@
 // Created by danielsf97 on 1/30/20.
 //
 
-#include "df_serializer/capnp/capnp_serializer.h"
 #include "df_tcp_client_server_connection/tcp_client_server_connection.h"
 #include <thread>
 #include <utility>
@@ -144,7 +143,7 @@ bool anti_entropy::recover_state(tcp_client_server_connection::tcp_server_connec
 
 void anti_entropy::phase_recovering() {
     tcp_client_server_connection::tcp_server_connection connection =
-            tcp_client_server_connection::tcp_server_connection(this->ip.c_str(), peer::recover_port, std::unique_ptr<Serializer>(new Capnp_Serializer));
+            tcp_client_server_connection::tcp_server_connection(this->ip.c_str(), peer::recover_port);
 
     while(this->phase == anti_entropy::Phase::Recovering){
 

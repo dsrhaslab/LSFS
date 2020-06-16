@@ -13,8 +13,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <df_serializer/capnp/capnp_serializer.h>
-
 
 data_handler_listener::data_handler_listener(std::string ip/*, int port*/, long id, float chance, pss *pss, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, bool smart)
     : ip(std::move(ip)), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
@@ -508,10 +506,7 @@ void data_handler_listener::process_recover_request_msg(const proto::kv_message&
     }
 
     try {
-
-        std::shared_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
-        tcp_client_server_connection::tcp_client_connection connection(sender_ip.c_str(), peer::recover_port,
-                                                                       capnp_serializer);
+        tcp_client_server_connection::tcp_client_connection connection(sender_ip.c_str(), peer::recover_port);
 
         char rcv_buf[65500];
 

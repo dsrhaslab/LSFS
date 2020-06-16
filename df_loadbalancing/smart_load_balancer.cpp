@@ -4,7 +4,6 @@
 
 #include <spdlog/spdlog.h>
 #include "smart_load_balancer.h"
-#include "df_serializer/capnp/capnp_serializer.h"
 #include "df_tcp_client_server_connection/tcp_client_server_connection.h"
 #include <thread>
 #include <netinet/in.h>
@@ -23,7 +22,6 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip/*, int boot_port*/,
     this->random_eng = std::mt19937(rd());
 
     bool recovered = false;
-    std::shared_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
 
     YAML::Node config = YAML::LoadFile("../scripts/conf.yaml");
     auto main_confs = config["main_confs"];
@@ -43,31 +41,48 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip/*, int boot_port*/,
 
     while(!recovered){
         try {
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::lb_port, capnp_serializer);
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::lb_port);
 
-            //sending announce msg
-            pss_message pss_get_view_msg;
-            pss_get_view_msg.sender_ip = ip;
-            //pss_get_view_msg.sender_port = port;
-            pss_get_view_msg.type = pss_message::Type::GetView;
-            connection.send_pss_msg(pss_get_view_msg);
+            //sending getview msg
+            proto::pss_message msg_to_send;
+            msg_to_send.set_type(proto::pss_message_Type::pss_message_Type_GETVIEW);
+            msg_to_send.set_sender_ip(ip);
+            msg_to_send.set_sender_pos(0); // not used
+
+            std::string buf;
+            msg_to_send.SerializeToString(&buf);
+
+            connection.send_msg(buf.data(), buf.size());
 
             //receiving view from df_bootstrapper
             bool view_recv = false;
-            pss_message pss_view_msg_rcv;
-            while (!view_recv) {
-                connection.recv_pss_msg(pss_view_msg_rcv);
+            proto::pss_message pss_view_msg_rcv;
+            char rcv_buf [65500];
 
-                if (pss_view_msg_rcv.type == pss_message::Type::Normal)
+            while (!view_recv) {
+                int bytes_rcv = connection.recv_msg(rcv_buf); //throw exception
+
+                pss_view_msg_rcv.ParseFromArray(rcv_buf, bytes_rcv);
+
+                if (pss_view_msg_rcv.type() == proto::pss_message_Type::pss_message_Type_NORMAL)
                     view_recv = true;
             }
 
             recovered = true;
 
-            std::cout << "Things are starting" << std::endl;
-
             std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
-            auto temp_group = std::make_unique<std::vector<peer_data>>(std::move(pss_view_msg_rcv.view));
+            std::vector<peer_data> view_rcv;
+            for (auto& peer : pss_view_msg_rcv.view()) {
+                struct peer_data peer_rcv;
+                peer_rcv.ip = peer.ip();
+                peer_rcv.age = peer.age();
+                peer_rcv.id = peer.id();
+                peer_rcv.slice = peer.slice();
+                peer_rcv.nr_slices = peer.nr_slices();
+                peer_rcv.pos = peer.pos();
+                view_rcv.emplace_back(std::move(peer_rcv));
+            }
+            auto temp_group = std::make_unique<std::vector<peer_data>>(std::move(view_rcv));
             this->view.push_back(std::move(temp_group));
         }catch(const char* e){
             spdlog::error(e);
@@ -75,7 +90,6 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip/*, int boot_port*/,
         }catch(...){}
     }
 }
-
 
 int smart_load_balancer::group(double peer_pos){
     int temp = (int) ceil((static_cast<double>(this->nr_groups))*peer_pos);
@@ -139,7 +153,6 @@ void smart_load_balancer::split_groups_from_view() {
     }
     this->view = std::move(next_view);
 }
-
 
 void smart_load_balancer::receive_message(std::vector<peer_data> received) {
 

@@ -8,7 +8,6 @@
 #include <fstream>
 #include "pss.h"
 #include "df_tcp_client_server_connection/tcp_client_server_connection.h"
-#include "df_serializer/capnp/capnp_serializer.h"
 #include "pss_message.pb.h"
 #include <thread>
 #include <chrono>         // std::chrono::seconds
@@ -34,43 +33,55 @@ pss::pss(const char *boot_ip/*, int boot_port*/, std::string my_ip/*, int my_por
     //TODO acrescentar loop para tentar reconexão caso falhe
 
     bool recovered = false;
-    std::shared_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
 
     while(!recovered){
         try {
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip, peer::pss_port /*boot_port*/, capnp_serializer);
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip, peer::pss_port);
 
-            //sending announce msg
-            pss_message pss_announce_msg;
-            pss_announce_msg.sender_ip = my_ip;
-            //pss_announce_msg.sender_port = my_port;
-            pss_announce_msg.type = pss_message::Type::Announce;
-            pss_announce_msg.view.push_back({
-                my_ip,
-                //my_port,
-                0,
-                my_id,
-                0,
-                my_pos,
-                0
-            });
-            connection.send_pss_msg(pss_announce_msg);
+            proto::pss_message pss_announce_msg;
+            pss_announce_msg.set_type(proto::pss_message_Type::pss_message_Type_ANNOUNCE);
+            pss_announce_msg.set_sender_ip(my_ip);
+            pss_announce_msg.set_sender_pos(my_pos); // not used
+
+            proto::peer_data* peer_data = pss_announce_msg.add_view();
+            peer_data->set_ip(my_ip);
+            peer_data->set_age(0);
+            peer_data->set_id(my_id);
+            peer_data->set_pos(my_pos);
+            peer_data->set_nr_slices(0); // not used
+            peer_data->set_slice(0); // not used
+
+            std::string buf;
+            pss_announce_msg.SerializeToString(&buf);
+
+            connection.send_msg(buf.data(), buf.size());
 
             //receiving view from df_bootstrapper
             bool view_recv = false;
-            pss_message pss_view_msg_rcv;
-            while (!view_recv) {
-                connection.recv_pss_msg(pss_view_msg_rcv);
+            proto::pss_message pss_view_msg_rcv;
+            char rcv_buf [65500];
 
-                if (pss_view_msg_rcv.type == pss_message::Type::Normal)
+            while (!view_recv) {
+                int bytes_rcv = connection.recv_msg(rcv_buf); //throw exception
+
+                pss_view_msg_rcv.ParseFromArray(rcv_buf, bytes_rcv);
+
+                if (pss_view_msg_rcv.type() == proto::pss_message_Type::pss_message_Type_NORMAL)
                     view_recv = true;
             }
 
             recovered = true;
 
             //process received view
-            for (peer_data &peer : pss_view_msg_rcv.view) {
-                this->view.insert(std::make_pair(peer.ip /*peer.port*/, std::move(peer)));
+            for (auto& peer : pss_view_msg_rcv.view()) {
+                struct peer_data peer_rcv;
+                peer_rcv.ip = peer.ip();
+                peer_rcv.age = peer.age();
+                peer_rcv.id = peer.id();
+                peer_rcv.slice = peer.slice();
+                peer_rcv.nr_slices = peer.nr_slices();
+                peer_rcv.pos = peer.pos();
+                this->view.insert(std::make_pair(peer.ip(), std::move(peer_rcv)));
             }
 
         }catch(const char* e){
@@ -382,7 +393,6 @@ void pss::process_msg(const proto::pss_message& pss_msg){
 
         this->incorporate_in_view(recv_view);
         this->incorporate_last_sent_view();
-//        this->print_view();
 
 // penso que é desnecessário
 //        while(this->view.size() > this->view_size){
@@ -471,16 +481,18 @@ void pss::stop_thread() {
 
 void pss::bootstrapper_termination_alerting() {
     try {
-        std::unique_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
-        tcp_client_server_connection::tcp_client_connection connection(this->boot_ip, peer::pss_port/*this->boot_port*/,
-                                                                       std::move(capnp_serializer));
+        tcp_client_server_connection::tcp_client_connection connection(this->boot_ip, peer::pss_port);
 
-        //sending announce msg
-        pss_message pss_termination_msg;
-        pss_termination_msg.sender_ip = this->ip;
-        //pss_termination_msg.sender_port = this->port;
-        pss_termination_msg.type = pss_message::Type::Termination;
-        connection.send_pss_msg(pss_termination_msg);
+        //sending termination msg
+        proto::pss_message msg_to_send;
+        msg_to_send.set_type(proto::pss_message_Type::pss_message_Type_TERMINATION);
+        msg_to_send.set_sender_ip(this->ip);
+        msg_to_send.set_sender_pos(0); // not used
+
+        std::string buf;
+        msg_to_send.SerializeToString(&buf);
+
+        connection.send_msg(buf.data(), buf.size());
     }catch(const char* e){
         spdlog::error(e);
         spdlog::error("Erro ao alertar o df_bootstrapper =========================================================================================================================");

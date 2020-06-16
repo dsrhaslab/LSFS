@@ -2,7 +2,6 @@
 // Created by danielsf97 on 1/27/20.
 //
 
-#include "df_serializer/capnp/capnp_serializer.h"
 #include "df_tcp_client_server_connection/tcp_client_server_connection.h"
 #include <thread>
 #include <netinet/in.h>
@@ -13,44 +12,57 @@
 #include "dynamic_load_balancer.h"
 
 dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip/*, int boot_port*/, std::string ip/*, int port*/, long sleep_interval):
-    ip(ip)/*, port(port)*/, sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
+    ip(ip), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {
 
     std::random_device rd;     // only used once to initialise (seed) engine
     this->random_eng = std::mt19937(rd());
 
     bool recovered = false;
-    std::shared_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
 
     while(!recovered){
         try {
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::lb_port, capnp_serializer);
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::lb_port);
 
-            //sending announce msg
-            pss_message pss_get_view_msg;
-            pss_get_view_msg.sender_ip = ip;
-            //pss_get_view_msg.sender_port = port;
-            pss_get_view_msg.type = pss_message::Type::GetView;
-            connection.send_pss_msg(pss_get_view_msg);
+            //sending getview msg
+            proto::pss_message msg_to_send;
+            msg_to_send.set_type(proto::pss_message_Type::pss_message_Type_GETVIEW);
+            msg_to_send.set_sender_ip(ip);
+            msg_to_send.set_sender_pos(0); // not used
+
+            std::string buf;
+            msg_to_send.SerializeToString(&buf);
+
+            connection.send_msg(buf.data(), buf.size());
 
             //receiving view from df_bootstrapper
             bool view_recv = false;
-            pss_message pss_view_msg_rcv;
-            while (!view_recv) {
-                connection.recv_pss_msg(pss_view_msg_rcv);
+            proto::pss_message pss_view_msg_rcv;
+            char rcv_buf [65500];
 
-                if (pss_view_msg_rcv.type == pss_message::Type::Normal)
+            while (!view_recv) {
+                int bytes_rcv = connection.recv_msg(rcv_buf); //throw exception
+                pss_view_msg_rcv.ParseFromArray(rcv_buf, bytes_rcv);
+
+                if (pss_view_msg_rcv.type() == proto::pss_message_Type::pss_message_Type_NORMAL)
                     view_recv = true;
             }
 
             recovered = true;
 
             std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
-            this->view = std::move(pss_view_msg_rcv.view);
-            //process received view
-//            for (peer_data &peer : pss_view_msg_rcv.view) {
-//                this->view.push_back(std::move(peer));
-//            }
+            std::vector<peer_data> view_rcv;
+            for (auto& peer : pss_view_msg_rcv.view()) {
+                struct peer_data peer_rcv;
+                peer_rcv.ip = peer.ip();
+                peer_rcv.age = peer.age();
+                peer_rcv.id = peer.id();
+                peer_rcv.slice = peer.slice();
+                peer_rcv.nr_slices = peer.nr_slices();
+                peer_rcv.pos = peer.pos();
+                view_rcv.emplace_back(std::move(peer_rcv));
+            }
+            this->view = std::move(view_rcv);
 
         }catch(const char* e){
             spdlog::error(e);

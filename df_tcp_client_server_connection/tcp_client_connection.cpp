@@ -15,6 +15,7 @@
 #include <memory>
 #include <utility>
 #include <exceptions/custom_exceptions.h>
+#include <iostream>
 
 #define LOG(X) std::cout << X << std::endl;
 
@@ -24,10 +25,9 @@ namespace tcp_client_server_connection{
         close(this->f_socket);
     }
 
-    tcp_client_connection::tcp_client_connection(const char* peer_addr, int peer_port, std::shared_ptr<Serializer> serializer):
+    tcp_client_connection::tcp_client_connection(const char* peer_addr, int peer_port):
             f_peer_addr(peer_addr),
-            f_peer_port(peer_port),
-            serializer(serializer)
+            f_peer_port(peer_port)
     {
 
         // Create a socket
@@ -128,11 +128,4 @@ namespace tcp_client_server_connection{
         }
         return bytes_sent;
     }
-
-    void tcp_client_connection::recv_pss_msg(pss_message& pss_msg){
-        this->serializer->recv_pss_message(&(this->f_socket), pss_msg);
-    };
-    void tcp_client_connection::send_pss_msg(pss_message& pss_msg){
-        this->serializer->send_pss_message(&(this->f_socket), pss_msg);
-    };
 }

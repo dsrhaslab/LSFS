@@ -7,6 +7,7 @@
 
 #include <string>
 #include <vector>
+#include <df_core/peer_data.h>
 #include "df_tcp_client_server_connection/tcp_client_server_connection.h"
 
 class Bootstrapper {

@@ -6,7 +6,6 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(CMAKE_PREFIX_PATH "/usr/local/lib64/cmake")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build")
 
-find_package(CapnProto CONFIG REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(Boost COMPONENTS system thread serialization regex REQUIRED)
@@ -22,18 +21,16 @@ else()
 endif()
 
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS df_serializer/protos/pss_message.proto df_serializer/protos/kv_message.proto)
-capnp_generate_cpp(packetSources packetHeaders df_serializer/capnp/packet.capnp)
 
 set(INCLUDE_DIRECTORY include)
 set(INCLUDE_HEADERS ${INCLUDE_DIRECTORY}/ctpl_stl.h)
 
 add_executable(bootstrapper_exe
         df_bootstrapper/bootstrapper_impl.cpp
+        ${PROTO_SRCS}
+        ${PROTO_HDRS}
         ${packetSources}
         df_tcp_client_server_connection/tcp_server_connection.cpp
-        df_serializer/serializer.h
-        df_serializer/capnp/capnp_serializer.h
-        df_serializer/capnp/capnp_serializer.cpp
         ${INCLUDE_HEADERS}
         df_communication/udp_async_server.h
         exceptions/peer_disconnected.h
@@ -41,7 +38,8 @@ add_executable(bootstrapper_exe
         exceptions/socket_read_exception.h
         exceptions/socket_send_exception.h
         exceptions/peer_disconnected.h exceptions/socket_exception.h exceptions/socket_read_exception.h exceptions/socket_send_exception.h)
-target_link_libraries(bootstrapper_exe PRIVATE CapnProto::capnp)
+target_link_libraries(bootstrapper_exe PUBLIC ${PROTOBUF_LIBRARIES})
+target_include_directories(bootstrapper_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bootstrapper_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(bootstrapper_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bootstrapper_exe PRIVATE ${INCLUDE_DIRECTORY})
@@ -54,12 +52,8 @@ add_executable( peer_exe
         df_pss/pss.cpp
         df_tcp_client_server_connection/tcp_client_connection.cpp
         df_tcp_client_server_connection/tcp_server_connection.cpp
-        df_serializer/serializer.h
-        df_serializer/capnp/capnp_serializer.h
-        df_serializer/capnp/capnp_serializer.cpp
         df_pss/pss_listener.cpp
         df_pss/pss_listener.h
-        df_pss/pss_message.h
         df_core/peer_data.h
         ${INCLUDE_HEADERS}
         df_pss/view_logger.h
@@ -100,7 +94,6 @@ add_executable( peer_exe
         exceptions/socket_exception.h
         exceptions/socket_read_exception.h
         exceptions/socket_send_exception.h exceptions/peer_disconnected.h exceptions/socket_exception.h exceptions/socket_read_exception.h exceptions/socket_send_exception.h)
-target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)
 target_link_libraries(peer_exe PUBLIC ${PROTOBUF_LIBRARIES})
@@ -119,10 +112,6 @@ add_executable( client_exe
         ${packetSources}
         df_tcp_client_server_connection/tcp_client_connection.cpp
         df_tcp_client_server_connection/tcp_server_connection.cpp
-        df_serializer/serializer.h
-        df_serializer/capnp/capnp_serializer.h
-        df_serializer/capnp/capnp_serializer.cpp
-        df_pss/pss_message.h
         df_core/peer_data.h
         ${INCLUDE_HEADERS}
         ${PROTO_SRCS}
@@ -161,7 +150,6 @@ add_executable( client_exe
         exceptions/socket_send_exception.h
         exceptions/peer_disconnected.h exceptions/socket_exception.h exceptions/socket_read_exception.h exceptions/socket_send_exception.h)
 
-target_link_libraries(client_exe PRIVATE CapnProto::capnp)
 target_link_libraries(client_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(client_exe PRIVATE yaml-cpp)
 target_link_libraries(client_exe PUBLIC ${PROTOBUF_LIBRARIES})
@@ -176,10 +164,6 @@ add_executable( lsfs_exe
         ${packetSources}
         df_tcp_client_server_connection/tcp_client_connection.cpp
         df_tcp_client_server_connection/tcp_server_connection.cpp
-        df_serializer/serializer.h
-        df_serializer/capnp/capnp_serializer.h
-        df_serializer/capnp/capnp_serializer.cpp
-        df_pss/pss_message.h
         df_core/peer_data.h
         ${INCLUDE_HEADERS}
         ${PROTO_SRCS}
@@ -231,7 +215,6 @@ add_executable( lsfs_exe
         fuse/fuse_common/macros.h
         )
 
-target_link_libraries(lsfs_exe PRIVATE CapnProto::capnp)
 target_link_libraries(lsfs_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(lsfs_exe PRIVATE yaml-cpp)
 target_link_libraries(lsfs_exe PUBLIC ${PROTOBUF_LIBRARIES})

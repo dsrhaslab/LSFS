@@ -29,10 +29,9 @@ namespace tcp_client_server_connection{
         close(this->f_socket);
     }
 
-    tcp_server_connection::tcp_server_connection(const char* host_addr, int host_port, std::unique_ptr<Serializer> serializer):
+    tcp_server_connection::tcp_server_connection(const char* host_addr, int host_port):
         f_addr(host_addr),
-        f_port(host_port),
-        serializer(std::move(serializer))
+        f_port(host_port)
     {
         memset(&(this->f_sockaddr_in ), 0, sizeof(struct sockaddr_in));
         this->f_sockaddr_in.sin_family = AF_INET;
@@ -180,12 +179,4 @@ namespace tcp_client_server_connection{
         }
         return bytes_sent;
     }
-
-    void tcp_server_connection::recv_pss_msg(int* client_socket, pss_message& pss_msg){
-        this->serializer->recv_pss_message(client_socket, pss_msg);
-    };
-    void tcp_server_connection::send_pss_msg(int* client_socket, pss_message& pss_msg){
-        this->serializer->send_pss_message(client_socket, pss_msg);
-    }
-
 }

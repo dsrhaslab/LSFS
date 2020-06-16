@@ -9,7 +9,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <stdexcept>
-#include "df_serializer/serializer.h"
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -28,7 +27,7 @@ namespace tcp_client_server_connection
     {
     public:
 
-        tcp_client_connection(const char* addr, int port, std::shared_ptr<Serializer> serializer);
+        tcp_client_connection(const char* addr, int port);
         ~tcp_client_connection();
 
         int                     get_socket() const;
@@ -39,16 +38,11 @@ namespace tcp_client_server_connection
 
         int send_msg(char* buf, size_t size);
 
-        void recv_pss_msg(pss_message &pss_msg);
-
-        void send_pss_msg(pss_message &pss_msg);
-
     private:
         int                         f_socket;
         int                         f_peer_port;
         std::string                 f_peer_addr;
         struct sockaddr_in          f_peer_sockaddr_in;
-        std::shared_ptr<Serializer> serializer;
     };
 
 
@@ -59,10 +53,9 @@ namespace tcp_client_server_connection
         int f_port;
         std::string f_addr;
         struct sockaddr_in f_sockaddr_in;
-        std::unique_ptr<Serializer> serializer;
 
     public:
-        tcp_server_connection(const char *host_addr, int host_port, std::unique_ptr<Serializer> serializer);
+        tcp_server_connection(const char *host_addr, int host_port);
 
         ~tcp_server_connection();
 
@@ -79,10 +72,6 @@ namespace tcp_client_server_connection
         int recv_msg(int* client_socket, char* buf);
 
         int send_msg(int* client_socket, char* buf, size_t size);
-
-        void recv_pss_msg(int *client_socket, pss_message &pss_msg);
-
-        void send_pss_msg(int *client_socket, pss_message &pss_msg);
     };
 }
 

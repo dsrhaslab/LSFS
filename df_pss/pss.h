@@ -9,7 +9,6 @@
 #include <memory>
 #include <vector>
 #include "df_core/peer_data.h"
-#include "pss_message.h"
 #include <mutex>
 #include <atomic>
 #include <pss_message.pb.h>
