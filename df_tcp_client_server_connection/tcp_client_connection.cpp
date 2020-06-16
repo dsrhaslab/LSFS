@@ -11,10 +11,10 @@
 #include <string>
 #include "tcp_client_server_connection.h"
 #include <netinet/in.h>
-//#include "df_serializer/capnp/packet.capnp.h"
 #include <unistd.h>
 #include <memory>
 #include <utility>
+#include <exceptions/custom_exceptions.h>
 
 #define LOG(X) std::cout << X << std::endl;
 
@@ -33,8 +33,7 @@ namespace tcp_client_server_connection{
         // Create a socket
         this->f_socket = ::socket(AF_INET, SOCK_STREAM, 0);
         if (this->f_socket < 0) {
-            perror("Cannot create a socket");
-            exit(1);
+            throw "Error on Socket Creation";
         }
 
         // Fill in the address of server
@@ -42,8 +41,7 @@ namespace tcp_client_server_connection{
 
         struct hostent *host = gethostbyname(peer_addr);
         if (host == NULL) {
-            perror("Cannot define host address");
-            exit(1);
+            throw "Error defining host address";
         }
         this->f_peer_sockaddr_in.sin_family = AF_INET;
         this->f_peer_sockaddr_in.sin_port = htons(peer_port);
@@ -76,6 +74,59 @@ namespace tcp_client_server_connection{
 
     int tcp_client_connection::get_socket() const {
         return this->f_socket;
+    }
+
+    int tcp_client_connection::recv_msg(char* buf){
+        // Setting timeout for receiving data
+        fd_set set;
+        FD_ZERO(&set);
+        FD_SET(this->f_socket, &set);
+
+        struct timeval timeout;
+        timeout.tv_sec = 5;
+        timeout.tv_usec = 0;
+
+        int rv = select(this->f_socket + 1, &set, NULL, NULL, &timeout);
+        if (rv == -1)
+        {
+            throw SocketException();
+        }
+        else if (rv == 0)
+        {
+            throw TimeoutException();
+        }
+        else
+        {
+            // socket has something to read
+            uint16_t msg_size;
+            recv(this->f_socket, &msg_size, sizeof(uint16_t), 0);
+            int recv_size = recv(this->f_socket, buf, msg_size, 0);
+            if (recv_size == -1)
+            {
+                throw SocketReadException();
+            }
+            else if (recv_size == 0)
+            {
+                throw PeerDisconnectedException();
+            }
+            else
+            {
+                return recv_size;
+            }
+        }
+    }
+
+    int tcp_client_connection::send_msg( char* buf, size_t size){
+        uint16_t msg_size = size;
+        int bytes_sent =send(this->f_socket, (char*) &msg_size, sizeof(uint16_t), 0);
+        if(bytes_sent < 0){
+            throw SocketSendException();
+        }
+        bytes_sent = send(this->f_socket, buf, size, 0);
+        if(bytes_sent < 0){
+            throw SocketSendException();
+        }
+        return bytes_sent;
     }
 
     void tcp_client_connection::recv_pss_msg(pss_message& pss_msg){

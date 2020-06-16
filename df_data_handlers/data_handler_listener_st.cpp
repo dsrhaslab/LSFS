@@ -8,8 +8,8 @@
 #include <df_core/peer.h>
 #include "data_handler_listener_st.h"
 
-data_handler_listener_st::data_handler_listener_st(std::string ip, long id, float chance, pss *pss, std::shared_ptr<kv_store<std::string>> store, bool smart)
-        : data_handler_listener(std::move(ip), id, chance, pss, std::move(store), smart), socket_rcv(socket(AF_INET, SOCK_DGRAM, 0)){}
+data_handler_listener_st::data_handler_listener_st(std::string ip, long id, float chance, pss *pss, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, bool smart)
+        : data_handler_listener(std::move(ip), id, chance, pss, group_c, std::move(store), smart), socket_rcv(socket(AF_INET, SOCK_DGRAM, 0)){}
 
 void data_handler_listener_st::operator()() {
     this->running = true;

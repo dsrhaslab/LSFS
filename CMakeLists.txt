@@ -36,7 +36,11 @@ add_executable(bootstrapper_exe
         df_serializer/capnp/capnp_serializer.cpp
         ${INCLUDE_HEADERS}
         df_communication/udp_async_server.h
-        )
+        exceptions/peer_disconnected.h
+        exceptions/socket_exception.h
+        exceptions/socket_read_exception.h
+        exceptions/socket_send_exception.h
+        exceptions/peer_disconnected.h exceptions/socket_exception.h exceptions/socket_read_exception.h exceptions/socket_send_exception.h)
 target_link_libraries(bootstrapper_exe PRIVATE CapnProto::capnp)
 target_include_directories(bootstrapper_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(bootstrapper_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
@@ -88,7 +92,14 @@ add_executable( peer_exe
         fuse/fuse_lsfs/metadata.cpp
         fuse/fuse_lsfs/util.h
         fuse/fuse_lsfs/util.cpp
-        df_data_handlers/data_handler_listener_mt.cpp df_data_handlers/data_handler_listener_mt.h df_data_handlers/data_handler_listener_st.cpp df_data_handlers/data_handler_listener_st.h)
+        df_data_handlers/data_handler_listener_mt.cpp
+        df_data_handlers/data_handler_listener_mt.h
+        df_data_handlers/data_handler_listener_st.cpp
+        df_data_handlers/data_handler_listener_st.h
+        exceptions/peer_disconnected.h
+        exceptions/socket_exception.h
+        exceptions/socket_read_exception.h
+        exceptions/socket_send_exception.h exceptions/peer_disconnected.h exceptions/socket_exception.h exceptions/socket_read_exception.h exceptions/socket_send_exception.h)
 target_link_libraries(peer_exe PRIVATE CapnProto::capnp)
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)
@@ -143,7 +154,12 @@ add_executable( client_exe
         fuse/fuse_lsfs/metadata.cpp
         fuse/fuse_lsfs/util.h
         fuse/fuse_lsfs/util.cpp
-        df_loadbalancing/smart_load_balancer.cpp df_loadbalancing/smart_load_balancer.h)
+        df_loadbalancing/smart_load_balancer.cpp
+        df_loadbalancing/smart_load_balancer.h
+        exceptions/socket_exception.h
+        exceptions/socket_read_exception.h
+        exceptions/socket_send_exception.h
+        exceptions/peer_disconnected.h exceptions/socket_exception.h exceptions/socket_read_exception.h exceptions/socket_send_exception.h)
 
 target_link_libraries(client_exe PRIVATE CapnProto::capnp)
 target_link_libraries(client_exe PRIVATE nlohmann_json::nlohmann_json)
@@ -202,7 +218,18 @@ add_executable( lsfs_exe
         fuse/fuse_lsfs/metadata.cpp
         df_client/client_reply_handler_mt.cpp
         df_client/client_reply_handler_mt.h
-        exceptions/timeout_exception.h fuse/fuse_common/fuse_utils.cpp fuse/fuse_common/fuse_utils.h fuse/fuse_lsfs/lsfs_state.cpp fuse/fuse_lsfs/lsfs_state.h df_client/client_reply_handler.cpp df_client/client_reply_handler.h fuse/fuse_lsfs/storage_specific.cpp df_loadbalancing/smart_load_balancer.cpp df_loadbalancing/smart_load_balancer.h fuse/fuse_common/macros.h)
+        exceptions/timeout_exception.h
+        fuse/fuse_common/fuse_utils.cpp
+        fuse/fuse_common/fuse_utils.h
+        fuse/fuse_lsfs/lsfs_state.cpp
+        fuse/fuse_lsfs/lsfs_state.h
+        df_client/client_reply_handler.cpp
+        df_client/client_reply_handler.h
+        fuse/fuse_lsfs/storage_specific.cpp
+        df_loadbalancing/smart_load_balancer.cpp
+        df_loadbalancing/smart_load_balancer.h
+        fuse/fuse_common/macros.h
+        )
 
 target_link_libraries(lsfs_exe PRIVATE CapnProto::capnp)
 target_link_libraries(lsfs_exe PRIVATE nlohmann_json::nlohmann_json)

@@ -35,11 +35,10 @@ namespace tcp_client_server_connection
         int                     get_port() const;
         std::string             get_addr() const;
 
-//        void                                    send_packet(::capnp::MessageBuilder& message);
-//        std::unique_ptr<packet::Packet::Reader> recv_packet();
-//        void recv_view(std::unordered_map<int, int> &map);
-//        void send_identity(int port);
-//        void send_view( std::unordered_map<int, int>& view);
+        int recv_msg(char* buf);
+
+        int send_msg(char* buf, size_t size);
+
         void recv_pss_msg(pss_message &pss_msg);
 
         void send_pss_msg(pss_message &pss_msg);
@@ -73,17 +72,17 @@ namespace tcp_client_server_connection
 
         std::string get_addr() const;
 
+        int accept_connection(long timeout);
+
         int accept_connection();
 
-//        void send_view( std::unordered_map<int, int>& view ,int client_socket);
-//
-//        int recv_identity(int client_socket);
+        int recv_msg(int* client_socket, char* buf);
+
+        int send_msg(int* client_socket, char* buf, size_t size);
 
         void recv_pss_msg(int *client_socket, pss_message &pss_msg);
 
         void send_pss_msg(int *client_socket, pss_message &pss_msg);
-
-//        void close_socket();
     };
 }
 

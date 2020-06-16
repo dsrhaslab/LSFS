@@ -42,7 +42,7 @@ public:
     pss(const char* boot_ip/*, int boot_port*/, std::string my_ip/*,int my_port*/, long id, double pos, long boot_time, int view_size, int sleep, int gossip_size, group_construction* group_c);
     void operator()();
     void print_view();
-    void process_msg(proto::pss_message message);
+    void process_msg(const proto::pss_message& message);
     void write_view_to_file();
     void stop_thread();
     //std::vector<int> get_peers_from_view();
@@ -62,7 +62,8 @@ private:
     void complete_view_with_last_sent();
     peer_data* get_older_from_view();
     std::vector<peer_data> select_view_to_send(std::string target_ip /*int target_port*/);
-    void send_pss_msg(/*int target_port*/ std::string target_ip, std::vector<peer_data>& view_to_send, proto::pss_message_Type);
+    void send_pss_msg(const std::string& target_ip, std::vector<peer_data>& view_to_send, proto::pss_message_Type);
+    void forward_pss_msg(const std::string& target_ip, const proto::pss_message& pss_message);
     void incorporate_in_view(std::vector<peer_data> vector);
     void incorporate_last_sent_view();
 };

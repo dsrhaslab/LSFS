@@ -75,7 +75,6 @@ void dynamic_load_balancer::process_msg(proto::pss_message &pss_msg) {
     for(auto& peer: pss_msg.view()){
         peer_data peer_data;
         peer_data.ip = peer.ip();
-        //peer_data.port = peer.port();
         peer_data.age = peer.age();
         peer_data.id = peer.id();
         peer_data.slice = peer.slice();
@@ -85,7 +84,7 @@ void dynamic_load_balancer::process_msg(proto::pss_message &pss_msg) {
     }
 
     std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
-    if(recv_view.size() != 0) {
+    if(!recv_view.empty()) {
         this->view = std::move(recv_view);
     }
 }
@@ -127,7 +126,7 @@ void dynamic_load_balancer::operator()() {
 
                 proto::pss_message pss_message;
                 pss_message.set_sender_ip(this->ip);
-                //pss_message.set_sender_port(this->port);
+                pss_message.set_sender_pos(0); // not used
                 pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE);
                 this->send_msg(target_peer, pss_message);
             }catch(const char* msg){

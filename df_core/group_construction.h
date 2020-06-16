@@ -22,7 +22,6 @@ private:
     std::unordered_map<std::string, peer_data> local_view; //port -> age
     long id;
     std::string ip;
-    //int port;
     double position;
     std::atomic<int> nr_groups;
     std::atomic<int> my_group;
@@ -32,7 +31,7 @@ private:
     bool local; //enable local messages
     std::atomic<int> cycle; //o ciclo em que nos encontramos
     int local_interval; //interval of local messages if enable (de quantos em quantos ciclos)
-    std::atomic<bool> first_message; //se estamos a iniciar o protocolo de group construction
+    std::atomic<bool> recovering_local_view; //se estamos a iniciar o protocolo de group construction
     int sender_socket;
     std::shared_ptr<kv_store<std::string>> store;
     std::shared_ptr<spdlog::logger> logger;
@@ -60,15 +59,27 @@ public:
 
     int group(double peer_pos);
 
-    void receive_local_message(std::vector<peer_data> received);
+    void incorporate_local_peers(const std::vector<peer_data>& received);
 
-    void receive_message(std::vector<peer_data> received);
+    void clean_local_view();
+
+    void receive_local_message(const std::vector<peer_data>& received);
+
+    void receive_message(const std::vector<peer_data>& received);
 
     void print_view();
 
-    void send_pss_msg(std::string& target_ip/*, int target_port*/, std::string &msg_string);
+    void send_pss_msg(const std::string& target_ip, const std::string &msg_string);
 
-    void send_local_message(std::string& target_ip/*, int target_port*/);
+    void send_local_message(std::string& target_ip);
+
+    void recover_local_view(const std::vector<peer_data>& received);
+
+    bool has_recovered();
+
+    void request_local_message(const std::vector<peer_data>& received);
+
+    peer_data get_random_peer_from_local_view();
 };
 
 

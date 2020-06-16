@@ -327,6 +327,8 @@ peer_data smart_load_balancer::get_peer(const std::string& key) {
     if(slice_size == 0){
         return get_random_peer();
     }else if(slice_size == 1){
+        //TODO meter a gerar um numero random e numa probabilidade
+        //TODO de 50-50 sortear entre o slice_group->front() e o get_random_peer();
         return slice_group->front();
     }else{
         std::uniform_real_distribution<double> dist(0, slice_size - 1);
@@ -386,7 +388,7 @@ void smart_load_balancer::operator()() {
 
                     proto::pss_message pss_message;
                     pss_message.set_sender_ip(this->ip);
-                    //pss_message.set_sender_port(this->port);
+                    pss_message.set_sender_pos(this->position);
                     pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE_LOCAL);
                     this->send_msg(target_peer, pss_message);
                 }else{
@@ -395,7 +397,7 @@ void smart_load_balancer::operator()() {
 
                     proto::pss_message pss_message;
                     pss_message.set_sender_ip(this->ip);
-                    //pss_message.set_sender_port(this->port);
+                    pss_message.set_sender_pos(this->position);
                     pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE);
                     this->send_msg(target_peer, pss_message);
                 }

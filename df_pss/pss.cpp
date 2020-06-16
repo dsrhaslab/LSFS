@@ -161,11 +161,32 @@ std::vector<peer_data> pss::get_view(){
     return res;
 }
 
-void pss::send_pss_msg(/*int target_port*/ std::string target_ip, std::vector<peer_data>& view_to_send, proto::pss_message_Type msg_type){
-    //TODO lidar com o caso de não conseguir conexão
+void pss::forward_pss_msg(const std::string& target_ip, const proto::pss_message& pss_message) {
     try {
-//        std::cerr << "[df_pss] function: send_response_msg [Creating Connection]" << std::endl;
+        struct sockaddr_in serverAddr;
+        socklen_t addr_size;
+        memset(&serverAddr, '\0', sizeof(serverAddr));
 
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(peer::pss_port);
+        serverAddr.sin_addr.s_addr = inet_addr(target_ip.c_str());
+
+        std::string buf;
+        pss_message.SerializeToString(&buf);
+
+        //socket synchronization
+        std::scoped_lock<std::recursive_mutex> lk (this->socket_send_mutex);
+        int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+        if(res == -1){
+            spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
+        }
+    }catch(...){
+        spdlog::error("=============================== Não consegui enviar =================");
+    }
+}
+
+void pss::send_pss_msg(const std::string& target_ip, std::vector<peer_data>& view_to_send, proto::pss_message_Type msg_type){
+    try {
         struct sockaddr_in serverAddr;
         socklen_t addr_size;
         memset(&serverAddr, '\0', sizeof(serverAddr));
@@ -176,13 +197,12 @@ void pss::send_pss_msg(/*int target_port*/ std::string target_ip, std::vector<pe
 
         proto::pss_message pss_message;
         pss_message.set_sender_ip(this->ip);
-        //pss_message.set_sender_port(this->port);
+        pss_message.set_sender_pos(this->pos);
         pss_message.set_type(msg_type);
 
         for(auto& peer: view_to_send){
             proto::peer_data* peer_data = pss_message.add_view();
             peer_data->set_ip(peer.ip);
-            //peer_data->set_port(peer.port);
             peer_data->set_age(peer.age);
             peer_data->set_id(peer.id);
             peer_data->set_pos(peer.pos);
@@ -198,8 +218,6 @@ void pss::send_pss_msg(/*int target_port*/ std::string target_ip, std::vector<pe
         int res = sendto(this->socket_send, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
         if(res == -1){
             spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
-
-//                printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
         }
     }catch(...){
         spdlog::error("=============================== Não consegui enviar =================");
@@ -266,22 +284,6 @@ int pss::get_nr_groups(){
     return this->group_c->get_nr_groups();
 }
 
-//void df_pss::write_view_to_file(){
-//    std::string filename = "../logging/" + std::to_string(this->port) + ".json";
-//    std::ofstream file;
-//    file.open(filename);
-//    if(file.is_open()){
-//        std::vector<int> peers_from_view;
-//        for(auto& [port, peer]: this->view)
-//            peers_from_view.push_back(port);
-//        json j = {};
-//        j["peer"] = this->port;
-//        j["view"] = peers_from_view;
-//        file << j;
-//        file.close();
-//    }
-//}
-
 void pss::age_view_members() {
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(auto& [/*port*/ ip, peer]: this->view){
@@ -302,7 +304,20 @@ peer_data* pss::get_older_from_view() {
     return older_peer;
 }
 
-void pss::process_msg(proto::pss_message pss_msg){
+void pss::process_msg(const proto::pss_message& pss_msg){
+
+    if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_REQUEST_LOCAL){
+        int slice = this->group_c->group(pss_msg.sender_pos());
+        if(this->group_c->get_my_group() == slice){
+            this->group_c->send_local_message(const_cast<std::string &>(pss_msg.sender_ip()));
+        }else{
+            std::vector<peer_data> peers_from_slice = have_peer_from_slice(slice);
+            for(peer_data& peer: peers_from_slice){
+                this->forward_pss_msg(peer.ip, pss_msg);
+            }
+        }
+        return;
+    }
 
     std::vector<peer_data> recv_view;
     for(auto& peer: pss_msg.view()){

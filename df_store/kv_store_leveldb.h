@@ -52,10 +52,13 @@ private:
 
 public:
     ~kv_store_leveldb();
+    void send_keys_gt(std::vector<std::string> &off_keys, tcp_client_server_connection::tcp_client_connection &connection,
+                      void (*action)(tcp_client_server_connection::tcp_client_connection &, const std::string &, long, long, bool, const char*, size_t)) override;
     kv_store_leveldb(std::string(*f)(const std::string&, const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at);
     int init(void*, long id) override ;
     void close() override ;
     std::string db_name() const override;
+    std::vector<std::string> get_last_keys_limit4() override;
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<std::string>> get_keys() override;
     bool put(const std::string& key, long version, long client_id, const std::string& bytes, bool is_merge) override; // use string.c_str() to convert string to const char*
@@ -123,11 +126,33 @@ int kv_store_leveldb::init(void* path, long id){
     return 0;
 }
 
+std::vector<std::string> kv_store_leveldb::get_last_keys_limit4(){
+
+    leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+    std::set<std::string> temp;
+    for (it->SeekToLast(); it->Valid() && temp.size() < 4; it->Prev()) {
+        std::string comp_key = it->key().ToString();
+        std::string key;
+        long version;
+        long client_id;
+        int res = split_composite_key(comp_key, &key, &version, &client_id);
+        if(res == 0){
+            temp.emplace(key);
+        }
+    }
+
+    std::vector<std::string> res;
+    for (auto it = temp.begin(); it != temp.end(); ) {
+        res.push_back(std::move(temp.extract(it++).value()));
+    }
+    return res;
+}
+
 //TODO este método tem de ser alterado está a criar um mapa com todas as chaves na base de dados
 void kv_store_leveldb::update_partition(int p, int np) {
 
     if(np != this->nr_slices){
-//        std::cout << "UPDATE_PARTITION " << std::to_string(np) << std::endl;
+        std::cout << "UPDATE_PARTITION " << std::to_string(np) << std::endl;
         this->nr_slices = np;
         this->slice = p;
         //clear memory to allow new keys to be stored
@@ -530,6 +555,46 @@ bool kv_store_leveldb::put_with_merge(const std::string& key, long version, long
         }
     }catch(LevelDBException& e){
         return false;
+    }
+}
+
+void kv_store_leveldb::send_keys_gt(std::vector<std::string> &off_keys, tcp_client_server_connection::tcp_client_connection &connection,
+                                    void (*send)(tcp_client_server_connection::tcp_client_connection &, const std::string &, long, long, bool, const char*, size_t)) {
+
+    leveldb::Iterator *it = db->NewIterator(leveldb::ReadOptions());
+    bool found_offset_key = false;
+    if(off_keys.empty()){
+        it->SeekToFirst();
+    }else {
+        for (auto key_it = off_keys.begin(); key_it != off_keys.end() && !found_offset_key; ++key_it) {
+            std::string prefix = *key_it + "#";
+            it->Seek(prefix);
+            if (it->Valid() && it->key().starts_with(prefix)) {
+                found_offset_key = true;
+                break;
+            } else {
+                it->SeekToFirst();
+            }
+        }
+    }
+
+    for (; it->Valid(); it->Next()) {
+        std::string comp_key = it->key().ToString();
+        std::string current_key;
+        std::string value;
+        long current_version;
+        long current_client_id;
+        split_composite_key(comp_key, &current_key, &current_version, &current_client_id);
+        leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value);
+        bool is_merge = s.ok();
+        send(connection, current_key, current_version, current_client_id, is_merge, it->value().data(), it->value().size());
+    }
+
+    if (!it->status().ok()) {
+        delete it;
+        throw LevelDBException();
+    } else {
+        delete it;
     }
 }
 

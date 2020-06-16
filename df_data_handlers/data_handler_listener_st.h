@@ -14,7 +14,7 @@ private:
     int socket_rcv;
 
 public:
-    data_handler_listener_st(std::string ip, long id, float chance, pss *pss, std::shared_ptr<kv_store<std::string>> store, bool smart);
+    data_handler_listener_st(std::string ip, long id, float chance, pss *pss, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, bool smart);
     ~data_handler_listener_st() = default;
     void operator ()();
     void stop_thread();

@@ -13,13 +13,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-
-//TODO Se calhar preciso de sincronizar o socket send
-
+#include <df_serializer/capnp/capnp_serializer.h>
 
 
-data_handler_listener::data_handler_listener(std::string ip/*, int port*/, long id, float chance, pss *pss, std::shared_ptr<kv_store<std::string>> store, bool smart)
-    : ip(std::move(ip))/*, port(port)*/, id(id), chance(chance), pss_ptr(pss), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
+data_handler_listener::data_handler_listener(std::string ip/*, int port*/, long id, float chance, pss *pss, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, bool smart)
+    : ip(std::move(ip)), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
 
 void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip/*, int sender_port*/){
     try{
@@ -425,7 +423,6 @@ void data_handler_listener::process_anti_entropy_message(const proto::kv_message
 void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg) {
     const proto::get_latest_version_message& message = msg.get_latest_version_msg();
     const std::string& sender_ip = message.ip();
-    //int sender_port = message.port();
     const std::string& key = message.key();
     const std::string& req_id = message.reqid();
     std::unique_ptr<long> version(nullptr);
@@ -480,7 +477,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
             message_content->set_reqid(req_id);
             reply_message.set_allocated_get_latest_version_reply_msg(message_content);
 
-            this->reply_client(reply_message, sender_ip/*, sender_port*/);
+            this->reply_client(reply_message, sender_ip);
 //                std::cout << "GET REPLY Version(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
         }else{
@@ -494,6 +491,83 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         }
+    }
+}
+
+void data_handler_listener::process_recover_request_msg(const proto::kv_message& msg) {
+    const proto::recover_request_message& message = msg.recover_request_msg();
+    const std::string& sender_ip = message.ip();
+    int nr_slices = message.nr_slices();
+    int slice = message.slice();
+
+    if(this->group_c_ptr->get_my_group() != slice ||
+       this->group_c_ptr->get_nr_groups() != nr_slices ||
+       !this->group_c_ptr->has_recovered())
+    {
+        return;
+    }
+
+    try {
+
+        std::shared_ptr<Capnp_Serializer> capnp_serializer(new Capnp_Serializer);
+        tcp_client_server_connection::tcp_client_connection connection(sender_ip.c_str(), peer::recover_port,
+                                                                       capnp_serializer);
+
+        char rcv_buf[65500];
+
+        int bytes_rcv = connection.recv_msg(rcv_buf); //throw exception
+
+        proto::kv_message kv_message_rcv;
+        kv_message_rcv.ParseFromArray(rcv_buf, bytes_rcv);
+
+        if(kv_message_rcv.has_recover_offset_msg()) {
+
+            const proto::recover_offset_message& off_msg = kv_message_rcv.recover_offset_msg();
+            std::vector<std::string> off_keys;
+            for(auto& key: off_msg.keys()){
+                off_keys.emplace_back(key);
+            }
+
+            // For Each Key greater than offset send to peer
+            this->store->send_keys_gt(off_keys, connection,
+                                      [](tcp_client_server_connection::tcp_client_connection& connection, const std::string& key,
+                                         long version, long client_id, bool is_merge, const char* data, size_t data_size){
+                                          proto::kv_message kv_message;
+                                          auto* message_content = new proto::recover_data_message();
+                                          message_content->set_key(key);
+                                          message_content->set_version(version);
+                                          message_content->set_version_client_id(client_id);
+                                          message_content->set_data(data, data_size);
+                                          kv_message.set_allocated_recover_data_msg(message_content);
+
+                                          std::string buf;
+                                          kv_message.SerializeToString(&buf);
+
+                                          try {
+                                              connection.send_msg(buf.data(), buf.size());
+                                          }catch(std::exception& e){
+                                              std::cerr << "Exception: " << e.what() << std::endl;
+                                          }
+                                      });
+
+            // Send Recover Done Message
+            proto::kv_message kv_message;
+            auto* message_content = new proto::recover_termination_message();
+            kv_message.set_allocated_recover_termination_msg(message_content);
+            std::string buf;
+            kv_message.SerializeToString(&buf);
+
+            try {
+                connection.send_msg(buf.data(), buf.size());
+            }catch(std::exception& e){
+                std::cerr << "Exception: " << e.what() << std::endl;
+            }
+        }
+
+    }catch(const char* e){
+        std::cerr << "Exception: " << e << std::endl;
+    }catch(std::exception& e){
+        std::cerr << "Exception: " << e.what() << std::endl;
     }
 }
 

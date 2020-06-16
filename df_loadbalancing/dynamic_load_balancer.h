@@ -21,7 +21,7 @@ private:
     long sleep_interval;
     int sender_socket;
     std::string ip;
-    //int port;
+    double pos;
     std::mt19937 random_eng;
 
 public:

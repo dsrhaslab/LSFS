@@ -7,6 +7,7 @@
 
 #include <unordered_set>
 #include "kv_store_key.h"
+#include "df_tcp_client_server_connection/tcp_client_server_connection.h"
 
 template <typename T>
 class kv_store {
@@ -36,6 +37,9 @@ public:
     virtual int init(void*, long id) = 0;
     virtual std::string db_name() const = 0;
     virtual void close() = 0;
+    virtual std::vector<std::string> get_last_keys_limit4() = 0;
+    virtual void send_keys_gt(std::vector<std::string>& off_keys, tcp_client_server_connection::tcp_client_connection& connection,
+                              void(*action)(tcp_client_server_connection::tcp_client_connection& connection, const std::string&, long, long, bool, const char* data, size_t data_size)) = 0;
     virtual void update_partition(int p, int np) = 0;
     virtual std::unordered_set<kv_store_key<T>> get_keys() = 0;
     virtual bool put(const T& key, long version, long client_id, const std::string& bytes, bool is_merge = false) = 0; // use string.c_str() to convert string to const char*

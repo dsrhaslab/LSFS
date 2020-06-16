@@ -13,9 +13,9 @@
 class data_handler_listener {
 protected:
     std::string ip;
-    //int port;
     long id;
     std::shared_ptr<kv_store<std::string>> store;
+    group_construction* group_c_ptr;
     pss* pss_ptr;
     float chance;
     int socket_send;
@@ -24,7 +24,7 @@ protected:
     std::atomic<long> anti_entropy_req_count = 0;
 
 public:
-    data_handler_listener(std::string ip/*, int port*/, long id, float chance, pss* pss, std::shared_ptr<kv_store<std::string>> store, bool smart);
+    data_handler_listener(std::string ip, long id, float chance, pss* pss, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, bool smart);
     void reply_client(proto::kv_message& message, const std::string& sender_ip);
     void forward_message(const std::vector<peer_data>& view_to_send, proto::kv_message& message);
     void process_get_message(const proto::kv_message &msg);
@@ -34,6 +34,7 @@ public:
     long get_anti_entropy_req_count();
     void process_anti_entropy_message(const proto::kv_message &msg);
     void process_get_latest_version_msg(proto::kv_message msg);
+    void process_recover_request_msg(const proto::kv_message& message);
 
     virtual void operator ()() = 0;
     virtual void stop_thread() = 0;

@@ -190,18 +190,18 @@ def add_peer_instances(num_peers, procs, initial_nodes = False):
       step = 1 / num_peers
       positions = list(numpy.arange(0,1,step))
       ids = range(0, num_peers)
-      ports = range(current_port, current_port + (2 * num_peers))
+      ports = range(current_port, current_port + (3 * num_peers))
 
-      peer_commands = [[peer_program, str(ports[2*i]), str(ports[2*i + 1]), str(ids[i]), str(positions[i]), args['config']] for i in range(0, num_peers)]
+      peer_commands = [[peer_program, str(ports[3*i]), str(ports[3*i + 1]),str(ports[3*i + 2]), str(ids[i]), str(positions[i]), args['config']] for i in range(0, num_peers)]
       print(peer_commands)
 
    else:
       positions = [random.random() for i in range(0, num_peers)]
       ids = range(last_id, last_id + num_peers)
-      ports = range(current_port, current_port + (2 * num_peers))
-      peer_commands = [[peer_program, str(ports[2*i]), str(ports[2*i + 1]), str(ids[i]), str(positions[i]), args['config']] for i in range(0, num_peers)]
-   
-   current_port += (2 * num_peers)
+      ports = range(current_port, current_port + (3 * num_peers))
+      peer_commands = [[peer_program, str(ports[3*i]), str(ports[3*i + 1]),str(ports[3*i + 2]), str(ids[i]), str(positions[i]), args['config']] for i in range(0, num_peers)]
+
+   current_port += (3 * num_peers)
    last_id += num_peers
 
    for command in peer_commands:

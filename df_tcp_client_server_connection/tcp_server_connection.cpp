@@ -11,6 +11,14 @@
 #include <unistd.h>
 #include <memory>
 #include <netinet/in.h>
+#include <build/kv_message.pb.h>
+
+#include <cstdio>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <cstring>
+#include <exceptions/custom_exceptions.h>
 
 #define LOG(X) std::cout << X << std::endl;
 
@@ -57,6 +65,35 @@ namespace tcp_client_server_connection{
         }
     }
 
+    int tcp_server_connection::accept_connection(long timeout) {
+        struct timeval tv;
+        fd_set readfds;
+
+        tv.tv_sec = timeout;
+        tv.tv_usec = 0;
+
+        FD_ZERO(&readfds);
+        FD_SET(this->f_socket, &readfds);
+
+        sockaddr_in client;
+        socklen_t client_len =  sizeof(client);
+        int clientSocket;
+
+        if (select(this->f_socket+1, &readfds, nullptr, nullptr, &tv) > 0) {
+            clientSocket = accept(this->f_socket, (sockaddr *) &client, &client_len);
+
+            if (clientSocket < 0) {
+                perror("Cannot accept");
+            }else{
+                char str[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET,&(client.sin_addr), str,INET_ADDRSTRLEN);
+
+                return clientSocket;
+            }
+        }
+        return -1;
+    }
+
     int tcp_server_connection::accept_connection() {
         sockaddr_in client;
         socklen_t client_len =  sizeof(client);
@@ -88,6 +125,60 @@ namespace tcp_client_server_connection{
 
     int tcp_server_connection::get_socket() const {
         return this->f_socket;
+    }
+
+    int tcp_server_connection::recv_msg(int* client_socket, char* buf){
+        // Setting timeout for receiving data
+        fd_set set;
+        FD_ZERO(&set);
+        FD_SET(*client_socket, &set);
+
+        struct timeval timeout;
+        timeout.tv_sec = 5;
+        timeout.tv_usec = 0;
+
+        int rv = select(*client_socket + 1, &set, NULL, NULL, &timeout);
+        if (rv == -1)
+        {
+            throw SocketException();
+        }
+        else if (rv == 0)
+        {
+            throw TimeoutException();
+        }
+        else
+        {
+            // socket has something to read
+            uint16_t msg_size;
+            recv(*client_socket, &msg_size, sizeof(uint16_t), 0);
+            int recv_size = recv(*client_socket, buf, msg_size, 0);
+
+            if (recv_size == -1)
+            {
+                throw SocketReadException();
+            }
+            else if (recv_size == 0)
+            {
+                throw PeerDisconnectedException();
+            }
+            else
+            {
+                return recv_size;
+            }
+        }
+    }
+
+    int tcp_server_connection::send_msg(int* client_socket, char* buf, size_t size){
+        uint16_t msg_size = size;
+        int bytes_sent = send(*client_socket, (char*) &msg_size, sizeof(uint16_t), 0);
+        if(bytes_sent < 0){
+            throw SocketSendException();
+        }
+        bytes_sent = send(*client_socket, buf, size, 0);
+        if(bytes_sent < 0){
+            throw SocketSendException();
+        }
+        return bytes_sent;
     }
 
     void tcp_server_connection::recv_pss_msg(int* client_socket, pss_message& pss_msg){

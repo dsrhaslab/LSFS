@@ -34,6 +34,8 @@ public:
                 data_handler->process_get_latest_version_msg(msg);
             }else if(msg.has_get_latest_version_reply_msg()){
                 //Este caso não vai acontecer porque os peers não deveriam receber mensagens de reply a um get version
+            }else if(msg.has_recover_request_msg()){
+                data_handler->process_recover_request_msg(msg);
             }
 
         }
@@ -45,8 +47,8 @@ public:
     }
 };
 
-data_handler_listener_mt::data_handler_listener_mt(std::string ip, long id, float chance, pss *pss, std::shared_ptr<kv_store<std::string>> store, bool smart)
-        : data_handler_listener(std::move(ip), id, chance, pss, std::move(store), smart){}
+data_handler_listener_mt::data_handler_listener_mt(std::string ip, long id, float chance, pss *pss, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, bool smart)
+        : data_handler_listener(std::move(ip), id, chance, pss, group_c, std::move(store), smart){}
 
 void data_handler_listener_mt::operator()() {
     try {

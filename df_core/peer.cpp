@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <df_data_handlers/data_handler_listener_mt.h>
 #include <df_data_handlers/data_handler_listener_st.h>
-#include "df_store/kv_store_wiredtiger.h"
+//#include "df_store/kv_store_wiredtiger.h"
 #include "df_store/kv_store_leveldb.h"
 //#include "df_store/kv_store_memory_v2.h"
 
@@ -27,16 +27,16 @@ std::shared_ptr<peer> g_peer_impl;
 
 peer::peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int data_port*/, double position, std::shared_ptr<spdlog::logger> logger):
     id(id), ip(ip)/*, pss_port(pss_port)*/, data_port(data_port), position(position), logger(logger), view_logger_enabled(false),
-//    store(std::make_shared<kv_store_leveldb>(merge_metadata, 100, 100, 100)),
-    store(std::make_shared<kv_store_wiredtiger>(merge_metadata, 100, 100, 100)),
+    store(std::make_shared<kv_store_leveldb>(merge_metadata, 100, 100, 100)),
+//    store(std::make_shared<kv_store_wiredtiger>(merge_metadata, 100, 100, 100)),
 //    store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata, 100, 100, 100)),
 //    store(std::make_shared<kv_store_memory<std::string>>(merge_metadata, 100, 100, 100)),
-    group_c(ip/*, pss_port*/, id, position, 5, 10, 40, true, 15, this->store, logger),
-    cyclon(boot_ip.c_str()/*, peer::boot_port*/, ip/*, pss_port*/, id, position,2,8,10,7, &(this->group_c)),
-    listener(/*"127.0.0.1", this->pss_port,*/ &(this->cyclon) ),
-    v_logger(/*this->pss_port,*/ &(this->cyclon),60, "../logging/"),
-    data_handler(std::make_unique<data_handler_listener_mt>(ip, id, 1, &(this->cyclon), this->store, false)),
-    anti_ent(ip/*, data_port*/, id, &(this->cyclon), this->store, 20)
+    group_c(ip, id, position, 5, 10, 40, true, 15, this->store, logger),
+    cyclon(boot_ip.c_str(), ip, id, position,2,8,10,7, &(this->group_c)),
+    listener(&(this->cyclon) ),
+    v_logger(&(this->cyclon),60, "../logging/"),
+    data_handler(std::make_unique<data_handler_listener_mt>(ip, id, 1, &(this->cyclon), &(this->group_c),this->store, false)),
+    anti_ent(ip, id, &(this->cyclon), &(this->group_c),this->store, 20)
 {
     std::string database_folder = std::string("/home/danielsf97/Desktop/") + this->store->db_name() + "/";
     int res = this->store->init((void*) database_folder.c_str(), id);
@@ -58,12 +58,12 @@ peer::peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int dat
         cyclon(boot_ip.c_str()/*, peer::boot_port*/, ip/*, pss_port*/, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
         listener(/*"127.0.0.1", pss_port,*/ &(this->cyclon)),
         v_logger(/*pss_port,*/ &(this->cyclon), logging_interval, logging_dir),
-        anti_ent(ip/*, data_port*/, id, &(this->cyclon), this->store, anti_entropy_interval)
+        anti_ent(ip/*, data_port*/, id, &(this->cyclon), &(this->group_c),this->store, anti_entropy_interval)
 {
     if(mt_data_handler){
-        this->data_handler = std::make_unique<data_handler_listener_mt>(ip, id, reply_chance, &(this->cyclon), this->store, smart);
+        this->data_handler = std::make_unique<data_handler_listener_mt>(ip, id, reply_chance, &(this->cyclon), &(this->group_c),this->store, smart);
     }else{
-        this->data_handler = std::make_unique<data_handler_listener_st>(ip, id, reply_chance, &(this->cyclon), this->store, smart);
+        this->data_handler = std::make_unique<data_handler_listener_st>(ip, id, reply_chance, &(this->cyclon), &(this->group_c),this->store, smart);
     }
 
     std::string database_folder = database_dir + this->store->db_name() + "/";

@@ -14,11 +14,13 @@ message pss_message {
     NORMAL = 0;
     RESPONSE = 1;
     LOCAL = 2;
-    LOADBALANCE = 3;
-    LOADBALANCE_LOCAL = 4;
+    REQUEST_LOCAL = 3;
+    LOADBALANCE = 4;
+    LOADBALANCE_LOCAL = 5;
   }
 
   required Type type = 1;
   required string sender_ip = 2;
-  repeated peer_data view = 4;
+  required double sender_pos = 4;
+  repeated peer_data view = 5;
 }
