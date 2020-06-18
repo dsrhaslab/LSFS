@@ -52,6 +52,7 @@ private:
 
 public:
     ~kv_store_leveldb();
+    int restart_database() override;
     void send_keys_gt(std::vector<std::string> &off_keys, tcp_client_server_connection::tcp_client_connection &connection,
                       void (*action)(tcp_client_server_connection::tcp_client_connection &, const std::string &, long, long, bool, const char*, size_t)) override;
     kv_store_leveldb(std::string(*f)(const std::string&, const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at);
@@ -62,7 +63,7 @@ public:
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<std::string>> get_keys() override;
     bool put(const std::string& key, long version, long client_id, const std::string& bytes, bool is_merge) override; // use string.c_str() to convert string to const char*
-    bool put_with_merge(const std::string& key, long version, long client_id, const std::string& bytes);
+    bool put_with_merge(const std::string& key, long version, long client_id, const std::string& bytes) override;
     std::unique_ptr<std::string> get(kv_store_key<std::string>& key) override;
     std::unique_ptr<std::string> remove(const kv_store_key<std::string>& key) override;
     std::unique_ptr<std::string> get_latest(const std::string& key, kv_store_key_version* kv_version) override;
@@ -85,14 +86,25 @@ kv_store_leveldb::~kv_store_leveldb() {
 
 void kv_store_leveldb::close() {
     spdlog::debug("closing connection");
-    delete db;
+
+    delete this->db;
+    std::cout << "Deleted db Database" << std::endl;
+    delete this->db_merge_log;
+    std::cout << "Deleted db_merge Database" << std::endl;
 }
 
 std::string kv_store_leveldb::db_name() const {
     return "levelDB";
 }
 
+int kv_store_leveldb::restart_database() {
+    std::cout << "Restarting Database" << std::endl;
+    this->close();
+    return this->init((void *) this->path.c_str(), this->id);
+}
+
 int kv_store_leveldb::init(void* path, long id){
+    std::cout << "Database Init" << std::endl;
     this->id = id;
     this->path = std::string((char*) path);
 
@@ -102,6 +114,8 @@ int kv_store_leveldb::init(void* path, long id){
     options.create_if_missing = true;
     std::string db_name = this->path + std::to_string(id);
     std::string db_merge_log_name = db_name + "_merge";
+
+    std::cout << "Opening Database" << std::endl;
 
     leveldb::Status status = leveldb::DB::Open(options, db_name, &db);
 
@@ -113,7 +127,11 @@ int kv_store_leveldb::init(void* path, long id){
         return -1;
     }
 
+    std::cout << "Opened db Database" << std::endl;
+
     status = leveldb::DB::Open(options, db_merge_log_name, &db_merge_log);
+
+    std::cout << "Opened merge Database" << std::endl;
 
     if (!status.ok())
     {
@@ -122,6 +140,8 @@ int kv_store_leveldb::init(void* path, long id){
                 db_name.c_str());
         return -1;
     }
+
+    std::cout << "All done" << std::endl;
 
     return 0;
 }

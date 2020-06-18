@@ -10,7 +10,7 @@ main_confs:
   log_interval_sec: 5
   logging_dir: /P2P-Filesystem/logging/
   results_dir: /P2P-Filesystem/results/
-  database_base_path: /P2P-Filesystem/
+  database_base_path: /share-dir/
   rep_max: 10
   rep_min: 5
   max_age: 40
@@ -24,6 +24,8 @@ main_confs:
   seen_log_garbage_at: 1000
   request_log_garbage_at: 1000
   anti_entropy_log_garbage_at: 1000
+  restart_database_after: 60 #should be equal or greater to group convergence interval
+
   ######################################
   #               Client               #
   ######################################

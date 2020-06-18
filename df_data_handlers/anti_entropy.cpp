@@ -14,9 +14,9 @@
 #include "anti_entropy.h"
 
 anti_entropy::anti_entropy(std::string ip, long id, pss *pss_ptr, group_construction* group_c,
-        std::shared_ptr<kv_store<std::string>> store, long sleep_interval): ip(std::move(ip)), id(id),
+        std::shared_ptr<kv_store<std::string>> store, long sleep_interval, bool recover_database): ip(std::move(ip)), id(id),
         store(std::move(store)), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0)),
-        phase(anti_entropy::Phase::Starting), pss_ptr(pss_ptr), group_c(group_c)
+        phase(anti_entropy::Phase::Starting), pss_ptr(pss_ptr), group_c(group_c), recover_database(recover_database)
 {}
 
 void anti_entropy::send_peer_keys(std::vector<peer_data>& target_peers, proto::kv_message &msg){
@@ -82,7 +82,13 @@ int anti_entropy::send_recover_request(peer_data& target_peer){
 
 void anti_entropy::phase_starting() {
     if(this->group_c->has_recovered()){
-        this->phase = anti_entropy::Phase::Recovering;
+        if(this->recover_database) {
+            std::cout << "Phase starting =========> Phase Recovering" << std::endl;
+            this->phase = anti_entropy::Phase::Recovering;
+        }else{
+            std::cout << "Phase starting =========> Phase Operating" << std::endl;
+            this->phase = anti_entropy::Phase::Operating;
+        }
     }
 }
 

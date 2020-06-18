@@ -192,7 +192,7 @@ def add_peer_instances(num_peers, procs, initial_nodes = False):
       ids = range(0, num_peers)
       ports = range(current_port, current_port + (3 * num_peers))
 
-      peer_commands = [[peer_program, str(ports[3*i]), str(ports[3*i + 1]),str(ports[3*i + 2]), str(ids[i]), str(positions[i]), args['config']] for i in range(0, num_peers)]
+      peer_commands = [[peer_program, str(ports[3*i]), str(ports[3*i + 1]),str(ports[3*i + 2]), str(ids[i]), str(positions[i]), args['config'], '--no-recover'] for i in range(0, num_peers)]
       print(peer_commands)
 
    else:

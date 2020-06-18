@@ -28,9 +28,10 @@ private:
     std::string ip;
     long id;
     Phase phase;
+    bool recover_database;
 
 public:
-    anti_entropy(std::string ip, long id, pss* pss_ptr, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, long sleep_interval);
+    anti_entropy(std::string ip, long id, pss* pss_ptr, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, long sleep_interval, bool recover_database);
     void operator()();
     void stop_thread();
 

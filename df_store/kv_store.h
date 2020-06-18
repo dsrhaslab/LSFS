@@ -35,6 +35,7 @@ protected:
 public:
 
     virtual int init(void*, long id) = 0;
+    virtual int restart_database() = 0;
     virtual std::string db_name() const = 0;
     virtual void close() = 0;
     virtual std::vector<std::string> get_last_keys_limit4() = 0;
