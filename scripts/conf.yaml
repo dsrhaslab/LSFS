@@ -24,7 +24,8 @@ main_confs:
   seen_log_garbage_at: 1000
   request_log_garbage_at: 1000
   anti_entropy_log_garbage_at: 1000
-  restart_database_after: 60 #should be equal or greater to group convergence interval
+  warmup_interval: 60
+  restart_database_after_warmup: true
 
   ######################################
   #               Client               #

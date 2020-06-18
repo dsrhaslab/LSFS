@@ -78,22 +78,7 @@ void peer::print_view() {
     this->cyclon.print_view();
 }
 
-void peer::start() {
-    try{
-        this->pss_th = std::thread (std::ref(this->cyclon));
-        this->pss_listener_th = std::thread(std::ref(this->listener));
-        if(view_logger_enabled) {
-            this->v_logger_th = std::thread(std::ref(this->v_logger));
-        }
-        this->data_handler_th = std::thread(std::ref(*this->data_handler));
-        this->anti_ent_th = std::thread(std::ref(this->anti_ent));
-    }catch(const std::system_error& e) {
-        std::cerr << "System Error: Not avaliable resources to create peer (peer)!" << std::endl;
-        exit(1);
-    }
-}
-
-void peer::start(int restart_database_after) {
+void peer::start(int warmup_interval, bool restart_database_after_warmup) {
     try{
         this->pss_th = std::thread (std::ref(this->cyclon));
         this->pss_listener_th = std::thread(std::ref(this->listener));
@@ -101,12 +86,14 @@ void peer::start(int restart_database_after) {
             this->v_logger_th = std::thread(std::ref(this->v_logger));
         }
 
-        sleep(restart_database_after);
+        sleep(warmup_interval);
 
-        int res = this->store->restart_database();
-        if(res != 0){
-            std::cerr << "Database Restart Error" << std::endl;
-            exit(1);
+        if(restart_database_after_warmup){
+            int res = this->store->restart_database();
+            if(res != 0){
+                std::cerr << "Database Restart Error" << std::endl;
+                exit(1);
+            }
         }
 
         this->data_handler_th = std::thread(std::ref(*this->data_handler));
@@ -294,7 +281,8 @@ int main(int argc, char* argv []){
     long request_log_garbage_at = main_confs["request_log_garbage_at"].as<long>();
     long anti_entropy_log_garbage_at = main_confs["anti_entropy_log_garbage_at"].as<long>();
     bool mt_data_handler = main_confs["mt_data_handler"].as<bool>();
-    int restart_database_after = main_confs["restart_database_after"].as<int>();
+    int warmup_interval = main_confs["warmup_interval"].as<int>();
+    bool restart_database_after_warmup = main_confs["restart_database_after_warmup"].as<bool>();
 
     std::shared_ptr<spdlog::logger> logger;
     try
@@ -330,10 +318,6 @@ int main(int argc, char* argv []){
 
     g_peer_impl = std::make_shared<peer>(id,ip,boot_ip,pos,boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
             database_dir, rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, mt_data_handler, logger, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at, recover_database);
-    if(restart_database_after > 0){
-        g_peer_impl->start(restart_database_after);
-    }else{
-        g_peer_impl->start();
-    }
+    g_peer_impl->start(warmup_interval, restart_database_after_warmup);
     g_peer_impl->join();
 }

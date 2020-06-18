@@ -65,8 +65,7 @@ public:
             int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval,
             float reply_chance, bool smart, bool mt_data_handler , std::shared_ptr<spdlog::logger> logger, long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool recover_database);
     void print_view();
-    void start();
-    void start(int restart_database_after);
+    void start(int warmup_interval, bool restart_database_after_warmup);
     void stop();
     void join();
 };
