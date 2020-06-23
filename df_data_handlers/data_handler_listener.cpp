@@ -19,6 +19,8 @@ data_handler_listener::data_handler_listener(std::string ip/*, int port*/, long 
 
 void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip/*, int sender_port*/){
     try{
+        std::cout << "Replying Client" << std::endl;
+
         struct sockaddr_in serverAddr;
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
@@ -37,6 +39,8 @@ void data_handler_listener::reply_client(proto::kv_message& message, const std::
             spdlog::error("Oh dear, something went wrong with send()! %s\n", strerror(errno));
 
 //                printf("Oh dear, something went wrong with send()! %s\n", strerror(errno));
+        }else{
+            std::cout << "Replied Client" << std::endl;
         }
     }catch(...){
         spdlog::error("=============================== Não consegui enviar =================");
@@ -59,6 +63,8 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
             serverAddr.sin_family = AF_INET;
             serverAddr.sin_port = htons(peer::kv_port/*peer.port + 1*/); // +1 porque as portas da vista são do df_pss
             serverAddr.sin_addr.s_addr = inet_addr(peer.ip.c_str());
+
+            std::cout << "Forward Message To " << peer.ip << std::endl;
 
             std::unique_lock<std::mutex> lock (socket_send_mutex);
             int res = sendto(this->socket_send, data, data_size, 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
@@ -83,6 +89,8 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
     const std::string& key = message.key();
     const std::string& req_id = message.reqid();
     std::unique_ptr<std::string> data(nullptr); //*data = undefined
+
+    std::cout << "Recv GET [" << req_id << "] " << key << " <- " << sender_ip << std::endl;
 
     //se o pedido ainda não foi processado e não é um pedido interno (não começa com intern)
     if(!this->store->in_log(req_id) && req_id.rfind("intern", 0) != 0){
@@ -213,6 +221,9 @@ void data_handler_listener::process_get_reply_message(const proto::kv_message &m
     const std::string& data = message.data();
     bool is_merge = message.merge();
 
+    std::cout << "Recv GET Reply " << key << ":" << version << std::endl;
+
+
 //        spdlog::debug("GET REPLY(\033[1;31m" + std::to_string(this->id) + "\033[0m) " + key + ":" + std::to_string(version) + " <==================================");
 //        std::cout << "GET REPLY(\033[1;31m" << this->id << "\033[0m) " << key << ":" << version << " <==================================" << std::endl;
 
@@ -236,6 +247,7 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
     long client_id = message.id();
     const std::string& data = message.data();
 
+    std::cout << "Recv Put " << key << ":" << version << " <- " << sender_ip << std::endl;
 
     if (!this->store->have_seen(key, version, client_id)) {
         bool stored;
@@ -311,6 +323,7 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
     long client_id = message.id();
     const std::string& data = message.data();
 
+    std::cout << "Recv Put Merge" << key << ":" << version << " <- " << sender_ip << std::endl;
 
     if (!this->store->have_seen(key, version, client_id)) {
         bool stored;
@@ -384,6 +397,8 @@ long data_handler_listener::get_anti_entropy_req_count(){
 
 void data_handler_listener::process_anti_entropy_message(const proto::kv_message &msg) {
     const proto::anti_entropy_message& message = msg.anti_entropy_msg();
+
+    std::cout << "Recv Anti Entropy" << std::endl;
 
     try {
 

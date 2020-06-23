@@ -399,6 +399,8 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
     const std::string& req_id = msg.reqid();
     const std::string& data = msg.data();
 
+    std::cout << "Recv GET Reply " << req_id  << " <- " << msg.ip() << std::endl;
+
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
     boost::regex composite_key(".+:(\\d+)$");
@@ -430,6 +432,8 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
     kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
     long replier_id = msg.id();
 
+    std::cout << "Recv Put Reply " << key << ":" << version << " <- " << msg.ip() << std::endl;
+
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
 
 //    spdlog::debug("<============================== PUT " + key + " : " + std::to_string(version));
@@ -452,6 +456,8 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
 
 void client_reply_handler::process_get_latest_version_reply_msg(const proto::get_latest_version_reply_message& msg) {
     const std::string& req_id = msg.reqid();
+
+    std::cout << "Recv GET Reply LV " << req_id  << " <- " << msg.ip() << std::endl;
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
