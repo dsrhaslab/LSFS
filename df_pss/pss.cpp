@@ -138,8 +138,8 @@ std::vector<peer_data> pss::select_view_to_send(/*int target_port*/ std::string 
 
     for(peer_data& peer: my_view_elements){
         if(res.size() < this->gossip_size){
-            res.push_back(std::move(peer));
             this->view.erase(peer.ip/*peer.port*/);
+            res.push_back(std::move(peer));
         }
     }
 
