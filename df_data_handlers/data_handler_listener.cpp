@@ -55,6 +55,8 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
     const char* data = buf.data();
     size_t data_size = buf.size();
 
+    std::cout << "Going to Forward Message" << std::endl;
+
     for(const peer_data& peer: view_to_send){
         try {
             struct sockaddr_in serverAddr;
@@ -444,10 +446,12 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 
     //se o pedido ainda não foi processado
     if(!this->store->in_log(req_id)){
+        std::cout << "Not in log" << std::endl;
         this->store->log_req(req_id);
         //só faz sentido perguntar qual é a última versão de uma chave aos peers inseridos na slice
         //cuja chave pertence, isto porque alguns peers podem ter versões antigas da chave e como não
         //pertencem à slice atual, não possuem as mais recentes.
+        std::cout << "key slice: " << this->store->get_slice_for_key(key) << " my slice: " << this->store->get_slice() << std::endl;
         if(this->store->get_slice_for_key(key) == this->store->get_slice()){
             try {
                 version = this->store->get_latest_version(key);
@@ -456,6 +460,9 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                 //(no caso de getattr que são muito frequentes, seria um motivo de mau desempenho)
                 if (version == nullptr) {
                     version = std::make_unique<long>(-1);
+                    std::cout << "Key version: " << -1 << std::endl;
+                }else{
+                    std::cout << "Key version: " << *version << std::endl;
                 }
             }catch(std::exception& e){
                 //LevelDBException
@@ -467,6 +474,8 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 
 
         if(version != nullptr){
+            std::cout << "Version != nullptr " << std::endl;
+
             // se a chave pertence à minha slice (versão da chave >= -1)
             float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
             if(achance <= this->chance){
@@ -475,8 +484,12 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                 if(!slice_peers.empty() && this->smart_forward){
                     // forward to other peers from my slice as its the right slice for the key
                     // trying to speed up quorum
+                    std::cout << "case 1 " << std::endl;
+
                     this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
                 }else{
+                    std::cout << "case 2 " << std::endl;
+
                     std::vector<peer_data> view = this->pss_ptr->get_view();
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 }
@@ -496,12 +509,17 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 //                std::cout << "GET REPLY Version(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
         }else{
+            std::cout << "Version == nullptr " << std::endl;
+
             //se não tenho o conteudo da chave -> fazer forward
             int obj_slice = this->store->get_slice_for_key(key);
             std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
             if(!slice_peers.empty() && this->smart_forward){
+                std::cout << "case 3 " << std::endl;
                 this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
             }else{
+                std::cout << "case 4 " << std::endl;
+
                 std::vector<peer_data> view = this->pss_ptr->get_view();
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
