@@ -440,6 +440,8 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
     const std::string& req_id = message.reqid();
     std::unique_ptr<long> version(nullptr);
 
+    std::cout << "Recv GET Latest Version [" << req_id << "] " << key << " <- " << sender_ip << std::endl;
+
     //se o pedido ainda não foi processado
     if(!this->store->in_log(req_id)){
         this->store->log_req(req_id);
@@ -512,6 +514,8 @@ void data_handler_listener::process_recover_request_msg(const proto::kv_message&
     const std::string& sender_ip = message.ip();
     int nr_slices = message.nr_slices();
     int slice = message.slice();
+
+    std::cout << "Recv Recover Message <- " << sender_ip << std::endl;
 
     if(this->group_c_ptr->get_my_group() != slice ||
        this->group_c_ptr->get_nr_groups() != nr_slices ||
