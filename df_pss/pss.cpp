@@ -419,24 +419,30 @@ void pss::process_msg(const proto::pss_message& pss_msg){
 
 void pss::incorporate_in_view(std::vector<peer_data> source) {
     std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
-    std::cout << "Incorporate in view: ";
-    while(this->view.size() < this->view_size && source.size() > 0){
+    std::cout << "Incorporate in view (" << this->view.size() << "): ";
+    for(const auto& it: source){
+        std::cout << it.id << " ";
+    }
+    std::cout << std::endl;
+
+    while(this->view.size() < this->view_size && !source.empty()){
         peer_data tmp = source.front();
         source.erase(source.begin());
+        std::cout << "my_ip: " << this->ip << " (" << this->id << ") rcv_ip: " << tmp.ip << " (" << tmp.id << ")" << std::endl;
         if(tmp.ip != this->ip/*tmp.port != this->port*/){
             auto current_it = this->view.find(tmp.ip/*tmp.port*/);
             if(current_it != this->view.end()){ //o elemento existe no mapa
                 int current_age = current_it->second.age;
-                if(current_age > tmp.age)
+                if(current_age > tmp.age) {
                     current_it->second = tmp;
-
+                    std::cout << "Modified " << tmp.id << std::endl;
+                }
             }else{
                 this->view.insert(std::make_pair(/*tmp.port*/ tmp.ip, tmp));
-                std::cout << tmp.id << " ";
+                std::cout << "Inserted " << tmp.id << std::endl;
             }
         }
     }
-    std::cout << std::endl;
     print_view();
 }
 
