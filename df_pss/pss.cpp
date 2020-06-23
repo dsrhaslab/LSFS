@@ -456,28 +456,28 @@ void pss::incorporate_last_sent_view() {
     }
 }
 
-std::vector<std::string/*int*/> pss::get_peers_from_view() {
-    std::vector</*int*/ std::string> res;
+std::vector<long> pss::get_peers_from_view() {
+    std::vector<long> res;
 
     std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
     for (auto&[/*port*/ ip, peer]: this->view) {
-        res.push_back(/*port*/ ip);
+        res.push_back(/*port*/ peer.id);
     }
 
     auto it = this->last_sent_view.begin();
     while (res.size() < this->view_size && it != this->last_sent_view.end()) {
-        res.push_back(/*it->port*/ it->ip);
+        res.push_back(/*it->port*/ it->id);
         ++it;
     }
 
     return std::move(res);
 }
 
-std::vector</*int*/ std::string> pss::get_group_view() {
+std::vector</*int*/ long> pss::get_group_view() {
     auto peers =  this->group_c->get_local_view();
-    std::vector</*int*/ std::string> res;
+    std::vector</*int*/ long> res;
     for(auto& peer: peers)
-        res.push_back(/*peer.port*/ peer.ip);
+        res.push_back(/*peer.port*/ peer.id);
     return std::move(res);
 }
 

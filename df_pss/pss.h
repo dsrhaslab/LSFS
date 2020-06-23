@@ -45,7 +45,7 @@ public:
     void write_view_to_file();
     void stop_thread();
     //std::vector<int> get_peers_from_view();
-    std::vector<std::string> get_peers_from_view();
+    std::vector<long> get_peers_from_view();
     int get_my_group();
     int get_nr_groups();
     void bootstrapper_termination_alerting();
@@ -54,7 +54,7 @@ public:
     std::vector<peer_data> get_view();
     std::vector<peer_data> get_slice_local_view();
     //std::vector<int> get_group_view();
-    std::vector<std::string> get_group_view();
+    std::vector<long> get_group_view();
 
 private:
     void age_view_members();
