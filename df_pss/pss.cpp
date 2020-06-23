@@ -278,13 +278,16 @@ void pss::operator()() {
 
 void pss::print_view() {
 //    std::cout << "====== My View[" + std::to_string(this->port) + "] ====" << std::endl;
-    spdlog::debug("====== My View[" + this->ip /*std::to_string(this->port)*/ + "] ====" );
-    std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
+//    spdlog::debug("====== My View[" + this->ip /*std::to_string(this->port)*/ + "] ====" );
+//    std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
+    std::cout << "View: ";
     for(auto const& [key, peer] : this->view){
-        spdlog::debug(peer.ip + " : " + std::to_string(peer.age) );
+        std::cout << peer.id << " ";
+//        spdlog::debug(peer.ip + " : " + std::to_string(peer.age) );
 //        std::cout << peer.ip << "(" << peer.port << ") : " << peer.age << std::endl;
     }
-    spdlog::debug("==========================");
+    std::cout << std::endl;
+   // spdlog::debug("==========================");
 //    std::cout << "==========================" << std::endl;
 }
 
@@ -416,6 +419,7 @@ void pss::process_msg(const proto::pss_message& pss_msg){
 
 void pss::incorporate_in_view(std::vector<peer_data> source) {
     std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
+    std::cout << "Incorporate in view: ";
     while(this->view.size() < this->view_size && source.size() > 0){
         peer_data tmp = source.front();
         source.erase(source.begin());
@@ -428,9 +432,12 @@ void pss::incorporate_in_view(std::vector<peer_data> source) {
 
             }else{
                 this->view.insert(std::make_pair(/*tmp.port*/ tmp.ip, tmp));
+                std::cout << tmp.id << " ";
             }
         }
     }
+    std::cout << std::endl;
+    print_view();
 }
 
 void pss::complete_view_with_last_sent() {
@@ -454,6 +461,8 @@ void pss::incorporate_last_sent_view() {
         this->view.insert(std::make_pair(/*tmp.port*/tmp.ip, tmp));
         this->last_sent_view.erase(this->last_sent_view.begin());
     }
+    std::cout << "Incorporate Last Sent View" << std::endl;
+    print_view();
 }
 
 std::vector<long> pss::get_peers_from_view() {
