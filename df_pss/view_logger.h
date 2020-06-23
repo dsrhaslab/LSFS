@@ -26,17 +26,17 @@ class view_logger {
 private:
     std::atomic<bool> running;
     pss* cyclon_ptr;
-//    int port;
+    long id;
     int logging_interval;
     std::string logging_dir;
 
 public:
 
-    view_logger(/*int port,*/ pss* pss, int logging_interval, std::string logging_dir)
+    view_logger(long id, pss* pss, int logging_interval, std::string logging_dir)
     {
         this->cyclon_ptr = pss;
         this->running = true;
-        //this->port = port;
+        this->id = id;
         this->logging_interval = logging_interval;
         this->logging_dir = logging_dir;
     }
@@ -46,7 +46,7 @@ public:
 
         std::filesystem::create_directories(this->logging_dir);
 
-        std::string filename = this->logging_dir + /*std::to_string(this->port)*/ "df_logger" + ".txt";
+        std::string filename = this->logging_dir + "peer" + std::to_string(this->id) + ".txt";
 
         std::shared_ptr<spdlog::logger> logger;
         try
