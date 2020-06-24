@@ -84,7 +84,7 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
 }
 
 int client::send_get(peer_data &peer, const std::string& key, long* version, const std::string& req_id) {
-    std::cout << "Send Get [" << req_id << "] " << key << " -> " << peer.ip << std::endl;
+    std::cout << "Send Get [" << req_id << "] " << key << " -> " << peer.id << std::endl;
     proto::kv_message msg;
     auto* message_content = new proto::get_message();
     message_content->set_ip(this->ip);
@@ -103,7 +103,7 @@ int client::send_get(peer_data &peer, const std::string& key, long* version, con
 }
 
 int client::send_get_latest_version(peer_data &peer, const std::string& key, const std::string& req_id) {
-    std::cout << "Send Get Latest Version [" << req_id << "] " << key << " -> " << peer.ip << std::endl;
+    std::cout << "Send Get Latest Version [" << req_id << "] " << key << " -> " << peer.id << std::endl;
     proto::kv_message msg;
     auto* message_content = new proto::get_latest_version_message();
     message_content->set_ip(this->ip);
@@ -116,7 +116,7 @@ int client::send_get_latest_version(peer_data &peer, const std::string& key, con
 }
 
 int client::send_put(peer_data &peer, const std::string& key, long version, const char *data, size_t size) {
-    std::cout << "Send Put " << key << ":" << version << " -> " << peer.ip << std::endl;
+    std::cout << "Send Put " << key << ":" << version << " -> " << peer.id << std::endl;
     proto::kv_message msg;
     auto* message_content = new proto::put_message();
     message_content->set_ip(this->ip);
@@ -130,7 +130,7 @@ int client::send_put(peer_data &peer, const std::string& key, long version, cons
 }
 
 int client::send_put_with_merge(peer_data &peer, const std::string& key, long version, const char *data, size_t size) {
-    std::cout << "Send Put Merge" << key << ":" << version << " -> " << peer.ip << std::endl;
+    std::cout << "Send Put Merge" << key << ":" << version << " -> " << peer.id << std::endl;
     proto::kv_message msg;
     auto* message_content = new proto::put_with_merge_message();
     message_content->set_ip(this->ip);

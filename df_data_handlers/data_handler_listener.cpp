@@ -40,7 +40,7 @@ void data_handler_listener::reply_client(proto::kv_message& message, const std::
 
 //                printf("Oh dear, something went wrong with send()! %s\n", strerror(errno));
         }else{
-            std::cout << "Replied Client" << std::endl;
+            std::cout << this->id << " -> Replied Client" << std::endl;
         }
     }catch(...){
         spdlog::error("=============================== Não consegui enviar =================");
@@ -66,7 +66,7 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
             serverAddr.sin_port = htons(peer::kv_port/*peer.port + 1*/); // +1 porque as portas da vista são do df_pss
             serverAddr.sin_addr.s_addr = inet_addr(peer.ip.c_str());
 
-            std::cout << "Forward Message To " << peer.ip << std::endl;
+            std::cout << this->id << " -> Forward Message To " << peer.id << std::endl;
 
             std::unique_lock<std::mutex> lock (socket_send_mutex);
             int res = sendto(this->socket_send, data, data_size, 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
@@ -151,6 +151,11 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
                 int obj_slice = this->store->get_slice_for_key(key);
                 if(this->store->get_slice() == obj_slice){
                     std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+                    std::cout << "local view: ";
+                    for(auto& peer: view){
+                        std::cout << peer.id << " ";
+                    }
+                    std::cout << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 }
             }else{
@@ -158,9 +163,19 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
                 int obj_slice = this->store->get_slice_for_key(key);
                 std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
                 if(!slice_peers.empty() && this->smart_forward){
-                    std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                    std::cout << "slice peers: ";
+                    for(auto& peer: slice_peers){
+                        std::cout << peer.id << " ";
+                    }
+                    std::cout << std::endl;
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
                 }else{
                     std::vector<peer_data> view = this->pss_ptr->get_view();
+                    std::cout << "view: ";
+                    for(auto& peer: view){
+                        std::cout << peer.id << " ";
+                    }
+                    std::cout << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 }
             }
@@ -172,9 +187,19 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
             int obj_slice = this->store->get_slice_for_key(key);
             std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
             if(!slice_peers.empty() && this->smart_forward){
+                std::cout << "slice peers: ";
+                for(auto& peer: slice_peers){
+                    std::cout << peer.id << " ";
+                }
+                std::cout << std::endl;
                 this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
             }else{
                 std::vector<peer_data> view = this->pss_ptr->get_view();
+                std::cout << "view: ";
+                for(auto& peer: view){
+                    std::cout << peer.id << " ";
+                }
+                std::cout << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         }
@@ -207,6 +232,11 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
                 }else{
                     //se não possuo o valor da chave, fazer forward
                     std::vector<peer_data> view = this->pss_ptr->get_view();
+                    std::cout << "view: ";
+                    for(auto& peer: view){
+                        std::cout << peer.id << " ";
+                    }
+                    std::cout << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 }
             }
@@ -277,8 +307,18 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
 
 //                    std::cout << "PUT REPLY (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << " ==================================>" << std::endl;
                 this->reply_client(reply_message, sender_ip/*, sender_port*/);
+                std::cout << "local view: ";
+                for(auto& peer: view){
+                    std::cout << peer.id << " ";
+                }
+                std::cout << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             } else {
+                std::cout << "local view: ";
+                for(auto& peer: view){
+                    std::cout << peer.id << " ";
+                }
+                std::cout << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         } else {
@@ -287,12 +327,27 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
                 std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
                 if (slice_peers.empty()) {
                     std::vector<peer_data> view = this->pss_ptr->get_view();
+                    std::cout << "view: ";
+                    for(auto& peer: view){
+                        std::cout << peer.id << " ";
+                    }
+                    std::cout << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 } else {
+                    std::cout << "slice peers: ";
+                    for(auto& peer: slice_peers){
+                        std::cout << peer.id << " ";
+                    }
+                    std::cout << std::endl;
                     this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
                 }
             } else {
                 std::vector<peer_data> view = this->pss_ptr->get_view();
+                std::cout << "view: ";
+                for(auto& peer: view){
+                    std::cout << peer.id << " ";
+                }
+                std::cout << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         }
@@ -353,8 +408,18 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
 
 //                    std::cout << "PUT REPLY (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << " ==================================>" << std::endl;
                 this->reply_client(reply_message, sender_ip/*, sender_port*/);
+                std::cout << "local view: ";
+                for(auto& peer: view){
+                    std::cout << peer.id << " ";
+                }
+                std::cout << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             } else {
+                std::cout << "local view: ";
+                for(auto& peer: view){
+                    std::cout << peer.id << " ";
+                }
+                std::cout << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         } else {
@@ -363,12 +428,27 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
                 std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
                 if (slice_peers.empty()) {
                     std::vector<peer_data> view = this->pss_ptr->get_view();
+                    std::cout << "view: ";
+                    for(auto& peer: view){
+                        std::cout << peer.id << " ";
+                    }
+                    std::cout << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 } else {
+                    std::cout << "slice peers: ";
+                    for(auto& peer: slice_peers){
+                        std::cout << peer.id << " ";
+                    }
+                    std::cout << std::endl;
                     this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
                 }
             } else {
                 std::vector<peer_data> view = this->pss_ptr->get_view();
+                std::cout << "view: ";
+                for(auto& peer: view){
+                    std::cout << peer.id << " ";
+                }
+                std::cout << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         }
@@ -399,8 +479,6 @@ long data_handler_listener::get_anti_entropy_req_count(){
 
 void data_handler_listener::process_anti_entropy_message(const proto::kv_message &msg) {
     const proto::anti_entropy_message& message = msg.anti_entropy_msg();
-
-    std::cout << "Recv Anti Entropy" << std::endl;
 
     try {
 
@@ -442,16 +520,12 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
     const std::string& req_id = message.reqid();
     std::unique_ptr<long> version(nullptr);
 
-    std::cout << "Recv GET Latest Version [" << req_id << "] " << key << " <- " << sender_ip << std::endl;
-
     //se o pedido ainda não foi processado
     if(!this->store->in_log(req_id)){
-        std::cout << "Not in log" << std::endl;
         this->store->log_req(req_id);
         //só faz sentido perguntar qual é a última versão de uma chave aos peers inseridos na slice
         //cuja chave pertence, isto porque alguns peers podem ter versões antigas da chave e como não
         //pertencem à slice atual, não possuem as mais recentes.
-        std::cout << "key slice: " << this->store->get_slice_for_key(key) << " my slice: " << this->store->get_slice() << std::endl;
         if(this->store->get_slice_for_key(key) == this->store->get_slice()){
             try {
                 version = this->store->get_latest_version(key);
@@ -460,9 +534,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                 //(no caso de getattr que são muito frequentes, seria um motivo de mau desempenho)
                 if (version == nullptr) {
                     version = std::make_unique<long>(-1);
-                    std::cout << "Key version: " << -1 << std::endl;
                 }else{
-                    std::cout << "Key version: " << *version << std::endl;
                 }
             }catch(std::exception& e){
                 //LevelDBException
@@ -474,8 +546,6 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 
 
         if(version != nullptr){
-            std::cout << "Version != nullptr " << std::endl;
-
             // se a chave pertence à minha slice (versão da chave >= -1)
             float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
             if(achance <= this->chance){
@@ -484,13 +554,19 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                 if(!slice_peers.empty() && this->smart_forward){
                     // forward to other peers from my slice as its the right slice for the key
                     // trying to speed up quorum
-                    std::cout << "case 1 " << std::endl;
-
+                    std::cout << "local view: ";
+                    for(auto& peer: slice_peers){
+                        std::cout << peer.id << " ";
+                    }
+                    std::cout << std::endl;
                     this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
                 }else{
-                    std::cout << "case 2 " << std::endl;
-
                     std::vector<peer_data> view = this->pss_ptr->get_view();
+                    std::cout << "view: ";
+                    for(auto& peer: view){
+                        std::cout << peer.id << " ";
+                    }
+                    std::cout << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 }
             }
@@ -509,18 +585,23 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 //                std::cout << "GET REPLY Version(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
         }else{
-            std::cout << "Version == nullptr " << std::endl;
-
             //se não tenho o conteudo da chave -> fazer forward
             int obj_slice = this->store->get_slice_for_key(key);
             std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
             if(!slice_peers.empty() && this->smart_forward){
-                std::cout << "case 3 " << std::endl;
+                std::cout << "slice peers: ";
+                for(auto& peer: slice_peers){
+                    std::cout << peer.id << " ";
+                }
+                std::cout << std::endl;
                 this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
             }else{
-                std::cout << "case 4 " << std::endl;
-
                 std::vector<peer_data> view = this->pss_ptr->get_view();
+                std::cout << "view: ";
+                for(auto& peer: view){
+                    std::cout << peer.id << " ";
+                }
+                std::cout << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         }

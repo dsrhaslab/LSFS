@@ -268,7 +268,6 @@ void pss::operator()() {
                 }
 
                 this->send_pss_msg(/*target.port*/ target.ip, view_to_send, proto::pss_message_Type::pss_message_Type_NORMAL);
-                std::cout << "Sent Normal PSS -> " << target.ip << std::endl;
             }
 //            this->print_view();
         }
@@ -322,7 +321,6 @@ peer_data* pss::get_older_from_view() {
 void pss::process_msg(const proto::pss_message& pss_msg){
 
     if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_REQUEST_LOCAL){
-        std::cout << "Received Request Local PSS <- " << pss_msg.sender_ip() << std::endl;
 
         int slice = this->group_c->group(pss_msg.sender_pos());
         if(this->group_c->get_my_group() == slice){
@@ -350,7 +348,6 @@ void pss::process_msg(const proto::pss_message& pss_msg){
     }
 
     if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_LOCAL){
-        std::cout << "Received Local PSS <- " << pss_msg.sender_ip() << std::endl;
         this->group_c->receive_local_message(recv_view);
     }else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_LOADBALANCE){
         std::vector<peer_data> current_view = this->get_view();
@@ -369,11 +366,9 @@ void pss::process_msg(const proto::pss_message& pss_msg){
 
         this->send_pss_msg(/*pss_msg.sender_port()*/pss_msg.sender_ip(), current_view, proto::pss_message_Type::pss_message_Type_LOADBALANCE);
     }else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_LOADBALANCE_LOCAL){
-        std::cout << "Received Load Balancer Local PSS <- " << pss_msg.sender_ip() << std::endl;
         std::string target_ip = pss_msg.sender_ip();
         this->group_c->send_local_message(target_ip/*, pss_msg.sender_port()*/);
     }else if(pss_msg.type() == proto::pss_message_Type::pss_message_Type_NORMAL){
-        std::cout << "Received Normal PSS <- " << pss_msg.sender_ip() << std::endl;
         std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
         this->incorporate_last_sent_view();
         //1- seleciona uma vista para enviar (removendo tais nodos da sua vista, isto
@@ -394,14 +389,10 @@ void pss::process_msg(const proto::pss_message& pss_msg){
         //4- envia msg de resposta
         this->send_pss_msg(pss_msg.sender_ip()/*pss_msg.sender_port()*/, view_to_send, proto::pss_message_Type::pss_message_Type_RESPONSE);
 
-        std::cout << "Sent Response PSS -> " << pss_msg.sender_ip() << std::endl;
-
         //5- pass received peers to gropu construction
         this->group_c->receive_message(recv_view);
 
     }else if (pss_msg.type() == proto::pss_message_Type::pss_message_Type_RESPONSE){
-        std::cout << "Received Response PSS <- " << pss_msg.sender_ip() << std::endl;
-
         std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
 
         this->incorporate_in_view(recv_view);
@@ -419,31 +410,22 @@ void pss::process_msg(const proto::pss_message& pss_msg){
 
 void pss::incorporate_in_view(std::vector<peer_data> source) {
     std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
-    std::cout << "Incorporate in view (" << this->view.size() << "): ";
-    for(const auto& it: source){
-        std::cout << it.id << " ";
-    }
-    std::cout << std::endl;
 
     while(this->view.size() < this->view_size && !source.empty()){
         peer_data tmp = source.front();
         source.erase(source.begin());
-        std::cout << "my_ip: " << this->ip << " (" << this->id << ") rcv_ip: " << tmp.ip << " (" << tmp.id << ")" << std::endl;
         if(tmp.ip != this->ip/*tmp.port != this->port*/){
             auto current_it = this->view.find(tmp.ip/*tmp.port*/);
             if(current_it != this->view.end()){ //o elemento existe no mapa
                 int current_age = current_it->second.age;
                 if(current_age > tmp.age) {
                     current_it->second = tmp;
-                    std::cout << "Modified " << tmp.id << std::endl;
                 }
             }else{
                 this->view.insert(std::make_pair(/*tmp.port*/ tmp.ip, tmp));
-                std::cout << "Inserted " << tmp.id << std::endl;
             }
         }
     }
-    print_view();
 }
 
 void pss::complete_view_with_last_sent() {
@@ -467,7 +449,6 @@ void pss::incorporate_last_sent_view() {
         this->view.insert(std::make_pair(/*tmp.port*/tmp.ip, tmp));
         this->last_sent_view.erase(this->last_sent_view.begin());
     }
-    std::cout << "Incorporate Last Sent View" << std::endl;
     print_view();
 }
 
