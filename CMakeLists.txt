@@ -37,7 +37,13 @@ add_executable(bootstrapper_exe
         exceptions/socket_exception.h
         exceptions/socket_read_exception.h
         exceptions/socket_send_exception.h
-        exceptions/peer_disconnected.h exceptions/socket_exception.h exceptions/socket_read_exception.h exceptions/socket_send_exception.h)
+        exceptions/peer_disconnected.h
+        exceptions/socket_exception.h
+        exceptions/socket_read_exception.h
+        exceptions/socket_send_exception.h
+        df_util/randomizer.h
+        )
+
 target_link_libraries(bootstrapper_exe PUBLIC ${PROTOBUF_LIBRARIES})
 target_include_directories(bootstrapper_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bootstrapper_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -93,7 +99,14 @@ add_executable( peer_exe
         exceptions/peer_disconnected.h
         exceptions/socket_exception.h
         exceptions/socket_read_exception.h
-        exceptions/socket_send_exception.h exceptions/peer_disconnected.h exceptions/socket_exception.h exceptions/socket_read_exception.h exceptions/socket_send_exception.h)
+        exceptions/socket_send_exception.h
+        exceptions/peer_disconnected.h
+        exceptions/socket_exception.h
+        exceptions/socket_read_exception.h
+        exceptions/socket_send_exception.h
+        df_util/randomizer.h
+        )
+
 target_link_libraries(peer_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(peer_exe PRIVATE yaml-cpp)
 target_link_libraries(peer_exe PUBLIC ${PROTOBUF_LIBRARIES})
@@ -148,7 +161,12 @@ add_executable( client_exe
         exceptions/socket_exception.h
         exceptions/socket_read_exception.h
         exceptions/socket_send_exception.h
-        exceptions/peer_disconnected.h exceptions/socket_exception.h exceptions/socket_read_exception.h exceptions/socket_send_exception.h)
+        exceptions/peer_disconnected.h
+        exceptions/socket_exception.h
+        exceptions/socket_read_exception.h
+        exceptions/socket_send_exception.h
+        df_util/randomizer.h
+        )
 
 target_link_libraries(client_exe PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(client_exe PRIVATE yaml-cpp)
@@ -213,6 +231,7 @@ add_executable( lsfs_exe
         df_loadbalancing/smart_load_balancer.cpp
         df_loadbalancing/smart_load_balancer.h
         fuse/fuse_common/macros.h
+        df_util/randomizer.h
         )
 
 target_link_libraries(lsfs_exe PRIVATE nlohmann_json::nlohmann_json)

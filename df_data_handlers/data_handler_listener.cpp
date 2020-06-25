@@ -15,11 +15,7 @@
 #include <unistd.h>
 
 data_handler_listener::data_handler_listener(std::string ip/*, int port*/, long id, float chance, pss *pss, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, bool smart)
-    : ip(std::move(ip)), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)), dis(0.0, 1.0) {
-
-    std::random_device rd;  //Will be used to obtain a seed for the random number engine
-    this->gen.seed(rd());
-}
+    : ip(std::move(ip)), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
 
 void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip/*, int sender_port*/){
     try{
@@ -128,7 +124,7 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
         if(data != nullptr){
             //se tenho o conteudo da chave
             //float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-            float achance = dis(gen);
+            float achance = random_float(0.0, 1.0);
 //                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
             if(achance <= this->chance){
                 //a probabilidade ditou para responder à mensagem com o conteudo para a chave
@@ -301,7 +297,7 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
 //            std::cout << "<==========(" << std::to_string(stored) <<")============== " << "PUT (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << std::endl;
         if (stored) {
             //float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-            float achance = dis(gen);
+            float achance = random_float(0.0, 1.0);
 //                std::cout << achance << " <= " << chance << std::endl;
 //                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
@@ -411,7 +407,7 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
 //            float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 //                std::cout << achance << " <= " << chance << std::endl;
 //                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
-            float achance = dis(gen);
+            float achance = random_float(0.0, 1.0);
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
             if (achance <= this->chance) {
                 proto::kv_message reply_message;
@@ -573,7 +569,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
         if(version != nullptr){
             // se a chave pertence à minha slice (versão da chave >= -1)
             //float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-            float achance = dis(gen);
+            float achance = random_float(0.0, 1.0);
             if(achance <= this->chance){
                 //responder à mensagem
                 proto::kv_message reply_message;
