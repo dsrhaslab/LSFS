@@ -543,6 +543,8 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
     const std::string& req_id = message.reqid();
     std::unique_ptr<long> version(nullptr);
 
+    std::cout << "Recv GET LV [" << req_id << "] " << key << " <- " << sender_ip << std::endl;
+
     //se o pedido ainda não foi processado
     if(!this->store->in_log(req_id)){
         this->store->log_req(req_id);
