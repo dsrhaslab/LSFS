@@ -30,7 +30,7 @@ void data_handler_listener_st::operator()() {
 
         if(this->running){
             try {
-                std::cout << "Rcv Msg from " << si_other.sin_addr.s_addr << std::endl;
+                std::cout << "Rcv Msg from " << inet_ntoa(si_other.sin_addr) << std::endl;
 
                 proto::kv_message msg;
                 msg.ParseFromArray(buf, bytes_rcv);
