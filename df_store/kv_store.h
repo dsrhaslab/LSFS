@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include "kv_store_key.h"
 #include "df_tcp_client_server_connection/tcp_client_server_connection.h"
+#include "iostream"
 
 template <typename T>
 class kv_store {
@@ -111,6 +112,7 @@ bool kv_store<T>::have_seen(const T& key, long version, long client_id) {
     kv_store_key<T> key_to_check({key, kv_store_key_version(version, client_id)});
 
     std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
+    std::cout << "seen_log: " << this->seen.size() << " seen_count: " << seen_count << std::endl;
     auto it = this->seen.find(key_to_check);
     if(it == this->seen.end()){ //a chave não existe no mapa seen
         return false;
@@ -124,6 +126,7 @@ void kv_store<T>::seen_it(const T& key, long version, long client_id) {
     seen_count +=1 ;
     kv_store_key<T> key_to_insert({key, kv_store_key_version(version, client_id)});
     std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
+    std::cout << "seen_log: " << this->seen.size() << " seen_count: " << seen_count << std::endl;
     if(seen_count % seen_log_garbage_at == 0){
         this->clear_seen_log();
         seen_count = 0;
@@ -167,6 +170,7 @@ void kv_store<T>::clear_request_log() {
 template <typename T>
 bool kv_store<T>::in_log(const std::string& req_id) {
     std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
+    std::cout << "req_log: " << this->request_log.size() << " req_count: " << req_count << std::endl;
     return !(this->request_log.find(req_id) == this->request_log.end());
 }
 
@@ -174,6 +178,7 @@ template <typename T>
 void kv_store<T>::log_req(const std::string& req_id) {
     req_count +=1 ;
     std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
+    std::cout << "req_log: " << this->request_log.size() << " req_count: " << req_count << std::endl;
     if(req_count % request_log_garbage_at == 0){
         this->clear_request_log();
         req_count = 0;

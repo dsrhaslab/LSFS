@@ -15,12 +15,14 @@
 #include <unistd.h>
 
 data_handler_listener::data_handler_listener(std::string ip/*, int port*/, long id, float chance, pss *pss, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, bool smart)
-    : ip(std::move(ip)), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
+    : ip(std::move(ip)), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)), dis(0.0, 1.0) {
+
+    std::random_device rd;  //Will be used to obtain a seed for the random number engine
+    this->gen.seed(rd());
+}
 
 void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip/*, int sender_port*/){
     try{
-        std::cout << "Replying Client" << std::endl;
-
         struct sockaddr_in serverAddr;
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
@@ -54,8 +56,6 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
     message.SerializeToString(&buf);
     const char* data = buf.data();
     size_t data_size = buf.size();
-
-    std::cout << "Going to Forward Message" << std::endl;
 
     for(const peer_data& peer: view_to_send){
         try {
@@ -127,7 +127,8 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
 
         if(data != nullptr){
             //se tenho o conteudo da chave
-            float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+            //float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+            float achance = dis(gen);
 //                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
             if(achance <= this->chance){
                 //a probabilidade ditou para responder à mensagem com o conteudo para a chave
@@ -145,6 +146,7 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
 
 //                    std::cout << "GET REPLY(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
+                std::cout << "Replying Client 1 ["  << req_id << "]" << std::endl;
                 this->reply_client(reply_message, sender_ip/*, sender_port*/);
                 // forward to other peers from my slice if is the right slice for the key
                 // trying to speed up quorum
@@ -156,6 +158,7 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
                         std::cout << peer.id << " ";
                     }
                     std::cout << std::endl;
+                    std::cout << "Going to Forward Message 1 ["  << req_id << "]" << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 }
             }else{
@@ -168,6 +171,7 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
                         std::cout << peer.id << " ";
                     }
                     std::cout << std::endl;
+                    std::cout << "Going to Forward Message 2 ["  << req_id << "]" << std::endl;
                     this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
                 }else{
                     std::vector<peer_data> view = this->pss_ptr->get_view();
@@ -176,6 +180,7 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
                         std::cout << peer.id << " ";
                     }
                     std::cout << std::endl;
+                    std::cout << "Going to Forward Message 3 ["  << req_id << "]" << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 }
             }
@@ -192,6 +197,7 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
                     std::cout << peer.id << " ";
                 }
                 std::cout << std::endl;
+                std::cout << "Going to Forward Message 4 ["  << req_id << "]" << std::endl;
                 this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
             }else{
                 std::vector<peer_data> view = this->pss_ptr->get_view();
@@ -200,6 +206,7 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
                     std::cout << peer.id << " ";
                 }
                 std::cout << std::endl;
+                std::cout << "Going to Forward Message 5 ["  << req_id << "]" << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         }
@@ -228,6 +235,7 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
                     message_content->set_merge(is_merge);
                     reply_message.set_allocated_get_reply_msg(message_content);
 
+                    std::cout << "Replying Client 2 ["  << req_id << "]" << std::endl;
                     this->reply_client(reply_message, sender_ip/*, sender_port*/);
                 }else{
                     //se não possuo o valor da chave, fazer forward
@@ -237,6 +245,7 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
                         std::cout << peer.id << " ";
                     }
                     std::cout << std::endl;
+                    std::cout << "Going to Forward Message 6 ["  << req_id << "]" << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 }
             }
@@ -279,7 +288,7 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
     long client_id = message.id();
     const std::string& data = message.data();
 
-    std::cout << "Recv Put " << key << ":" << version << " <- " << sender_ip << std::endl;
+    std::cout << "Recv Put [" << key << ":" << version << "] <- " << sender_ip << std::endl;
 
     if (!this->store->have_seen(key, version, client_id)) {
         bool stored;
@@ -291,7 +300,8 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
 
 //            std::cout << "<==========(" << std::to_string(stored) <<")============== " << "PUT (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << std::endl;
         if (stored) {
-            float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+            //float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+            float achance = dis(gen);
 //                std::cout << achance << " <= " << chance << std::endl;
 //                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
@@ -306,12 +316,14 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
                 reply_message.set_allocated_put_reply_msg(message_content);
 
 //                    std::cout << "PUT REPLY (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << " ==================================>" << std::endl;
+                std::cout << "Replying Client 3 ["  << key << ":" << version << "]" << std::endl;
                 this->reply_client(reply_message, sender_ip/*, sender_port*/);
                 std::cout << "local view: ";
                 for(auto& peer: view){
                     std::cout << peer.id << " ";
                 }
                 std::cout << std::endl;
+                std::cout << "Going to Forward Message 7 [" << key << ":" << version << "]" << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             } else {
                 std::cout << "local view: ";
@@ -319,6 +331,7 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
                     std::cout << peer.id << " ";
                 }
                 std::cout << std::endl;
+                std::cout << "Going to Forward Message 8 [" << key << ":" << version << "]" << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         } else {
@@ -332,6 +345,7 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
                         std::cout << peer.id << " ";
                     }
                     std::cout << std::endl;
+                    std::cout << "Going to Forward Message 9 [" << key << ":" << version << "]" << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 } else {
                     std::cout << "slice peers: ";
@@ -339,6 +353,7 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
                         std::cout << peer.id << " ";
                     }
                     std::cout << std::endl;
+                    std::cout << "Going to Forward Message 10 [" << key << ":" << version << "]" << std::endl;
                     this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
                 }
             } else {
@@ -348,6 +363,7 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
                     std::cout << peer.id << " ";
                 }
                 std::cout << std::endl;
+                std::cout << "Going to Forward Message 11 [" << key << ":" << version << "]" << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         }
@@ -392,9 +408,10 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
 
 //            std::cout << "<==========(" << std::to_string(stored) <<")============== " << "PUT (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << std::endl;
         if (stored) {
-            float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+//            float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 //                std::cout << achance << " <= " << chance << std::endl;
 //                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
+            float achance = dis(gen);
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
             if (achance <= this->chance) {
                 proto::kv_message reply_message;
@@ -407,12 +424,14 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
                 reply_message.set_allocated_put_reply_msg(message_content);
 
 //                    std::cout << "PUT REPLY (\033[1;31m" << this->id << "\033[0m) " << key << " : " << version << " ==================================>" << std::endl;
+                std::cout << "Replying Client 4 ["  << key << ":" << version << "]" << std::endl;
                 this->reply_client(reply_message, sender_ip/*, sender_port*/);
                 std::cout << "local view: ";
                 for(auto& peer: view){
                     std::cout << peer.id << " ";
                 }
                 std::cout << std::endl;
+                std::cout << "Going to Forward Message 12 [" << key << ":" << version << "]" << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             } else {
                 std::cout << "local view: ";
@@ -420,6 +439,7 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
                     std::cout << peer.id << " ";
                 }
                 std::cout << std::endl;
+                std::cout << "Going to Forward Message 13 [" << key << ":" << version << "]" << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         } else {
@@ -433,6 +453,7 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
                         std::cout << peer.id << " ";
                     }
                     std::cout << std::endl;
+                    std::cout << "Going to Forward Message 14 [" << key << ":" << version << "]" << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 } else {
                     std::cout << "slice peers: ";
@@ -440,6 +461,7 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
                         std::cout << peer.id << " ";
                     }
                     std::cout << std::endl;
+                    std::cout << "Going to Forward Message 15 [" << key << ":" << version << "]" << std::endl;
                     this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
                 }
             } else {
@@ -449,6 +471,7 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
                     std::cout << peer.id << " ";
                 }
                 std::cout << std::endl;
+                std::cout << "Going to Forward Message 16 [" << key << ":" << version << "]" << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         }
@@ -547,9 +570,27 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 
         if(version != nullptr){
             // se a chave pertence à minha slice (versão da chave >= -1)
-            float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+            //float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+            float achance = dis(gen);
             if(achance <= this->chance){
-                //a probabilidade ditou para fazer forward message
+                //responder à mensagem
+                proto::kv_message reply_message;
+                auto* message_content = new proto::get_latest_version_reply_message();
+                message_content->set_ip(this->ip);
+                //message_content->set_port(this->port);
+                message_content->set_id(this->id);
+                message_content->set_version(*version);
+                message_content->set_reqid(req_id);
+                reply_message.set_allocated_get_latest_version_reply_msg(message_content);
+
+                std::cout << "Replying Client 5 ["  << req_id << "]" << std::endl;
+                this->reply_client(reply_message, sender_ip);
+
+                std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
+                std::cout << "Going to Forward Message 17 ["  << req_id << "]" << std::endl;
+                this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+
+            }else{
                 std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
                 if(!slice_peers.empty() && this->smart_forward){
                     // forward to other peers from my slice as its the right slice for the key
@@ -559,6 +600,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                         std::cout << peer.id << " ";
                     }
                     std::cout << std::endl;
+                    std::cout << "Going to Forward Message 18 ["  << req_id << "]" << std::endl;
                     this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
                 }else{
                     std::vector<peer_data> view = this->pss_ptr->get_view();
@@ -567,21 +609,10 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                         std::cout << peer.id << " ";
                     }
                     std::cout << std::endl;
+                    std::cout << "Going to Forward Message 19 ["  << req_id << "]" << std::endl;
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
                 }
             }
-
-            //responder à mensagem
-            proto::kv_message reply_message;
-            auto* message_content = new proto::get_latest_version_reply_message();
-            message_content->set_ip(this->ip);
-            //message_content->set_port(this->port);
-            message_content->set_id(this->id);
-            message_content->set_version(*version);
-            message_content->set_reqid(req_id);
-            reply_message.set_allocated_get_latest_version_reply_msg(message_content);
-
-            this->reply_client(reply_message, sender_ip);
 //                std::cout << "GET REPLY Version(\033[1;31m" << this->id << "\033[0m) " << req_id << " ==================================>" << std::endl;
 
         }else{
@@ -594,6 +625,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                     std::cout << peer.id << " ";
                 }
                 std::cout << std::endl;
+                std::cout << "Going to Forward Message 20 ["  << req_id << "]" << std::endl;
                 this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
             }else{
                 std::vector<peer_data> view = this->pss_ptr->get_view();
@@ -602,6 +634,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                     std::cout << peer.id << " ";
                 }
                 std::cout << std::endl;
+                std::cout << "Going to Forward Message 21 ["  << req_id << "]" << std::endl;
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
         }

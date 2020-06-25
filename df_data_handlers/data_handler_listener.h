@@ -9,6 +9,9 @@
 #include <build/kv_message.pb.h>
 #include "df_pss/pss.h"
 #include "df_store/kv_store.h"
+#include <iostream>
+#include <random>
+#include <chrono>
 
 class data_handler_listener {
 protected:
@@ -22,6 +25,10 @@ protected:
     std::mutex socket_send_mutex;
     bool smart_forward;
     std::atomic<long> anti_entropy_req_count = 0;
+
+    //random
+    std::mt19937_64 gen;
+    std::uniform_real_distribution<float> dis;
 
 public:
     data_handler_listener(std::string ip, long id, float chance, pss* pss, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, bool smart);
