@@ -125,6 +125,8 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
             //se tenho o conteudo da chave
             //float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
             float achance = random_float(0.0, 1.0);
+            std::cout << "achance: " << achance << std::endl;
+
 //                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
             if(achance <= this->chance){
                 //a probabilidade ditou para responder à mensagem com o conteudo para a chave
@@ -298,6 +300,7 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
         if (stored) {
             //float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
             float achance = random_float(0.0, 1.0);
+            std::cout << "achance: " << achance << std::endl;
 //                std::cout << achance << " <= " << chance << std::endl;
 //                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
@@ -408,6 +411,7 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
 //                std::cout << achance << " <= " << chance << std::endl;
 //                spdlog::debug(std::to_string(achance) + " <= " + std::to_string(chance));
             float achance = random_float(0.0, 1.0);
+            std::cout << "achance: " << achance << std::endl;
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
             if (achance <= this->chance) {
                 proto::kv_message reply_message;
@@ -570,6 +574,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
             // se a chave pertence à minha slice (versão da chave >= -1)
             //float achance = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
             float achance = random_float(0.0, 1.0);
+            std::cout << "achance: " << achance << std::endl;
             if(achance <= this->chance){
                 //responder à mensagem
                 proto::kv_message reply_message;
