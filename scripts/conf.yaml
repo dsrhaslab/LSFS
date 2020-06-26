@@ -38,6 +38,8 @@ main_confs:
   mt_client_handler: true
   nr_client_handler_ths: 3
   max_nr_requests_timeouts: 1000
+  load_balancer: dynamic
+  smart_load_balancer_group_knowledge: 3
   limit_write_paralelization_to: 32k
   limit_read_paralelization_to: 32k
 

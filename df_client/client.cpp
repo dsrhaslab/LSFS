@@ -28,8 +28,14 @@ client::client(std::string boot_ip, std::string ip, long id/*, int port, int lb_
     bool mt_client_handler = main_confs["mt_client_handler"].as<bool>();
     this->wait_timeout = main_confs["client_wait_timeout"].as<long>();
     long lb_interval = main_confs["lb_interval"].as<long>();
+    auto load_balancer_type = main_confs["load_balancer"].as<std::string>();
 
-    this->lb = std::make_shared<dynamic_load_balancer>(boot_ip/*, client::lb_port*/, ip/*, lb_port*/, lb_interval);
+    if(load_balancer_type == "dynamic"){
+        this->lb = std::make_shared<dynamic_load_balancer>(boot_ip, ip, lb_interval);
+    }else if(load_balancer_type == "smart"){
+        auto load_balancer_knowledge = main_confs["smart_load_balancer_group_knowledge"].as<int>();
+        this->lb = std::make_shared<smart_load_balancer>(boot_ip, ip, lb_interval, load_balancer_knowledge);
+    }
     this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip/*, lb_port*/);
 
     this->lb_th = std::thread (std::ref(*this->lb));
