@@ -14,13 +14,11 @@
 #include <yaml-cpp/yaml.h>
 #include <boost/concept_check.hpp>
 #include <df_client/client.h>
+#include <df_util/randomizer.h>
 
 smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, long sleep_interval, std::string& config_filename):
         ip(ip), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {
-    std::random_device rd;     // only used once to initialise (seed) engine
-    this->random_eng = std::mt19937(rd());
-
     bool recovered = false;
 
     YAML::Node config = YAML::LoadFile(config_filename);
@@ -33,8 +31,7 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, lo
     this->local_interval = 5;//main_confs["local_interval_sec"].as<int>();
     this->nr_saved_peers_by_group = main_confs["smart_load_balancer_group_knowledge"].as<int>();
 
-    std::uniform_real_distribution<double> dist(0, 1);
-    this->position = dist(random_eng);
+    this->position = random_double(0.0, 1.0);
     this->nr_groups = 1;
     this->my_group = 1;
     this->cycle = 1;
@@ -282,9 +279,8 @@ peer_data smart_load_balancer::get_random_peer() {
     std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
 
     bool done = false;
-    std::uniform_int_distribution<int> uni(0, nr_groups - 1); // guaranteed unbiased
     while(!done) {
-        int group_to_send = uni(random_eng);
+        int group_to_send = random_int(0, nr_groups - 1);
         auto slice_group = this->view[group_to_send].get();
         int slice_size = slice_group->size();
         if(slice_size == 0){
@@ -292,8 +288,8 @@ peer_data smart_load_balancer::get_random_peer() {
         }else if(slice_size == 1){
             return slice_group->front();
         }else{
-            std::uniform_int_distribution<int> dist_slice(0, slice_size - 1);
-            return slice_group->at(dist_slice(random_eng));
+            int slice_idx = random_int(0, slice_size - 1);
+            return slice_group->at(slice_idx);
         }
     }
 }
@@ -302,8 +298,7 @@ peer_data smart_load_balancer::get_random_local_peer() {
     std::scoped_lock<std::recursive_mutex> lk (this->local_view_mutex);
     int local_view_size = this->local_view.size();
     if(local_view_size == 0) throw "EMPTY VIEW EXCEPTION";
-    std::uniform_int_distribution<int> uni(0, local_view_size - 1); // guaranteed unbiased
-    int peer_idx = uni(random_eng);
+    int peer_idx = random_int(0, local_view_size - 1);
     auto it = this->local_view.begin();
     for(int i = 0; i < peer_idx; i++){
         ++it;
@@ -345,8 +340,9 @@ peer_data smart_load_balancer::get_peer(const std::string& key) {
         //TODO de 50-50 sortear entre o slice_group->front() e o get_random_peer();
         return slice_group->front();
     }else{
-        std::uniform_real_distribution<double> dist(0, slice_size - 1);
-        return slice_group->at(dist(random_eng));
+        int slice_idx = random_int(0, slice_size - 1);
+        std::cout << "slice size: " << slice_size << "slice idx: " << slice_idx << std::endl;
+        return slice_group->at(slice_idx);
     }
 }
 
