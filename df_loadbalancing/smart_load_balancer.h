@@ -45,7 +45,7 @@ private:
     void split_groups_from_view();
 
 public:
-    smart_load_balancer(std::string boot_ip, std::string ip, long sleep_interval, int load_balancer_knowledge = 2);
+    smart_load_balancer(std::string boot_ip, std::string ip, long sleep_interval, std::string& config_filename);
     peer_data get_peer(const std::string& key) override;
     void receive_local_message(std::vector<peer_data> received);
     void process_msg(proto::pss_message& msg) override;

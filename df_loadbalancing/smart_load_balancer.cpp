@@ -15,9 +15,8 @@
 #include <boost/concept_check.hpp>
 #include <df_client/client.h>
 
-smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, long sleep_interval, int load_balancer_knowledge):
-        ip(ip), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0)),
-        nr_saved_peers_by_group(load_balancer_knowledge)
+smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, long sleep_interval, std::string& config_filename):
+        ip(ip), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {
     std::random_device rd;     // only used once to initialise (seed) engine
     this->random_eng = std::mt19937(rd());
@@ -32,6 +31,7 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, lo
     this->first_message = true;
     this->local = main_confs["local_message"].as<bool>();
     this->local_interval = 5;//main_confs["local_interval_sec"].as<int>();
+    this->nr_saved_peers_by_group = main_confs["smart_load_balancer_group_knowledge"].as<int>();
 
     std::uniform_real_distribution<double> dist(0, 1);
     this->position = dist(random_eng);

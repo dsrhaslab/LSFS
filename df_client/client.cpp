@@ -33,8 +33,7 @@ client::client(std::string boot_ip, std::string ip, long id/*, int port, int lb_
     if(load_balancer_type == "dynamic"){
         this->lb = std::make_shared<dynamic_load_balancer>(boot_ip, ip, lb_interval);
     }else if(load_balancer_type == "smart"){
-        auto load_balancer_knowledge = main_confs["smart_load_balancer_group_knowledge"].as<int>();
-        this->lb = std::make_shared<smart_load_balancer>(boot_ip, ip, lb_interval, load_balancer_knowledge);
+        this->lb = std::make_shared<smart_load_balancer>(boot_ip, ip, lb_interval, conf_filename);
     }
     this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip/*, lb_port*/);
 
