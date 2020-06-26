@@ -23,7 +23,7 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, lo
 
     bool recovered = false;
 
-    YAML::Node config = YAML::LoadFile("../scripts/conf.yaml");
+    YAML::Node config = YAML::LoadFile(config_filename);
     auto main_confs = config["main_confs"];
     this->replication_factor_max = main_confs["rep_max"].as<int>();
     this->replication_factor_min = main_confs["rep_min"].as<int>();
