@@ -101,7 +101,7 @@ void insert_peer_data_with_order(std::unique_ptr<std::vector<peer_data>>& view, 
     bool inserted = false;
 
     for(auto it = view->begin(); it != view->end(); ++it){
-        if(it->ip != peer.ip/*it->port == peer.port*/){
+        if(it->ip == peer.ip/*it->port == peer.port*/){
             if(it->age > peer.age)
                 it->age = peer.age;
             return;
@@ -341,7 +341,6 @@ peer_data smart_load_balancer::get_peer(const std::string& key) {
         return slice_group->front();
     }else{
         int slice_idx = random_int(0, slice_size - 1);
-        std::cout << "slice size: " << slice_size << "slice idx: " << slice_idx << std::endl;
         return slice_group->at(slice_idx);
     }
 }
