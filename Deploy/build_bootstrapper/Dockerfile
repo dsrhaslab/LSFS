@@ -1,0 +1,28 @@
+FROM cpp-build-base:0.1.0 AS build
+
+ARG GITUSER=lsfs-user-temp
+ARG GITPASS=Lsfs123User456Temp.,;
+
+RUN git clone https://${GITUSER}:${GITPASS}@github.com/danielsf97/P2P-Filesystem.git
+
+RUN cd P2P-Filesystem && git checkout server-deploy-msg-logging
+
+WORKDIR /P2P-Filesystem
+
+RUN mkdir build/ && cd build/ && \
+	cmake .. && cmake --build . --target bootstrapper_exe
+
+EXPOSE 12345
+EXPOSE 12346
+EXPOSE 12347
+
+#CMD ["./build/bootstrapper_exe", "scripts/conf.yaml"]
+
+#FROM ubuntu:bionic
+
+#WORKDIR /opt/lsfs-peer
+
+#COPY --from=build /P2P-Filesystem/build/peer_exe ./
+#COPY --from=build /P2P-Filesystem/scripts/conf.yaml ./
+
+#CMD ["./peer_exe","13350","13351","27","0.25","conf.yaml"]

@@ -1,0 +1,6 @@
+---
+
+- include: tasks.yml
+  when: tensorflow_test == True
+
+

@@ -1,0 +1,27 @@
+---
+
+- name: Reset Kubernetes component
+  shell: "kubeadm reset --force"
+  register: reset_cluster
+
+# - name: Join to Kubernetes cluster
+#   when: reset_cluster is succeeded
+#   shell: |
+#     kubeadm join --token {{ token }} \
+#                 --node-name {{ hostname_alias }}\
+#                 --discovery-token-unsafe-skip-ca-verification \
+#                 {{ master_ip }}:6443
+#   register: join_cluster
+#   notify:
+#     - Recreate kube-dns
+
+- name: Join to Kubernetes cluster
+  when: reset_cluster is succeeded
+  shell: |
+    kubeadm join --token {{ token }} \
+                --node-name sembene\
+                --discovery-token-unsafe-skip-ca-verification \
+                {{ master_ip }}:6443
+  register: join_cluster
+  notify:
+    - Recreate kube-dns

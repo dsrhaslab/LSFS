@@ -1,0 +1,150 @@
+#######################
+       In image
+#######################
+
+seq-write-1th-4k
+
+903.092: Run took 900 seconds...
+905.765: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+write1               13414175ops    14862ops/s  58.1mb/s    0.067ms/op [0.002ms - 2097.781ms]
+create1              1ops        0ops/s   0.0mb/s   22.828ms/op [22.828ms - 22.828ms]
+905.765: IO Summary: 13414176 ops 14861.682 ops/s 0/14862 rd/wr  58.1mb/s 0.067ms/op
+
+seq-read-1th-4k
+
+902.880: Run took 900 seconds...
+902.928: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read1                10018620ops    11130ops/s  43.5mb/s    0.090ms/op [0.001ms - 198.559ms]
+open1                1ops        0ops/s   0.0mb/s    3.059ms/op [3.059ms - 3.059ms]
+902.928: IO Summary: 10018621 ops 11130.419 ops/s 11130/0 rd/wr  43.5mb/s 0.090ms/op
+
+rand-read-1th-4k
+
+903.607: Run took 900 seconds...
+903.608: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read1                41573ops       46ops/s   0.2mb/s   21.641ms/op [0.009ms - 228.651ms]
+open1                1ops        0ops/s   0.0mb/s   68.991ms/op [68.991ms - 68.991ms]
+903.608: IO Summary: 41574 ops 46.188 ops/s 46/0 rd/wr   0.2mb/s 21.642ms/op
+
+#######################
+    In Docker Volume
+#######################
+
+seq-write-1th-4k
+
+902.821: Run took 900 seconds...
+904.987: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+write1               13322740ops    14788ops/s  57.8mb/s    0.067ms/op [0.002ms - 1970.596ms]
+create1              1ops        0ops/s   0.0mb/s    3.493ms/op [3.493ms - 3.493ms]
+904.987: IO Summary: 13322741 ops 14787.671 ops/s 0/14788 rd/wr  57.8mb/s 0.067ms/op
+
+seq-read-1th-4k
+
+902.814: Run took 900 seconds...
+902.875: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read1                9795740ops    10883ops/s  42.5mb/s    0.092ms/op [0.001ms - 268.912ms]
+open1                1ops        0ops/s   0.0mb/s   41.647ms/op [41.647ms - 41.647ms]
+902.875: IO Summary: 9795741 ops 10882.705 ops/s 10883/0 rd/wr  42.5mb/s 0.092ms/op
+
+rand-read-1th-4k
+
+903.912: Run took 900 seconds...
+903.912: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read1                44764ops       50ops/s   0.2mb/s   20.096ms/op [0.008ms - 308.607ms]
+open1                1ops        0ops/s   0.0mb/s   89.458ms/op [89.458ms - 89.458ms]
+903.912: IO Summary: 44765 ops 49.733 ops/s 50/0 rd/wr   0.2mb/s 20.097ms/op
+
+
+removi o docker-py e instalei o docker com o pip
+
+#######################
+        Local
+#######################
+
+seq-write-1th-4k
+
+901.761: Run took 900 seconds...
+903.547: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+write1               13443276ops    14935ops/s  58.3mb/s    0.066ms/op [0.002ms - 2718.682ms]
+create1              1ops        0ops/s   0.0mb/s    0.102ms/op [0.102ms - 0.102ms]
+
+seq-read-1th-4k
+
+901.744: Run took 900 seconds...
+901.766: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read1                10775225ops    11971ops/s  46.8mb/s    0.083ms/op [0.001ms - 238.571ms]
+open1                0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+901.766: IO Summary: 10775225 ops 11970.983 ops/s 11971/0 rd/wr  46.8mb/s 0.083ms/op
+
+
+901.842: Run took 900 seconds...
+901.913: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read1                10353596ops    11501ops/s  44.9mb/s    0.087ms/op [0.001ms - 205.239ms]
+open1                1ops        0ops/s   0.0mb/s    0.035ms/op [0.035ms - 0.035ms]
+901.913: IO Summary: 10353597 ops 11501.467 ops/s 11501/0 rd/wr  44.9mb/s 0.087ms/op
+
+901.789: Run took 900 seconds...
+901.822: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read1                7438140ops     8263ops/s  32.3mb/s    0.121ms/op [0.001ms - 115.140ms]
+open1                0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+901.822: IO Summary: 7438140 ops 8263.169 ops/s 8263/0 rd/wr  32.3mb/s 0.121ms/op
+
+rand-read-1th-4k
+
+901.804: Run took 900 seconds...
+901.804: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read1                48546ops       54ops/s   0.2mb/s   18.535ms/op [0.001ms - 321.686ms]
+open1                1ops        0ops/s   0.0mb/s    0.045ms/op [0.045ms - 0.045ms]
+901.804: IO Summary: 48547 ops 53.934 ops/s 54/0 rd/wr   0.2mb/s 18.535ms/op
+
+901.757: Run took 900 seconds...
+901.758: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read1                47558ops       53ops/s   0.2mb/s   18.920ms/op [0.002ms - 255.208ms]
+open1                0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+901.758: IO Summary: 47558 ops 52.836 ops/s 53/0 rd/wr   0.2mb/s 18.920ms/op
+
+901.778: Run took 900 seconds...
+901.778: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read1                41858ops       47ops/s   0.2mb/s   21.497ms/op [0.002ms - 207.521ms]
+open1                1ops        0ops/s   0.0mb/s    0.044ms/op [0.044ms - 0.044ms]
+901.778: IO Summary: 41859 ops 46.505 ops/s 47/0 rd/wr   0.2mb/s 21.496ms/op
+
+#######################
+    Kubernetes IO
+#######################
+
+seq-write-1th-4k
+
+902.825: Run took 900 seconds...
+905.170: Per-Operation Breakdown
+finish1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close1               0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+write1               13416722ops    14874ops/s  58.1mb/s    0.066ms/op [0.002ms - 2100.304ms]
+create1              1ops        0ops/s   0.0mb/s    5.748ms/op [5.748ms - 5.748ms]
+905.170: IO Summary: 13416723 ops 14873.709 ops/s 0/14874 rd/wr  58.1mb/s 0.066ms/op

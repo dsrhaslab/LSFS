@@ -1,0 +1,31 @@
+---
+
+- name: Send Config File to Peer Nodes
+  hosts: peer
+  tasks:
+    - name: Put Config File in Shared (Volume) directory
+      copy:
+        src: conf.yaml
+        dest: "/home/{{ ansible_user }}/share-dir"
+
+- name: Creation of Bootstrapper and Peer Pods
+  hosts: master
+  roles:
+    - bootstrapper
+    - { role: peers, nr_peers: "{{ nr_of_peers }}", share_dir_path: "/home/{{ ansible_user }}/share-dir" }
+
+- name: Save Bootstrapper Ip to file
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  tasks:
+    - name: Remove previous bootstrapper ip file if exists
+      file:
+        path: bootstrapper_ip
+        state: absent
+
+    - name: Create file with bootstrapper ip
+      lineinfile:
+        path: bootstrapper_ip
+        line: "{{ bootstrapper_ip }}"
+        create: yes

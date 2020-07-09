@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "peer{{ item.0 }}"
+  namespace: lsfs
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: lsfs-component
+            operator: In
+            values:
+            - "peer{{ item.2 }}"
+            - node
+  containers:
+  - name: peer-container
+    image: lsfsusertemp/lsfs-testing:peer_debug_message
+    command: ["/bin/sh", "-c"]
+    #args: ["sleep infinity"]
+    args: ["./build/peer_exe {{ item.0 }} {{ item.1 }} /share-dir/conf.yaml {{ bootstrapper_ip }}"]
+    volumeMounts:
+    - mountPath: /share-dir
+      name: peer-volume
+  volumes:
+  - hostPath:
+      path: "{{ share_dir_path }}"
+    name: peer-volume

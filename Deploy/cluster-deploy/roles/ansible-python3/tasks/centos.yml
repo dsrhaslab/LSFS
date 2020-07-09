@@ -1,0 +1,59 @@
+---
+- name: Install requirements for package install
+  block:
+    - name: Install system packages
+      become: true
+      yum:
+        name:
+          - python-setuptools
+          - python3
+          - python3-devel
+          - python3-pip
+        state: present
+
+    - name: Install Python utilities
+      become: true
+      pip:
+        name:
+          - virtualenv
+        state: present
+        executable: pip3
+
+    - name: Set system facts
+      set_fact:
+        python3_command: python3.6
+
+    # Have to use `shell` here because `type` is a builtin.
+    # TODO: Surely there's a module for this?
+    - name: Find installed executable
+      shell: "type -p {{ python3_command }}"  # noqa 305
+      register: python3_which
+      changed_when: false
+
+    - name: Link executable to generic name
+      become: true
+      file:
+        src: "{{ python3_which.stdout }}"
+        dest: "{{ python3_which.stdout|dirname }}/python3"
+        state: link
+
+  when: python3_pyenv == None
+
+
+- name: Install requirements for pyenv install
+  yum:
+    name:
+      - bzip2-devel
+      - bzip2-libs
+      - gcc
+      - git
+      - make
+      - openssl-devel
+      - openssl-static
+      - readline-devel
+      - readline-static
+      - sqlite-devel
+      - zlib-devel
+    state: present
+  when: python3_pyenv != None
+  become: true

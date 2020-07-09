@@ -1,0 +1,117 @@
+- name: Create Bootstrapper Pod
+  k8s:
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/gsd/.kube/config
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: bootstrapper
+        namespace: lsfs
+        labels:
+          lsfs: bootstrapper
+      spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: lsfs-component
+                  operator: In
+                  values:
+                  - bootstrapper
+                  - node
+        containers:
+        - name: bootstrapper-container
+          #image: lsfsusertemp/lsfs-testing:bootstrapper1
+          image: lsfsusertemp/lsfs-testing:bootstrapper_debug_message
+          command: ["./build/bootstrapper_exe", "scripts/conf.yaml"]
+        # nodeSelector: #selector ?
+        #   lsfs-component: bootstrapper #node
+        ports: [
+          {
+            containerPort: 12345,
+            protocol: TCP
+          },
+          {
+            containerPort: 12346,
+            protocol: TCP
+          },
+          {
+            containerPort: 12347,
+            protocol: TCP
+          }
+        ]               #- protocol: TCP
+        #- containerPort: 12345
+        #- containerPort: 12346
+  register: bootstrapper_container
+
+#- name: Create Service
+#  k8s:
+#    kubeconfig: /home/gsd/.kube/config
+#    state: present
+#    definition:
+#      apiVersion: v1
+#      kind: Service
+#      metadata:
+#        namespace: lsfs
+#        name: bootstrapper-service
+#      spec:
+#        selector:
+#          lsfs: bootstrapper
+#        ports:
+#        - name: port-12345 
+#          port: 12345
+#          targetPort: 12345
+#        - name: port-12346
+#          port: 12346
+#          targetPort: 12346
+
+- name: Get a list of all pods from any namespace
+  k8s_info:
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/gsd/.kube/config
+    namespace: lsfs
+    api_version: v1
+    name: bootstrapper
+    kind: Pod
+  register: bootstrapper_pod
+  retries: 10
+  until: bootstrapper_pod.resources[0].status.podIPs is defined
+
+#- name: wait for pods to come up
+#  shell: kubectl get pods -o json --namespace=lsfs
+#  register: kubectl_get_pods
+#  until: kubectl_get_pods.stdout|from_json|json_query('items[*].status.phase')|unique == ["Running"]
+
+
+#- name: Wait for bootstrapper pod become ready
+#  shell: "kubectl wait --namespace=lsfs --kubeconfig=/home/gsd/.kube/config --for=condition=Ready pods bootstrapper"
+
+- debug:
+    var: bootstrapper_pod
+
+- name: Setting Bootstrapper Ip fact
+  set_fact:
+    bootstrapper_ip: "{{ bootstrapper_pod.resources[0].status.podIPs[0].ip }}"
+
+- name: Setting Bootstrapper Ip fact
+  set_fact:
+    bootstrapper_ip: "{{ bootstrapper_pod.resources[0].status.podIPs[0].ip }}"
+  delegate_to: 127.0.0.1
+  delegate_facts: true
+
+
+#- name: Create and Start Bootstrapper
+#  docker_container:
+#    name: bootstrapper
+#    state: started
+#    image: bootstrapper:0.1.0
+#    command: ["./build/bootstrapper_exe", "scripts/conf.yaml"]
+#  register: bootstrapper_container
+
+#- debug:
+#    var: bootstrapper_container.ansible_facts.docker_container.NetworkSettings.IPAddress
+
+#- name: Setting Bootstrapper Ip fact
+#  set_fact:
+#    bootstrapper_ip: "{{bootstrapper_container.ansible_facts.docker_container.NetworkSettings.IPAddress}}"

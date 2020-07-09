@@ -1,0 +1,30 @@
+- name: Get Peers Positions
+  shell: "if [ {{ nr_peers }} -gt 1 ]; then step=`bc -l <<< 'scale=6; 1/{{ nr_peers - 1 }}'`;for i in `seq 0 ${step} 1`; do echo $i; done; else echo 1; fi;"
+  args:
+    executable: /bin/bash
+  register: result
+
+- debug:
+    msg: "{{ item.replace(',', '.') }}"
+  with_items:
+  - "{{ result.stdout_lines }}"
+
+- name: Create Peer Pod
+  when: (free_database is not defined) or (free_database|bool == false)
+  k8s:
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/gsd/.kube/config 
+    state: present
+    definition: "{{ lookup('template', '{{ role_path }}/templates/peer.yml.j2') }}"
+  with_together:
+    - "{{ range(1, nr_peers + 1) | list }}"
+    - "{{ result.stdout_lines }}"
+
+- name: Create Peer Pod
+  when: (free_database is defined) and (free_database|bool == true)
+  k8s:
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/gsd/.kube/config 
+    state: present
+    definition: "{{ lookup('template', '{{ role_path }}/templates/peer_clear_dbs.yml.j2') }}"
+  with_together:
+    - "{{ range(1, nr_peers + 1) | list }}"
+    - "{{ result.stdout_lines }}"

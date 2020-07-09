@@ -1,0 +1,19 @@
+---
+
+- name: Creates Volume Mount Directory
+  file:
+    path: "{{ volume_mount }}"
+    state: directory
+  ignore_errors: yes
+
+- name: Creates Mount Directory I
+  file:
+    path: "{{ volume_mount }}/mount"
+    state: directory
+  ignore_errors: yes
+
+- name: Creates Mount Directory
+  file:
+    path: "{{ volume_mount }}/backend"
+    state: directory
+  ignore_errors: yes

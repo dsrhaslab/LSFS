@@ -1,0 +1,59 @@
+- name: Download fuse-3.9.1.tar.xz
+  get_url:
+    url: https://github.com/libfuse/libfuse/releases/download/fuse-3.9.1/fuse-3.9.1.tar.xz
+    dest: /home/fuse-3.9.1.tar.xz
+    mode: '0440'
+
+- name: Extract fuse tarball
+  unarchive:
+    src: /home/fuse-3.9.1.tar.xz
+    dest: /home
+    remote_src: yes
+
+- name: Update repositories cache and install udev
+  when: ansible_os_family == "Debian"
+  apt:
+    name: udev
+    update_cache: yes
+
+- name: Update repositories cache and install meson
+  when: ansible_os_family == "Debian"
+  apt:
+    name: meson
+
+- name: Disables the installation of a boot script and udev rule that are not needed.
+  shell: sed -i '/^udev/,$ s/^/#/' util/meson.build
+  args:
+    chdir: /home/fuse-3.9.1
+
+- name: Create a directory if it does not exist
+  file:
+    path: /home/fuse-3.9.1/build
+    state: directory
+    mode: '0755'
+
+- name: Run Meson
+  shell: meson --prefix=/usr ..
+  args:
+    chdir: /home/fuse-3.9.1/build
+
+- name: Run Ninja
+  shell: ninja
+  args:
+    chdir: /home/fuse-3.9.1/build
+
+- name: Run Ninja Install
+  shell: ninja install
+  args:
+    chdir: /home/fuse-3.9.1/build
+
+- name: Remove fuse directory
+  file:
+    path: /home/fuse-3.9.1
+    state: absent
+
+- name: Remove fuse tarball
+  file:
+    path: /home/fuse-3.9.1.tar.xz
+    state: absent
+

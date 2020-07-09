@@ -1,0 +1,14 @@
+gkename: gkeclus
+initial_node_count: 2
+preemptible: yes
+username: admin
+password: Lsfs123Temp456User.,;
+machine_type: n1-standard-1
+disk_size_gb: 12
+zone: 'us-east1-b'
+project: dflasks
+auth_kind: serviceaccount
+service_account_file: credentials.json
+# gke node pool
+npname: gkeclus-pool
+image_type: ubuntu
