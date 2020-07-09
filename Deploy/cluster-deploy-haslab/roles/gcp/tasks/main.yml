@@ -1,0 +1,177 @@
+- name: Create boot disk
+  gcp_compute_disk:
+    name: "disk-{{ type_of_component }}-{{ item }}"
+    size_gb: "{{ boot_disk_size }}"
+    source_image: "{{ source_image }}"
+    zone: "{{ gcp_zone }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    state: present
+  register: disk
+  with_sequence: start=1 end="{{ nr_of_machines }}"
+
+- name: Create a network
+  gcp_compute_network:
+    name: "lsfs-network"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    state: present
+  register: network
+
+#- name: Create an address
+#  gcp_compute_address:
+#    name: "address-{{ type_of_component }}-{{ item }}"
+#    region: "{{ gcp_region }}"
+#    project: "{{ gcp_project }}"
+#    auth_kind: "{{ gcp_cred_kind }}"
+#    service_account_file: "{{ gcp_cred_file }}"
+#    network_tier: "STANDARD"                     #added recently
+#    state: present
+#  register: address
+#  with_sequence: start=1 end="{{ nr_of_machines }}"
+
+- name: Internal/external firewall rules
+  gcp_compute_firewall:
+    name: "internal-external-rules"
+    allowed:
+      - ip_protocol: tcp
+        ports:
+          - 22
+          - 80
+      - ip_protocol: icmp
+    network: 
+      selfLink: "global/networks/{{ network.name }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    state: present
+
+- name: Internal firewall rules
+  gcp_compute_firewall:
+    name: "internal-rules"
+    allowed:
+      - ip_protocol: tcp
+        ports:
+          - 3306
+          - 5000
+          - 9200
+          - 9300
+          - 6443
+      - ip_protocol: 112
+      - ip_protocol: udp
+    source_ranges:
+      - 10.128.0.0/9
+    network: 
+      selfLink: "global/networks/{{ network.name }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    state: present
+
+- name: Create a weaker instance
+  when: ssd_disk_type is not defined
+  gcp_compute_instance:
+    name: "instance-{{ type_of_component }}-{{ '%04d' | format(item | int) }}"
+    machine_type: "{{ gcp_machine_type }}"
+    can_ip_forward: true
+    service_accounts:
+      - scopes: 
+         - "{{ gcp_account_scope }}"
+        email: "{{ gcp_account_email }}"
+    disks:
+      - auto_delete: true
+        boot: true
+        source: "{{ disk.results[item | int - 1] }}"
+    metadata:
+      startup-script: |
+        #!/bin/bash
+        ls
+    tags:
+      items: "{{ tags }}"
+    network_interfaces:
+      - network: "{{ network }}"
+        access_configs:
+        - name: External NAT
+#          nat_ip: "{{ address.results[item- 1] }}"
+          type: ONE_TO_ONE_NAT
+    scheduling:
+      preemptible: no
+    zone: "{{ gcp_zone }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    state: present
+  register: weaker_instance
+  with_sequence: start=1 end="{{ nr_of_machines }}" format=%d
+
+- name: Create a stronger instance
+  when: ssd_disk_type is defined
+  gcp_compute_instance:
+    name: "instance-{{ type_of_component }}-{{ '%04d' | format(item | int) }}"
+    machine_type: "{{ gcp_machine_type }}"
+    can_ip_forward: true
+    service_accounts:
+      - scopes: 
+         - "{{ gcp_account_scope }}"
+        email: "{{ gcp_account_email }}"
+    disks:
+      - auto_delete: true
+        boot: true
+        source: "{{ disk.results[item | int - 1] }}"
+#      - auto_delete: true
+#        boot: false
+#        initialize_params:
+#          disk_type: "{{ ssd_disk_type }}"
+#        interface: "{{ ssd_disk_interface }}"
+#        type: "SCRATCH" # "PERSISTENT"
+#    guest_accelerators:
+#      - accelerator_count: 1
+#        accelerator_type: "{{ gpu_type }}"
+    metadata:
+      startup-script: |
+        #!/bin/bash
+        ls
+    tags:
+      items: "{{ tags }}"
+    network_interfaces:
+      - network: "{{ network }}"
+        access_configs:
+        - name: External NAT
+#          nat_ip: "{{ address.results[item- 1] }}"
+          type: ONE_TO_ONE_NAT
+    scheduling:
+      preemptible: false
+      on_host_maintenance: "terminate"
+      automatic_restart: true
+    zone: "{{ gcp_zone }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    state: present
+  register: stronger_instance
+  with_sequence: start=1 end="{{ nr_of_machines }}" format=%d
+
+- name: Add weaker instance hosts to in memory inventory
+  when: ssd_disk_type is not defined
+  add_host:
+    name: "{{ item.networkInterfaces[0].accessConfigs[0].natIP }}"
+    groups: "{{ item.tags['items'] | join(',') }}"
+    hostname_alias: "{{ item.name }}" 
+  loop: "{{ weaker_instance.results }}"
+
+- name: Add stronger instance hosts to in memory inventory
+  when: ssd_disk_type is defined
+  add_host:
+    name: "{{ item.networkInterfaces[0].accessConfigs[0].natIP }}"
+    groups: "{{ item.tags['items'] | join(',') }}"
+    hostname_alias: "{{ item.name }}" 
+  loop: "{{ stronger_instance.results }}"
+
+
+- name: Wait for instances to respond
+  wait_for:
+    host: "{{ item }}"
+    port: 22
+  loop: "{{ groups['all'] }}"

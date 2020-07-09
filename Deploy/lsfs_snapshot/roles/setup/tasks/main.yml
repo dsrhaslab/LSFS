@@ -1,0 +1,14 @@
+---
+
+- name: Install google-auth python module
+  pip:
+    name: google-auth
+
+- name: Install boto python module
+  pip:
+    name: boto
+
+# - name: Copy service account file to node
+#   copy:
+#     src: "{{ service_account_file }}"
+#     dest: "{{ service_account_file }}"

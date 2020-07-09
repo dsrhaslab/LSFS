@@ -1,0 +1,13 @@
+---
+
+- name: Taking Snapshot of lsfs network
+  hosts: peer
+  gather_facts: yes
+  become: no
+  vars:
+    service_account_file: "credentials.json" 
+  roles:
+    - snapshot
+
+
+

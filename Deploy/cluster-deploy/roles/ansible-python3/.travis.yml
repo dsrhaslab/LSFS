@@ -1,0 +1,28 @@
+## Travis CI configuration for the python3 Ansible role.
+##
+##  <https://travis-ci.org/mdklatt/ansible-python3-role>
+##
+language: python
+
+python:
+  - "3.8"
+
+branches:
+  only:
+    - master
+    - dev
+
+services:
+  - docker
+
+install:
+  - python -m pip install -r molecule/requirements.txt
+
+script:
+  - ansible --version
+  - molecule --version
+  - molecule test --all
+
+notifications:
+  webhooks:
+    - https://galaxy.ansible.com/api/v1/notifications/

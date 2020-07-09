@@ -1,0 +1,9 @@
+---
+
+- name: Install google-auth python module
+  pip:
+    name: google-auth
+
+- name: Install boto python module
+  pip:
+    name: boto

@@ -1,0 +1,6 @@
+---
+# defaults file for sysctl
+
+sysctl_ignore_errors: "yes"
+
+sysctl_rules: {}

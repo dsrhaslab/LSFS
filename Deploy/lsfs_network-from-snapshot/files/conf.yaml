@@ -1,0 +1,68 @@
+main_confs:
+  nr_peers: 1
+  view_size: 8
+  gossip_size: 7
+  message_passing_interval_sec: 10
+  exec_time_sec: 100000000
+  base_port: 12350
+  peer_instantiation_interval_sec: 0.01
+  view_logger_enabled: true
+  log_interval_sec: 5
+  logging_dir: /P2P-Filesystem/logging/
+  results_dir: /P2P-Filesystem/results/
+  database_base_path: /share-dir/
+  rep_max: 10
+  rep_min: 5
+  max_age: 40
+  local_message: true
+  local_interval_sec: 8
+  anti_entropy_interval_sec: 20
+  reply_chance: 1
+  smart: true
+  mt_data_handler: true
+  log_level: off
+  seen_log_garbage_at: 1000
+  request_log_garbage_at: 1000
+  anti_entropy_log_garbage_at: 1000
+  warmup_interval: 120
+  restart_database_after_warmup: false
+
+  ######################################
+  #               Client               #
+  ######################################
+
+  nr_puts_required: 3
+  nr_gets_required: 3
+  nr_gets_version_required: 3
+  client_wait_timeout: 5
+  mt_client_handler: true
+  nr_client_handler_ths: 3
+  max_nr_requests_timeouts: 1000
+  limit_write_paralelization_to: 32k
+  limit_read_paralelization_to: 32k
+
+  ######################################
+
+  lb_interval: 5
+  draw_graph: False
+  graph_labels: False
+simulation:
+  configuration:
+          #    - execution_type: constant
+      #      time_start_sec: 300
+      #      time_end_sec: 500
+      #      time_interval_sec: 50
+      #      churn_op_type: substitute
+      #      percentage: 10
+#    - execution_type: constant
+#      time_start_sec: 800
+#      time_end_sec: 1100
+#      time_interval_sec: 10
+#      churn_op_type: substitute
+#      percentage: 10
+#    - execution_type: constant
+#      time_start_sec: 1100
+#      time_end_sec: 1500
+#      time_interval_sec: 10
+#      churn_op_type: substitute
+#      percentage: 30

@@ -1,0 +1,7 @@
+---
+
+- name: Creates Share Directory
+  file:
+    path: "{{ share_dir_path }}"
+    state: directory
+

@@ -1,0 +1,13 @@
+---
+
+- name: Setup python3.8 as tensorflow default
+  shell:
+    cmd: "pyenv local {{ python3_version }}"
+    chdir: "/home/{{ ansible_user }}/tensorflow/"
+  environment:
+    PATH: "{{ ansible_env.PATH }}:/home/{{ ansible_user }}/.pyenv/bin"
+
+- name: Install need packages for tensorflow
+  shell:
+    cmd: bash -lc "./train-official-model.sh setup-machine >> ola.txt"
+    chdir: "/home/{{ ansible_user }}/tensorflow/"

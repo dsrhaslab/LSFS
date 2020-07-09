@@ -1,0 +1,56 @@
+- name: Get Peers Positions
+  shell: "if [ {{ nr_peers }} -gt 1 ]; then step=`bc -l <<< 'scale=6; 1/{{ nr_peers - 1 }}'`;for i in `seq 0 ${step} 1`; do echo $i; done; else echo 1; fi;"
+  args:
+    executable: /bin/bash
+  register: result
+
+- debug:
+    msg: "{{ item.replace(',', '.') }}"
+  with_items:
+  - "{{ result.stdout_lines }}"
+
+- name: Create Peer Pod
+  k8s:
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/gsd/.kube/config 
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: "peer{{ item.0 }}"
+        namespace: lsfs
+      spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: lsfs-component
+                  operator: In
+                  values:
+                  - "peer{{ item.0 }}"
+                  - node
+      spec:
+        containers:
+        - name: peer-container
+          image: lsfsusertemp/lsfs-testing:peer_debug_message
+        #  image: lsfsusertemp/lsfs-testing:peer1
+        #  command: ["sleep", "infinity"]
+          command: ["./build/peer_exe", "{{ item.0 }}", "{{ item.1.replace(',', '.') }}", "/share-dir/conf.yaml", "{{ bootstrapper_ip }}", "--no-recover"]
+          volumeMounts:
+          - mountPath: /share-dir
+            name: peer-volume
+        volumes:
+        - hostPath:
+            path: "{{ share_dir_path }}"
+          name: peer-volume
+        nodeSelector:
+          lsfs-component: "peer{{ item.0 }}" #node
+        #ports:
+        #- protocol: TCP
+        #  targetPort: 8000
+        #  name: port-8000-tcp
+        #  port: 8000
+  with_together:
+    - "{{ range(1, nr_peers + 1) | list }}"
+    - "{{ result.stdout_lines }}"

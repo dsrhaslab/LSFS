@@ -1,0 +1,8 @@
+---
+
+- name: gcp_container_cluster - Creates a GCP Cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+   - gke

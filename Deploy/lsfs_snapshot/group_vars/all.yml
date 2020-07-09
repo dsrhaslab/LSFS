@@ -1,0 +1,70 @@
+# Ansible
+ansible_user: gsd
+
+#Network Config
+bootstrapper_boot_disk_size: 10
+bootstrapper_machine_type: g1-small
+bootstrapper_lsfs_component: "bootstrapper"
+
+nr_of_peers: 4
+peer_boot_disk_size: 10
+peer_machine_type: g1-small
+peer_lsfs_component: "peer"
+
+kubernetes_master_boot_disk_size: 12
+kubernetes_master_machine_type: n1-standard-2
+kubernetes_master_lsfs_component: "master"
+
+nr_of_client_nodes: 1
+client_machine_type: n1-standard-2 #n1-standard-4
+client_lsfs_component: "client"
+client_boot_disk_size: 10
+client_ssd_disk_type: local-ssd
+client_ssd_disk_interface: "NVME"
+client_gpu_type: projects/dflasks/zones/us-east1-d/acceleratorTypes/nvidia-tesla-t4
+
+
+# Kubernetes
+kube_version: v1.16.3
+token: b0f7b8.8d1767876297d85c
+ansible_python_interpreter: /usr/bin/python3
+
+# 1.8.x feature: --feature-gates SelfHosting=true
+init_opts: ""
+
+# Any other additional opts you want to add..
+kubeadm_opts: ""
+# For example:
+# kubeadm_opts: '--apiserver-cert-extra-sans "k8s.domain.com,kubernetes.domain.com"'
+
+service_cidr: "10.96.0.0/12"
+pod_network_cidr: "10.244.0.0/16"
+
+# Network implementation('flannel', 'calico', 'canal')
+network: flannel
+
+# Change this to an appropriate interface, preferably a private network.
+# For example, on DigitalOcean, you would use eth1 as that is the default private network interface.
+network_interface: ""
+
+enable_dashboard: no
+
+# A list of insecure registries you might need to define
+# insecure_registries: []
+insecure_registries: ['gcr.io']
+
+systemd_dir: /lib/systemd/system
+system_env_dir: /etc/sysconfig
+network_dir: /etc/kubernetes/network
+kubeadmin_config: /etc/kubernetes/admin.conf
+kube_addon_dir: /etc/kubernetes/addon
+
+# Additional feature to install
+additional_features:
+  helm: false
+  metallb: false
+  healthcheck: false
+
+# temporary directory used by additional features
+tmp_dir: /tmp/kubeadm-ansible-files
+

@@ -1,0 +1,4 @@
+# Ansible
+ansible_user: danielsf97
+
+resources_dir: "/home/danielsf97/tensorflow/resources"
