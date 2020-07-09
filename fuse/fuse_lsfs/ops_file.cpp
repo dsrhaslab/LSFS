@@ -87,14 +87,6 @@ int lsfs_impl::_create(
         return_value = create_or_open(true, path, mode, fi);
     }
 
-//    if (path){
-//        logger->info("CREATE " + std::string(path));
-//        logger->flush();
-//    }else{
-//        logger->info("CREATE FD:");
-//        logger->flush();
-//    }
-
     fuse_pt_unimpersonate();
 
     return return_value;
@@ -141,27 +133,11 @@ int lsfs_impl::_open(
         return_value = create_or_open(false, path, 0, fi);
     }
 
-//    if (path){
-//        logger->info("OPEN " + std::string(path));
-//        logger->flush();
-//    }else{
-//        logger->info("OPEN");
-//        logger->flush();
-//    }
-
     return return_value;
 }
 
 int lsfs_impl::_flush(const char *path, struct fuse_file_info *fi){
     const int fd = (int)fi->fh;
-
-//    if (path){
-//        logger->info("FLUSH " + std::string(path) + " FD:" + std::to_string(fd));
-//        logger->flush();
-//    }else{
-//        logger->info("FLUSH FD:" + std::to_string(fd));
-//        logger->flush();
-//    }
 
     (void)path;
 
@@ -179,14 +155,6 @@ int lsfs_impl::_release(
 {
     const int fd = (int)fi->fh;
 
-//    if (path){
-//        logger->info("RELEASE " + std::string(path) + " FD:" + std::to_string(fd));
-//        logger->flush();
-//    }else{
-//        logger->info("RELEASE FD:" + std::to_string(fd));
-//        logger->flush();
-//    }
-
     (void)path;
 
     if(!is_temp_file(path)) {
@@ -202,14 +170,6 @@ int lsfs_impl::_fsync(
 )
 {
     const int fd = (int)fi->fh;
-
-//    if (path){
-//        logger->info("FSYNC " + std::string(path));
-//        logger->flush();
-//    }else{
-//        logger->info("FSYNC " + std::to_string(fd));
-//        logger->flush();
-//    }
 
     (void)path;
 
@@ -234,14 +194,6 @@ int lsfs_impl::_read(
         struct fuse_file_info *fi
 )
 {
-//    if (path){
-//        logger->info("READ " + std::string(path) + " SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset));
-//        logger->flush();
-//    }else{
-//        logger->info("READ SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset));
-//        logger->flush();
-//    }
-
     (void)path;
 
     size_t bytes_count;
@@ -451,13 +403,6 @@ int lsfs_impl::_write(
 //    struct fuse_file_info *fi
 //    )
 //{
-//    if (path){
-//        logger->info("READBUF " + std::string(path) + " SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset));
-//        logger->flush();
-//    }else{
-//        logger->info("READBUF SIZE:" + std::to_string(size) + " OFFSET" + std::to_string(offset));
-//        logger->flush();
-//    }
 //
 //    (void)path;
 //
@@ -500,12 +445,7 @@ int lsfs_impl::_write(
 //        if(it != file_handlers.end()){
 //            std::string file_path = it->second;
 //
-//            logger->info("WRITEBUF " + file_path + " OFFSET " + std::to_string(offset));
-//            logger->flush();
-//
 //            if(!is_temp_file(file_path)){
-//                logger->info("WRITEBUF - Não é temporário");
-//                logger->flush();
 //
 //                dst.buf[0].flags = static_cast<fuse_buf_flags>(/*FUSE_BUF_IS_FD |*/ FUSE_BUF_FD_SEEK);
 //                dst.buf[0].mem   = (char*) malloc(sizeof(char) * buf->buf[0].size);
@@ -531,9 +471,6 @@ int lsfs_impl::_write(
 //    dst.buf[0].pos   = offset;
 //
 //    auto return_value = fuse_buf_copy(&dst, buf, FUSE_BUF_SPLICE_NONBLOCK);
-//
-//    logger->info("WRITEBUF OFFSET " + std::to_string(offset) + " FH: " + std::to_string(fd));
-//    logger->flush();
 //
 //    return return_value;
 //}

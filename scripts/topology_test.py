@@ -16,7 +16,6 @@ import random
 import shutil
 import argparse
 import yaml
-import time
 import pickle
 import numpy
 

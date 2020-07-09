@@ -8,10 +8,14 @@
 #include <df_core/peer.h>
 #include "data_handler_listener_st.h"
 
-data_handler_listener_st::data_handler_listener_st(std::string ip, long id, float chance, pss *pss, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, bool smart)
-        : data_handler_listener(std::move(ip), id, chance, pss, group_c, std::move(store), smart), socket_rcv(socket(AF_INET, SOCK_DGRAM, 0)){}
+data_handler_listener_st::data_handler_listener_st(std::string ip, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
+        : data_handler_listener(std::move(ip), id, chance, pss, group_c, anti_ent, std::move(store), smart), socket_rcv(socket(AF_INET, SOCK_DGRAM, 0)){}
 
 void data_handler_listener_st::operator()() {
+
+    //wait for database to recover
+    this->anti_ent_ptr->wait_while_recovering();
+
     this->running = true;
 
     struct sockaddr_in si_me, si_other;
@@ -30,8 +34,6 @@ void data_handler_listener_st::operator()() {
 
         if(this->running){
             try {
-                std::cout << "Rcv Msg from " << inet_ntoa(si_other.sin_addr) << std::endl;
-
                 proto::kv_message msg;
                 msg.ParseFromArray(buf, bytes_rcv);
 

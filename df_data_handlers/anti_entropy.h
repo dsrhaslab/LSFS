@@ -9,7 +9,8 @@
 #include <atomic>
 #include <kv_message.pb.h>
 #include "df_pss/pss.h"
-
+#include <mutex>
+#include <condition_variable>
 
 class anti_entropy{
 
@@ -27,13 +28,17 @@ private:
     int sender_socket;
     std::string ip;
     long id;
-    Phase phase;
     bool recover_database;
+
+    std::mutex phase_mutex;
+    std::condition_variable phase_cv;
+    Phase phase;
 
 public:
     anti_entropy(std::string ip, long id, pss* pss_ptr, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, long sleep_interval, bool recover_database);
     void operator()();
     void stop_thread();
+    void wait_while_recovering();
 
 private:
     void phase_starting();

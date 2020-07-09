@@ -65,8 +65,7 @@ dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip/*, int boot_por
             this->view = std::move(view_rcv);
 
         }catch(const char* e){
-            spdlog::error(e);
-//            std::cout << e << std::endl;
+            std::cout << e << std::endl;
         }catch(...){}
     }
 }
@@ -117,13 +116,10 @@ void dynamic_load_balancer::send_msg(peer_data& target_peer, proto::pss_message&
         int res = sendto(this->sender_socket, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
         if(res == -1){
-            spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
-
-//                printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
+            printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
         }
     }catch(...){
-        spdlog::error("=============================== Não consegui enviar =================");
-//            std::cout <<"=============================== Não consegui enviar =================" << std::endl;
+        std::cout <<"=============================== Não consegui enviar =================" << std::endl;
     }
 }
 

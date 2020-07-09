@@ -83,8 +83,7 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, lo
             auto temp_group = std::make_unique<std::vector<peer_data>>(std::move(view_rcv));
             this->view.push_back(std::move(temp_group));
         }catch(const char* e){
-            spdlog::error(e);
-//            std::cout << e << std::endl;
+            std::cout << e << std::endl;
         }catch(...){}
     }
 }

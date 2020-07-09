@@ -48,6 +48,9 @@ private:
     //int port;
     const char* ip;
 
+private:
+    void clear_fila();
+
 public:
     BootstrapperImpl(int viewsize, const char* ip/*, int port*/);
     void run();

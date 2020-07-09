@@ -100,19 +100,26 @@ namespace tcp_client_server_connection{
             // socket has something to read
             uint16_t msg_size;
             recv(this->f_socket, &msg_size, sizeof(uint16_t), 0);
-            int recv_size = recv(this->f_socket, buf, msg_size, 0);
-            if (recv_size == -1)
-            {
-                throw SocketReadException();
+            int total_size = 0;
+            while(total_size < msg_size){
+
+                int recv_size = recv(this->f_socket, &buf[total_size], msg_size - total_size, 0);
+
+                if (recv_size == -1)
+                {
+                    throw SocketReadException();
+                }
+                else if (recv_size == 0)
+                {
+                    throw PeerDisconnectedException();
+                }
+                else
+                {
+                    total_size += recv_size;
+                }
             }
-            else if (recv_size == 0)
-            {
-                throw PeerDisconnectedException();
-            }
-            else
-            {
-                return recv_size;
-            }
+
+            return msg_size;
         }
     }
 

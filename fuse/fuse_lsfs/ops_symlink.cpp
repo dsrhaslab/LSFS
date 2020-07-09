@@ -14,9 +14,6 @@ int lsfs_impl::_symlink(
     const char *from, const char *to
     )
 {
-//    logger->info("SYMLINK FROM:" + std::string(from) + " TO:" + std::string(to));
-//    logger->flush();
-
     if (!fuse_pt_impersonate_calling_process_highlevel(NULL))
         return -errno;
 
@@ -31,9 +28,6 @@ int lsfs_impl::_readlink(
     const char *path, char *buf, size_t size
     )
 {
-//    logger->info("READLINK " + std::string(path) + " SIZE:" + std::to_string(size));
-//    logger->flush();
-
     if (size == 0)
         return -EINVAL;
 

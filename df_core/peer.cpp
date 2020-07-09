@@ -36,8 +36,8 @@ peer::peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int dat
     cyclon(boot_ip.c_str(), ip, id, position,2,8,10,7, &(this->group_c)),
     listener(&(this->cyclon) ),
     v_logger(id, &(this->cyclon),60, "../logging/"),
-    data_handler(std::make_unique<data_handler_listener_mt>(ip, id, 1, &(this->cyclon), &(this->group_c),this->store, false)),
-    anti_ent(ip, id, &(this->cyclon), &(this->group_c),this->store, 20, true)
+    anti_ent(ip, id, &(this->cyclon), &(this->group_c),this->store, 20, true),
+    data_handler(std::make_unique<data_handler_listener_mt>(ip, id, 1, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, false))
 {
     std::string database_folder = std::string("/home/danielsf97/Desktop/") + this->store->db_name() + "/";
     int res = this->store->init((void*) database_folder.c_str(), id);
@@ -62,9 +62,9 @@ peer::peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int dat
         anti_ent(ip/*, data_port*/, id, &(this->cyclon), &(this->group_c),this->store, anti_entropy_interval, recover_database)
 {
     if(mt_data_handler){
-        this->data_handler = std::make_unique<data_handler_listener_mt>(ip, id, reply_chance, &(this->cyclon), &(this->group_c),this->store, smart);
+        this->data_handler = std::make_unique<data_handler_listener_mt>(ip, id, reply_chance, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, smart);
     }else{
-        this->data_handler = std::make_unique<data_handler_listener_st>(ip, id, reply_chance, &(this->cyclon), &(this->group_c),this->store, smart);
+        this->data_handler = std::make_unique<data_handler_listener_st>(ip, id, reply_chance, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, smart);
     }
 
     std::string database_folder = database_dir + this->store->db_name() + "/";
@@ -96,8 +96,8 @@ void peer::start(int warmup_interval, bool restart_database_after_warmup) {
             }
         }
 
-        this->data_handler_th = std::thread(std::ref(*this->data_handler));
         this->anti_ent_th = std::thread(std::ref(this->anti_ent));
+        this->data_handler_th = std::thread(std::ref(*this->data_handler));
     }catch(const std::system_error& e) {
         std::cerr << "System Error: Not avaliable resources to create peer (peer)!" << std::endl;
         exit(1);

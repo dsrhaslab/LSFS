@@ -61,8 +61,20 @@ std::vector<peer_data> BootstrapperImpl::get_view() {
         peer.ip = peer_ip;
         //peer.port = peer_port;
         peer.age = 20;
-        peer.id = aliveIds[/*peer_port*/ peer_ip];
-        peer.pos = alivePos[/*peer_port*/ peer_ip];
+        auto id_it = aliveIds.find(peer_ip);
+        if (id_it == aliveIds.end()) {
+            this->clear_fila();
+            return this->get_view();
+        } else {
+            peer.id = id_it->second;
+        }
+        auto pos_it = alivePos.find(peer_ip);
+        if (pos_it == alivePos.end()) {
+            this->clear_fila();
+            return this->get_view();
+        } else {
+            peer.pos = pos_it->second;
+        }
 
         res.push_back(peer);
     }
@@ -85,6 +97,12 @@ void BootstrapperImpl::remove_peer(/*int port*/ std::string ip){
     this->aliveIds.erase(/*port*/ ip);
     this->alivePos.erase(/*port*/ ip);
 };
+
+void BootstrapperImpl::clear_fila(){
+    std::unique_lock<std::recursive_mutex> lk_fila(this->fila_mutex);
+    std::queue<std::vector<std::string>> empty;
+    std::swap( this->fila, empty );
+}
 
 void BootstrapperImpl::boot_fila() {
 

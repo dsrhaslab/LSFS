@@ -31,10 +31,6 @@ void*  lsfs_impl::_init(
     struct fuse_config *cfg
     )
 {
-
-//    logger->info("INIT");
-//    logger->flush();
-
     // clear umask
 
     umask(0);
@@ -93,9 +89,6 @@ void lsfs_impl::_destroy(
     void *private_data
     )
 {
-//    logger->info("Destroy");
-//    logger->flush();
-
     (void)private_data;
 }
 

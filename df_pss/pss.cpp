@@ -231,8 +231,7 @@ void pss::send_pss_msg(const std::string& target_ip, std::vector<peer_data>& vie
             spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
         }
     }catch(...){
-        spdlog::error("=============================== Não consegui enviar =================");
-//            std::cout <<"=============================== Não consegui enviar =================" << std::endl;
+        std::cout <<"=============================== Não consegui enviar =================" << std::endl;
     }
 }
 
@@ -501,9 +500,7 @@ void pss::bootstrapper_termination_alerting() {
         connection.send_msg(buf.data(), buf.size());
     }catch(const char* e){
         spdlog::error(e);
-        spdlog::error("Erro ao alertar o df_bootstrapper =========================================================================================================================");
-
-//        std::cout << "Erro ao alertar o df_bootstrapper =========================================================================================================================";
+        std::cout << "Erro ao alertar o df_bootstrapper =========================================================================================================================";
     }
 }
 
