@@ -38,6 +38,8 @@ namespace tcp_client_server_connection
 
         int send_msg(char* buf, size_t size);
 
+        void wait_for_remote_end_to_close_socket();
+
     private:
         int                         f_socket;
         int                         f_peer_port;
@@ -72,6 +74,8 @@ namespace tcp_client_server_connection
         int recv_msg(int* client_socket, char* buf);
 
         int send_msg(int* client_socket, char* buf, size_t size);
+
+        void wait_for_remote_end_to_close_socket(int* client_socket);
     };
 }
 

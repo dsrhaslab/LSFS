@@ -123,6 +123,18 @@ namespace tcp_client_server_connection{
         }
     }
 
+    void tcp_client_connection::wait_for_remote_end_to_close_socket(){
+        shutdown(this->f_socket, SHUT_WR);
+        uint16_t discard_bytes;
+        bool closed_socket = false;
+        while(!closed_socket) {
+            int recv_bytes = recv(this->f_socket, &discard_bytes, sizeof(uint16_t), 0);
+            if (recv_bytes <= 0) {
+                closed_socket = true;
+            }
+        }
+    }
+
     int tcp_client_connection::send_msg( char* buf, size_t size){
         uint16_t msg_size = size;
         int bytes_sent =send(this->f_socket, (char*) &msg_size, sizeof(uint16_t), 0);

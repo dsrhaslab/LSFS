@@ -529,6 +529,7 @@ void data_handler_listener::process_recover_request_msg(const proto::kv_message&
             }catch(std::exception& e){
                 std::cerr << "Exception: " << e.what() << " " << strerror(errno) << std::endl;
             }
+            connection.wait_for_remote_end_to_close_socket();
         }
 
     }catch(const char* e){
