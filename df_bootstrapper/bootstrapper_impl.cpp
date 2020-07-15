@@ -214,6 +214,7 @@ void BootstrapperImpl::boot_worker(int* socket){
     }catch(...){}
 
 //    std::cerr << "[Bootstrap] function: boot_worker [Closing] socket -> " + std::to_string(*socket) << std::endl;
+    this->connection.wait_for_remote_end_to_close_socket(socket);
     close(*socket);
 }
 

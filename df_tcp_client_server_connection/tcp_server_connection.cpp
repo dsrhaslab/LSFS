@@ -185,4 +185,16 @@ namespace tcp_client_server_connection{
         }
         return bytes_sent;
     }
+
+    void tcp_server_connection::wait_for_remote_end_to_close_socket(int* client_socket){
+        shutdown(*client_socket, SHUT_WR);
+        uint16_t discard_bytes;
+        bool closed_socket = false;
+        while(!closed_socket) {
+            int recv_bytes = recv(*client_socket, &discard_bytes, sizeof(uint16_t), 0);
+            if (recv_bytes <= 0) {
+                closed_socket = true;
+            }
+        }
+    }
 }
