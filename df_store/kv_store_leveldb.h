@@ -176,36 +176,37 @@ void kv_store_leveldb::update_partition(int p, int np) {
         this->nr_slices = np;
         this->slice = p;
         //clear memory to allow new keys to be stored
-        std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
-
-        std::map<kv_store_key<std::string>, bool> keys;
-
-        leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
-        for (it->SeekToFirst(); it->Valid(); it->Next()) {
-            std::string comp_key = it->key().ToString();
-            std::string key;
-            long version;
-            long client_id;
-            int res = split_composite_key(comp_key, &key, &version, &client_id);
-            if(res == 0){
-                kv_store_key<std::string> key_to_insert({key, kv_store_key_version(version, client_id)});
-                keys.insert(std::make_pair(std::move(key_to_insert), false));
-            }
-        }
-
-        if(!it->status().ok()){
-            delete it;
-            throw LevelDBException();
-        }
-
-        delete it;
-
-
-        for(const auto& seen_pair: this->seen){
-            if(keys.find(seen_pair.first) == keys.end()) { // a chave não existe
-                this->seen.insert_or_assign(seen_pair.first, false);
-            }
-        }
+        this->clear_seen_log();
+//        std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
+//
+//        std::map<kv_store_key<std::string>, bool> keys;
+//
+//        leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+//        for (it->SeekToFirst(); it->Valid(); it->Next()) {
+//            std::string comp_key = it->key().ToString();
+//            std::string key;
+//            long version;
+//            long client_id;
+//            int res = split_composite_key(comp_key, &key, &version, &client_id);
+//            if(res == 0){
+//                kv_store_key<std::string> key_to_insert({key, kv_store_key_version(version, client_id)});
+//                keys.insert(std::make_pair(std::move(key_to_insert), false));
+//            }
+//        }
+//
+//        if(!it->status().ok()){
+//            delete it;
+//            throw LevelDBException();
+//        }
+//
+//        delete it;
+//
+//
+//        for(const auto& seen_pair: this->seen){
+//            if(keys.find(seen_pair.first) == keys.end()) { // a chave não existe
+//                this->seen.insert_or_assign(seen_pair.first, false);
+//            }
+//        }
 
     }
 }
