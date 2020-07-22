@@ -28,8 +28,6 @@ public:
     static const int max_working_directories_cache = 16;
 
 public:
-    std::mutex version_tracker_mutex;
-    std::unordered_map<std::string, long> version_tracker; // path => version
     std::recursive_mutex open_files_mutex;
     std::unordered_map<std::string, std::pair<FileAccess::FileAccess ,std::shared_ptr<struct stat>>> open_files; // path => version
     std::recursive_mutex working_directories_mutex;
