@@ -185,6 +185,25 @@ void client_reply_handler::register_get(const std::string& req_id) {
     lock.unlock();
 }
 
+long client_reply_handler::change_get_reqid(const std::string &latest_reqid_str, const std::string &new_reqid) {
+    std::unique_lock<std::mutex> lock(this->get_global_mutex);
+
+    auto it = this->get_replies.find(latest_reqid_str);
+    if(it != this->get_replies.end()){
+        // a chave não existe
+        auto get_map_node = this->get_replies.extract(it);
+        get_map_node.key() = new_reqid;
+        this->get_replies.insert(std::move(get_map_node));
+        auto get_mutexes_node = this->get_mutexes.extract(latest_reqid_str);
+        get_mutexes_node.key() = new_reqid;
+        this->get_mutexes.insert(std::move(get_mutexes_node));
+    }else{
+        //É impossível isto acontecer (registar uma mesma key)
+    }
+
+    lock.unlock();
+}
+
 std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::string& req_id, int wait_for) {
     std::unique_ptr<std::string> res (nullptr);
 
