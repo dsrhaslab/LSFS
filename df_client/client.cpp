@@ -270,6 +270,11 @@ void client::get_batch(const std::vector<std::string> &keys, std::vector<std::sh
                 }catch(TimeoutException& e){
                     std::cout << "Timeout key: " << keys[i] << std::endl;
                     peer_data peer = this->lb->get_peer(keys[i]); //throw exception (empty view)
+                    long req_id = this->inc_and_get_request_count();
+                    std::string latest_reqid_str = req_ids[i];
+                    req_ids[i].clear();
+                    req_ids[i].append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+                    this->handler->change_get_reqid(latest_reqid_str, req_ids[i]);
                     this->send_get(peer, keys[i], nullptr, req_ids[i]);
                     remain_timeouts--;
                 }
@@ -316,6 +321,11 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, l
                 res = this->handler->wait_for_get(req_id_str, wait_for);
             }catch(TimeoutException& e){
                 curr_timeouts++;
+                req_id = this->inc_and_get_request_count();
+                std::string latest_reqid_str = req_id_str;
+                req_id_str.clear();
+                req_id_str.append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+                this->handler->change_get_reqid(latest_reqid_str, req_id_str);
             }
         }
     }
@@ -345,6 +355,11 @@ long client::get_latest_version(const std::string& key, int wait_for) {
                 res = this->handler->wait_for_get_latest_version(req_id_str, wait_for);
             }catch(TimeoutException& e){
                 curr_timeouts++;
+                req_id = this->inc_and_get_request_count();
+                std::string latest_reqid_str = req_id_str;
+                req_id_str.clear();
+                req_id_str.append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+                this->handler->change_get_reqid(latest_reqid_str, req_id_str);
             }
         }
     }

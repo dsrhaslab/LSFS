@@ -34,6 +34,7 @@ public:
     client_reply_handler(std::string ip/*, int port*/, long wait_timeout);
 
     long register_put(const std::string& key, long version);
+    long change_get_reqid(const std::string& latest_reqid_str, const std::string& new_reqid);
     bool wait_for_put(const kv_store_key<std::string>& key, int wait_for);
     bool wait_for_put_until(const kv_store_key<std::string>& key, int wait_for, std::chrono::system_clock::time_point& wait_until);
     void clear_put_keys_entries(std::vector<kv_store_key<std::string>>& erasing_keys);
