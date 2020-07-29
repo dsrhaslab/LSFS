@@ -40,7 +40,9 @@ void*  lsfs_impl::_init(
     change_root((const char *)fuse_get_context()->private_data);
 
     // configure fuse
-
+    conn->max_readahead = state->max_parallel_read_size;
+    conn->max_background = 1;
+    
 //    conn->want |= FUSE_CAP_WRITEBACK_CACHE;
 //
 //    conn->want |= FUSE_CAP_SPLICE_MOVE;
