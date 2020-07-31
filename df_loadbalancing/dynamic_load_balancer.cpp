@@ -70,7 +70,7 @@ dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip/*, int boot_por
     }
 }
 
-peer_data dynamic_load_balancer::get_peer(const std::string& key = "") {
+peer_data dynamic_load_balancer::get_random_peer() {
 
     std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
     int view_size = this->view.size();
@@ -79,6 +79,10 @@ peer_data dynamic_load_balancer::get_peer(const std::string& key = "") {
     std::uniform_int_distribution<int> uni(0, view_size - 1); // guaranteed unbiased
     int random_int = uni(random_eng);
     return this->view.at(random_int);
+}
+
+peer_data dynamic_load_balancer::get_peer(const std::string& key = "") {
+    return get_random_peer();
 }
 
 void dynamic_load_balancer::process_msg(proto::pss_message &pss_msg) {

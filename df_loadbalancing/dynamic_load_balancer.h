@@ -27,6 +27,7 @@ private:
 public:
     dynamic_load_balancer(std::string boot_ip/*, int boot_port*/, std::string ip/*, int port*/, long sleep_interval);
     peer_data get_peer(const std::string& key) override;
+    peer_data get_random_peer() override;
     void process_msg(proto::pss_message& msg) override;
     void operator()() override;
 

@@ -37,7 +37,6 @@ private:
     //int port;
 
 private:
-    peer_data get_random_peer();
     peer_data get_random_local_peer();
     void receive_message(std::vector<peer_data> received);
     int group(double peer_pos);
@@ -47,6 +46,7 @@ private:
 public:
     smart_load_balancer(std::string boot_ip, std::string ip, long sleep_interval, std::string& config_filename);
     peer_data get_peer(const std::string& key) override;
+    peer_data get_random_peer() override;
     void receive_local_message(std::vector<peer_data> received);
     void process_msg(proto::pss_message& msg) override;
     void operator()() override;

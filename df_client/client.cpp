@@ -149,8 +149,13 @@ void client::put(const std::string& key, long version, const char *data, size_t 
     bool succeed = false;
     int curr_timeouts = 0;
     while(!succeed && curr_timeouts < this->max_timeouts){
-        peer_data peer = this->lb->get_peer(key); //throw exception
-        int status = this->send_put(peer, key, version, data, size);
+        peer_data* peer;
+        if (curr_timeouts + 1 <= 2){
+            *peer = this->lb->get_peer(key); //throw exception
+        }else{
+            *peer = this->lb->get_random_peer(); //throw exception
+        }
+        int status = this->send_put(*peer, key, version, data, size);
         if(status == 0){
             try{
                 //while(res == nullptr){
@@ -180,28 +185,35 @@ void client::put_batch(const std::vector<std::string> &keys, const std::vector<l
         this->send_put(peer, keys[i], versions[i], datas[i], sizes[i]);
     }
 
-    long remain_timeouts = nr_writes * this->max_timeouts;
+    long curr_timeouts = 0;
     bool all_completed = false;
 
     do{
+        bool loop_timeout = false;
         auto wait_until = std::chrono::system_clock::now() + std::chrono::seconds(this->wait_timeout);
         for(size_t i = 0; i < completed.size(); i++){
             if(!completed[i]){
                 try{
                     kv_store_key<std::string> comp_key = {keys[i], kv_store_key_version(versions[i])};
                     completed[i] = this->handler->wait_for_put_until(comp_key, wait_for, wait_until);
-                    // if completed i can at least decrease a timeout that belongs to this key
-                    remain_timeouts--;
                 }catch(TimeoutException& e){
                     std::cout << "Timeout" << std::endl;
-                    peer_data peer = this->lb->get_peer(keys[i]); //throw exception
-                    this->send_put(peer, keys[i], versions[i], datas[i], sizes[i]);
-                    remain_timeouts--;
+                    loop_timeout = true;
+                    peer_data* peer;
+                    if (curr_timeouts + 1 <= 2){
+                        *peer = this->lb->get_peer(keys[i]); //throw exception
+                    }else{
+                        *peer = this->lb->get_random_peer(); //throw exception
+                    }
+                    this->send_put(*peer, keys[i], versions[i], datas[i], sizes[i]);
                 }
             }
         }
+        if(loop_timeout){
+            curr_timeouts++;
+        }
         all_completed = std::find(completed.begin(), completed.end(), false) == completed.end();
-    }while( !all_completed && remain_timeouts > 0); // do while there are incompleted puts
+    }while( !all_completed && curr_timeouts < this->max_timeouts); // do while there are incompleted puts
 
     // clear not succeded keys from put maps
     std::vector<kv_store_key<std::string>> erasing_keys;
@@ -224,8 +236,13 @@ void client::put_with_merge(const std::string& key, long version, const char *da
     bool succeed = false;
     int curr_timeouts = 0;
     while(!succeed && curr_timeouts < this->max_timeouts){
-        peer_data peer = this->lb->get_peer(key); //throw exception
-        int status = this->send_put_with_merge(peer, key, version, data, size);
+        peer_data* peer;
+        if (curr_timeouts + 1 <= 2){
+            *peer = this->lb->get_peer(key); //throw exception
+        }else{
+            *peer = this->lb->get_random_peer(); //throw exception
+        }
+        int status = this->send_put_with_merge(*peer, key, version, data, size);
         if(status == 0){
 //            spdlog::debug("PUT (TO " + std::to_string(peer.id) + ") " + key + " : " + std::to_string(version) + " ==============================>");
             try{
@@ -240,6 +257,8 @@ void client::put_with_merge(const std::string& key, long version, const char *da
         throw TimeoutException();
     }
 }
+
+
 
 void client::get_batch(const std::vector<std::string> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for) {
 
@@ -256,32 +275,39 @@ void client::get_batch(const std::vector<std::string> &keys, std::vector<std::sh
         this->send_get(peer, keys[i], nullptr, req_ids[i]);
     }
 
-    long remain_timeouts = nr_reads * this->max_timeouts;
+    long curr_timeouts = 0;
     bool all_completed = false;
 
     do{
+        bool loop_timeout = false;
         auto wait_until = std::chrono::system_clock::now() + std::chrono::seconds(this->wait_timeout);
         for(size_t i = 0; i < data_strs.size(); i++){
             if(data_strs[i] == nullptr){
                 try{
                     data_strs[i] = this->handler->wait_for_get_until(req_ids[i], wait_for, wait_until);
-                    // if completed i can at least decrease a timeout that belongs to this key
-                    remain_timeouts--;
                 }catch(TimeoutException& e){
                     std::cout << "Timeout key: " << keys[i] << std::endl;
-                    peer_data peer = this->lb->get_peer(keys[i]); //throw exception (empty view)
+                    loop_timeout = true;
+                    peer_data* peer;
+                    if (curr_timeouts + 1 <= 2){
+                        *peer = this->lb->get_peer(keys[i]); //throw exception (empty view)
+                    }else{
+                        *peer = this->lb->get_random_peer(); //throw exception (empty view)
+                    }
                     long req_id = this->inc_and_get_request_count();
                     std::string latest_reqid_str = req_ids[i];
                     req_ids[i].clear();
                     req_ids[i].append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
                     this->handler->change_get_reqid(latest_reqid_str, req_ids[i]);
-                    this->send_get(peer, keys[i], nullptr, req_ids[i]);
-                    remain_timeouts--;
+                    this->send_get(*peer, keys[i], nullptr, req_ids[i]);
                 }
             }
         }
+        if(loop_timeout){
+            curr_timeouts++;
+        }
         all_completed = std::find(data_strs.begin(), data_strs.end(), nullptr) == data_strs.end();
-    }while( !all_completed && remain_timeouts > 0); // do while there are incompleted puts
+    }while( !all_completed && curr_timeouts < this->max_timeouts); // do while there are incompleted puts
 
     // clear not succeded keys from put maps
     auto it_req_ids = req_ids.begin();
@@ -313,8 +339,13 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, l
 
     int curr_timeouts = 0;
     while(res == nullptr && curr_timeouts < this->max_timeouts){
-        peer_data peer = this->lb->get_peer(key); //throw exception (empty view)
-        int status = this->send_get(peer, key, version_ptr, req_id_str);
+        peer_data* peer;
+        if (curr_timeouts + 1 <= 2){
+            *peer = this->lb->get_peer(key); //throw exception
+        }else{
+            *peer = this->lb->get_random_peer(); //throw exception
+        }
+        int status = this->send_get(*peer, key, version_ptr, req_id_str);
         if (status == 0) {
 //            spdlog::debug("GET " + std::to_string(req_id)  + " TO (" + std::to_string(peer.id) + ") " + key + (version_ptr == nullptr ? ": ?" : ": " + std::to_string(*version_ptr)) + " ==================================>");
             try{
@@ -347,8 +378,13 @@ long client::get_latest_version(const std::string& key, int wait_for) {
 
     int curr_timeouts = 0;
     while(res == nullptr && curr_timeouts < this->max_timeouts){
-        peer_data peer = this->lb->get_peer(key); //throw exception (empty view)
-        int status = this->send_get_latest_version(peer, key, req_id_str);
+        peer_data* peer;
+        if (curr_timeouts + 1 <= 2){
+            *peer = this->lb->get_peer(key); //throw exception
+        }else{
+            *peer = this->lb->get_random_peer(); //throw exception
+        }
+        int status = this->send_get_latest_version(*peer, key, req_id_str);
         if (status == 0) {
 //            spdlog::debug("GET Version " + std::to_string(req_id) + " TO (" + std::to_string(peer.id) + ") " + " Key:" + key + " ==================================>");
             try{
