@@ -149,13 +149,14 @@ void client::put(const std::string& key, long version, const char *data, size_t 
     bool succeed = false;
     int curr_timeouts = 0;
     while(!succeed && curr_timeouts < this->max_timeouts){
-        peer_data* peer;
+        int status = 0;
         if (curr_timeouts + 1 <= 2){
-            *peer = this->lb->get_peer(key); //throw exception
+            peer_data peer = this->lb->get_peer(key); //throw exception
+            status = this->send_put(peer, key, version, data, size);
         }else{
-            *peer = this->lb->get_random_peer(); //throw exception
+            peer_data peer = this->lb->get_random_peer(); //throw exception
+            status = this->send_put(peer, key, version, data, size);
         }
-        int status = this->send_put(*peer, key, version, data, size);
         if(status == 0){
             try{
                 //while(res == nullptr){
@@ -199,13 +200,13 @@ void client::put_batch(const std::vector<std::string> &keys, const std::vector<l
                 }catch(TimeoutException& e){
                     std::cout << "Timeout" << std::endl;
                     loop_timeout = true;
-                    peer_data* peer;
                     if (curr_timeouts + 1 <= 2){
-                        *peer = this->lb->get_peer(keys[i]); //throw exception
+                        peer_data peer = this->lb->get_peer(keys[i]); //throw exception
+                        this->send_put(peer, keys[i], versions[i], datas[i], sizes[i]);
                     }else{
-                        *peer = this->lb->get_random_peer(); //throw exception
+                        peer_data peer = this->lb->get_random_peer(); //throw exception
+                        this->send_put(peer, keys[i], versions[i], datas[i], sizes[i]);
                     }
-                    this->send_put(*peer, keys[i], versions[i], datas[i], sizes[i]);
                 }
             }
         }
@@ -236,13 +237,14 @@ void client::put_with_merge(const std::string& key, long version, const char *da
     bool succeed = false;
     int curr_timeouts = 0;
     while(!succeed && curr_timeouts < this->max_timeouts){
-        peer_data* peer;
+        int status = 0;
         if (curr_timeouts + 1 <= 2){
-            *peer = this->lb->get_peer(key); //throw exception
+            peer_data peer = this->lb->get_peer(key); //throw exception
+            status = this->send_put_with_merge(peer, key, version, data, size);
         }else{
-            *peer = this->lb->get_random_peer(); //throw exception
+            peer_data peer = this->lb->get_random_peer(); //throw exception
+            status = this->send_put_with_merge(peer, key, version, data, size);
         }
-        int status = this->send_put_with_merge(*peer, key, version, data, size);
         if(status == 0){
 //            spdlog::debug("PUT (TO " + std::to_string(peer.id) + ") " + key + " : " + std::to_string(version) + " ==============================>");
             try{
@@ -288,18 +290,18 @@ void client::get_batch(const std::vector<std::string> &keys, std::vector<std::sh
                 }catch(TimeoutException& e){
                     std::cout << "Timeout key: " << keys[i] << std::endl;
                     loop_timeout = true;
-                    peer_data* peer;
-                    if (curr_timeouts + 1 <= 2){
-                        *peer = this->lb->get_peer(keys[i]); //throw exception (empty view)
-                    }else{
-                        *peer = this->lb->get_random_peer(); //throw exception (empty view)
-                    }
                     long req_id = this->inc_and_get_request_count();
                     std::string latest_reqid_str = req_ids[i];
                     req_ids[i].clear();
                     req_ids[i].append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
                     this->handler->change_get_reqid(latest_reqid_str, req_ids[i]);
-                    this->send_get(*peer, keys[i], nullptr, req_ids[i]);
+                    if (curr_timeouts + 1 <= 2){
+                        peer_data peer = this->lb->get_peer(keys[i]); //throw exception (empty view)
+                        this->send_get(peer, keys[i], nullptr, req_ids[i]);
+                    }else{
+                        peer_data peer = this->lb->get_random_peer(); //throw exception (empty view)
+                        this->send_get(peer, keys[i], nullptr, req_ids[i]);
+                    }
                 }
             }
         }
@@ -339,13 +341,14 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, l
 
     int curr_timeouts = 0;
     while(res == nullptr && curr_timeouts < this->max_timeouts){
-        peer_data* peer;
+        int status = 0;
         if (curr_timeouts + 1 <= 2){
-            *peer = this->lb->get_peer(key); //throw exception
+            peer_data peer = this->lb->get_peer(key); //throw exception
+            status = this->send_get(peer, key, version_ptr, req_id_str);
         }else{
-            *peer = this->lb->get_random_peer(); //throw exception
+            peer_data peer = this->lb->get_random_peer(); //throw exception
+            status = this->send_get(peer, key, version_ptr, req_id_str);
         }
-        int status = this->send_get(*peer, key, version_ptr, req_id_str);
         if (status == 0) {
 //            spdlog::debug("GET " + std::to_string(req_id)  + " TO (" + std::to_string(peer.id) + ") " + key + (version_ptr == nullptr ? ": ?" : ": " + std::to_string(*version_ptr)) + " ==================================>");
             try{
@@ -378,13 +381,14 @@ long client::get_latest_version(const std::string& key, int wait_for) {
 
     int curr_timeouts = 0;
     while(res == nullptr && curr_timeouts < this->max_timeouts){
-        peer_data* peer;
+        int status = 0;
         if (curr_timeouts + 1 <= 2){
-            *peer = this->lb->get_peer(key); //throw exception
+            peer_data peer = this->lb->get_peer(key); //throw exception
+            status = this->send_get_latest_version(peer, key, req_id_str);
         }else{
-            *peer = this->lb->get_random_peer(); //throw exception
+            peer_data peer = this->lb->get_random_peer(); //throw exception
+            status = this->send_get_latest_version(peer, key, req_id_str);
         }
-        int status = this->send_get_latest_version(*peer, key, req_id_str);
         if (status == 0) {
 //            spdlog::debug("GET Version " + std::to_string(req_id) + " TO (" + std::to_string(peer.id) + ") " + " Key:" + key + " ==================================>");
             try{
