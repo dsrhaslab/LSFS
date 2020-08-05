@@ -425,7 +425,7 @@ std::vector<peer_data> smart_load_balancer::get_n_peers(const std::string& key, 
     }
 
     std::vector<peer_data> res;
-    int nr_elements_to_sample = std::max(slice_size, nr_peers);
+    int nr_elements_to_sample = std::min(slice_size, nr_peers);
     std::sample(
             slice_group->begin(),
             slice_group->end(),

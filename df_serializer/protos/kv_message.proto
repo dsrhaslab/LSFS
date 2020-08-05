@@ -95,7 +95,7 @@ message anti_entropy_message {
 }
 
 message kv_message {
-    bool forwarded = 1;
+    bool forwarded_within_group = 1;
     oneof msg {
         get_message                         get_msg = 2;
         get_reply_message                   get_reply_msg = 3;

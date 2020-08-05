@@ -75,7 +75,7 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
         serverAddr.sin_port = htons(client::kv_port);
         serverAddr.sin_addr.s_addr = inet_addr(target_peer.ip.c_str());
 
-        msg.set_forwarded(false);
+        msg.set_forwarded_within_group(false);
 
         std::string buf;
         msg.SerializeToString(&buf);
