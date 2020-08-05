@@ -16,6 +16,11 @@ struct peer_data {
     int nr_slices;
     double pos;
     int slice;
+
+    bool operator<(const struct peer_data& rhs) const
+    {
+        return id < rhs.id;  //assume that you compare the record based on a
+    }
 };
 
 #endif //DATAFLASKSCPP_PEER_DATA_H

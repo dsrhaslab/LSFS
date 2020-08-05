@@ -26,6 +26,8 @@ void data_handler_listener::reply_client(proto::kv_message& message, const std::
         serverAddr.sin_port = htons(peer::kv_port/*sender_port*/); // não é necessário +1 porque vou responder para a port de onde o pedido proveio
         serverAddr.sin_addr.s_addr = inet_addr(sender_ip.c_str());
 
+        message.set_forwarded(false);
+
         std::string buf;
         message.SerializeToString(&buf);
 
@@ -47,6 +49,8 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
     message.SerializeToString(&buf);
     const char* data = buf.data();
     size_t data_size = buf.size();
+
+    message.set_forwarded(true);
 
     for(const peer_data& peer: view_to_send){
         try {
@@ -77,6 +81,7 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
     const std::string& key = message.key();
     const std::string& req_id = message.reqid();
     std::unique_ptr<std::string> data(nullptr); //*data = undefined
+    bool direct_message = !msg.forwarded();
 
     //se o pedido ainda não foi processado e não é um pedido interno (não começa com intern)
     if(!this->store->in_log(req_id) && req_id.rfind("intern", 0) != 0){
@@ -108,8 +113,7 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
             //se tenho o conteudo da chave
             float achance = random_float(0.0, 1.0);
 
-            if(achance <= this->chance){
-                //a probabilidade ditou para responder à mensagem com o conteudo para a chave
+            if(direct_message || achance <= this->chance){
                 proto::kv_message reply_message;
                 auto* message_content = new proto::get_reply_message();
                 message_content->set_ip(this->ip);
@@ -133,12 +137,17 @@ void data_handler_listener::process_get_message(const proto::kv_message &msg) {
             }else{
                 //a probabilidade ditou para fazer forward da mensagem
                 int obj_slice = this->store->get_slice_for_key(key);
-                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
-                if(!slice_peers.empty() && this->smart_forward){
-                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
-                }else{
-                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                if(this->store->get_slice() == obj_slice){
+                    std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
                     this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                }else {
+                    std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                    if (!slice_peers.empty() && this->smart_forward) {
+                        this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                    } else {
+                        std::vector<peer_data> view = this->pss_ptr->get_view();
+                        this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                    }
                 }
             }
         }else{
@@ -216,6 +225,7 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
     long version = message.version();
     long client_id = message.id();
     const std::string& data = message.data();
+    bool direct_message = !msg.forwarded();
 
     if (!this->store->have_seen(key, version, client_id)) {
         bool stored;
@@ -229,7 +239,7 @@ void data_handler_listener::process_put_message(const proto::kv_message &msg) {
             float achance = random_float(0.0, 1.0);
 
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-            if (achance <= this->chance) {
+            if (direct_message || achance <= this->chance) {
                 proto::kv_message reply_message;
                 auto *message_content = new proto::put_reply_message();
                 message_content->set_ip(this->ip);
@@ -287,6 +297,7 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
     long version = message.version();
     long client_id = message.id();
     const std::string& data = message.data();
+    bool direct_message = !msg.forwarded();
 
     if (!this->store->have_seen(key, version, client_id)) {
         bool stored;
@@ -301,7 +312,7 @@ void data_handler_listener::process_put_with_merge_message(const proto::kv_messa
             float achance = random_float(0.0, 1.0);
 
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-            if (achance <= this->chance) {
+            if (direct_message || achance <= this->chance) {
                 proto::kv_message reply_message;
                 auto *message_content = new proto::put_reply_message();
                 message_content->set_ip(this->ip);
@@ -396,6 +407,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
     const std::string& key = message.key();
     const std::string& req_id = message.reqid();
     std::unique_ptr<long> version(nullptr);
+    bool direct_message = !msg.forwarded();
 
     //se o pedido ainda não foi processado
     if(!this->store->in_log(req_id)){
@@ -424,7 +436,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 
             float achance = random_float(0.0, 1.0);
 
-            if(achance <= this->chance){
+            if(direct_message || achance <= this->chance){
                 //responder à mensagem
                 proto::kv_message reply_message;
                 auto* message_content = new proto::get_latest_version_reply_message();
@@ -500,6 +512,7 @@ void data_handler_listener::process_recover_request_msg(const proto::kv_message&
                                       [](tcp_client_server_connection::tcp_client_connection& connection, const std::string& key,
                                          long version, long client_id, bool is_merge, const char* data, size_t data_size){
                                           proto::kv_message kv_message;
+                                          kv_message.set_forwarded(false);
                                           auto* message_content = new proto::recover_data_message();
                                           message_content->set_key(key);
                                           message_content->set_version(version);
@@ -519,6 +532,7 @@ void data_handler_listener::process_recover_request_msg(const proto::kv_message&
 
             // Send Recover Done Message
             proto::kv_message kv_message;
+            kv_message.set_forwarded(false);
             auto* message_content = new proto::recover_termination_message();
             kv_message.set_allocated_recover_termination_msg(message_content);
             std::string buf;

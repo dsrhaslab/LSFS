@@ -18,6 +18,8 @@ main_confs:
   local_interval_sec: 8
   anti_entropy_interval_sec: 20
   reply_chance: 1
+  max_nodes_to_send_get_request: 3
+  max_nodes_to_send_put_request: 3
   smart: true
   mt_data_handler: true
   log_level: off

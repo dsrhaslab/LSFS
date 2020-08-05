@@ -32,6 +32,8 @@ private:
     int nr_puts_required;
     int nr_gets_required;
     int nr_gets_version_required;
+    int max_nodes_to_send_get_request;
+    int max_nodes_to_send_put_request;
     int max_timeouts;
     int wait_timeout;
 
@@ -75,10 +77,10 @@ public:
 private:
     long inc_and_get_request_count();
     int send_msg(peer_data& target_peer, proto::kv_message& msg);
-    int send_get(peer_data &peer, const std::string& key, long* version, const std::string& req_id);
-    int send_put(peer_data& peer, const std::string& key, long version, const char* data, size_t size);
-    int send_put_with_merge(peer_data& peer, const std::string& key, long version, const char* data, size_t size);
-    int send_get_latest_version(peer_data &peer, const std::string& key, const std::string& req_id);
+    int send_get(std::vector<peer_data>& peers, const std::string& key, long* version, const std::string& req_id);
+    int send_put(std::vector<peer_data>& peers, const std::string& key, long version, const char* data, size_t size);
+    int send_put_with_merge(std::vector<peer_data>& peers, const std::string& key, long version, const char* data, size_t size);
+    int send_get_latest_version(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id);
 };
 
 
