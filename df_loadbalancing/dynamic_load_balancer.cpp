@@ -91,7 +91,7 @@ std::vector<peer_data> dynamic_load_balancer::get_n_random_peers(int nr_peers) {
     int view_size = this->view.size();
     if(view_size == 0) throw "Empty View Received";
     std::vector<peer_data> res;
-    int nr_elements_to_sample = std::max(view_size, nr_peers);
+    int nr_elements_to_sample = std::min(view_size, nr_peers);
     std::sample(
             this->view.begin(),
             this->view.end(),
