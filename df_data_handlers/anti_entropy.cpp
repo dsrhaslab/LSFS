@@ -51,6 +51,7 @@ int anti_entropy::send_recover_request(peer_data& target_peer){
     memset(&serverAddr, '\0', sizeof(serverAddr));
 
     proto::kv_message message;
+    message.set_forwarded(false);
     auto *message_content = new proto::recover_request_message();
     message_content->set_ip(this->ip);
     message_content->set_nr_slices(this->group_c->get_nr_groups());
@@ -109,6 +110,7 @@ bool anti_entropy::recover_state(tcp_client_server_connection::tcp_server_connec
     std::vector<std::string> keys_offset; //= this->store->get_last_keys_limit4();
 
     proto::kv_message kv_message;
+    kv_message.set_forwarded(false);
     auto* message_content = new proto::recover_offset_message();
     for(std::string& key: keys_offset)
         message_content->add_keys(key);
@@ -200,6 +202,7 @@ void anti_entropy::phase_operating(){
 
     try {
         proto::kv_message message;
+        message.set_forwarded(false);
         auto *message_content = new proto::anti_entropy_message();
         message_content->set_ip(this->ip);
         message_content->set_id(this->id);

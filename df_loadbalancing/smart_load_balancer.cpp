@@ -19,6 +19,9 @@
 smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, long sleep_interval, std::string& config_filename):
         ip(ip), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {
+    std::random_device rd;     // only used once to initialise (seed) engine
+    this->random_eng = std::mt19937(rd());
+
     bool recovered = false;
 
     YAML::Node config = YAML::LoadFile(config_filename);
@@ -274,6 +277,18 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
     }
 }
 
+peer_data smart_load_balancer::get_random_local_peer() {
+    std::scoped_lock<std::recursive_mutex> lk (this->local_view_mutex);
+    int local_view_size = this->local_view.size();
+    if(local_view_size == 0) throw "EMPTY VIEW EXCEPTION";
+    int peer_idx = random_int(0, local_view_size - 1);
+    auto it = this->local_view.begin();
+    for(int i = 0; i < peer_idx; i++){
+        ++it;
+    }
+    return it->second;
+}
+
 peer_data smart_load_balancer::get_random_peer() {
     std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
 
@@ -291,18 +306,6 @@ peer_data smart_load_balancer::get_random_peer() {
             return slice_group->at(slice_idx);
         }
     }
-}
-
-peer_data smart_load_balancer::get_random_local_peer() {
-    std::scoped_lock<std::recursive_mutex> lk (this->local_view_mutex);
-    int local_view_size = this->local_view.size();
-    if(local_view_size == 0) throw "EMPTY VIEW EXCEPTION";
-    int peer_idx = random_int(0, local_view_size - 1);
-    auto it = this->local_view.begin();
-    for(int i = 0; i < peer_idx; i++){
-        ++it;
-    }
-    return it->second;
 }
 
 peer_data smart_load_balancer::get_peer(const std::string& key) {
@@ -342,6 +345,96 @@ peer_data smart_load_balancer::get_peer(const std::string& key) {
         int slice_idx = random_int(0, slice_size - 1);
         return slice_group->at(slice_idx);
     }
+}
+
+std::vector<peer_data> smart_load_balancer::get_n_random_peers(int nr_peers) {
+    std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
+    std::set<peer_data> temp;
+    std::vector<peer_data> res;
+
+    bool done = false;
+    int max_equal_insertions_before_giveup = 3;
+    int nr_insertions = 0;
+    while(!done) {
+        int group_to_send = random_int(0, nr_groups - 1);
+        auto slice_group = this->view[group_to_send].get();
+        int slice_size = slice_group->size();
+        if(slice_size == 0){
+            continue;
+        }else if(slice_size == 1){
+            temp.insert(slice_group->front());
+            if(temp.size() == nr_insertions){
+                max_equal_insertions_before_giveup--;
+                if(max_equal_insertions_before_giveup == 0) {
+                    done = true;
+                }
+            }else{
+                nr_insertions += 1;
+            }
+        }else{
+            int slice_idx = random_int(0, slice_size - 1);
+            temp.insert(slice_group->front());
+            if(temp.size() == nr_insertions){
+                max_equal_insertions_before_giveup--;
+                if(max_equal_insertions_before_giveup == 0) {
+                    done = true;
+                }
+            }else{
+                nr_insertions += 1;
+            }
+        }
+    }
+
+    res.reserve(temp.size());
+    for (auto it = temp.begin(); it != temp.end(); ) {
+        res.push_back(std::move(temp.extract(it++).value()));
+    }
+
+    return std::move(res);
+}
+
+std::vector<peer_data> smart_load_balancer::get_n_peers(const std::string& key, int nr_peers){
+    int key_group__nr;
+    if(this->nr_groups == 1) key_group__nr = 1;
+
+    size_t max = SIZE_MAX;
+    size_t min = 0;
+    size_t target = std::hash<std::string>()(key);
+    size_t step = (max / this->nr_groups);
+
+    size_t current = min;
+    int slice = 1;
+    size_t next_current = current + step;
+
+    while (target > next_current){
+        current = next_current;
+        next_current = current + step;
+        if(current > 0 && next_current < 0) break; //in the case of overflow
+        slice = slice + 1;
+    }
+
+    if(slice > this->nr_groups){
+        slice = this->nr_groups - 1;
+    }
+
+    std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
+    auto slice_group = this->view[slice - 1].get();
+    int slice_size = slice_group->size();
+    if(slice_size == 0){
+        return this->get_n_random_peers(nr_peers);
+    }
+
+    std::vector<peer_data> res;
+    int nr_elements_to_sample = std::max(slice_size, nr_peers);
+    std::sample(
+            slice_group->begin(),
+            slice_group->end(),
+            std::back_inserter(res),
+            nr_elements_to_sample,
+            random_eng
+    );
+
+    return std::move(res);
 }
 
 void smart_load_balancer::receive_local_message(std::vector<peer_data> received) {

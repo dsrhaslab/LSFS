@@ -85,6 +85,28 @@ peer_data dynamic_load_balancer::get_peer(const std::string& key = "") {
     return get_random_peer();
 }
 
+std::vector<peer_data> dynamic_load_balancer::get_n_random_peers(int nr_peers) {
+
+    std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
+    int view_size = this->view.size();
+    if(view_size == 0) throw "Empty View Received";
+    std::vector<peer_data> res;
+    int nr_elements_to_sample = std::max(view_size, nr_peers);
+    std::sample(
+            this->view.begin(),
+            this->view.end(),
+            std::back_inserter(res),
+            nr_elements_to_sample,
+            random_eng
+    );
+
+    return std::move(res);
+}
+
+std::vector<peer_data> dynamic_load_balancer::get_n_peers(const std::string& key = "", int nr_peers = 1) {
+    return get_n_random_peers(nr_peers);
+}
+
 void dynamic_load_balancer::process_msg(proto::pss_message &pss_msg) {
     std::vector<peer_data> recv_view;
     for(auto& peer: pss_msg.view()){
