@@ -29,7 +29,7 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, lo
     this->replication_factor_max = main_confs["rep_max"].as<int>();
     this->replication_factor_min = main_confs["rep_min"].as<int>();
     this->max_age = main_confs["max_age"].as<int>();
-    this->first_message = true;
+    this->recovering_local_view = true;
     this->local = main_confs["local_message"].as<bool>();
     this->local_interval = 5;//main_confs["local_interval_sec"].as<int>();
     this->nr_saved_peers_by_group = main_confs["smart_load_balancer_group_knowledge"].as<int>();
@@ -39,6 +39,7 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, lo
     this->my_group = 1;
     this->cycle = 1;
 
+    srand( time(NULL) ); //seeding for the first time only!
 
     while(!recovered){
         try {
@@ -122,6 +123,134 @@ void insert_peer_data_with_order(std::unique_ptr<std::vector<peer_data>>& view, 
     }
 }
 
+void smart_load_balancer::incorporate_local_peers(const std::vector<peer_data>& received) {
+    std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
+    for(const peer_data& peer: received){
+        if(group(peer.pos) == this->my_group){
+            auto current_it = this->local_view.find(peer.ip);
+            if(current_it != this->local_view.end()){ //o elemento existe no mapa
+                int current_age = current_it->second.age;
+                if(current_age > peer.age)
+                    current_it->second.age = peer.age;
+            }else{
+                this->local_view.insert(std::make_pair(peer.ip, peer));
+            }
+        }
+    }
+}
+
+void smart_load_balancer::clean_local_view(){
+    std::scoped_lock<std::recursive_mutex> lk (this->local_view_mutex);
+
+    for(auto it = this->local_view.begin(); it != this->local_view.end();){
+        const peer_data& peer = it->second;
+        if(group(peer.pos) != this->my_group){
+            this->local_view.erase(it++);
+        }
+        else{
+            if(peer.age > max_age){
+                this->local_view.erase(it++);
+            }else{
+                ++it;
+            }
+        }
+    }
+}
+
+void smart_load_balancer::incorporate_peers_in_view(const std::vector<peer_data>& received){
+    for(auto& peer: received){
+        insert_peer_data_with_order(this->view[group(peer.pos)-1], peer);
+    }
+
+    //CLEAN VIEW
+    for(auto& per_group_view : this->view) {
+        int nr_elem_to_keep = 0;
+        for (auto it = per_group_view->begin(); it != per_group_view->end(); ++it) {
+            if (it->age < max_age) {
+                nr_elem_to_keep++;
+            } else {
+                break;
+            }
+        }
+        per_group_view->resize(std::min(this->nr_saved_peers_by_group, nr_elem_to_keep));
+    }
+}
+
+void smart_load_balancer::reconfigure_view_if_needed(){
+    int current_groups = this->nr_groups;
+    std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
+    int view_nr_groups = this->view.size();
+
+    if(view_nr_groups == current_groups){
+        return;
+    }
+
+    if(view_nr_groups > current_groups){
+        while(view_nr_groups != current_groups){
+            this->merge_groups_from_view();
+            view_nr_groups = view_nr_groups/2;
+        }
+    }else{
+        while(view_nr_groups != current_groups){
+            this->split_groups_from_view();
+            view_nr_groups = view_nr_groups*2;
+        }
+    }
+}
+
+void smart_load_balancer::recover_local_view(const std::vector<peer_data>& received){
+
+    std::scoped_lock<std::recursive_mutex> lk (this->local_view_mutex);
+
+    int nr_groups_from_peers = 1;
+
+    for (const peer_data& peer: received) {
+        if (peer.nr_slices > nr_groups_from_peers) {
+            nr_groups_from_peers = peer.nr_slices;
+        }
+    }
+
+    // Incorporate from received view nodes that belong to my group
+    this->incorporate_local_peers(received);
+
+    int first_estimation = this->local_view.size(); //countEqual();
+    // Se a minha perceção do número de grupos é maior que a recebida e tenho nodos
+    // suficientes para a sustentar
+    if(this->nr_groups > nr_groups_from_peers && first_estimation >= this->replication_factor_min){
+        if(first_estimation > this->replication_factor_max){
+            this->nr_groups = this->nr_groups*2;
+            this->my_group = group(this->position);
+            this->reconfigure_view_if_needed();
+            this->incorporate_peers_in_view(received);
+            this->clean_local_view();
+        }
+        this->recovering_local_view = false;
+        return;
+    }
+
+    this->nr_groups = nr_groups_from_peers;
+    this->my_group = group(this->position);
+    this->reconfigure_view_if_needed();
+    this->incorporate_peers_in_view(received);
+
+    // Clean local view
+    this->clean_local_view();
+
+    // At system start all peers have the same estimation of 1
+    // There is nothing to recover
+    if(nr_groups_from_peers == 1){
+        this->recovering_local_view = false;
+    }
+
+    // Check if Local view was sucessfully recovered
+    int estimation = this->local_view.size(); //countEqual();
+    if(estimation >= this->replication_factor_min && estimation <= this->replication_factor_max){
+        this->recovering_local_view = false;
+    }else{
+        this->request_local_message(received);
+    }
+}
+
 void smart_load_balancer::merge_groups_from_view() {
     std::vector<std::unique_ptr<std::vector<peer_data>>> next_view;
     if(this->view.size() == 1) return;
@@ -156,10 +285,13 @@ void smart_load_balancer::split_groups_from_view() {
 
 void smart_load_balancer::receive_message(std::vector<peer_data> received) {
 
-    std::scoped_lock<std::recursive_mutex> lk_local (this->local_view_mutex);
+    // If its recovering local view, discard group construction messages
+    if(this->recovering_local_view) {
+        recover_local_view(received);
+        return;
+    }
 
-    //When a peer boots it must keep up with peers
-    int nr_groups_from_peers = 1;
+    std::scoped_lock<std::recursive_mutex> lk_local (this->local_view_mutex);
 
     //AGING LOCAL VIEW
     for(auto& [/*port*/ ip, peer]: this->local_view){
@@ -170,11 +302,6 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
 
     //ADD RECEIVED
     for (peer_data& peer: received){
-        if(this->first_message){
-            if(peer.nr_slices > this->nr_groups && peer.nr_slices > nr_groups_from_peers){
-                nr_groups_from_peers = peer.nr_slices;
-            }
-        }
         if(group(peer.pos) == this->my_group){
             auto current_it = this->local_view.find(peer.ip/*peer.port*/);
             if(current_it != this->local_view.end()){ //o elemento existe no mapa
@@ -209,38 +336,29 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
 
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
 
-    if(this->first_message){
-        this->nr_groups = nr_groups_from_peers;
-        std::cout << "Nr_groups: " << this->nr_groups << std::endl;
-        this->first_message = false;
-        this->view.clear();
-        for (int i = 0; i < nr_groups_from_peers; i++){
-            this->view.push_back(std::make_unique<std::vector<peer_data>>());
-        }
-    }else{
-        //AGING VIEW
-        for(auto& group_view : this->view){
-            for(auto& peer: *group_view){
-                peer.age += 1;
-            }
-        }
-
-        //SEARCH FOR VIOLATIONS
-        int estimation = this->local_view.size(); //countEqual();
-
-        if(estimation < this->replication_factor_min){
-            if(this->nr_groups > 1){
-                this->nr_groups = this->nr_groups/2;
-                std::cout << "Estimation: " << estimation << "Nr_groups: " << this->nr_groups << std::endl;
-                this->merge_groups_from_view();
-            }
-        }
-        if(estimation > this->replication_factor_max){
-            this->nr_groups = this->nr_groups*2;
-            std::cout << "Estimation: " << estimation << "Nr_groups: " << this->nr_groups << std::endl;
-            this->split_groups_from_view();
+    //AGING VIEW
+    for(auto& group_view : this->view){
+        for(auto& peer: *group_view){
+            peer.age += 1;
         }
     }
+
+    //SEARCH FOR VIOLATIONS
+    int estimation = this->local_view.size(); //countEqual();
+
+    if(estimation < this->replication_factor_min){
+        if(this->nr_groups > 1){
+            this->nr_groups = this->nr_groups/2;
+            std::cout << "Estimation: " << estimation << "Nr_groups: " << this->nr_groups << std::endl;
+            this->merge_groups_from_view();
+        }
+    }
+    if(estimation > this->replication_factor_max){
+        this->nr_groups = this->nr_groups*2;
+        std::cout << "Estimation: " << estimation << "Nr_groups: " << this->nr_groups << std::endl;
+        this->split_groups_from_view();
+    }
+
 
     this->my_group = group(this->position);
 
@@ -259,22 +377,7 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
         }
     }
 
-    for(auto& peer: received){
-        insert_peer_data_with_order(this->view[group(peer.pos)-1], peer);
-    }
-
-    //CLEAN VIEW
-    for(auto& per_group_view : this->view) {
-        int nr_elem_to_keep = 0;
-        for (auto it = per_group_view->begin(); it != per_group_view->end(); ++it) {
-            if (it->age < max_age) {
-                nr_elem_to_keep++;
-            } else {
-                break;
-            }
-        }
-        per_group_view->resize(std::min(this->nr_saved_peers_by_group, nr_elem_to_keep));
-    }
+    this->incorporate_peers_in_view(received);
 }
 
 peer_data smart_load_balancer::get_random_local_peer() {
@@ -438,20 +541,29 @@ std::vector<peer_data> smart_load_balancer::get_n_peers(const std::string& key, 
 }
 
 void smart_load_balancer::receive_local_message(std::vector<peer_data> received) {
-    std::scoped_lock<std::recursive_mutex> lk (this->local_view_mutex);
-    for(peer_data& peer: received){
-        if(group(peer.pos) == this->my_group){
-            auto current_it = this->local_view.find(peer.ip /*peer.port*/);
-            if(current_it != this->local_view.end()){ //o elemento existe no mapa
-                int current_age = current_it->second.age;
-                if(current_age > peer.age)
-                    current_it->second.age = peer.age;
 
-            }else{
-                this->local_view.insert(std::make_pair(peer.ip /*peer.port*/, peer));
-            }
-        }
+    if(this->recovering_local_view) {
+        recover_local_view(received);
+        return;
     }
+
+    this->incorporate_local_peers(received);
+}
+
+void smart_load_balancer::request_local_message(const std::vector<peer_data>& received){
+
+    proto::pss_message pss_message;
+    pss_message.set_sender_ip(this->ip);
+    pss_message.set_sender_pos(this->position);
+    pss_message.set_type(proto::pss_message_Type::pss_message_Type_REQUEST_LOCAL);
+
+    for(const peer_data& peer : received){
+        send_msg(peer, pss_message);
+    }
+}
+
+bool smart_load_balancer::has_recovered(){
+    return !this->recovering_local_view;
 }
 
 void smart_load_balancer::process_msg(proto::pss_message &pss_msg) {
@@ -515,7 +627,7 @@ void smart_load_balancer::stop() {
     this->running = false;
 }
 
-void smart_load_balancer::send_msg(peer_data &target_peer, proto::pss_message &msg) {
+void smart_load_balancer::send_msg(const peer_data &target_peer, proto::pss_message &msg) {
     try {
 
         struct sockaddr_in serverAddr;
