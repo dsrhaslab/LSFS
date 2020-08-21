@@ -519,60 +519,38 @@ std::unique_ptr<std::string> kv_store_leveldb::remove(const kv_store_key<std::st
 
 bool kv_store_leveldb::put_with_merge(const std::string& key, long version, long client_id, const std::string& bytes) {
     try{
-//        std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
-//
-//        // quer exista ou não uma entrada para a mesma versão de outro cliente
-//        // faz-se put na mesma da versão deste cliente para ter registo que a versão
-//        // de tal cliente foi processada e por motivos de anti-entropia (não requerer
-//        // versões-client_id já processados)
-//        // É estritamente necessário o *max_client_id != client_id porque poderiamos estar a
-//        // dar overwrite a uma versão merged.
-//        if(max_client_id == nullptr || *max_client_id != client_id){
-//            put(key, version, client_id, bytes, true);
-//        }
-//
-//        if(max_client_id != nullptr){
-//            if(*max_client_id != client_id){
-//                kv_store_key<std::string> kv_key = {key, kv_store_key_version(version, *max_client_id)};
-//                std::shared_ptr<std::string> data = get(kv_key);
-//                if(data == nullptr){
-//                    // caso ocorresse algum erro
-//                    return false;
-//                }
-//                return put(key, version, std::max(*max_client_id, client_id), this->merge_function(*data, bytes), true);
-//            }
-//        }
-
-
-
-        // quer exista ou não uma entrada para a mesma versão-client_id de outro cliente
-        // faz-se put na mesma da versão deste cliente para ter registo que a versão
-        // de tal cliente foi processada e por motivos de anti-entropia (não requerer
-        // versões-client_id já processados)
-        int res = put(key, version, client_id, bytes, true);
-        if(res == false){
-            return false;
-        }
-
-        kv_store_key_version kv_version;
+        kv_store_key_version kv_latest_version;
         //We only need to merge with latest version
-        std::unique_ptr<std::string> data = get_latest(key, &kv_version);
+        std::unique_ptr<std::string> data = get_latest(key, &kv_latest_version);
+        auto kv_version_received = kv_store_key_version(version, client_id);
+
         if(data != nullptr){
-            if(kv_version.version > version){
-                //if there is a version bigger than mine, use its client_id
+            //If latest version exists and is bigger than version received merge version received with latest version
+            //and overwrite latest version
+            if(kv_version_received < kv_latest_version){
+                this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
+                int res = put(key, kv_latest_version.version, kv_latest_version.client_id, this->merge_function(*data, bytes), true);
+                if(res){
+                    //Ensure received version stays logged in the database. (for anti-entropy reasons)
+                    return put(key, version, client_id, bytes, true);
+                }else{
+                    return false;
+                }
+            }
+            //If version received is bigger than latest version than merge and put merged data
+            //with version received
+            else if (kv_version_received > kv_latest_version){
                 this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
                 return put(key, version, client_id, this->merge_function(*data, bytes), true);
-            }else if(kv_version.client_id != client_id){
-                //if there is no version bigger than mine, use max client_id for merge
-                this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
-                return put(key, version, std::max(kv_version.client_id, client_id), this->merge_function(*data, bytes), true);
             }
-
-            //No need for merge, my version-client_id is bigger than the others
-            return true;
+            //If latest version is equal to version received
+            else{
+                //do nothing
+                return true;
+            }
         }else{
-            // error on get
-            throw LevelDBException();
+            //if there no entry for the key, no need for merge
+            return put(key, version, client_id, bytes, true);
         }
     }catch(LevelDBException& e){
         return false;
