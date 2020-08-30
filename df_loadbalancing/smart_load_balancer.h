@@ -37,10 +37,12 @@ private:
     //int port;
 
 private:
+    void print_view();
     peer_data get_random_local_peer();
     void receive_local_message(std::vector<peer_data> received);
     void receive_message(std::vector<peer_data> received);
     int group(double peer_pos);
+    int group(double peer_pos, int nr_groups);
     void merge_groups_from_view();
     void split_groups_from_view();
     void incorporate_local_peers(const std::vector<peer_data>& received);

@@ -100,6 +100,31 @@ int smart_load_balancer::group(double peer_pos){
     return temp;
 }
 
+int smart_load_balancer::group(double peer_pos, int nr_groups){
+    int temp = (int) ceil((static_cast<double>(nr_groups))*peer_pos);
+    if(temp == 0){
+        temp = 1;
+    }
+    return temp;
+}
+
+void smart_load_balancer::print_view(){
+   //std::vector<std::unique_ptr<std::vector<peer_data>>> view;
+
+    std::cout << "================= View ===========" << std::endl;
+    int i = 1;
+    for(auto& view_group : view){
+        std::cout << "Grupo " << i << ": ";
+        for(auto& peer: *view_group){
+            std::cout << peer.id << "[ " << peer.pos << " " << peer.age << " ] ";
+        }
+        std::cout << std::endl;
+        i++;
+    }
+    std::cout << "==================================" << std::endl;
+}
+
+
 void insert_peer_data_with_order(std::unique_ptr<std::vector<peer_data>>& view, peer_data peer){
     bool inserted = false;
 
@@ -252,6 +277,7 @@ void smart_load_balancer::recover_local_view(const std::vector<peer_data>& recei
 }
 
 void smart_load_balancer::merge_groups_from_view() {
+    std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     std::vector<std::unique_ptr<std::vector<peer_data>>> next_view;
     if(this->view.size() == 1) return;
     for(auto it = this->view.begin(); it != this->view.end() && (it+1) != this->view.end(); it+=2){
@@ -265,12 +291,14 @@ void smart_load_balancer::merge_groups_from_view() {
 }
 
 void smart_load_balancer::split_groups_from_view() {
+    std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
+    int view_next_size = this->view.size() * 2;
     std::vector<std::unique_ptr<std::vector<peer_data>>> next_view;
     int current_group = 1;
     for(auto& it : this->view){
         auto next_group = std::make_unique<std::vector<peer_data>>();
         for(auto peer_it = it->begin(); peer_it != it->end();){
-            if(group(peer_it->pos) == current_group + 1){
+            if(group(peer_it->pos, view_next_size) == current_group + 1){
                 insert_peer_data_with_order(next_group, *peer_it);
                 peer_it = it->erase(peer_it);
             }else{
@@ -279,6 +307,7 @@ void smart_load_balancer::split_groups_from_view() {
         }
         next_view.push_back(std::move(it));
         next_view.push_back(std::move(next_group));
+        current_group += 2;
     }
     this->view = std::move(next_view);
 }
@@ -378,6 +407,8 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
     }
 
     this->incorporate_peers_in_view(received);
+
+    this->print_view();
 }
 
 peer_data smart_load_balancer::get_random_local_peer() {
