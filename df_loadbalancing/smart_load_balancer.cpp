@@ -408,7 +408,6 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
 
     this->incorporate_peers_in_view(received);
 
-    this->print_view();
 }
 
 peer_data smart_load_balancer::get_random_local_peer() {
