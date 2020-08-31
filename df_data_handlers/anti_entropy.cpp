@@ -223,13 +223,18 @@ void anti_entropy::operator()() {
     this->running = true;
 
     while(this->running){
-        std::this_thread::sleep_for (std::chrono::seconds(this->sleep_interval));
         if(this->running){
             std::unique_lock<std::mutex> lck(phase_mutex);
             switch(this->phase){
                 case anti_entropy::Phase::Starting:
                     lck.unlock();
                     this->phase_starting();
+		    { // if phase change we do not want to sleep before recover
+                        std::lock_guard<std::mutex> lck(this->phase_mutex);
+                        if(this->phase != anti_entropy::Phase::Starting){
+                            continue;
+                        }
+                    }
                     break;
                 case anti_entropy::Phase::Recovering:
                     lck.unlock();
@@ -243,6 +248,7 @@ void anti_entropy::operator()() {
                     break;
             }
         }
+	std::this_thread::sleep_for (std::chrono::seconds(this->sleep_interval));
     }
 
     close(this->sender_socket);
