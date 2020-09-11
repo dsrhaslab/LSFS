@@ -147,13 +147,27 @@ namespace tcp_client_server_connection{
         else
         {
             // socket has something to read
+            int msg_size_sizeread = 0;
             uint16_t msg_size;
-            recv(*client_socket, &msg_size, sizeof(uint16_t), 0);
+            char* msg_size_void = (char*) &msg_size;
+            while(msg_size_sizeread < sizeof(uint16_t)){
+                int recv_msg_size = recv(*client_socket, &msg_size_void[msg_size_sizeread], sizeof(uint16_t) - msg_size_sizeread, 0);
+                if (recv_msg_size == -1)
+                {
+                    throw SocketReadException();
+                }
+                else if (recv_msg_size == 0)
+                {
+                    throw PeerDisconnectedException();
+                }
+                else
+                {
+                    msg_size_sizeread += recv_msg_size;
+                }
+            } 
             int total_size = 0;
             while(total_size < msg_size){
                 int recv_size = recv(*client_socket, &buf[total_size], msg_size - total_size, 0);
-
-                std::cout << "msg_size: " << msg_size << " total_size: " << total_size << " recv_size: " << recv_size << std::endl;
 
                 if (recv_size == -1)
                 {

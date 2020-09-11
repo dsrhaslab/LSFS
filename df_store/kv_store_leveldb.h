@@ -586,7 +586,11 @@ void kv_store_leveldb::send_keys_gt(std::vector<std::string> &off_keys, tcp_clie
         split_composite_key(comp_key, &current_key, &current_version, &current_client_id);
         leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value);
         bool is_merge = s.ok();
-        send(connection, current_key, current_version, current_client_id, is_merge, it->value().data(), it->value().size());
+        try {
+            send(connection, current_key, current_version, current_client_id, is_merge, it->value().data(), it->value().size());
+        }catch(std::exception& e){
+            std::cerr << "Exception: " << e.what()  << " " << strerror(errno) << std::endl;
+        }
     }
 
     if (!it->status().ok()) {

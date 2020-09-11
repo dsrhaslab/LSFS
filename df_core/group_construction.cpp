@@ -193,6 +193,7 @@ void group_construction::recover_local_view(const std::vector<peer_data>& receiv
         if((first_estimation + 1) > this->replication_factor_max){
             this->set_nr_groups(this->nr_groups*2);
             this->set_my_group(group(this->position));
+            this->store->update_partition(this->my_group, this->nr_groups);
             this->clean_local_view();
         }
         this->recovering_local_view = false;
@@ -201,6 +202,7 @@ void group_construction::recover_local_view(const std::vector<peer_data>& receiv
 
     this->set_nr_groups(nr_groups_from_peers);
     this->set_my_group(group(this->position));
+    this->store->update_partition(this->my_group, this->nr_groups);
 
     // Clean local view
     this->clean_local_view();
@@ -209,6 +211,7 @@ void group_construction::recover_local_view(const std::vector<peer_data>& receiv
     // There is nothing to recover
     if(nr_groups_from_peers == 1){
         this->recovering_local_view = false;
+        return;
     }
 
     // Check if Local view was sucessfully recovered

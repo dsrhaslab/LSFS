@@ -139,7 +139,7 @@ bool client_reply_handler::wait_for_put_until(const kv_store_key<std::string>& k
             // não é necessário acordar possiveis threads presas na cond variable
             // porque é certo que apenas uma thread podes estar à espera de uma mesma key
             lock_key.unlock(); // é estritamente necessário fazer free porque se não ao removermos
-            // como sai do scope ele vai tentar faazer free num mutex inexistente (SIGSEV)
+            // como sai do scope ele vai tentar fazer free num mutex inexistente (SIGSEV)
             this->put_mutexes.erase(it_key);
 
             lock.unlock();
