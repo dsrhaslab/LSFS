@@ -130,8 +130,10 @@ void insert_peer_data_with_order(std::unique_ptr<std::vector<peer_data>>& view, 
 
     for(auto it = view->begin(); it != view->end(); ++it){
         if(it->ip == peer.ip/*it->port == peer.port*/){
-            if(it->age > peer.age)
-                it->age = peer.age;
+            if(it->age > peer.age){
+                view->erase(it);
+                insert_peer_data_with_order(view, peer);
+            }
             return;
         }
     }
