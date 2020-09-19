@@ -29,6 +29,7 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, lo
     this->replication_factor_max = main_confs["rep_max"].as<int>();
     this->replication_factor_min = main_confs["rep_min"].as<int>();
     this->max_age = main_confs["max_age"].as<int>();
+    this->max_smart_view_age = main_confs["max_smart_view_age"].as<int>(); 
     this->recovering_local_view = true;
     this->local = main_confs["local_message"].as<bool>();
     this->local_interval = 5;//main_confs["local_interval_sec"].as<int>();
@@ -193,7 +194,7 @@ void smart_load_balancer::incorporate_peers_in_view(const std::vector<peer_data>
     for(auto& per_group_view : this->view) {
         int nr_elem_to_keep = 0;
         for (auto it = per_group_view->begin(); it != per_group_view->end(); ++it) {
-            if (it->age < max_age) {
+            if (it->age < max_smart_view_age) {
                 nr_elem_to_keep++;
             } else {
                 break;
