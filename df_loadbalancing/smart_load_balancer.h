@@ -27,6 +27,7 @@ private:
     int replication_factor_max;
     int replication_factor_min;
     int max_age;
+    int max_smart_view_age;
     std::atomic<bool> recovering_local_view;
 
     std::mt19937 random_eng;
