@@ -39,6 +39,7 @@ public:
     void operator()();
     void stop_thread();
     void wait_while_recovering();
+    bool has_recovered();
 
 private:
     void phase_starting();

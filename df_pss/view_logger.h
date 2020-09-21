@@ -14,7 +14,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
 #include <filesystem>
-
+#include "df_data_handlers/anti_entropy.h"
 #define LOG(X) std::cout << X << std::endl;
 
 
@@ -26,15 +26,17 @@ class view_logger {
 private:
     std::atomic<bool> running;
     pss* cyclon_ptr;
+    anti_entropy* anti_ent_ptr;
     long id;
     int logging_interval;
     std::string logging_dir;
 
 public:
 
-    view_logger(long id, pss* pss, int logging_interval, std::string logging_dir)
+    view_logger(long id, pss* pss, anti_entropy* anti_ent, int logging_interval, std::string logging_dir)
     {
         this->cyclon_ptr = pss;
+        this->anti_ent_ptr = anti_ent;
         this->running = true;
         this->id = id;
         this->logging_interval = logging_interval;
@@ -84,6 +86,7 @@ public:
                 i++;
             }
             timed_json += "],";
+            timed_json += "\"recovered\":" + std::to_string(this->anti_ent_ptr->has_recovered()) + ",";
             timed_json += "\"nr_groups\":" + std::to_string(this->cyclon_ptr->get_nr_groups()) + ",";
             timed_json += "\"position\":" + std::to_string(this->cyclon_ptr->get_position()) + ",";
             timed_json += "\"time\":\"" + std::to_string(localTime->tm_hour) + ":" + std::to_string(localTime->tm_min) + ":" + std::to_string(localTime->tm_sec) + "\",";
