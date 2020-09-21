@@ -34,9 +34,9 @@ peer::peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int dat
 //    store(std::make_shared<kv_store_memory<std::string>>(merge_metadata, 100, 100, 100)),
     group_c(ip, id, position, 5, 10, 40, true, 15, this->store, logger),
     cyclon(boot_ip.c_str(), ip, id, position,2,8,10,7, &(this->group_c)),
-    listener(&(this->cyclon) ),
-    v_logger(id, &(this->cyclon),60, "../logging/"),
+    listener(&(this->cyclon)),
     anti_ent(ip, id, &(this->cyclon), &(this->group_c),this->store, 20, true),
+    v_logger(id, &(this->cyclon), &(this->anti_ent),60, "../logging/"),
     data_handler(std::make_unique<data_handler_listener_mt>(ip, id, 1, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, false))
 {
     std::string database_folder = std::string("/home/danielsf97/Desktop/") + this->store->db_name() + "/";
@@ -58,8 +58,8 @@ peer::peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int dat
         group_c(ip/*, pss_port*/, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),
         cyclon(boot_ip.c_str()/*, peer::boot_port*/, ip/*, pss_port*/, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
         listener(/*"127.0.0.1", pss_port,*/ &(this->cyclon)),
-        v_logger(id, &(this->cyclon), logging_interval, logging_dir),
-        anti_ent(ip/*, data_port*/, id, &(this->cyclon), &(this->group_c),this->store, anti_entropy_interval, recover_database)
+        anti_ent(ip/*, data_port*/, id, &(this->cyclon), &(this->group_c),this->store, anti_entropy_interval, recover_database),
+        v_logger(id, &(this->cyclon), &(this->anti_ent), logging_interval, logging_dir)
 {
     if(mt_data_handler){
         this->data_handler = std::make_unique<data_handler_listener_mt>(ip, id, reply_chance, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, smart);

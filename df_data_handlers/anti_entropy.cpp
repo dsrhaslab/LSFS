@@ -81,6 +81,11 @@ int anti_entropy::send_recover_request(peer_data& target_peer){
     return 0;
 }
 
+bool anti_entropy::has_recovered(){
+    std::lock_guard<std::mutex> lck(this->phase_mutex);
+    return (this->phase == anti_entropy::Phase::Operating);
+}
+
 void anti_entropy::phase_starting() {
     if(this->group_c->has_recovered()){
         if(this->recover_database) {
