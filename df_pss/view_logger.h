@@ -53,10 +53,10 @@ public:
         std::shared_ptr<spdlog::logger> logger;
         try
         {
-            logger = spdlog::basic_logger_mt("view_logger", filename);
+            logger = spdlog::basic_logger_mt("view_logger", filename, true);
             logger->set_level(spdlog::level::info);
             logger->set_pattern("%v");
-//            spdlog::flush_every(std::chrono::seconds(5));
+            spdlog::flush_every(std::chrono::seconds(60));
         }
         catch (const spdlog::spdlog_ex &ex)
         {

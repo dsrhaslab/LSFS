@@ -142,7 +142,7 @@ int lsfs_impl::_flush(const char *path, struct fuse_file_info *fi){
     (void)path;
 
     if(!is_temp_file(path)) {
-        return state->flush_and_release_open_file(path);
+        return state->flush_open_file(path);
     }else{
         return 0;
     }
