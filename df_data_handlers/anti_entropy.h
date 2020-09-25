@@ -28,6 +28,8 @@ private:
     int sender_socket;
     std::string ip;
     long id;
+    //TODO remove pos variable
+    double pos;
     bool recover_database;
 
     std::mutex phase_mutex;
@@ -35,7 +37,7 @@ private:
     Phase phase;
 
 public:
-    anti_entropy(std::string ip, long id, pss* pss_ptr, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, long sleep_interval, bool recover_database);
+    anti_entropy(std::string ip, long id, double pos, pss* pss_ptr, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, long sleep_interval, bool recover_database);
     void operator()();
     void stop_thread();
     void wait_while_recovering();
