@@ -13,8 +13,8 @@
 #include <exceptions/custom_exceptions.h>
 #include "anti_entropy.h"
 
-anti_entropy::anti_entropy(std::string ip, long id, pss *pss_ptr, group_construction* group_c,
-        std::shared_ptr<kv_store<std::string>> store, long sleep_interval, bool recover_database): ip(std::move(ip)), id(id),
+anti_entropy::anti_entropy(std::string ip, long id, double pos, pss *pss_ptr, group_construction* group_c,
+        std::shared_ptr<kv_store<std::string>> store, long sleep_interval, bool recover_database): ip(std::move(ip)), id(id), pos(pos),
         store(std::move(store)), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0)),
         phase(anti_entropy::Phase::Starting), pss_ptr(pss_ptr), group_c(group_c), recover_database(recover_database)
 {}
@@ -177,22 +177,25 @@ void anti_entropy::phase_recovering() {
         std::vector<peer_data> local_view = this->group_c->get_local_view();
 
         peer_data p = this->group_c->get_random_peer_from_local_view();
-        int res = this->send_recover_request(p);
-        if(res == -1){
-            continue;
-        }
-        int socket = connection.accept_connection(2);
-        if(socket != -1){
-            bool recovered = this->recover_state(connection, &socket);
-            if(recovered){
-                {
-                    std::lock_guard<std::mutex> lck(this->phase_mutex);
-                    this->phase = anti_entropy::Phase::Operating;
-                    recovering = false;
-                }
-                this->phase_cv.notify_all();
+        //TODO remove this verification
+        if(p.pos != this->pos){
+            int res = this->send_recover_request(p);
+            if(res == -1){
+                continue;
             }
-            close(socket);
+            int socket = connection.accept_connection(2);
+            if(socket != -1){
+                bool recovered = this->recover_state(connection, &socket);
+                if(recovered){
+                    {
+                        std::lock_guard<std::mutex> lck(this->phase_mutex);
+                        this->phase = anti_entropy::Phase::Operating;
+                        recovering = false;
+                    }
+                    this->phase_cv.notify_all();
+                }
+                close(socket);
+            }
         }
     }
 }
