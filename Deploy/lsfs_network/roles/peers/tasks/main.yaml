@@ -12,7 +12,7 @@
 - name: Create Peer Pod
   when: (free_database is not defined) or (free_database|bool == false)
   k8s:
-    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/gsd/.kube/config 
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/danielsf97/.kube/config 
     state: present
     definition: "{{ lookup('template', '{{ role_path }}/templates/peer.yml.j2') }}"
   with_together:
@@ -22,7 +22,7 @@
 - name: Create Peer Pod
   when: (free_database is defined) and (free_database|bool == true)
   k8s:
-    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/gsd/.kube/config 
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/danielsf97/.kube/config 
     state: present
     definition: "{{ lookup('template', '{{ role_path }}/templates/peer_clear_dbs.yml.j2') }}"
   with_together:

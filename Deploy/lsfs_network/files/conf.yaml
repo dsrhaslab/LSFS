@@ -6,18 +6,20 @@ main_confs:
   exec_time_sec: 100000000
   base_port: 12350
   peer_instantiation_interval_sec: 0.01
-  view_logger_enabled: true
+  view_logger_enabled: false
   log_interval_sec: 5
   logging_dir: /share-dir/logging/
   results_dir: /P2P-Filesystem/results/
   database_base_path: /share-dir/
-  rep_max: 10
-  rep_min: 5
-  max_age: 40
+  rep_max: 5 #10
+  rep_min: 3 #5
+  max_age: 30
   local_message: true
   local_interval_sec: 8
   anti_entropy_interval_sec: 20
   reply_chance: 1
+  max_nodes_to_send_get_request: 1
+  max_nodes_to_send_put_request: 1
   smart: true
   mt_data_handler: true
   log_level: off
@@ -31,15 +33,15 @@ main_confs:
   #               Client               #
   ######################################
 
-  nr_puts_required: 1
+  nr_puts_required: 3
   nr_gets_required: 1
   nr_gets_version_required: 1
-  client_wait_timeout: 5
+  client_wait_timeout: 1
   mt_client_handler: true
   nr_client_handler_ths: 3
-  max_nr_requests_timeouts: 1000
-  load_balancer: dynamic
-  smart_load_balancer_group_knowledge: 3
+  max_nr_requests_timeouts: 5
+  load_balancer: smart
+  smart_load_balancer_group_knowledge: 2
   limit_write_paralelization_to: 4k
   limit_read_paralelization_to: 4k
 
@@ -50,7 +52,7 @@ main_confs:
   graph_labels: False
 simulation:
   configuration:
-          #    - execution_type: constant
+      #    - execution_type: constant
       #      time_start_sec: 300
       #      time_end_sec: 500
       #      time_interval_sec: 50

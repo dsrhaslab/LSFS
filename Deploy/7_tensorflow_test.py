@@ -5,30 +5,36 @@ import os
 import regex as re
 import argparse
 from datetime import date
+from datetime import datetime
+import json
 
 tensorflow_dir = "/home/danielsf97/tensorflow/"
-#local_dataset_dir = "/home/gsd/datasets/imagenet/tf_records"
-local_dataset_dir = "/home/danielsf97/lsfs-mount/mount/tf_records"
+local_dataset_dir = "/home/danielsf97/datasets_reduced/imagenet/tf-records"
+#local_dataset_dir = "/home/danielsf97/lsfs-mount/mount/tf_records"
 home_dir = "/home/danielsf97/"
 dataset_dir = home_dir + "datasets/imagenet/tf_records"
 mount_folder = home_dir + "lsfs-mount/mount"
+local_filesystem = True
+results_local_folder = 'results'
 populate_size = 500000000 # 1GB
 warmup_interval = 0
 mount_interval = 50
 nr_of_nodes = 1
 monitoring = True
+try_nr = 1
+log_folder_name = "local"
+send_results_to_bucket = True
 
 ########### Default Values ###########
 
 model = "resnet"
-batch_size = 64 # ou 32
+batch_size = 32
 epochs = 3
 shuffle_buffer = 10000
-num_gpus = 0
+num_gpus = 1
 
 ######################################
 
-master_addr = None
 client_addr = None
 run_dir = None
 run_name = None
@@ -43,12 +49,10 @@ def create_inventory_dict():
   inv = {}
   data_loader = DataLoader()
   inventory = InventoryManager(loader = data_loader,
-                             sources=['cluster-deploy/ansible_hosts'])
+                             sources=['hosts'])
 
   ansible_inv = inventory.get_groups_dict()
 
-  if 'master' in ansible_inv:
-    inv['master'] = ansible_inv['master'][0]
   if 'client' in ansible_inv:
     inv['client'] = ansible_inv['client'][0]
 
@@ -127,7 +131,7 @@ def create_results_directory():
   global client_addr, model, batch_size, epochs, tensorflow_dir, run_dir, run_name
 
   results_dir = tensorflow_dir + "results"
-  day = date.today().strftime("%Y_%m_%d")
+  day = datetime.now().strftime("%Y_%m_%d-%H_%M")
 
   # Create results directory
   run_name = "{}-bs{}-ep{}-{}".format(model, batch_size, epochs, day)
@@ -135,13 +139,29 @@ def create_results_directory():
   command = "ssh {} \"mkdir -p {}\"".format(client_addr, run_dir)
   subprocess.Popen(command, shell=True).wait()
 
+  script_path = tensorflow_dir + "train-official-model.sh"
+  transf_run_dir = run_dir.replace("/", "\\/")
+  command1 = "ssh {} \"sed -i \'s/RUN_NAME=\\\".*\\\"/RUN_NAME=\\\"{}\\\"/g\' {}\"".format(client_addr, run_name, script_path)
+  command2 = "ssh {} \"sed -i \'s/RUN_DIR=\\\".*\\\"/RUN_DIR=\\\"{}\\\"/g\' {}\"".format(client_addr, transf_run_dir, script_path)
+
+  subprocess.Popen(command1, shell=True).wait()
+  subprocess.Popen(command2, shell=True).wait()
+
 def start_monitoring():
-  global run_name, monitoring
+  global monitoring, run_name
 
   if(not monitoring):
      return
 
-  subprocess.Popen("ansible-playbook monitoring/start-monitoring/playbook.yml -i hosts --extra-vars \"run_name={}\"".format(run_name), shell=True).wait()
+  extra_vars = json.dumps(
+    {
+      'run_name': run_name,
+      'gpu': True 
+    }
+    , separators=(',',':')
+  )
+
+  subprocess.Popen("ansible-playbook monitoring/start-monitoring/playbook.yml -i hosts --extra-vars \'{}\'".format(extra_vars), shell=True).wait()
 
 def stop_monitoring():
   global run_name, monitoring
@@ -149,7 +169,7 @@ def stop_monitoring():
   if(not monitoring):
      return
 
-  subprocess.Popen("ansible-playbook monitoring/stop-monitoring/playbook.yml -i hosts --extra-vars \"run_name={}\"".format(run_name), shell=True).wait()
+  subprocess.Popen("ansible-playbook monitoring/stop-monitoring/playbook.yml -i hosts --extra-vars \"run_name={} try_nr={} folder_name={}\"".format(run_name, try_nr, log_folder_name), shell=True).wait()
 
 def tensorflow_training():
   global model, batch_size, epochs, shuffle_buffer, num_gpus, tensorflow_dir, client_addr
@@ -173,38 +193,45 @@ def tensorflow_training():
                 ).wait()
 
 def retrieve_results():
-  global client_addr, run_dir, run_name
+  global client_addr, run_dir, run_name, results_local_folder
 
-  subprocess.Popen("scp -r {}:{} results/"
-                     .format(client_addr, run_dir), shell=True
+  subprocess.Popen("scp -r {}:{} {}/"
+                     .format(client_addr, run_dir, results_local_folder), shell=True
                   ).wait()
 
+  if send_results_to_bucket:
+    local_results_file_path = results_local_folder + "/" + run_name
+    bucket_folder_path = "gs://lsfs_bucket/logs/" + log_folder_name + "/" +run_name + "/" + str(try_nr) + "/"
+    subprocess.Popen("gsutil cp -r {}/* {}"
+                      .format(local_results_file_path, bucket_folder_path), shell=True
+                     ).wait()
+
 def main():
-  global master_addr, client_addr
+  global client_addr
   
   #Create Inventory dictionary
   inv = create_inventory_dict()
-  master_addr = inv['master']
   client_addr = inv['client']
 
   # Setup network and populate
-  # if(args.get('restore')):
-  #   setup_network_from_snapshot()
-  # else:
-  #   setup_network()
-  #   populate_database()
+  if not local_filesystem:
+    if(args.get('restore')):
+      setup_network_from_snapshot()
+    else:
+      setup_network()
+      populate_database()
 
-  # setup_test_configs()
+  setup_test_configs()
 
-  # create_results_directory()
+  create_results_directory()
 
-  # start_monitoring()
+  start_monitoring()
 
   tensorflow_training()
 
-  # stop_monitoring()
+  stop_monitoring()
 
-  # retrieve_results()
+  retrieve_results()
 
 if __name__ == "__main__":
   main()

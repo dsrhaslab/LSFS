@@ -7,7 +7,9 @@
 
 # ---------------------------------------------------------------------------- #
 
-define fileset name="fileset1", path="/home/danielsf97/lsfs-mount/mount", entries=1, dirwidth=1, dirgamma=0, prealloc, filesize=178266k, reuse
+set mode quit firstdone
+
+define fileset name="fileset1", path="/home/danielsf97/lsfs-mount/mount", entries=1, dirwidth=1, dirgamma=0, prealloc, filesize=8000000k, reuse
 
 define process name="process1", instances=1
 {
@@ -28,6 +30,6 @@ create files
 system "sync"
 system "echo 3 > /proc/sys/vm/drop_caches"
 
-run 60
+run 1200
 
 # ---------------------------------------------------------------------------- #

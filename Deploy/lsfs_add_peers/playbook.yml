@@ -1,13 +1,13 @@
 ---
 
-- name: Send Config File to Peer Nodes
-  gather_facts: no
-  hosts: peer
-  tasks:
-    - name: Put Config File in Shared (Volume) directory
-      copy:
-        src: conf.yaml
-        dest: "/home/{{ ansible_user }}/share-dir"
+# - name: Send Config File to Peer Nodes
+#   gather_facts: no
+#   hosts: peer
+#   tasks:
+#     - name: Put Config File in Shared (Volume) directory
+#       copy:
+#         src: conf.yaml
+#         dest: "/home/{{ ansible_user }}/share-dir"
 
 - name: Add New Peers
   gather_facts: no

@@ -197,17 +197,29 @@ def get_child_size(path):
         return os.path.getsize(path)
 
 def replicate_file(original_file, replicated_file):
-    block_size = 1024
+    block_size = 4096
 
     repl_f = open(replicated_file, "wb")
 
     with open(original_file, 'rb') as orig_f:
         buff_orig = orig_f.read(block_size)
         while len(buff_orig) > 0:
-            repl_f.write(buff_orig)
+            succeded = False
+            while not succeded:
+                try:
+                    repl_f.write(buff_orig)
+                    succeded = True
+                except:
+                    print("Error detected!")
             buff_orig = orig_f.read(block_size)
 
-    repl_f.close()
+    succeded = False
+    while not succeded:
+        try:
+            repl_f.close()
+            succeded = True
+        except:
+            print("Error detected!")
     print("Wrote file ", replicated_file)
 
 def replicate_directory(original, replicated):

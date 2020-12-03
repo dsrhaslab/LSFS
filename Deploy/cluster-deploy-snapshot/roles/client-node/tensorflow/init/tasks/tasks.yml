@@ -1,0 +1,102 @@
+- name: Install google-auth python module
+  pip:
+    name: google-auth
+
+- name: Install boto python module
+  pip:
+    name: boto
+
+- name: Wait for automatic system updates
+  become: true
+  shell: while sudo fuser /var/lib/dpkg/{{ item }} >/dev/null 2>&1; do sleep 1; done;
+  with_items:
+    - lock
+    - lock-frontend
+
+- name: Install unzip
+  become: yes
+  apt:
+    name: unzip
+    state: present
+  register: apt_unzip
+  retries: 1000
+  until: apt_unzip is success
+
+- name: Install libffi-dev (need for tensorflow)
+  become: yes
+  apt:
+    name: libffi-dev
+    state: present
+  register: apt_libffi
+  retries: 1000
+  until: apt_libffi is success
+
+- name: Install bazel dependent pkgs
+  become: yes
+  apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - curl
+    - gnupg
+  register: apt_bazel_depend
+  retries: 1000
+  until: apt_bazel_depend is success
+
+- name: Add an Apt signing key, uses whichever key is at the URL
+  become: yes
+  apt_key:
+    url: https://bazel.build/bazel-release.pub.gpg
+    state: present
+
+- name: Add basel repository
+  become: yes
+  apt_repository:
+    filename: bazel.list
+    repo: deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8
+    state: present
+
+
+- name: update apt list
+  become: yes
+  apt:
+    update_cache: yes
+  register: apt_cache
+  retries: 1000
+  until: apt_cache is success
+
+- name: Install bazel (need for tensorflow)
+  become: yes  
+  apt:
+    name: bazel
+    state: present
+  register: apt_bazel
+  retries: 1000
+  until: apt_bazel is success
+
+- name: Download from bucket
+  gc_storage:
+    bucket: "lsfs_bucket"
+    object: "tensorflow.zip"
+    dest: "/home/{{ ansible_user }}/tensorflow.zip"
+    mode: get
+    gs_access_key: GOOGG44PCMOLPIORPWXFILV2
+    gs_secret_key: F8sh0E3Hq7gV8QlxWQ0dKonc/1LCW6qpljbCH++T
+  ignore_errors: yes
+
+- name: Extract tensorflow zip
+  unarchive:
+    src: "/home/{{ ansible_user }}/tensorflow.zip"
+    dest: "/home/{{ ansible_user }}/"
+    remote_src: yes
+
+- name: Remove tensorflow zip
+  file:
+    path: "/home/{{ ansible_user }}/tensorflow.zip"
+    state: absent
+
+- name: Replace home dir name
+  replace:
+    path: "/home/{{ ansible_user }}/tensorflow/train-official-model.sh"
+    regexp: '/home/[^/]+/'
+    replace: '/home/{{ ansible_user }}/'

@@ -9,11 +9,11 @@ import argparse
 
 warmup_interval = 120
 mount_interval = 120
-nr_of_nodes = 4
+nr_of_nodes = 15
 mount_folder = "/home/danielsf97/lsfs-mount/mount"
 master_addr = None
 client_addr = None
-bootstrapper_ip = None
+bootstrapper_ip = "10.244.1.202"
 free_database_peer_startup = False
 
 def str2bool(v):

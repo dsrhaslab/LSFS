@@ -1,27 +1,40 @@
 # Ansible
-ansible_user: danielsf97
+ansible_user: gsd
 
 #Network Config
+test_runner_boot_disk_size: 10
+test_runner_boot_disk_type: pd-standard
+test_runner_machine_type: n1-standard-1
+test_runner_lsfs_component: "test-runner"
+
+bootstrapper_image_version: 1
 bootstrapper_boot_disk_size: 10
+bootstrapper_boot_disk_type: pd-ssd
 bootstrapper_machine_type: g1-small
 bootstrapper_lsfs_component: "bootstrapper"
 
-nr_of_peers: 4
-peer_boot_disk_size: 10
+nr_of_peers: 100
+peer_image_version: 2
+peer_boot_disk_size: 15
+peer_boot_disk_type: pd-ssd
 peer_machine_type: g1-small
 peer_lsfs_component: "peer"
 
+kubernetes_master_image_version: 1
 kubernetes_master_boot_disk_size: 12
+kubernetes_master_boot_disk_type: pd-ssd
 kubernetes_master_machine_type: n1-standard-2
 kubernetes_master_lsfs_component: "master"
 
 nr_of_client_nodes: 1
-client_machine_type: n1-standard-2 #n1-standard-4
+client_image_version: 2
+client_machine_type: n1-standard-4 #n1-standard-2
 client_lsfs_component: "client"
-client_boot_disk_size: 10
+client_boot_disk_size: 64
+client_boot_disk_type: pd-ssd
 client_ssd_disk_type: local-ssd
 client_ssd_disk_interface: "NVME"
-client_gpu_type: projects/dflasks/zones/us-east1-d/acceleratorTypes/nvidia-tesla-t4
+client_gpu_type: projects/lsfs-283710/zones/us-east1-d/acceleratorTypes/nvidia-tesla-t4
 tensorflow_test: False
 
 # Kubernetes

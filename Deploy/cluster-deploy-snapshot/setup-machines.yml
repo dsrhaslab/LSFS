@@ -1,0 +1,284 @@
+---
+
+- name: Creating Lsfs Client Node
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  roles:
+    - role: gcp
+      vars:
+        from_snapshot: true
+        image_version: "{{ client_image_version }}"
+        gcp_network_name: lsfs-network
+        gcp_subnet_name: subnet-us-east-192
+        gcp_zone: us-east1-d
+        gcp_region: us-east1
+        gcp_project: lsfs-283710
+        gcp_cred_kind: serviceaccount
+        gcp_cred_file: credentials.json
+        gcp_account_email: 'lsfs-deploy@lsfs-283710.iam.gserviceaccount.com'
+        gcp_account_scope: 'https://www.googleapis.com/auth/cloud-platform'
+        source_image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20200414
+        nr_of_machines: "{{ nr_of_client_nodes }}"
+        boot_disk_size: "{{ client_boot_disk_size }}"
+        # ssd_disk_type: "{{ client_ssd_disk_type }}"
+        boot_disk_type: "{{ client_boot_disk_type }}"
+        # ssd_disk_interface: "{{ client_ssd_disk_interface }}"
+        gpu_type: "{{ client_gpu_type }}"
+        gcp_machine_type: "{{ client_machine_type }}"
+        type_of_component: "{{ client_lsfs_component }}"
+        tags: [client, kube-cluster]
+
+- name: Store known hosts of 'all' the hosts in the inventory file
+  hosts: localhost
+  connection: local
+
+  vars:
+    ssh_known_hosts_command: "ssh-keyscan -T 10"
+    ssh_known_hosts_file: "{{ lookup('env','HOME') + '/.ssh/known_hosts' }}"
+    ssh_known_hosts: "{{ groups['all'] }}"
+
+  tasks:
+  - name: For each host, remove entry on known_hosts
+    shell: "ssh-keygen -R {{ item }}"
+    with_items: "{{ ssh_known_hosts }}"
+    ignore_errors: yes
+
+  - name: For each host, scan for its ssh public key
+    shell: "ssh-keyscan -t rsa {{ item }}"
+    with_items: "{{ ssh_known_hosts }}"
+    register: ssh_known_host_results
+    ignore_errors: yes
+
+  - name: Add/update the public key in the '{{ ssh_known_hosts_file }}'
+    known_hosts:
+      name: "{{ item.item }}"
+      key: "{{ item.stdout }}"
+      path: "{{ ssh_known_hosts_file }}"
+    with_items: "{{ ssh_known_host_results.results }}"  
+
+- hosts: client
+  gather_facts: yes
+  roles:
+    - { role: client-node/tensorflow/init }
+    - { role: ansible-python3, python3_pyenv: "3.8.2"}
+    - { role: client-node/tensorflow/setup, python3_version: "3.8.2"}
+
+- name: Creating Kubernetes Master Instance
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  roles:
+    - role: gcp
+      when: local|bool == False
+      vars:
+        from_snapshot: true
+        image_version: "{{ kubernetes_master_image_version }}"
+        gcp_network_name: lsfs-network
+        gcp_subnet_name: subnet-us-east-192
+        gcp_zone: us-east1-d
+        gcp_region: us-east1image-peer-v2
+        gcp_project: lsfs-283710
+        gcp_cred_kind: serviceaccount
+        gcp_cred_file: credentials.json
+        gcp_account_email: 'lsfs-deploy@lsfs-283710.iam.gserviceaccount.com'
+        gcp_account_scope: 'https://www.googleapis.com/auth/cloud-platform'
+        source_image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20200414
+        nr_of_machines: 1
+        boot_disk_size: "{{ kubernetes_master_boot_disk_size }}"
+        boot_disk_type: "{{ kubernetes_master_boot_disk_type }}"
+        gcp_machine_type: "{{ kubernetes_master_machine_type }}"
+        type_of_component: "{{ kubernetes_master_lsfs_component }}"
+        tags: [master, kube-cluster]
+  tasks:
+    - when: local|bool == False
+      set_fact:
+        master_local_ip: "{{ hostvars['127.0.0.1']['weaker_instance_with_external_ip']['results'][0]['networkInterfaces'][0]['networkIP'] }}"
+
+- name: Creating LSFS bootstrapper Instance
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  roles:
+    - role: gcp
+      when: local|bool == False
+      vars:
+        from_snapshot: true
+        image_version: "{{ bootstrapper_image_version }}"
+        external_ip: false
+        gcp_network_name: lsfs-network
+        gcp_subnet_name: subnet-us-east-192
+        gcp_zone: us-east1-d
+        gcp_region: us-east1
+        gcp_project: lsfs-283710
+        gcp_cred_kind: serviceaccount
+        gcp_cred_file: credentials.json
+        gcp_account_email: 'lsfs-deploy@lsfs-283710.iam.gserviceaccount.com'
+        gcp_account_scope: 'https://www.googleapis.com/auth/cloud-platform'
+        source_image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20200414
+        nr_of_machines: 1
+        boot_disk_size: "{{ bootstrapper_boot_disk_size }}"
+        boot_disk_type: "{{ bootstrapper_boot_disk_type }}"
+        gcp_machine_type: "{{ bootstrapper_machine_type }}"
+        type_of_component: "{{ bootstrapper_lsfs_component }}"
+        tags: [bootstrapper, kube-cluster]
+
+- name: Creating LSFS peers Instances
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  roles:
+    - role: gcp
+      when: local|bool == False
+      vars:
+        from_snapshot: true
+        image_version: "{{ peer_image_version }}"
+        external_ip: false
+        gcp_network_name: lsfs-network
+        gcp_subnet_name: subnet-us-east-192
+        gcp_zone: us-east1-d
+        gcp_region: us-east1
+        gcp_project: lsfs-283710
+        gcp_cred_kind: serviceaccount
+        gcp_cred_file: credentials.json
+        gcp_account_email: 'lsfs-deploy@lsfs-283710.iam.gserviceaccount.com'
+        gcp_account_scope: 'https://www.googleapis.com/auth/cloud-platform'
+        source_image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20200414
+        nr_of_machines: "{{ nr_of_peers }}"
+        boot_disk_size: "{{ peer_boot_disk_size }}"
+        boot_disk_type: "{{ peer_boot_disk_type }}"
+        gcp_machine_type: "{{ peer_machine_type }}"
+        type_of_component: "{{ peer_lsfs_component }}"
+        tags: [peer, kube-cluster]
+
+- name: Store known hosts of 'all' the hosts in the inventory file
+  hosts: localhost
+  connection: local
+
+  vars:
+    ssh_known_hosts_command: "ssh-keyscan -T 10"
+    ssh_known_hosts_file: "{{ lookup('env','HOME') + '/.ssh/known_hosts' }}"
+    ssh_known_hosts: "{{ groups['all'] }}"
+
+  tasks:
+  - name: For each host, remove entry on known_hosts
+    shell: "ssh-keygen -R {{ item }}"
+    with_items: "{{ ssh_known_hosts }}"
+    ignore_errors: yes
+
+  - name: For each host, scan for its ssh public key
+    shell: "ssh-keyscan -t rsa {{ item }}"
+    with_items: "{{ ssh_known_hosts }}"
+    register: ssh_known_host_results
+    ignore_errors: yes
+
+  - name: Add/update the public key in the '{{ ssh_known_hosts_file }}'
+    known_hosts:
+      name: "{{ item.item }}"
+      key: "{{ item.stdout }}"
+      path: "{{ ssh_known_hosts_file }}"
+    with_items: "{{ ssh_known_host_results.results }}"  
+
+- name: Saving In-Memory Inventory to File
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - template:
+        src: ansible-hosts.j2
+        dest: ansible_hosts
+
+- name: Setup K8s master, cluster and network creation
+  hosts: master
+  gather_facts: yes
+  become: yes
+  roles:
+    - role: kubernetes/master 
+      when: local|bool == False
+      vars:
+        master_ip: "{{ hostvars['127.0.0.1']['master_local_ip'] }}"
+        tags: master
+    - role: cni 
+      when: local|bool == False  
+      vars:
+        tags: cni
+
+- name: Joining Bootstrapper, Peer and Client Instances to K8s cluster
+  hosts: [bootstrapper, peer, client]
+  #strategy: free
+  gather_facts: yes
+  become: yes
+  roles:
+    - role: kubernetes/node
+      when: local|bool == False
+      vars:
+        master_ip: "{{ hostvars['127.0.0.1']['master_local_ip'] }}"
+        tags: node 
+
+- name: Extra Cluster Configuration
+  hosts: master
+  gather_facts: yes
+  become: yes
+  tasks:
+    - name: Recreate kube-dns
+      when: local|bool == False
+      command: kubectl --kubeconfig={{ kubeadmin_config }} -n kube-system delete pods -l k8s-app=kube-dns
+      ignore_errors: true
+    - name: Adding labels to kubernetes bootstrapper node
+      when: local|bool == False
+      command: |
+        kubectl --kubeconfig={{ kubeadmin_config }} \
+            label nodes instance-{{ bootstrapper_lsfs_component }}-{{ '%04d' | format(item | int) }} lsfs-component={{ bootstrapper_lsfs_component }}
+      register: create_result_bootstrapper_node
+      until: create_result_bootstrapper_node.rc == 0
+      retries: 5
+      delay: 2
+      ignore_errors: true
+      with_sequence: start=1 end=1 format=%d
+
+    - name: Adding labels to kubernetes data nodes
+      when: local|bool == False
+      command: |
+        kubectl --kubeconfig={{ kubeadmin_config }} \
+            label nodes instance-{{ peer_lsfs_component }}-{{ '%04d' | format(item | int) }} lsfs-component={{ peer_lsfs_component }}{{ item }}
+      register: create_result_data_nodes
+      until: create_result_data_nodes.rc == 0
+      retries: 5
+      delay: 2
+      ignore_errors: true
+      with_sequence: start=1 end="{{ nr_of_peers }}" format=%d
+
+    - name: Adding labels to kubernetes client nodes
+      when: local|bool == False
+      command: |
+        kubectl --kubeconfig={{ kubeadmin_config }} \
+            label nodes instance-{{ client_lsfs_component }}-{{ '%04d' | format(item | int) }} lsfs-component={{ client_lsfs_component }}
+      register: create_result_client_nodes
+      until: create_result_client_nodes.rc == 0
+      retries: 5
+      delay: 2
+      ignore_errors: true
+      with_sequence: start=1 end="{{ nr_of_client_nodes }}" format=%d
+
+    - name: Install openshift python module
+      when: local|bool == False
+      pip:
+        name: openshift
+
+    - name: Create k8s lsfs namespace
+      when: local|bool == False
+      k8s:
+        kubeconfig: "/home/{{ ansible_user }}/.kube/config"
+        name: lsfs
+        api_version: v1
+        kind: Namespace
+        state: present
+
+- name: Saving In-Memory Inventory to File
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - template:
+        src: ansible-hosts.j2
+        dest: ansible_hosts

@@ -16,11 +16,12 @@ spec:
             - node
   containers:
   - name: client-container
+    image: lsfsusertemp/lsfs-testing:client1_v2
 #    image: lsfsusertemp/lsfs-testing:client_debug
-    image: lsfsusertemp/lsfs-testing:client_debug_message
+#    image: lsfsusertemp/lsfs-testing:client_debug_message
 #    image: lsfsusertemp/lsfs-testing:client_no_recover
     command: ["/bin/sh", "-c"]
-#    args: ["sleep infinity"]
+    #args: ["sleep infinity"]
     args: ["build/./lsfs_exe {{ bootstrapper_ip }} {{ client_id }} /share-dir/conf.yaml /lsfs-mount/mount /lsfs-mount/backend"]
     volumeMounts:
     - mountPath: /lsfs-mount

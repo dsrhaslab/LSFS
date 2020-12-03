@@ -1,0 +1,69 @@
+---
+
+- name: Configure VPC network and subnet
+  run_once: true
+  shell: "{{ item }}"
+  with_items:
+    - "gcloud compute networks create {{ gcp_network_name }} --subnet-mode custom"
+    - "gcloud compute networks subnets create {{ gcp_subnet_name }} --network {{ gcp_network_name }} --region {{ gcp_region }} --range {{ gcp_subnet_range }}"
+
+# - name: Create a network
+#   gcp_compute_network:
+#     name: "lsfs-network-t"
+#     project: "{{ gcp_project }}"
+#     auto_create_subnetworks: true
+#     routing_config:
+#       routing_mode: "REGIONAL"
+#     auth_kind: "{{ gcp_cred_kind }}"
+#     service_account_file: "{{ gcp_cred_file }}"
+#     state: present
+#   register: network
+
+- name: Internal/external firewall rules
+  run_once: true
+  gcp_compute_firewall:
+    name: "internal-external-rules"
+    allowed:
+      - ip_protocol: tcp
+        ports:
+          - 22
+          - 80
+      - ip_protocol: icmp
+    network: 
+      selfLink: "global/networks/{{ gcp_network_name }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    state: present
+
+- name: Internal firewall rules
+  run_once: true
+  gcp_compute_firewall:
+    name: "internal-rules"
+    allowed:
+      - ip_protocol: tcp
+        ports:
+          - 3306
+          - 5000
+          - 9200
+          - 9300
+          - 6443
+          - 443
+          - 10250
+      - ip_protocol: 112
+      - ip_protocol: udp
+    source_ranges:
+      - "{{ gcp_subnet_range }}"
+    network: 
+      selfLink: "global/networks/{{ gcp_network_name }}"
+    project: "{{ gcp_project }}"
+    auth_kind: "{{ gcp_cred_kind }}"
+    service_account_file: "{{ gcp_cred_file }}"
+    state: present
+
+- name: Configure NAT router in order to allow network access in instances without external IP
+  run_once: true
+  shell: "{{ item }}"
+  with_items:
+    - "gcloud compute routers create nat-router --asn=64512 --network {{ gcp_network_name }} --region {{ gcp_region }}"
+    - "gcloud compute routers nats create nat-config --router-region {{ gcp_region }} --router {{ gcp_router_name }} --nat-all-subnet-ip-ranges --auto-allocate-nat-external-ips"

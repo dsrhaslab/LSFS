@@ -16,10 +16,19 @@ spec:
             - node
   containers:
   - name: peer-container
-    image: lsfsusertemp/lsfs-testing:peer_debug_message
+    #image: lsfsusertemp/lsfs-testing:peer_debug_message
+    image: lsfsusertemp/lsfs-testing:peer1_v2
     command: ["/bin/sh", "-c"]
-    #args: ["sleep infinity"]
-    args: ["./build/peer_exe {{ item.0 }} {{ item.1 }} /share-dir/conf.yaml {{ bootstrapper_ip }}"]
+    args: ["sed -i \"s/warmup_interval:.*/warmup_interval: 0/g\" /share-dir/conf.yaml; ./build/peer_exe {{ item.0 }} {{ item.1 }} /share-dir/conf.yaml {{ bootstrapper_ip }}"]
+    lifecycle:
+      preStop:
+        exec:
+          command: ["/bin/bash","-c","/bin/kill -SIGTERM $(pgrep peer_exe) && tail --pid=$(pgrep peer_exe) -f /dev/null"]
+    resources:
+      requests:
+        ephemeral-storage: "4Gi"
+      limits:
+        ephemeral-storage: "4.3Gi"
     volumeMounts:
     - mountPath: /share-dir
       name: peer-volume
