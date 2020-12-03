@@ -1,7 +1,0 @@
----
-
-- name: Install data analysis packages
-  apt:
-    pkg:
-    - dstat
-    - sysstat

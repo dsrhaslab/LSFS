@@ -5,19 +5,35 @@ from time import sleep
 import subprocess
 import os
 import regex as re
+import argparse
 
+nr_of_nodes = 10
 client_addr = None
 home_folder = "/home/danielsf97"
 mount_folder = "/home/danielsf97/lsfs-mount/mount"
 
-def gcloud_create_machines():
-  subprocess.Popen("cp -r group_vars cluster-deploy", shell=True).wait()
+parser = argparse.ArgumentParser()
+parser.add_argument('--nr_nodes', help="Number of Nodes")
 
-  ansible_command = ["ansible-playbook", "cluster-deploy/playbook.yml"]
+args = vars(parser.parse_args())
+
+if args.get('nr_nodes'):
+  nr_of_nodes = int(args.get('nr_nodes'))
+
+def gcloud_create_machines():
+  global nr_of_nodes
+
+  subprocess.Popen("sed -i \"s/nr_of_peers:.*/nr_of_peers: {}/g\" {}"
+                    .format(nr_of_nodes, 'group_vars/all.yml'), shell=True
+                  ).wait()
+
+  subprocess.Popen("cp -r group_vars cluster-deploy-snapshot", shell=True).wait()
+
+  ansible_command = ["ansible-playbook", "cluster-deploy-snapshot/setup-machines.yml"]
   ansible_process = subprocess.Popen(ansible_command)
   output, error = ansible_process.communicate()
 
-  subprocess.Popen("cp cluster-deploy/ansible_hosts hosts", shell=True).wait()
+  subprocess.Popen("cp cluster-deploy-snapshot/ansible_hosts hosts", shell=True).wait()
 
   print("Machines Created")
 

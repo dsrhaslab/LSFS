@@ -21,7 +21,7 @@ client_lsfs_component: "client"
 client_boot_disk_size: 10
 client_ssd_disk_type: local-ssd
 client_ssd_disk_interface: "NVME"
-client_gpu_type: projects/dflasks/zones/us-east1-d/acceleratorTypes/nvidia-tesla-t4
+client_gpu_type: projects/lsfs-283710/zones/us-east1-d/acceleratorTypes/nvidia-tesla-t4
 tensorflow_test: False
 
 # Kubernetes

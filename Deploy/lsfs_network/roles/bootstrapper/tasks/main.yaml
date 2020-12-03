@@ -1,6 +1,6 @@
 - name: Create Bootstrapper Pod
   k8s:
-    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/gsd/.kube/config
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/danielsf97/.kube/config
     state: present
     definition:
       apiVersion: v1
@@ -23,8 +23,8 @@
                   - node
         containers:
         - name: bootstrapper-container
-          #image: lsfsusertemp/lsfs-testing:bootstrapper1
-          image: lsfsusertemp/lsfs-testing:bootstrapper_debug_message
+          image: lsfsusertemp/lsfs-testing:bootstrapper1
+          #image: lsfsusertemp/lsfs-testing:bootstrapper_debug_message
           command: ["./build/bootstrapper_exe", "scripts/conf.yaml"]
         # nodeSelector: #selector ?
         #   lsfs-component: bootstrapper #node
@@ -48,7 +48,7 @@
 
 #- name: Create Service
 #  k8s:
-#    kubeconfig: /home/gsd/.kube/config
+#    kubeconfig: /home/danielsf97/.kube/config
 #    state: present
 #    definition:
 #      apiVersion: v1
@@ -69,7 +69,7 @@
 
 - name: Get a list of all pods from any namespace
   k8s_info:
-    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/gsd/.kube/config
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/danielsf97/.kube/config
     namespace: lsfs
     api_version: v1
     name: bootstrapper
@@ -85,7 +85,7 @@
 
 
 #- name: Wait for bootstrapper pod become ready
-#  shell: "kubectl wait --namespace=lsfs --kubeconfig=/home/gsd/.kube/config --for=condition=Ready pods bootstrapper"
+#  shell: "kubectl wait --namespace=lsfs --kubeconfig=/home/danielsf97/.kube/config --for=condition=Ready pods bootstrapper"
 
 - debug:
     var: bootstrapper_pod

@@ -8,10 +8,10 @@ import regex as re
 
 master_addr = None
 client_addr = None
-home_dir = "/home/gsd/"
-dataset_dir = home_dir + "datasets/imagenet/tf_records"
+home_dir = "/home/danielsf97/"
+dataset_dir = home_dir + "datasets_reduced_v2/imagenet/tf_records"
 lsfs_dir = home_dir + "lsfs-mount/mount"
-populate_size = 1073741824 # 1GB
+populate_size = 100000000000 # 1GB
 
 def create_inventory_dict():
   inv = {}
@@ -82,7 +82,7 @@ def main():
   populate_database()
 
   # # Start Churning Phase
-  make_snapshot()
+  #make_snapshot()
 
 if __name__ == "__main__":
   main()

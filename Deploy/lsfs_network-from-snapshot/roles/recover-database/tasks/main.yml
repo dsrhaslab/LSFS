@@ -5,12 +5,12 @@
 
 - name: get node_id based on hostname
   set_fact:
-    node_id: "{{ result.stdout | regex_replace('^(.*)([0-9]+)$', '\\2') | int }}"
+    node_id: "{{ result.stdout | regex_replace('^(.*)-([0-9]+)$', '\\2') | int }}"
 
 - name: Download from bucket
   gc_storage:
-    bucket: "lsfs-bucket"
-    object: "{{ node_id }}.zip"
+    bucket: "lsfs_bucket"
+    object: "/{{ folder_name }}/{{ node_id }}.zip"
     dest: "/home/{{ ansible_user }}/share-dir/{{ node_id }}.zip"
     mode: get
     gs_access_key: GOOGG44PCMOLPIORPWXFILV2
@@ -24,6 +24,7 @@
     state: absent
 
 - name: Download unzip package
+  become: true
   apt:
     name: unzip
 

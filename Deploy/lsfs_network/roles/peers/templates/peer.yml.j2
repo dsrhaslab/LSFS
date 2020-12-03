@@ -16,9 +16,15 @@ spec:
             - node
   containers:
   - name: peer-container
-    image: lsfsusertemp/lsfs-testing:peer_debug_message
+    image: lsfsusertemp/lsfs-testing:peer1_v2
+    #image: lsfsusertemp/lsfs-testing:peer_debug_message
     command: ["/bin/sh", "-c"]
+    #args: ["sleep infinity"]
     args: ["./build/peer_exe {{ item.0 }} {{ item.1.replace(',', '.') }} /share-dir/conf.yaml {{ bootstrapper_ip }} --no-recover"]
+    lifecycle:
+      preStop:
+        exec:
+          command: ["/bin/bash","-c","/bin/kill -SIGTERM $(pgrep peer_exe) && tail --pid=$(pgrep peer_exe) -f /dev/null"]
     ports:
     - containerPort: 10250
     volumeMounts:

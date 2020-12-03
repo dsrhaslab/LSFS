@@ -1,6 +1,6 @@
 - name: Create Client Pod
   k8s:
-    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/gsd/.kube/config
+    kubeconfig: "/home/{{ ansible_user }}/.kube/config" #/home/danielsf97/.kube/config
     state: present
     definition: "{{ lookup('template', '{{ role_path }}/templates/client.yml.j2') }}"
 #      apiVersion: v1

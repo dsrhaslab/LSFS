@@ -11,10 +11,13 @@ import math
 import numpy
 import json
 import argparse
+import datetime
+import pause
+import logging
 
 ####### Global Static Variables ########
 
-mount_folder = "/home/gsd/lsfs-mount/mount"
+mount_folder = "/home/danielsf97/lsfs-mount/mount"
 churn_interval   = 60 # 1 em 1 minuto
 churn_iterations_per_phase = 15
 time_between_phases = 60
@@ -26,6 +29,7 @@ mount_interval      = 120
 replication_factor_min = 5
 replication_factor_max = 10
 free_database_space_on_new_node_launch = False
+churn_log_file = "churn_log_file.txt"
 
 ####### Global Dynamic Variables #######
 
@@ -55,6 +59,8 @@ parser.add_argument('-i', '--init', help="Init Network",
                     action='store_true')
 parser.add_argument('--warmup_int', help="Warmup Interval")
 parser.add_argument('--mount_int', help="Mount Interval")
+parser.add_argument('--replication_factor_min', help="Replication factor min")
+parser.add_argument('--replication_factor_max', help="Replication factor max")
 parser.add_argument('--nr_nodes', help="Number of Nodes")
 parser.add_argument('--churn_int', help="Churn Interval")
 parser.add_argument('--nr_phases', help="Churn Number of Phases")
@@ -62,6 +68,7 @@ parser.add_argument('--per_phase_its', help="Iterations Per Phase")
 parser.add_argument('--time_bet_phases', help="Time between Phases")
 parser.add_argument('--churn_percent', help="Churn Percentage")
 parser.add_argument('--free_database', help="Free database on nodes startup", type = str2bool, const=True, default=free_database_space_on_new_node_launch, nargs='?')
+parser.add_argument('--churn_log_file', help="Churn Log File")
 
 args = vars(parser.parse_args())
 
@@ -69,6 +76,10 @@ if args.get('warmup_int'):
   warmup_interval = int(args.get('warmup_int'))
 if args.get('mount_int'):
   warmup_interval = int(args.get('mount_int'))
+if args.get('replication_factor_min'):
+  replication_factor_min = int(args.get('replication_factor_min'))
+if args.get('replication_factor_max'):
+  replication_factor_max = int(args.get('replication_factor_max'))
 if args.get('nr_nodes'):
   nr_of_nodes = int(args.get('nr_nodes'))
 if args.get('churn_int'):
@@ -81,8 +92,17 @@ if args.get('time_bet_phases'):
   time_between_phases = int(args.get('time_bet_phases'))
 if args.get('churn_percent'):
   churn_percentage = int(args.get('churn_percent'))
+if args.get('churn_log_file'):
+  churn_log_file = args.get('churn_log_file')
 
 free_database_space_on_new_node_launch = args.get('free_database')
+
+logging.basicConfig(
+  filename=churn_log_file,
+  filemode='w',
+  level=logging.DEBUG,
+  format='%(asctime)s → %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p'
+)
 
 ######### Auxiliary Functions ##########
 
@@ -110,9 +130,11 @@ def calculate_nr_of_groups():
     else:
       idx += 1
 
-  print("Nr of groups = " + str((2 ** idx)))
+  nr_groups = (2 ** idx)
 
-  return (2 ** idx)
+  log("Nr of Groups: " + str(nr_groups))
+
+  return nr_groups
 
 def create_inventory_dict():
   inv = {}
@@ -129,6 +151,9 @@ def create_inventory_dict():
 
   return inv
 
+def log(msg):
+  logging.debug(msg)
+
 def variables_init():
   global bootstrapper_pod_ip, nr_of_groups, nr_of_nodes, groups, groups_usage_queue, current_peer_id
 
@@ -136,6 +161,8 @@ def variables_init():
   # (wrote by running ansible network playbook)
   with open("lsfs_network/bootstrapper_ip", "r") as f:
     bootstrapper_pod_ip = f.read().strip()
+
+  log("Bootstrapper Pod Ip: " + bootstrapper_pod_ip)
 
   # Populate groups global variable according to peers created
   nr_of_groups = calculate_nr_of_groups()
@@ -183,19 +210,26 @@ def setup_network():
   run_peers()
   mount_filesystem()
 
-def kill_nodes(nodes_id):
+def kill_nodes(nodes_id, nodes_group):
   global master_addr
 
   print("Killing " + str(len(nodes_id)) + " node(s)")
 
   kill_command = "ssh {} \"kubectl delete pods".format(master_addr)
+
+  nodes_list_str = "["
+  node_group_it = 0
   for node_id in nodes_id:
+    nodes_list_str += " {}({})".format(node_id, nodes_group[node_group_it]) 
     kill_command += " peer{}".format(node_id)
+    node_group_it += 1
   kill_command += " --namespace=lsfs &> /dev/null &\""
+  nodes_list_str += " ]"
   
   kill_process = subprocess.Popen(kill_command, shell=True)
   output, error = kill_process.communicate()
 
+  log("Killed nodes: " + nodes_list_str)
   print("Nodes Killed")
 
 def mount_filesystem():
@@ -210,16 +244,23 @@ def mount_filesystem():
   sleep(mount_interval)
   print("Filesystem is Mounted")
 
-def start_nodes(new_nodes_pos, machine_nrs):
-  global master_addr, current_peer_id, bootstrapper_pod_ip, free_database_space_on_new_node_launch
+def start_nodes(new_nodes_pos, machine_nrs, nodes_group):
+  global master_addr, current_peer_id, bootstrapper_pod_ip, free_database_space_on_new_node_launch, groups
+
+  print("Moving group_vars to lsfs_add_peers")
 
   subprocess.Popen("cp -r group_vars lsfs_add_peers", shell=True).wait()
 
   new_nodes_ids = []
 
+  nodes_list_str = "["
   for i in range(len(new_nodes_pos)):
     current_peer_id += 1
     new_nodes_ids.append(current_peer_id)
+    print((current_peer_id, new_nodes_pos[i], machine_nrs[i]))
+    groups[nodes_group[i]].put((current_peer_id, new_nodes_pos[i], machine_nrs[i]))
+    nodes_list_str += " {}({})".format(current_peer_id, nodes_group[i]) 
+  nodes_list_str += " ]"
 
   ansible_vars = json.dumps(
     {
@@ -232,7 +273,11 @@ def start_nodes(new_nodes_pos, machine_nrs):
     , separators=(',',':')
   )
 
+  print("Running lsfs_add_peers playbook")
+
   subprocess.Popen("ansible-playbook lsfs_add_peers/playbook.yml -i hosts --extra-vars \'{}\'".format(ansible_vars), shell=True).wait()
+
+  log("Started nodes: " + nodes_list_str)
 
   print("New Peers Are UP!!")
 
@@ -242,17 +287,26 @@ def apply_churn():
   nr_of_nodes_to_substitute = round(nr_of_nodes * (churn_percentage / 100))
 
   nodes_to_remove = [] # [(node_id, node_pos, machine_nr),...]
+  nodes_group = []
   for i in range(nr_of_nodes_to_substitute):
     next_group = groups_usage_queue.get()
     next_node = groups[next_group].get()
+    print(next_node)
     nodes_to_remove.append(next_node)
     groups_usage_queue.put(next_group)
+    nodes_group.append(next_group)
 
   nodes_id, nodes_pos, machine_nrs = zip(*nodes_to_remove)
 
-  kill_nodes(nodes_id)
+  print("Going to Kill nodes")
 
-  start_nodes(nodes_pos, machine_nrs)
+  kill_nodes(nodes_id, nodes_group)
+
+  print("Going to Start nodes")
+
+  start_nodes(nodes_pos, machine_nrs, nodes_group)
+
+  print("Nodes Started")
 
 def initiate_churn():
   global nr_of_phases, time_between_phases, churn_interval, churn_iterations_per_phase
@@ -262,21 +316,29 @@ def initiate_churn():
   # Apply Churn Forever
   while(curr_phases < nr_of_phases):
 
-    for it in range(0, churn_iterations_per_phase):
-
-      # Apply Churn
-      apply_churn()
-
-      if (it + 1) != churn_iterations_per_phase:
-        # Wait Churn Interval
-        sleep(churn_interval)
-    
     if curr_phases != nr_of_phases:
       # Wait Time Between Phases
       sleep(time_between_phases)
+      print("Slept time between phases")
 
+
+    for it in range(0, churn_iterations_per_phase):
+
+      time_start = datetime.datetime.now()
+      time_to_wait_for = time_start + datetime.timedelta(seconds=churn_interval)
+
+      # Apply Churn
+      print("Applying Churn")
+      apply_churn()
+      print("Churn Applied")
+
+      if (it + 1) != churn_iterations_per_phase:
+        # Wait Churn Interval
+        pause.until(time_to_wait_for)
+        print("Slept Churn Interval")
+    
     curr_phases += 1
-
+  print("Finished Churn")
 
 
 
