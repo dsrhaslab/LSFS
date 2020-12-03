@@ -34,7 +34,7 @@
 # Logging
 logging*
 backup/*
-*.json
+*.json*
 logs*
 
 # Build Directory
