@@ -51,8 +51,7 @@ namespace std {
             // second and third and combine them using XOR
             // and bit shifting:
 
-            return ((hash<T>()(k.key)
-                     ^ (hash<long>()(k.key_version.version) << 1)) >> 1);
+            return (hash<T>()(k.key));
         }
     };
 }
