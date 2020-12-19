@@ -13,8 +13,8 @@
 #include <regex>
 #include <spdlog/spdlog.h>
 
-client_reply_handler_st::client_reply_handler_st(std::string ip/*, int port*/, long wait_timeout):
-    client_reply_handler(ip/*, port*/, wait_timeout),
+client_reply_handler_st::client_reply_handler_st(std::string ip, long wait_timeout):
+    client_reply_handler(ip, wait_timeout),
     socket_rcv(socket(PF_INET, SOCK_DGRAM, 0))
 {}
 
@@ -25,14 +25,13 @@ client_reply_handler_st::~client_reply_handler_st()
 
 void client_reply_handler_st::operator()() {
     this->running = true;
-    spdlog::debug("Client Reply Handler is Active!!");
 
     struct sockaddr_in si_me, si_other;
     socklen_t addr_size = sizeof(si_other);
 
     memset(&si_me, '\0', sizeof(si_me));
     si_me.sin_family = AF_INET;
-    si_me.sin_port = htons(client::kv_port /*this->port*/);
+    si_me.sin_port = htons(client::kv_port);
     si_me.sin_addr.s_addr = inet_addr(this->ip.c_str());
 
     bind(this->socket_rcv, (struct sockaddr*)&si_me, sizeof(si_me));

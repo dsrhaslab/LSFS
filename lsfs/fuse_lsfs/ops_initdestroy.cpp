@@ -11,7 +11,7 @@
 
 #include "util.h"
 #include "lsfs_impl.h"
-#include "fuse/fuse_common/fuse_utils.h"
+#include "lsfs/fuse_common/fuse_utils.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -43,17 +43,6 @@ void*  lsfs_impl::_init(
     conn->max_readahead = state->max_parallel_read_size;
     conn->max_background = 1;
 
-//    conn->want |= FUSE_CAP_WRITEBACK_CACHE;
-//
-//    conn->want |= FUSE_CAP_SPLICE_MOVE;
-//    conn->want |= FUSE_CAP_SPLICE_READ;
-//    conn->want |= FUSE_CAP_SPLICE_WRITE;
-
-//    cfg->direct_io    = 1; // to avoid double-caching
-//    cfg->kernel_cache = 1; //supostamente tem de estar disable para filesystems cujos dados podem mudar externamente (network file systems)
-//    cfg->nullpath_ok  = 1;
-//    cfg->use_ino      = 1;
-
     cfg->entry_timeout    = 0;
     cfg->attr_timeout     = 0;
     cfg->negative_timeout = 0;
@@ -65,8 +54,6 @@ void*  lsfs_impl::_init(
     fuse_pt_log("conn->max_readahead = %u\n", conn->max_readahead);
     fuse_pt_log("conn->max_background = %u\n", conn->max_background);
     fuse_pt_log("conn->congestion_threshold = %u\n", conn->congestion_threshold);
-
-    // ---
 
     // ensure root directory exists
 
@@ -81,8 +68,6 @@ void*  lsfs_impl::_init(
     }
 
     state->clear_working_directories_cache();
-
-    // ---
 
     return NULL;
 }

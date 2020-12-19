@@ -13,9 +13,7 @@ class smart_load_balancer: public load_balancer {
 private:
     std::vector<std::unique_ptr<std::vector<peer_data>>> view;
     std::recursive_mutex view_mutex;
-
-    //std::unordered_map<int, peer_data> local_view; //port -> age
-    std::unordered_map<std::string, peer_data> local_view; //port -> age
+    std::unordered_map<std::string, peer_data> local_view;
     std::recursive_mutex local_view_mutex;
     int nr_saved_peers_by_group;
     bool local;
@@ -29,13 +27,11 @@ private:
     int max_age;
     int max_smart_view_age;
     std::atomic<bool> recovering_local_view;
-
     std::mt19937 random_eng;
     std::atomic<bool> running;
     long sleep_interval;
     int sender_socket;
     std::string ip;
-    //int port;
 
 private:
     void print_view();

@@ -3,7 +3,6 @@
 //
 
 #include "lsfs_state.h"
-
 #include <ctime>
 #include <utility>
 #include <spdlog/spdlog.h>
@@ -202,7 +201,6 @@ int lsfs_state::put_with_merge_metadata(metadata& met, const std::string& path){
 }
 
 std::unique_ptr<metadata> lsfs_state::get_metadata(const std::string& path){
-//    long version = get_version(path);
     std::unique_ptr<metadata> res = nullptr;
     try{
         long version = df_client->get_latest_version(path);
@@ -254,14 +252,6 @@ int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
     std::unique_ptr<std::string> parent_path = get_parent_dir(path);
     std::unique_ptr<std::string> child_name = get_child_name(path);
     if(parent_path != nullptr){
-        // parent is not root directory
-//        long version = get_version(parent_path->c_str());
-//        if(version == -1){
-//            errno = ENOENT;
-//            return -errno;
-//        }else{
-        //Fazer um get de metadados ao dataflasks
-
         std::unique_ptr<metadata> met(nullptr);
         met = this->add_child_to_working_dir_and_retreive(*parent_path, *child_name, is_dir);
         if(met == nullptr){
@@ -300,7 +290,6 @@ int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
         }
 
         return 0;
-//        }
     }
 
     // root directory doesn't have a parent
@@ -333,16 +322,6 @@ bool lsfs_state::is_working_directory(const std::string& path){
     }
     return false;
 }
-
-//std::shared_ptr<struct stat> get_open_file_if_exists(const char* path){
-//    std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
-//    auto it = open_files.find(path);
-//    if(it != open_files.end()) {
-//        return it->second.second;
-//    }
-//
-//    return nullptr;
-//}
 
 bool lsfs_state::update_open_file_metadata(const std::string& path, struct stat& stbuf){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
@@ -463,7 +442,7 @@ int lsfs_state::flush_open_file(const std::string& path){
     auto it = open_files.find(path);
     if(it != open_files.end()){
         if(it->second.first == FileAccess::CREATED || it->second.first == FileAccess::MODIFIED){
-            // Se o ficheiro foi modificado é necessário atualizar os metadados do mesmo
+            // If the file was modified we must update its metadata
 
             // create metadata object
             metadata to_send(*(it->second.second));
@@ -474,8 +453,7 @@ int lsfs_state::flush_open_file(const std::string& path){
             }
 
             if(it->second.first == FileAccess::CREATED){
-                // se o ficheiro foi criado pela primeira vez é necessário
-                // atualizar o pai com o path do mesmo
+                // If the file was created for the first time, we have to add it to parent folder
                 res = add_child_to_parent_dir(path, false);
                 if(res != 0){
                     return res;
@@ -514,7 +492,6 @@ void lsfs_state::reset_working_directory_add_remove_log(const std::string& path)
     for(auto & working_directory : working_directories){
         if(working_directory.first == path){
             working_directory.second->added_childs.clear();
-            working_directory.second->removed_childs.clear();
             break;
         }
     }

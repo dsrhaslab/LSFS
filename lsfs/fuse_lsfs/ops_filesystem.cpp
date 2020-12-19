@@ -4,7 +4,7 @@
 #include <sys/statvfs.h>
 
 #include "util.h"
-#include "fuse/fuse_lsfs/lsfs_impl.h"
+#include "lsfs/fuse_lsfs/lsfs_impl.h"
 
 /* -------------------------------------------------------------------------- */
 

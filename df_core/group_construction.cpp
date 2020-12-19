@@ -13,9 +13,7 @@
 
 #define LOG(X) std::cout << X << std::endl;
 
-//ou tem de se esperar mais tempo ou o numero de grupos n está a ser calculado corretamente
-
-group_construction::group_construction(std::string ip/*,int port*/, long id, double position, int replication_factor_min,
+group_construction::group_construction(std::string ip, long id, double position, int replication_factor_min,
         int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store<std::string>> store, std::shared_ptr<spdlog::logger> logger){
     this->recovering_local_view = true;
     this->id = id;
@@ -29,7 +27,6 @@ group_construction::group_construction(std::string ip/*,int port*/, long id, dou
     this->local_interval = local_interval;
     this->cycle = 1;
     this->ip = ip;
-    //this->port = port;
     this->store = std::move(store);
     this->logger = std::move(logger);
 
@@ -98,7 +95,7 @@ void group_construction::incorporate_local_peers(const std::vector<peer_data>& r
     for(const peer_data& peer: received){
         if(group(peer.pos) == this->my_group && peer.id != this->id){
             auto current_it = this->local_view.find(peer.ip);
-            if(current_it != this->local_view.end()){ //o elemento existe no mapa
+            if(current_it != this->local_view.end()){ //the element exists in the map
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second.age = peer.age;
@@ -131,7 +128,7 @@ void group_construction::request_local_message(const std::vector<peer_data>& rec
 
     for(const peer_data& peer : received){
         if(peer.id != this->id){
-            //SEND MESSAGE
+            //send message
             this->send_pss_msg(peer.ip, buf);
         }
     }
@@ -187,8 +184,8 @@ void group_construction::recover_local_view(const std::vector<peer_data>& receiv
     this->incorporate_local_peers(received);
 
     int first_estimation = this->local_view.size(); //countEqual();
-    // Se a minha perceção do número de grupos é maior que a recebida e tenho nodos
-    // suficientes para a sustentar
+    // If my perception on the number of groups is greater than the received one and i know
+    // sufficient nodes to sustain it
     if(this->nr_groups > nr_groups_from_peers && (first_estimation + 1) >= this->replication_factor_min){
         if((first_estimation + 1) > this->replication_factor_max){
             this->set_nr_groups(this->nr_groups*2);
@@ -216,7 +213,7 @@ void group_construction::recover_local_view(const std::vector<peer_data>& receiv
 
     // Check if Local view was sucessfully recovered
     int estimation = this->local_view.size(); //countEqual();
-    // +1 porque temos de incluir o próprio
+    // +1 because we have to include the node itself
     if((estimation + 1) >= this->replication_factor_min && (estimation + 1) <= this->replication_factor_max){
         this->recovering_local_view = false;
     }else{
@@ -226,14 +223,11 @@ void group_construction::recover_local_view(const std::vector<peer_data>& receiv
 
 void group_construction::print_view() {
     spdlog::debug("====== My View[" + this->ip /*std::to_string(this->port)*/ + "] ====");
-//    std::cout << "====== My View[" + std::to_string(this->port) + "] ====" << std::endl;
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(auto const& [key, peer] : this->local_view){
         spdlog::debug(peer.ip + /*"(" + std::to_string(peer.port) + ")*/" : " + std::to_string(peer.age)  + " -> " + std::to_string(peer.pos) + ":" + std::to_string(group(peer.pos)));
-//        std::cout << peer.ip << "(" << peer.port << ") : " << peer.age  << " -> " << peer.pos << ":" << group(peer.pos) << std::endl;
     }
     spdlog::debug("==========================");
-//    std::cout << "==========================" << std::endl;
 }
 
 
@@ -245,7 +239,7 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
         return;
     }
 
-    //AGING VIEW
+    //aging view
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(auto& [port, peer]: this->local_view){
         peer.age += 1;
@@ -253,44 +247,44 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
 
     std::vector<peer_data> not_added;
 
-    //ADD RECEIVED
+    //add received
     for (const peer_data& peer: received){
         if(group(peer.pos) == this->my_group && peer.id != this->id){
             auto current_it = this->local_view.find(peer.ip);
-            if(current_it != this->local_view.end()){ //o elemento existe no mapa
+            if(current_it != this->local_view.end()){ // the element exists in the map
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second = peer;
 
             }else{
-                this->local_view.insert(std::make_pair(peer.ip/*peer.port*/, peer));
+                this->local_view.insert(std::make_pair(peer.ip, peer));
             }
         }else{
             not_added.push_back(peer);
         }
     }
 
-    //CLEAN LOCAL VIEW
-    std::vector<std::string /*int*/> to_rem;
-    for (auto& [/*port*/ ip, peer] : this->local_view){
+    // clean local view
+    std::vector<std::string> to_rem;
+    for (auto& [ip, peer] : this->local_view){
         if(group(peer.pos) != this->my_group){
-            to_rem.push_back(ip /*port*/);
+            to_rem.push_back(ip);
             not_added.push_back(peer);
         }
         else{
             if(peer.age > max_age){
-                to_rem.push_back(ip /*port*/);
+                to_rem.push_back(ip);
             }
         }
     }
-    for(/*int port*/ std::string ip : to_rem){
-        this->local_view.erase(ip /*port*/);
+    for(std::string ip : to_rem){
+        this->local_view.erase(ip);
     }
 
     //SEARCH FOR VIOLATIONS
     int estimation = this->local_view.size(); //countEqual();
 
-    // +1 porque temos de incluir o próprio
+    // +1 because we have to include the node itself
     if((estimation + 1) < this->replication_factor_min){
         if(this->nr_groups > 1){
             this->set_nr_groups(this->nr_groups/2);
@@ -305,7 +299,7 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
 
     std::string local_view_str = "{";
     for(auto& [port, peer] : this->local_view){
-        local_view_str += peer.ip /*std::to_string(peer.port)*/ + ":" + std::to_string(peer.age) + ", ";
+        local_view_str += peer.ip+ ":" + std::to_string(peer.age) + ", ";
     }
     local_view_str +=  "} -> {";
 
@@ -313,7 +307,7 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
     //to the current group match now the group in question
     for(auto& peer : not_added){
         if(group(peer.pos) == this->my_group && peer.id != this->id) {
-            this->local_view.insert(std::make_pair(peer.ip /*peer.port*/, peer));
+            this->local_view.insert(std::make_pair(peer.ip, peer));
         }
     }
 
@@ -328,7 +322,6 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
         std::vector<peer_data> to_send;
         peer_data myself = {
                 this->ip,
-                //this->port,
                 0,
                 this->id,
                 this->nr_groups,
@@ -337,7 +330,7 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
         };
 
         to_send.push_back(myself);
-        for(auto [/*port*/ ip, peer]: this->local_view){
+        for(auto [ip, peer]: this->local_view){
             to_send.push_back(peer);
         }
 
@@ -361,8 +354,8 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
 
         for(peer_data& peer : to_send){
             if(peer.id != this->id){
-                //SEND MESSAGE
-                this->send_pss_msg(peer.ip /*, peer.port*/, buf);
+                //send message
+                this->send_pss_msg(peer.ip, buf);
             }
         }
     }
@@ -374,28 +367,24 @@ void group_construction::send_pss_msg(const std::string& target_ip, const std::s
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(peer::pss_port/*target_port*/);
+        serverAddr.sin_port = htons(peer::pss_port);
         serverAddr.sin_addr.s_addr = inet_addr(target_ip.c_str());
 
         int res = sendto(this->sender_socket, msg_string.data(), msg_string.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
         if(res == -1){
             spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
-
-//                printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
         }
     }catch(...){
-        spdlog::error("=============================== Não consegui enviar =================");
-//            std::cout <<"=============================== Não consegui enviar =================" << std::endl;
+        spdlog::error("=============================== Unable to send =================");
     }
 }
 
-void group_construction::send_local_message(std::string& target_ip/*, int target_port*/) {
+void group_construction::send_local_message(std::string& target_ip) {
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     std::vector<peer_data> to_send;
     peer_data myself = {
             this->ip,
-            //this->port,
             0,
             this->id,
             this->nr_groups,
@@ -404,7 +393,7 @@ void group_construction::send_local_message(std::string& target_ip/*, int target
     };
 
     to_send.push_back(myself);
-    for(auto [/*port*/ ip, peer]: this->local_view){
+    for(auto [ip, peer]: this->local_view){
         to_send.push_back(peer);
     }
 
@@ -426,7 +415,7 @@ void group_construction::send_local_message(std::string& target_ip/*, int target
     std::string buf;
     pss_message.SerializeToString(&buf);
 
-    this->send_pss_msg(target_ip/*, target_port*/, buf);
+    this->send_pss_msg(target_ip, buf);
 }
 
 

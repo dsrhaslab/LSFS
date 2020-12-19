@@ -24,7 +24,6 @@
 namespace tcp_client_server_connection{
 
     tcp_server_connection::~tcp_server_connection(){
-//        std::cerr << "[tcp_server_connection] function: destructor [Closing] server socket -> " + std::to_string(this->f_socket) << std::endl;
         close(this->f_socket);
     }
 
@@ -34,7 +33,7 @@ namespace tcp_client_server_connection{
     {
         memset(&(this->f_sockaddr_in ), 0, sizeof(struct sockaddr_in));
         this->f_sockaddr_in.sin_family = AF_INET;
-        this->f_sockaddr_in.sin_addr.s_addr = inet_addr(host_addr); //htonl(INADDR_ANY);
+        this->f_sockaddr_in.sin_addr.s_addr = inet_addr(host_addr);
         this->f_sockaddr_in.sin_port = htons(host_port);
 
         //create socket
@@ -43,8 +42,6 @@ namespace tcp_client_server_connection{
             perror("Cannot create a socket");
             exit(1);
         }
-
-//        std::cerr << "[tcp_server_connection] function: constructor [Opening] server socket -> " + std::to_string(this->f_socket) << std::endl;
 
         //bind
         int res = bind(this->f_socket, (struct sockaddr*) &this->f_sockaddr_in, sizeof(this->f_sockaddr_in));

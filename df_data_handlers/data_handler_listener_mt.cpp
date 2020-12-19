@@ -6,7 +6,7 @@
 #include "data_handler_listener_mt.h"
 
 class data_handler_listener_worker : public udp_handler{
-    //Esta classe é partilhada por todas as threads
+    // This class is shared by all threads
 private:
     data_handler_listener* data_handler;
 
@@ -27,13 +27,13 @@ public:
             }else if(msg.has_put_with_merge_msg()){
                 data_handler->process_put_with_merge_message(msg);
             }else if(msg.has_put_reply_msg()){
-                //Este caso não vai acontecer porque os peers não deveriam receber mensagens de reply a um put
+                // This case doesn't happen, because peers shouldn't receive put reply messages
             }else if(msg.has_anti_entropy_msg()){
                 data_handler->process_anti_entropy_message(msg);
             }else if(msg.has_get_latest_version_msg()){
                 data_handler->process_get_latest_version_msg(msg);
             }else if(msg.has_get_latest_version_reply_msg()){
-                //Este caso não vai acontecer porque os peers não deveriam receber mensagens de reply a um get version
+                // This case doesn't happen, because peers shouldn't receive get version reply messages
             }else if(msg.has_recover_request_msg()){
                 data_handler->process_recover_request_msg(msg);
             }
@@ -41,7 +41,6 @@ public:
         }
         catch(const char* e){
             spdlog::error(e);
-//            std::cout << e << std::endl;
         }
         catch(...){}
     }
@@ -57,7 +56,7 @@ void data_handler_listener_mt::operator()() {
 
     try {
         data_handler_listener_worker worker(this);
-        udp_async_server server(this->io_service, peer::kv_port/*this->port*/, (udp_handler*) &worker);
+        udp_async_server server(this->io_service, peer::kv_port, (udp_handler*) &worker);
 
         for (unsigned i = 0; i < this->nr_worker_threads; ++i)
             this->thread_pool.create_thread(bind(&asio::io_service::run, ref(this->io_service)));

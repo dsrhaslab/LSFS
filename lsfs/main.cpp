@@ -4,9 +4,7 @@
 
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
-#include "fuse/fuse_lsfs/lsfs_impl.h"
-
-// sudo ./lsfs_exe /home/danielsf97/Desktop/Tese/P2P-Filesystem/Teste/InnerFolder/ /home/danielsf97/Desktop/Tese/P2P-Filesystem/Teste/InnerFolder2/
+#include "lsfs/fuse_lsfs/lsfs_impl.h"
 
 std::string get_local_ip_address(){
     int sock = socket(PF_INET, SOCK_DGRAM, 0);

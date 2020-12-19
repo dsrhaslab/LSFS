@@ -9,7 +9,6 @@
 
 struct peer_data {
     std::string ip;
-    //int port;
     int age;
     long id;
     //group construction

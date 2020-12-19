@@ -28,7 +28,6 @@ private:
     int sender_socket;
     std::string ip;
     long id;
-    //TODO remove pos variable
     double pos;
     bool recover_database;
 

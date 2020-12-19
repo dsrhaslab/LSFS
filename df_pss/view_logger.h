@@ -17,9 +17,7 @@
 #include "df_data_handlers/anti_entropy.h"
 #define LOG(X) std::cout << X << std::endl;
 
-
 using json = nlohmann::json;
-
 
 class view_logger {
 
@@ -80,9 +78,9 @@ public:
             timed_json += "\"group\":" + std::to_string(this->cyclon_ptr->get_my_group()) + ",";
             timed_json += "\"group_view\":[";
             int i = 0;
-            for(auto& peer_id /*port*/: this->cyclon_ptr->get_group_view()){
+            for(auto& peer_id: this->cyclon_ptr->get_group_view()){
                 if (i != 0) timed_json += ",";
-                timed_json += std::to_string(peer_id)/*std::to_string(port)*/;
+                timed_json += std::to_string(peer_id);
                 i++;
             }
             timed_json += "],";
@@ -94,7 +92,7 @@ public:
             i = 0;
             for(auto& peer_id/*port*/: this->cyclon_ptr->get_peers_from_view()){
                 if (i != 0) timed_json += ",";
-                timed_json += std::to_string(peer_id)/*std::to_string(port)*/;
+                timed_json += std::to_string(peer_id);
                 i++;
             }
             timed_json += "]}";
@@ -110,50 +108,6 @@ public:
         spdlog::shutdown();
         LOG("END Logger Thread")
     }
-
-//    void operator ()(){
-//        json j = {};
-//        //j["peer"] = this->port;
-//        int cycles = 0;
-//        std::string folder_to_create = this->logging_dir + std::to_string(this->port);
-//        mkdir(folder_to_create.c_str() ,0777);
-//        std::string base_filename = this->logging_dir + std::to_string(this->port) + "/" + std::to_string(this->port) + "_";
-//        std::string extension = ".json";
-//
-//        time_t now = time(nullptr);
-//        struct tm *localTime;
-//        localTime = localtime(&now);
-//        std::time_t tt = std::mktime(localTime);
-//        std::chrono::system_clock::time_point tp = std::chrono::system_clock::from_time_t (tt);
-//        int seconds_to_wait = (this->logging_interval - (localTime->tm_sec % this->logging_interval)) % this->logging_interval;
-//        tp += std::chrono::seconds(seconds_to_wait);
-//        tt = std::chrono::system_clock::to_time_t(tp);
-//        localtime_r(&tt, localTime);
-//        std::this_thread::sleep_until(tp);
-//
-//        do{
-//
-//            std::ofstream file;
-//            file.open(base_filename + std::to_string(cycles) +  extension);
-//            if(file.is_open()){
-//                j["time"] = std::to_string(localTime->tm_hour) + ":" + std::to_string(localTime->tm_min) + ":" + std::to_string(localTime->tm_sec);
-//                j["view"] = this->cyclon_ptr->get_peers_from_view();
-//                j["group_view"] = this->cyclon_ptr->get_group_view();
-//                j["group"] = this->cyclon_ptr->get_my_group();
-//                j["nr_groups"] = this->cyclon_ptr->get_nr_groups();
-//                j["position"] = this->cyclon_ptr->get_position();
-//                file << j;
-//                file.close();
-//            }
-//
-//            ++cycles;
-//            tp += std::chrono::seconds(this->logging_interval);
-//            time_t tt = std::chrono::system_clock::to_time_t(tp);
-//            localtime_r(&tt, localTime);
-//            std::this_thread::sleep_until(tp);
-//        }while(running);
-//        LOG("END Logger Thread")
-//    }
 
     void stop_thread() {
         this->running = false;

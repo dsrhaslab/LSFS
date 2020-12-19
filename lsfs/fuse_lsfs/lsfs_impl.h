@@ -8,8 +8,8 @@
 #include <vector>
 #include "lsfs_state.h"
 #include <queue>
-#include "fuse/fuse_common/fuse_wrapper.h"
-#include "fuse/fuse_common/fuse_wrapper.cpp"
+#include "lsfs/fuse_common/fuse_wrapper.h"
+#include "lsfs/fuse_common/fuse_wrapper.cpp"
 #include "df_client/client.h"
 #include "metadata.h"
 #include "exceptions/custom_exceptions.h"
@@ -123,16 +123,6 @@ public:
             struct fuse_file_info *fi
     );
 
-//    static int _read_buf(
-//            const char *path, struct fuse_bufvec **bufp, size_t size, off_t offset,
-//            struct fuse_file_info *fi
-//    );
-//
-//    static int _write_buf(
-//            const char *path, struct fuse_bufvec *buf, off_t offset,
-//            struct fuse_file_info *fi
-//    );
-
 /* -------------------------------------------------------------------------- */
 
 /* ---------------------------- ops_filesystem ------------------------------ */
@@ -199,33 +189,6 @@ public:
     static int _readlink(
             const char *path, char *buf, size_t size
     );
-
-/* -------------------------------------------------------------------------- */
-
-/* ------------------------------ ops_xattr --------------------------------- */
-
-//    static int _getxattr(
-//            const char *path,
-//            const char *name, char *value, size_t size
-//    );
-//
-//    static int _setxattr(
-//            const char *path,
-//            const char *name, const char *value, size_t size,
-//            int flags
-//    );
-//
-//    static int _listxattr(
-//            const char *path,
-//            char *list, size_t size
-//    );
-//
-//    static int _removexattr(
-//            const char *path,
-//            const char *name
-//    );
-
-/* -------------------------------------------------------------------------- */
 };
 
 

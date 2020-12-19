@@ -5,7 +5,6 @@
 #ifndef P2PFS_KV_STORE_LEVELDB_H
 #define P2PFS_KV_STORE_LEVELDB_H
 
-#include <wiredtiger.h>
 #include <leveldb/db.h>
 #include "exceptions/custom_exceptions.h"
 #include "df_util/util.h"
@@ -20,7 +19,6 @@
 #include <iostream>
 #include <cstring>
 #include <functional>
-
 #include <sstream>
 #include <iostream>
 #include <fstream>
@@ -88,9 +86,7 @@ void kv_store_leveldb::close() {
     spdlog::debug("closing connection");
 
     delete this->db;
-    std::cout << "Deleted db Database" << std::endl;
     delete this->db_merge_log;
-    std::cout << "Deleted db_merge Database" << std::endl;
 }
 
 std::string kv_store_leveldb::db_name() const {
@@ -98,7 +94,6 @@ std::string kv_store_leveldb::db_name() const {
 }
 
 int kv_store_leveldb::restart_database() {
-    std::cout << "Restarting Database" << std::endl;
     this->close();
     return this->init((void *) this->path.c_str(), this->id);
 }
@@ -168,46 +163,13 @@ std::vector<std::string> kv_store_leveldb::get_last_keys_limit4(){
     return res;
 }
 
-//TODO este método tem de ser alterado está a criar um mapa com todas as chaves na base de dados
 void kv_store_leveldb::update_partition(int p, int np) {
-
     if(np != this->nr_slices){
-        std::cout << "UPDATE_PARTITION " << std::to_string(np) << std::endl;
+        std::cout << "update_partition " << std::to_string(np) << std::endl;
         this->nr_slices = np;
         this->slice = p;
         //clear memory to allow new keys to be stored
         this->clear_seen_log();
-//        std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
-//
-//        std::map<kv_store_key<std::string>, bool> keys;
-//
-//        leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
-//        for (it->SeekToFirst(); it->Valid(); it->Next()) {
-//            std::string comp_key = it->key().ToString();
-//            std::string key;
-//            long version;
-//            long client_id;
-//            int res = split_composite_key(comp_key, &key, &version, &client_id);
-//            if(res == 0){
-//                kv_store_key<std::string> key_to_insert({key, kv_store_key_version(version, client_id)});
-//                keys.insert(std::make_pair(std::move(key_to_insert), false));
-//            }
-//        }
-//
-//        if(!it->status().ok()){
-//            delete it;
-//            throw LevelDBException();
-//        }
-//
-//        delete it;
-//
-//
-//        for(const auto& seen_pair: this->seen){
-//            if(keys.find(seen_pair.first) == keys.end()) { // a chave não existe
-//                this->seen.insert_or_assign(seen_pair.first, false);
-//            }
-//        }
-
     }
 }
 
@@ -260,10 +222,10 @@ void kv_store_leveldb::remove_from_set_existent_keys(std::unordered_set<kv_store
         prefix.append(it_keys->key).append("#").append(std::to_string(it_keys->key_version.version)).append("#").append(std::to_string(it_keys->key_version.client_id));
         it->Seek(prefix);
         if(it->Valid() && it->key().ToString() == prefix){
-            // se possuimos a chave
+            // if we hold the key
             it_keys = keys.erase(it_keys);
         }else if(this->get_slice_for_key(it_keys->key) != this->slice){
-            // se a chave não pertence a esta store
+            // if the key does not belong to this slice
             it_keys = keys.erase(it_keys);
         }else{
             ++it_keys;
@@ -283,7 +245,7 @@ void kv_store_leveldb::refresh_nr_keys_count(){
 
     if(!it->status().ok()){
         delete it;
-        return; //DO NOTHING
+        return;
     }
 
     delete it;
@@ -304,9 +266,6 @@ std::unique_ptr<long> kv_store_leveldb::get_client_id_from_key_version(const std
         int res = split_composite_key(comp_key, &current_key, &current_version, &current_client_id);
 
         if(res == 0){
-//            long a = 23456789;
-//            long b = 0;
-//            std::cout << "version" << a << " client_id:" << b << std::endl;
             auto temp_version = kv_store_key_version(current_version, current_client_id);
             if(temp_version >= current_max_version){
                 current_max_version = temp_version;
@@ -328,7 +287,6 @@ std::unique_ptr<long> kv_store_leveldb::get_client_id_from_key_version(const std
 }
 
 bool kv_store_leveldb::put(const std::string& key, long version, long client_id, const std::string& bytes, bool is_merge) {
-
     this->seen_it(key, version, client_id);
     int k_slice = this->get_slice_for_key(key);
 
@@ -343,23 +301,6 @@ bool kv_store_leveldb::put(const std::string& key, long version, long client_id,
             db_merge_log->Put(writeOptions, comp_key, std::to_string(is_merge));
         }
         this->record_count++;
-
-//        if(!is_merge){
-//            //if is not a merge operation should only respond that put was sucessfully if the
-//            //version commited is actualy the current version
-//
-//            try{
-//                std::unique_ptr<long> max_client_id = get_client_id_from_key_version(key, version);
-//                if(max_client_id == nullptr){
-//                    return false;
-//                }else{
-//                    return  *max_client_id == client_id;
-//                }
-//            }catch(LevelDBException& e){
-//                this->unseen_it(key, version, client_id);
-//                throw LevelDBException();
-//            }
-//        }
 
         return true;
     }else{
@@ -443,7 +384,6 @@ std::unique_ptr<std::string> kv_store_leveldb::get_latest(const std::string& key
         long current_version;
         long current_client_id;
         int res = split_composite_key(comp_key, &current_key, &current_version, &current_client_id);
-//        std::cout << "version: " << current_version << " client_id: " << current_client_id << std::endl;
         auto temp_version = kv_store_key_version(current_version, current_client_id);
         if (res == 0 && temp_version >= current_max_version) {
             current_max_version = temp_version;

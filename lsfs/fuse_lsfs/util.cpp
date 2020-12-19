@@ -1,7 +1,4 @@
 /* -------------------------------------------------------------------------- */
-
-
-
 #include "util.h"
 
 bool is_temp_file(const std::string& path){
@@ -12,7 +9,6 @@ bool is_temp_file(const std::string& path){
 }
 
 std::unique_ptr<std::string> get_parent_dir(const std::string& path){
-    //std::smatch match;
     boost::cmatch match;
 
     if(path == "/") return nullptr;
@@ -29,7 +25,6 @@ std::unique_ptr<std::string> get_parent_dir(const std::string& path){
 }
 
 std::unique_ptr<std::string> get_child_name(const std::string& path){
-    //std::smatch match;
     boost::cmatch match;
 
     auto res = boost::regex_search(path.c_str(), match, child_name_pattern);

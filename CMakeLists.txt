@@ -72,26 +72,22 @@ add_executable( peer_exe
         df_data_handlers/data_handler_listener.cpp
         df_data_handlers/data_handler_listener.h
         df_store/kv_store.h df_store/kv_store_key.h
-        df_store/kv_store_memory.h
         df_data_handlers/anti_entropy.cpp
         df_data_handlers/anti_entropy.h
         df_core/peer.h
         df_core/peer.cpp
-        df_store/kv_store_wiredtiger.h
-        exceptions/wiredtiger_error.h
         df_store/kv_store_leveldb.h
         exceptions/leveldb_error.h
         df_util/util.cpp
         df_util/util.h
-        df_store/kv_store_memory_v2.h
         df_store/kv_store_key_version.h
 
         #necessary for merge function
-        fuse/fuse_lsfs/storage_specific.cpp
-        fuse/fuse_lsfs/metadata.h
-        fuse/fuse_lsfs/metadata.cpp
-        fuse/fuse_lsfs/util.h
-        fuse/fuse_lsfs/util.cpp
+        lsfs/fuse_lsfs/storage_specific.cpp
+        lsfs/fuse_lsfs/metadata.h
+        lsfs/fuse_lsfs/metadata.cpp
+        lsfs/fuse_lsfs/util.h
+        lsfs/fuse_lsfs/util.cpp
         df_data_handlers/data_handler_listener_mt.cpp
         df_data_handlers/data_handler_listener_mt.h
         df_data_handlers/data_handler_listener_st.cpp
@@ -112,11 +108,9 @@ target_link_libraries(peer_exe PRIVATE yaml-cpp)
 target_link_libraries(peer_exe PUBLIC ${PROTOBUF_LIBRARIES})
 target_link_libraries(peer_exe PUBLIC ${Boost_LIBRARIES})
 target_include_directories(peer_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-#target_include_directories(peer_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(peer_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(peer_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(peer_exe PRIVATE spdlog::spdlog)
-target_link_libraries(peer_exe PUBLIC wiredtiger)
 target_link_libraries(peer_exe PUBLIC leveldb)
 target_link_libraries(peer_exe PUBLIC stdc++fs) # for creating directories
 target_compile_definitions(peer_exe PRIVATE FUSE_USE_VERSION=35 _FILE_OFFSET_BITS=64)
@@ -151,11 +145,11 @@ add_executable( client_exe
         df_store/kv_store_key_version.h
 
         #necessary for merge function
-        fuse/fuse_lsfs/storage_specific.cpp
-        fuse/fuse_lsfs/metadata.h
-        fuse/fuse_lsfs/metadata.cpp
-        fuse/fuse_lsfs/util.h
-        fuse/fuse_lsfs/util.cpp
+        lsfs/fuse_lsfs/storage_specific.cpp
+        lsfs/fuse_lsfs/metadata.h
+        lsfs/fuse_lsfs/metadata.cpp
+        lsfs/fuse_lsfs/util.h
+        lsfs/fuse_lsfs/util.cpp
         df_loadbalancing/smart_load_balancer.cpp
         df_loadbalancing/smart_load_balancer.h
         exceptions/socket_exception.h
@@ -173,7 +167,6 @@ target_link_libraries(client_exe PRIVATE yaml-cpp)
 target_link_libraries(client_exe PUBLIC ${PROTOBUF_LIBRARIES})
 target_link_libraries(client_exe PUBLIC ${Boost_LIBRARIES})
 target_include_directories(client_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-#target_include_directories(client_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(client_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(client_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(client_exe PRIVATE FUSE_USE_VERSION=35 _FILE_OFFSET_BITS=64)
@@ -197,40 +190,38 @@ add_executable( lsfs_exe
         df_client/client.h
         df_client/client_reply_handler_st.cpp
         df_client/client_reply_handler_st.h
-        fuse/fuse_common/fuse_wrapper.cpp
-        fuse/fuse_common/fuse_wrapper.h
-        fuse/fuse_lsfs/lsfs_impl.h
-        fuse/main.cpp
-        fuse/fuse_lsfs/ops_createdelete.cpp
-        fuse/fuse_lsfs/ops_dir.cpp
-        fuse/fuse_lsfs/ops_file.cpp
-        fuse/fuse_lsfs/ops_filesystem.cpp
-        fuse/fuse_lsfs/ops_initdestroy.cpp
-        fuse/fuse_lsfs/ops_metadata.cpp
-        fuse/fuse_lsfs/ops_symlink.cpp
-        fuse/fuse_lsfs/ops_xattr.cpp
-        fuse/fuse_lsfs/static_checks.cpp
-        fuse/fuse_lsfs/util.h
-        fuse/fuse_lsfs/util.cpp
-        fuse/fuse_common/fuse35.h fuse/fuse_lsfs/lsfs_impl.cpp
+        lsfs/fuse_common/fuse_wrapper.cpp
+        lsfs/fuse_common/fuse_wrapper.h
+        lsfs/fuse_lsfs/lsfs_impl.h
+        lsfs/main.cpp
+        lsfs/fuse_lsfs/ops_createdelete.cpp
+        lsfs/fuse_lsfs/ops_dir.cpp
+        lsfs/fuse_lsfs/ops_file.cpp
+        lsfs/fuse_lsfs/ops_filesystem.cpp
+        lsfs/fuse_lsfs/ops_initdestroy.cpp
+        lsfs/fuse_lsfs/ops_metadata.cpp
+        lsfs/fuse_lsfs/ops_symlink.cpp
+        lsfs/fuse_lsfs/util.h
+        lsfs/fuse_lsfs/util.cpp
+        lsfs/fuse_common/fuse35.h lsfs/fuse_lsfs/lsfs_impl.cpp
         exceptions/empty_view_exception.h
         exceptions/concurrent_writes_same_key.h
         exceptions/custom_exceptions.h
-        fuse/fuse_lsfs/metadata.h
-        fuse/fuse_lsfs/metadata.cpp
+        lsfs/fuse_lsfs/metadata.h
+        lsfs/fuse_lsfs/metadata.cpp
         df_client/client_reply_handler_mt.cpp
         df_client/client_reply_handler_mt.h
         exceptions/timeout_exception.h
-        fuse/fuse_common/fuse_utils.cpp
-        fuse/fuse_common/fuse_utils.h
-        fuse/fuse_lsfs/lsfs_state.cpp
-        fuse/fuse_lsfs/lsfs_state.h
+        lsfs/fuse_common/fuse_utils.cpp
+        lsfs/fuse_common/fuse_utils.h
+        lsfs/fuse_lsfs/lsfs_state.cpp
+        lsfs/fuse_lsfs/lsfs_state.h
         df_client/client_reply_handler.cpp
         df_client/client_reply_handler.h
-        fuse/fuse_lsfs/storage_specific.cpp
+        lsfs/fuse_lsfs/storage_specific.cpp
         df_loadbalancing/smart_load_balancer.cpp
         df_loadbalancing/smart_load_balancer.h
-        fuse/fuse_common/macros.h
+        lsfs/fuse_common/macros.h
         df_util/randomizer.h
         )
 
@@ -242,7 +233,6 @@ target_link_libraries(lsfs_exe PRIVATE spdlog::spdlog)
 target_link_libraries(lsfs_exe PUBLIC fuse3)
 target_link_libraries(lsfs_exe PUBLIC ${Boost_LIBRARIES})
 target_include_directories(lsfs_exe PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-#target_include_directories(lsfs_exe PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(lsfs_exe PRIVATE ${INCLUDE_DIRECTORY})
 target_include_directories(lsfs_exe PUBLIC ${PROTOBUF_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(lsfs_exe PRIVATE FUSE_USE_VERSION=35 _FILE_OFFSET_BITS=64)

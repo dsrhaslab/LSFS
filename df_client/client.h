@@ -25,7 +25,6 @@ public:
 private:
     std::string ip;
     long id;
-    //int port;
     std::mutex sender_socket_mutex;
     int sender_socket;
     std::atomic<long> request_count;
@@ -47,7 +46,7 @@ private:
     std::thread handler_th;
 
 public:
-    client(std::string boot_ip, std::string ip, long id/*, int port, int lb_port*/, std::string conf_filename);
+    client(std::string boot_ip, std::string ip, long id, std::string conf_filename);
     void stop();
     void put(const std::string& key, long version, const char* data, size_t size, int wait_for);
     void put_batch(const std::vector<std::string>& keys, const std::vector<long>& versions, const std::vector<const char*>& datas, const std::vector<size_t>& sizes, int wait_for);
@@ -82,6 +81,5 @@ private:
     int send_put_with_merge(std::vector<peer_data>& peers, const std::string& key, long version, const char* data, size_t size);
     int send_get_latest_version(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id);
 };
-
 
 #endif //P2PFS_CLIENT_H

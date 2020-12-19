@@ -3,7 +3,7 @@
 //
 
 #include "metadata.h"
-#include "fuse/fuse_lsfs/lsfs_impl.h"
+#include "lsfs/fuse_lsfs/lsfs_impl.h"
 
 metadata::metadata(struct stat& stbuf): stbuf(stbuf){};
 
@@ -53,5 +53,4 @@ void metadata::initialize_metadata(struct stat* stbuf, mode_t mode, nlink_t nlin
 
 void metadata::reset_add_remove_log(){
     this->added_childs.clear();
-    this->removed_childs.clear();
 }
