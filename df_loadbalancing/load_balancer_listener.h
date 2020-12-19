@@ -18,7 +18,7 @@ private:
     int port;
 
 public:
-    load_balancer_listener(std::shared_ptr<load_balancer> lb, std::string ip/*, int port*/);
+    load_balancer_listener(std::shared_ptr<load_balancer> lb, std::string ip);
     ~load_balancer_listener();
     void stop();
     void operator()();

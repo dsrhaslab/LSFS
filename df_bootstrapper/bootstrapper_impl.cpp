@@ -38,10 +38,6 @@ std::string BootstrapperImpl::get_ip(){
     return this->ip;
 }
 
-//int BootstrapperImpl::get_port(){
-//    return this->port;
-//}
-
 std::vector<peer_data> BootstrapperImpl::get_view() {
 
     std::unique_lock<std::recursive_mutex> lk(this->fila_mutex);
@@ -50,16 +46,15 @@ std::vector<peer_data> BootstrapperImpl::get_view() {
         this->boot_fila();
     }
 
-    std::vector</*int*/std::string> to_send = this->fila.front();
+    std::vector<std::string> to_send = this->fila.front();
     this->fila.pop();
 
     lk.unlock();
 
     std::vector<peer_data> res;
-    for(/*int& peer_port*/ std::string peer_ip: to_send){
+    for(std::string peer_ip: to_send){
         peer_data peer;
         peer.ip = peer_ip;
-        //peer.port = peer_port;
         peer.age = 20;
         auto id_it = aliveIds.find(peer_ip);
         if (id_it == aliveIds.end()) {
@@ -82,20 +77,18 @@ std::vector<peer_data> BootstrapperImpl::get_view() {
     return res;
 }
 
-void BootstrapperImpl::add_peer(std::string ip/*, int port*/, long id, double pos){
-    std::scoped_lock<std::shared_mutex> lk(this->alive_ips_mutex /*this->alive_ports_mutex*/);
-    //this->alivePorts.insert(port);
+void BootstrapperImpl::add_peer(std::string ip, long id, double pos){
+    std::scoped_lock<std::shared_mutex> lk(this->alive_ips_mutex);
     this->aliveIps.insert(ip);
-    this->aliveIds.insert(std::make_pair(/*port*/ ip,id));
-    this->alivePos.insert(std::make_pair(/*port*/ ip,pos));
+    this->aliveIds.insert(std::make_pair(ip,id));
+    this->alivePos.insert(std::make_pair(ip,pos));
 };
 
-void BootstrapperImpl::remove_peer(/*int port*/ std::string ip){
-    std::scoped_lock<std::shared_mutex> lk(this->alive_ips_mutex /*this->alive_ports_mutex*/);
-    //this->alivePorts.erase(port);
-    this->aliveIps.erase(/*port*/ ip);
-    this->aliveIds.erase(/*port*/ ip);
-    this->alivePos.erase(/*port*/ ip);
+void BootstrapperImpl::remove_peer(std::string ip){
+    std::scoped_lock<std::shared_mutex> lk(this->alive_ips_mutex);
+    this->aliveIps.erase(ip);
+    this->aliveIds.erase(ip);
+    this->alivePos.erase(ip);
 };
 
 void BootstrapperImpl::clear_fila(){
@@ -107,35 +100,35 @@ void BootstrapperImpl::clear_fila(){
 void BootstrapperImpl::boot_fila() {
 
     std::unique_lock<std::recursive_mutex> lk_fila(this->fila_mutex);
-    std::unique_lock<std::shared_mutex> lk(this->alive_ips_mutex /*this->alive_ports_mutex*/);
+    std::unique_lock<std::shared_mutex> lk(this->alive_ips_mutex);
 
-    std::vector</*int*/ std::string> res;
-    if(/*this->alivePorts.size()*/ this->aliveIps.size() <= this->viewsize){
-        for (std::string peer_ip: this->aliveIps /*int peer_port: this->alivePorts*/){
-            res.push_back(peer_ip /*peer_port*/);
+    std::vector<std::string> res;
+    if(this->aliveIps.size() <= this->viewsize){
+        for (std::string peer_ip: this->aliveIps){
+            res.push_back(peer_ip);
         }
         lk.unlock();
         this->fila.push(res);
     }
-    else if(/*this->alivePorts.size()*/ this->aliveIps.size() < this->viewsize * 10){
-        std::vector<std::string /*int*/> tmp;
-        for (std::string peer_ip: this->aliveIps /*int peer_port: this->alivePorts*/){
-            tmp.push_back(peer_ip /*peer_port*/);
+    else if(this->aliveIps.size() < this->viewsize * 10){
+        std::vector<std::string> tmp;
+        for (std::string peer_ip: this->aliveIps){
+            tmp.push_back(peer_ip);
         }
         lk.unlock();
         std::shuffle(std::begin(tmp), std::end(tmp), std::default_random_engine(0));
         int max_rand = tmp.size() - this->viewsize - 1;
         for(int i = 0; i < this->initialnodes; i++){
             int st_index = std::rand() % (max_rand + 1);
-            res = std::vector</*int*/ std::string>(std::begin(tmp) + st_index, std::begin(tmp) + st_index + this->viewsize);
+            res = std::vector<std::string>(std::begin(tmp) + st_index, std::begin(tmp) + st_index + this->viewsize);
             this->fila.push(res);
         }
     }else{
         for(int i = 0; i < this->initialnodes; i++){
-            std::vector</*int*/ std::string> tmp;
+            std::vector<std::string> tmp;
             while(tmp.size() < this->viewsize){
-                int st_index = std::rand() % (this->aliveIps.size() /*this->alivePorts.size()*/);
-                auto it = std::begin(this->aliveIps /*this->alivePorts*/);
+                int st_index = std::rand() % (this->aliveIps.size());
+                auto it = std::begin(this->aliveIps);
                 std::advance(it, st_index);
                 if(std::find(tmp.begin(), tmp.end(), *it) == tmp.end()) {
                     tmp.push_back(*it);
@@ -213,7 +206,6 @@ void BootstrapperImpl::boot_worker(int* socket){
 
     }catch(...){}
 
-//    std::cerr << "[Bootstrap] function: boot_worker [Closing] socket -> " + std::to_string(*socket) << std::endl;
     this->connection.wait_for_remote_end_to_close_socket(socket);
     close(*socket);
 }
@@ -230,7 +222,6 @@ void BootstrapperImpl::run(){
 
     while(this->running){
         int socket = this->connection.accept_connection();
-//        std::cerr << "[Bootstrap] function: run [Opening] socket -> " + std::to_string(socket) << std::endl;
         this->io_service.post(boost::bind(&BootstrapperImpl::boot_worker, this, &socket));
     }
 }
@@ -250,7 +241,7 @@ std::string get_local_ip_address(){
     std::memset(&loopback, 0, sizeof(loopback));
     loopback.sin_family = AF_INET;
     loopback.sin_addr.s_addr = INADDR_LOOPBACK;   // using loopback ip address
-    loopback.sin_port = htons(9);                 // using debug port
+    loopback.sin_port = htons(9);        // using debug port
 
     if (connect(sock, reinterpret_cast<sockaddr*>(&loopback), sizeof(loopback)) == -1) {
         close(sock);
@@ -293,6 +284,6 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    std::unique_ptr<Bootstrapper> bootstrapper(new BootstrapperImpl(view_size, ip.c_str()/*, 12345*/));
+    std::unique_ptr<Bootstrapper> bootstrapper(new BootstrapperImpl(view_size, ip.c_str()));
     bootstrapper->run();
 };

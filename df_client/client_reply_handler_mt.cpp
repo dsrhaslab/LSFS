@@ -19,7 +19,7 @@
 * =====================================================================================================================*/
 
 class client_reply_handler_listener_worker : public udp_handler {
-    //Esta classe é partilhada por todas as threads
+    // This class is shared by all threads
 private:
     client_reply_handler *reply_handler;
 
@@ -53,14 +53,14 @@ public:
 
 /*=====================================================================================================================*/
 
-client_reply_handler_mt::client_reply_handler_mt(std::string ip/*, int port*/, long wait_timeout, int nr_workers):
-        client_reply_handler(std::move(ip)/*, port*/, wait_timeout), nr_worker_threads(nr_workers)
+client_reply_handler_mt::client_reply_handler_mt(std::string ip, long wait_timeout, int nr_workers):
+        client_reply_handler(std::move(ip), wait_timeout), nr_worker_threads(nr_workers)
 {}
 
 void client_reply_handler_mt::operator()() {
     try {
         client_reply_handler_listener_worker worker(this);
-        udp_async_server server(this->io_service, client::kv_port /*this->port*/, (udp_handler*) &worker);
+        udp_async_server server(this->io_service, client::kv_port, (udp_handler*) &worker);
 
         for (unsigned i = 0; i < this->nr_worker_threads; ++i)
             this->thread_pool.create_thread(bind(&asio::io_service::run, ref(this->io_service)));

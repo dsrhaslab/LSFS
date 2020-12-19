@@ -11,11 +11,11 @@
 #include <df_client/client.h>
 #include "dynamic_load_balancer.h"
 
-dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip/*, int boot_port*/, std::string ip/*, int port*/, long sleep_interval):
+dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, std::string ip, long sleep_interval):
     ip(ip), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {
 
-    std::random_device rd;     // only used once to initialise (seed) engine
+    std::random_device rd; // only used once to initialise (seed) engine
     this->random_eng = std::mt19937(rd());
 
     bool recovered = false;
@@ -133,7 +133,7 @@ void dynamic_load_balancer::send_msg(peer_data& target_peer, proto::pss_message&
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(/*target_peer.port*/ client::lb_port);
+        serverAddr.sin_port = htons(client::lb_port);
         serverAddr.sin_addr.s_addr = inet_addr(target_peer.ip.c_str());
 
         std::string buf;
@@ -145,7 +145,7 @@ void dynamic_load_balancer::send_msg(peer_data& target_peer, proto::pss_message&
             printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
         }
     }catch(...){
-        std::cout <<"=============================== Não consegui enviar =================" << std::endl;
+        std::cout <<"================= Unable to send =================" << std::endl;
     }
 }
 

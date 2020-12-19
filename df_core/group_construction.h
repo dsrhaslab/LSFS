@@ -18,7 +18,6 @@
 class group_construction {
 private:
     std::recursive_mutex view_mutex;
-    //std::unordered_map<int, peer_data> local_view; //port -> age
     std::unordered_map<std::string, peer_data> local_view; //port -> age
     long id;
     std::string ip;
@@ -29,15 +28,15 @@ private:
     int replication_factor_min;
     int max_age;
     bool local; //enable local messages
-    std::atomic<int> cycle; //o ciclo em que nos encontramos
-    int local_interval; //interval of local messages if enable (de quantos em quantos ciclos)
-    std::atomic<bool> recovering_local_view; //se estamos a iniciar o protocolo de group construction
+    std::atomic<int> cycle; // present cycle
+    int local_interval; //interval of local messages if enable (cycle interval)
+    std::atomic<bool> recovering_local_view; // if we are initiating group construction algorithm
     int sender_socket;
     std::shared_ptr<kv_store<std::string>> store;
     std::shared_ptr<spdlog::logger> logger;
 
 public:
-    group_construction(std::string ip/*, int port*/, long id, double position, int replication_factor_min,
+    group_construction(std::string ip, long id, double position, int replication_factor_min,
                        int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store<std::string>> store, std::shared_ptr<spdlog::logger> logger);
 
     std::vector<peer_data> get_local_view();
@@ -81,6 +80,5 @@ public:
 
     peer_data get_random_peer_from_local_view();
 };
-
 
 #endif //P2PFS_GROUP_CONSTRUCTION_H

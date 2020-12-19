@@ -2,10 +2,6 @@
 // Created by danielsf97 on 10/8/19.
 //
 
-//
-// Created by danielsf97 on 10/8/19.
-//
-
 #include <errno.h>
 #include <string.h>
 #include <string>
@@ -56,12 +52,6 @@ namespace tcp_client_server_connection{
             std::cout << strerror(errno) << std::endl;
             throw "Cannot Connect";
         }
-
-//        struct timeval timeout;
-//        timeout.tv_sec = 1;
-//        timeout.tv_usec = 0;
-//
-//        setsockopt (this->f_socket, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout));
     }
 
     std::string tcp_client_connection::get_addr() const {

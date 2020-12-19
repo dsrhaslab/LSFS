@@ -46,13 +46,13 @@ void data_handler_listener_st::operator()() {
                 }else if(msg.has_put_with_merge_msg()){
                     this->process_put_with_merge_message(msg);
                 }else if(msg.has_put_reply_msg()){
-                    //Este caso não vai acontecer porque os peers não deveriam receber mensagens de reply a um put
+                    // This case doesn't happen, because peers shouldn't receive put reply messages
                 }else if(msg.has_anti_entropy_msg()){
                     this->process_anti_entropy_message(msg);
                 }else if(msg.has_get_latest_version_msg()){
                     this->process_get_latest_version_msg(msg);
                 }else if(msg.has_get_latest_version_reply_msg()){
-                    //Este caso não vai acontecer porque os peers não deveriam receber mensagens de reply a um get version
+                    // This case doesn't happen, because peers shouldn't receive get version reply messages
                 }
             }
             catch(const char* e){

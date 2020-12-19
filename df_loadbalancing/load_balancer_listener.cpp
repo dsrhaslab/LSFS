@@ -10,14 +10,14 @@
 #include <utility>
 #include <df_client/client.h>
 
-load_balancer_listener::load_balancer_listener(std::shared_ptr<load_balancer> lb, std::string ip/*, int port*/):
-    lb(std::move(lb)), socket_rcv(socket(AF_INET, SOCK_DGRAM, 0)), ip(ip)/*, port(port)*/
+load_balancer_listener::load_balancer_listener(std::shared_ptr<load_balancer> lb, std::string ip):
+    lb(std::move(lb)), socket_rcv(socket(AF_INET, SOCK_DGRAM, 0)), ip(ip)
 {
     struct sockaddr_in si_me;
 
     memset(&si_me, '\0', sizeof(si_me));
     si_me.sin_family = AF_INET;
-    si_me.sin_port = htons(client::lb_port/*port*/);
+    si_me.sin_port = htons(client::lb_port);
     si_me.sin_addr.s_addr = inet_addr(ip.c_str());
 
     bind(this->socket_rcv, (struct sockaddr*)&si_me, sizeof(si_me));
@@ -36,7 +36,7 @@ void load_balancer_listener::stop() {
     memset(&serverAddr, '\0', sizeof(serverAddr));
 
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(client::lb_port/*this->port*/);
+    serverAddr.sin_port = htons(client::lb_port);
     serverAddr.sin_addr.s_addr = inet_addr(this->ip.c_str());
 
     char* buf[1];

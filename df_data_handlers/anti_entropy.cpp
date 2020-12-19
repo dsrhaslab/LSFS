@@ -75,7 +75,7 @@ int anti_entropy::send_recover_request(peer_data& target_peer){
             return -1;
         }
     }catch(...){
-        spdlog::error("=============================== Não consegui enviar =================");
+        spdlog::error("===================== Unable to Send =================");
         return -1;
     }
     return 0;
@@ -108,9 +108,7 @@ void anti_entropy::phase_starting() {
 
 bool anti_entropy::recover_state(tcp_client_server_connection::tcp_server_connection& connection, int* socket){
 
-    /*TODO Arranjar forma de ir buscar as últimas chaves inseridas
-        get_last_keys_limit4 está a ir buscar as últimas chaves de acordo
-        com a ordenação da base de dados
+    /*TODO Optmization -> get last 4 keys stored in order to not recover the whole database everytime
     */
     std::vector<std::string> keys_offset; //= this->store->get_last_keys_limit4();
 
@@ -177,25 +175,22 @@ void anti_entropy::phase_recovering() {
         std::vector<peer_data> local_view = this->group_c->get_local_view();
 
         peer_data p = this->group_c->get_random_peer_from_local_view();
-        //TODO remove this verification
-        if(p.pos != this->pos){
-            int res = this->send_recover_request(p);
-            if(res == -1){
-                continue;
-            }
-            int socket = connection.accept_connection(2);
-            if(socket != -1){
-                bool recovered = this->recover_state(connection, &socket);
-                if(recovered){
-                    {
-                        std::lock_guard<std::mutex> lck(this->phase_mutex);
-                        this->phase = anti_entropy::Phase::Operating;
-                        recovering = false;
-                    }
-                    this->phase_cv.notify_all();
+        int res = this->send_recover_request(p);
+        if(res == -1){
+            continue;
+        }
+        int socket = connection.accept_connection(2);
+        if(socket != -1){
+            bool recovered = this->recover_state(connection, &socket);
+            if(recovered){
+                {
+                    std::lock_guard<std::mutex> lck(this->phase_mutex);
+                    this->phase = anti_entropy::Phase::Operating;
+                    recovering = false;
                 }
-                close(socket);
+                this->phase_cv.notify_all();
             }
+            close(socket);
         }
     }
 }
@@ -237,7 +232,7 @@ void anti_entropy::operator()() {
                 case anti_entropy::Phase::Starting:
                     lck.unlock();
                     this->phase_starting();
-		    { // if phase change we do not want to sleep before recover
+		            { // if phase change we do not want to sleep before recover
                         std::lock_guard<std::mutex> lck(this->phase_mutex);
                         if(this->phase != anti_entropy::Phase::Starting){
                             continue;

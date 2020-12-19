@@ -11,54 +11,29 @@
 #include <time.h>
 #include "yaml-cpp/yaml.h"
 #include <fstream>
-//#include "df_store/kv_store_memory.h"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include <stdlib.h>
 #include <df_data_handlers/data_handler_listener_mt.h>
 #include <df_data_handlers/data_handler_listener_st.h>
-//#include "df_store/kv_store_wiredtiger.h"
 #include "df_store/kv_store_leveldb.h"
-//#include "df_store/kv_store_memory_v2.h"
 
 // definition
 extern std::string merge_metadata(const std::string&, const std::string&);
 
 std::shared_ptr<peer> g_peer_impl;
 
-peer::peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int data_port*/, double position, std::shared_ptr<spdlog::logger> logger):
-    id(id), ip(ip)/*, pss_port(pss_port)*/, data_port(data_port), position(position), logger(logger), view_logger_enabled(false),
-    store(std::make_shared<kv_store_leveldb>(merge_metadata, 100, 100, 100)),
-//    store(std::make_shared<kv_store_wiredtiger>(merge_metadata, 100, 100, 100)),
-//    store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata, 100, 100, 100)),
-//    store(std::make_shared<kv_store_memory<std::string>>(merge_metadata, 100, 100, 100)),
-    group_c(ip, id, position, 5, 10, 40, true, 15, this->store, logger),
-    cyclon(boot_ip.c_str(), ip, id, position,2,8,10,7, &(this->group_c)),
-    listener(&(this->cyclon)),
-    anti_ent(ip, id, position, &(this->cyclon), &(this->group_c),this->store, 20, true),
-    v_logger(id, &(this->cyclon), &(this->anti_ent),60, "../logging/"),
-    data_handler(std::make_unique<data_handler_listener_mt>(ip, id, 1, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, false))
-{
-    std::string database_folder = std::string("/home/danielsf97/Desktop/") + this->store->db_name() + "/";
-    int res = this->store->init((void*) database_folder.c_str(), id);
-    if(res != 0) {
-        exit(1);
-    }
-}
-
 peer::peer(long id, std::string ip, std::string boot_ip/*, int pss_port, int data_port*/,double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
         int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval,
         float reply_chance, bool smart, bool mt_data_handler, std::shared_ptr<spdlog::logger> logger, long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool recover_database)
-    :   id(id), ip(ip)/*, pss_port(pss_port)*/, data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
+    :   id(id), ip(ip), data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
         view_logger_enabled(view_logger_enabled), local_interval(local_interval), reply_chance(reply_chance),
         store(std::make_shared<kv_store_leveldb>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
- //       store(std::make_shared<kv_store_wiredtiger>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
-//        store(std::make_shared<kv_store_memory_v2<std::string>>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
 //        store(std::make_shared<kv_store_memory<std::string>>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
-        group_c(ip/*, pss_port*/, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),
-        cyclon(boot_ip.c_str()/*, peer::boot_port*/, ip/*, pss_port*/, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
-        listener(/*"127.0.0.1", pss_port,*/ &(this->cyclon)),
-        anti_ent(ip/*, data_port*/, id, position, &(this->cyclon), &(this->group_c),this->store, anti_entropy_interval, recover_database),
+        group_c(ip, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),
+        cyclon(boot_ip.c_str(), ip, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
+        listener(&(this->cyclon)),
+        anti_ent(ip, id, position, &(this->cyclon), &(this->group_c),this->store, anti_entropy_interval, recover_database),
         v_logger(id, &(this->cyclon), &(this->anti_ent), logging_interval, logging_dir)
 {
     if(mt_data_handler){

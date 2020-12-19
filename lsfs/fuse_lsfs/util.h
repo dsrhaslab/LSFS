@@ -3,10 +3,9 @@
 
 /* -------------------------------------------------------------------------- */
 
-#include "fuse/fuse_common/fuse35.h"
-//#include <regex>
+#include "lsfs/fuse_common/fuse35.h"
 #include <boost/regex.hpp>
-#include "fuse/fuse_common/macros.h"
+#include "lsfs/fuse_common/macros.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -14,9 +13,6 @@ static boost::regex string_capacity_size_regex("(\\d+)([bBkKmM])$");
 static boost::regex temp_extensions("(\\.swx$|\\.swp$|\\.inf$|/\\.|~$)");
 static boost::regex parent_dir_pattern("(.*)/[^/]+$");
 static boost::regex child_name_pattern("/([^/]+)$");
-//static std::regex parent_dir_pattern("(.*)/[^/]+$");
-//static std::regex child_name_pattern("/([^/]+)$");
-
 
 bool is_temp_file(const std::string& path);
 std::unique_ptr<std::string> get_parent_dir(const std::string& path);

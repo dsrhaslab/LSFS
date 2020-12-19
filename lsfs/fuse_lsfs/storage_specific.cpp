@@ -16,32 +16,6 @@ std::string merge_metadata(const std::string& bytes, const std::string& new_byte
             if(child_pair.first == FileType::DIRECTORY){
                 met1.stbuf.st_nlink++;
             }
-            met1.added_childs.emplace(child_pair.first, child_pair.second);
-        }
-    }
-
-
-    auto it = met1.childs.begin();
-    while(it != met1.childs.end()){
-        bool it_advanced = false;
-        for(auto& child_pair: met2.removed_childs){
-            if(child_pair.second == *it){
-                //se o filho existe no met1 e está incluido nos deleted da met2
-                //remover apenas se não está added de met1
-                auto it2 = met1.added_childs.find(child_pair);
-                if(it2 == met1.added_childs.end()){
-                    it = met1.childs.erase(it);
-                    it_advanced = true;
-                    if(child_pair.first == FileType::DIRECTORY){
-                        met1.stbuf.st_nlink--;
-                    }
-                    met1.removed_childs.emplace(child_pair.first, child_pair.second);
-                    break;
-                }
-            }
-        }
-        if(!it_advanced){
-            it++;
         }
     }
 

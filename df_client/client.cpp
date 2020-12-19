@@ -15,8 +15,8 @@
 #include "client_reply_handler_mt.h"
 #include "exceptions/custom_exceptions.h"
 
-client::client(std::string boot_ip, std::string ip, long id/*, int port, int lb_port*/, std::string conf_filename):
-    ip(ip), id(id)/*, port(port)*/, sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
+client::client(std::string boot_ip, std::string ip, long id, std::string conf_filename):
+    ip(ip), id(id), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
     , request_count(0)
 {
     YAML::Node config = YAML::LoadFile(conf_filename);
@@ -37,16 +37,16 @@ client::client(std::string boot_ip, std::string ip, long id/*, int port, int lb_
     }else if(load_balancer_type == "smart"){
         this->lb = std::make_shared<smart_load_balancer>(boot_ip, ip, lb_interval, conf_filename);
     }
-    this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip/*, lb_port*/);
+    this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip);
 
     this->lb_th = std::thread (std::ref(*this->lb));
     this->lb_listener_th = std::thread (std::ref(*this->lb_listener));
 
     if(mt_client_handler){
         int nr_workers = main_confs["nr_client_handler_ths"].as<int>();
-        this->handler = std::make_shared<client_reply_handler_mt>(ip/*, port*/, this->wait_timeout, nr_workers);
+        this->handler = std::make_shared<client_reply_handler_mt>(ip, this->wait_timeout, nr_workers);
     }else{
-        this->handler = std::make_shared<client_reply_handler_st>(ip/*, port*/, this->wait_timeout);
+        this->handler = std::make_shared<client_reply_handler_st>(ip, this->wait_timeout);
     }
     this->handler_th = std::thread (std::ref(*this->handler));
 }
@@ -168,7 +168,7 @@ int client::send_put_with_merge(std::vector<peer_data>& peers, const std::string
 
 
 void client::put(const std::string& key, long version, const char *data, size_t size, int wait_for) {
-    this->handler->register_put(key, version); // throw const char* (Escritas concorrentes sobre a mesma chave)
+    this->handler->register_put(key, version); // throw const char* (concurrent writes over the same key)
     kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
     bool succeed = false;
     int curr_timeouts = 0;
@@ -183,9 +183,7 @@ void client::put(const std::string& key, long version, const char *data, size_t 
         }
         if(status == 0){
             try{
-                //while(res == nullptr){
                 succeed = this->handler->wait_for_put(comp_key, wait_for);
-                //}
             }catch(TimeoutException& e){
                 curr_timeouts++;
             }
@@ -205,7 +203,7 @@ void client::put_batch(const std::vector<std::string> &keys, const std::vector<l
 
     //register all the keys and send first put
     for(size_t i = 0; i < keys.size(); i++){
-        this->handler->register_put(keys[i], versions[i]); // throw const char* (Escritas concorrentes sobre a mesma chave)
+        this->handler->register_put(keys[i], versions[i]); // throw const char* (concurrent writes over the same key)
         std::vector<peer_data> peers = this->lb->get_n_peers(keys[i], this->max_nodes_to_send_put_request); //throw exception
         this->send_put(peers, keys[i], versions[i], datas[i], sizes[i]);
     }
@@ -256,7 +254,7 @@ void client::put_batch(const std::vector<std::string> &keys, const std::vector<l
 }
 
 void client::put_with_merge(const std::string& key, long version, const char *data, size_t size, int wait_for) {
-    this->handler->register_put(key, version); // throw const char* (Escritas concorrentes sobre a mesma chave)
+    this->handler->register_put(key, version); // throw const char* (concurrent writes over the same key)
     kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
     bool succeed = false;
     int curr_timeouts = 0;
@@ -270,7 +268,6 @@ void client::put_with_merge(const std::string& key, long version, const char *da
             status = this->send_put_with_merge(peers, key, version, data, size);
         }
         if(status == 0){
-//            spdlog::debug("PUT (TO " + std::to_string(peer.id) + ") " + key + " : " + std::to_string(version) + " ==============================>");
             try{
                 succeed = this->handler->wait_for_put(comp_key, wait_for);
             }catch(TimeoutException& e){
@@ -339,14 +336,13 @@ void client::get_batch(const std::vector<std::string> &keys, std::vector<std::sh
     auto it_req_ids = req_ids.begin();
     for(size_t i = 0; i < data_strs.size(); i++){
         if(data_strs[i] != nullptr){
-            // se a leitura do bloco foi completa, remove a entrada dos req_ids
-            // uma vez que não vai ser necessário remover essa chave dos mapas dos gets
+            // if the block read succedded, remove entry from req_ids
+            // as it's not necessary to remove that key from the get map
             it_req_ids = req_ids.erase(it_req_ids);
         }else{
             ++it_req_ids;
         }
     }
-
     this->handler->clear_get_keys_entries(req_ids);
 
     if(!all_completed){
@@ -374,7 +370,6 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, l
             status = this->send_get(peers, key, version_ptr, req_id_str);
         }
         if (status == 0) {
-//            spdlog::debug("GET " + std::to_string(req_id)  + " TO (" + std::to_string(peer.id) + ") " + key + (version_ptr == nullptr ? ": ?" : ": " + std::to_string(*version_ptr)) + " ==================================>");
             try{
                 res = this->handler->wait_for_get(req_id_str, wait_for);
             }catch(TimeoutException& e){
@@ -414,7 +409,6 @@ long client::get_latest_version(const std::string& key, int wait_for) {
             status = this->send_get_latest_version(peers, key, req_id_str);
         }
         if (status == 0) {
-//            spdlog::debug("GET Version " + std::to_string(req_id) + " TO (" + std::to_string(peer.id) + ") " + " Key:" + key + " ==================================>");
             try{
                 res = this->handler->wait_for_get_latest_version(req_id_str, wait_for);
             }catch(TimeoutException& e){
@@ -431,8 +425,6 @@ long client::get_latest_version(const std::string& key, int wait_for) {
     if(res == nullptr){
         throw TimeoutException();
     }
-
-//    spdlog::debug("######################" + key + " VERSIONR: " + std::to_string(*res) + "#################################");
 
     return *res;
 }
