@@ -28,21 +28,6 @@ def create_inventory_dict():
 
   return inv
 
-# def populate_database():
-#   global client_addr
-
-#   full_file_path = "workloads-filebench/write-data-micro/seq-write-1th-4k.f"
-
-#   print("Running filebench")
-
-#   subprocess.Popen("ssh {} \"sudo sysctl kernel.randomize_va_space=0 && \
-#                     filebench -f {}\""
-#                     .format(
-#                       client_addr,
-#                       full_file_path
-#                     ), shell=True
-#                   ).wait()
-
 def populate_database():
   global client_addr, home_dir, populate_size, dataset_dir, lsfs_dir
 
@@ -81,8 +66,8 @@ def main():
 
   populate_database()
 
-  # # Start Churning Phase
-  #make_snapshot()
+  # Start Churning Phase
+  make_snapshot()
 
 if __name__ == "__main__":
   main()

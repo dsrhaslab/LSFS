@@ -18,13 +18,13 @@ import logging
 ####### Global Static Variables ########
 
 mount_folder = "/home/danielsf97/lsfs-mount/mount"
-churn_interval   = 60 # 1 em 1 minuto
+churn_interval   = 60 # 1 in 1 minute
 churn_iterations_per_phase = 15
 time_between_phases = 60
 nr_of_phases = 1
-churn_percentage = 25 # por cento
+churn_percentage = 25 # percent
 nr_of_nodes         = 4
-warmup_interval     = 120 #1 * 60 # segundos
+warmup_interval     = 120 #1 * 60 seconds
 mount_interval      = 120
 replication_factor_min = 5
 replication_factor_max = 10
@@ -298,15 +298,15 @@ def apply_churn():
 
   nodes_id, nodes_pos, machine_nrs = zip(*nodes_to_remove)
 
-  print("Going to Kill nodes")
+  print("Killing nodes...")
 
   kill_nodes(nodes_id, nodes_group)
 
-  print("Going to Start nodes")
+  print("Starting nodes...")
 
   start_nodes(nodes_pos, machine_nrs, nodes_group)
 
-  print("Nodes Started")
+  print("Nodes Started!")
 
 def initiate_churn():
   global nr_of_phases, time_between_phases, churn_interval, churn_iterations_per_phase

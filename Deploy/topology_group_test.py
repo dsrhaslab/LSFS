@@ -424,7 +424,7 @@ if args.get("e") == True:
 
    #############################
    print("###########################")
-   print("Vou terminar todos os peers")
+   print("     Killing all peers     ")
    print("###########################")
 
    for p in procs:
@@ -454,8 +454,6 @@ if args.get("a") == True:
 
    for filename in log_files:
       peer = (re.findall(r'(\d+).txt$', filename))[0]
-      print(filename)
-      print(peer)
       with open(filename, "r") as file:
          line = file.readline()
          while(line):
@@ -471,25 +469,6 @@ if args.get("a") == True:
             except Exception:
                print("LOADING JSON ERROR!")
             line = file.readline()
-
-   print(graph_data)         
-   #
-   # for directory in dirs:
-   #    peer = (re.findall(r'\d+$', directory))[0]
-   #    filenames = [os.path.join(directory, o) for o in os.listdir(directory)]
-   #    for filename in filenames:
-   #       print(filename)
-   #       with open(filename, "r") as file:
-   #          try:
-   #             data = json.load(file)
-   #             view = list(data['view'])
-   #             time = data['time']
-   #             time_sec = time_diff_sec(start_time, time)
-   #             nr_groups = data['nr_groups']
-   #             graph_data[time_sec][peer]['view'] = view
-   #             graph_data[time_sec][peer]['nr_groups'] = nr_groups
-   #          except Exception:
-   #             print("LOADING JSON ERROR!")
 
    calculate_mean_recover_time(graph_data)
 

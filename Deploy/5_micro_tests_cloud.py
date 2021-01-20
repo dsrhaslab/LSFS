@@ -34,37 +34,37 @@ client_addr = None
 bootstrapper_ip = None
 
 workloads_escrita = [
-  #("seq-write-1th-4k.f",[1,2,3]),
-  ("seq-write-1th-32k.f",[2,3])
-  # "seq-write-1th-128k.f",
-  # "seq-write-1th-1024k.f",
-  #("seq-write-16th-16f-4k.f",[1,2,3]),
-  # "seq-write-16th-16f-32k.f",
-  # "seq-write-16th-16f-128k.f",
-  # "seq-write-16th-16f-1024k.f"
+  ("seq-write-1th-4k.f",[1,2,3]),
+  ("seq-write-1th-32k.f",[2,3]),
+  ("seq-write-1th-128k.f",[1,2]),
+  ("seq-write-1th-1024k.f",[1]),
+  ("seq-write-16th-16f-4k.f",[1,2,3]),
+  ("seq-write-16th-16f-32k.f",[1]),
+  ("seq-write-16th-16f-128k.f",[2,3]),
+  ("seq-write-16th-16f-1024k.f",[1])
 ]
 
 workloads_leitura_1f = [
-  #("seq-read-1th-32kdf1.f",[1,2,3]),
-  #("seq-read-1th-4kdf1.f",[1,2,3]),
-  #("seq-read-1th-32kdf1.f",[1,3]),
-  # "seq-read-1th-128kdf1.f",
-  # "seq-read-1th-1024kdf1.f",
-  #("rand-read-1th-4kdf1.f",[1,2,3]),
-  #("rand-read-1th-32kdf1.f",[1,2,3]),
-  # "rand-read-1th-128kdf1.f",
-  # "rand-read-1th-1024kdf1.f"
+  ("seq-read-1th-32kdf1.f",[1,2,3]),
+  ("seq-read-1th-4kdf1.f",[1,2,3]),
+  ("seq-read-1th-32kdf1.f",[1,3]),
+  ("seq-read-1th-128kdf1.f",[1,3]),
+  ("seq-read-1th-1024kdf1.f",[2,3]),
+  ("rand-read-1th-4kdf1.f",[1,2,3]),
+  ("rand-read-1th-32kdf1.f",[1,2,3]),
+  ("rand-read-1th-128kdf1.f",[2]),
+  ("rand-read-1th-1024kdf1.f",[1])
 ]
 
 workloads_leitura_16f = [
-  # "seq-read-16th-16f-4kdf1.f",
-  # "seq-read-16th-16f-32kdf1.f",
-  # "seq-read-16th-16f-128kdf1.f",
-  # "seq-read-16th-16f-1024kdf1.f",
-  # "rand-read-16th-16f-4kdf1.f",
-  # "rand-read-16th-16f-32kdf1.f",
-  # "rand-read-16th-16f-128kdf1.f",
-  # "rand-read-16th-16f-1024kdf1.f"
+  ("seq-read-16th-16f-4kdf1.f",[1,2]),
+  ("seq-read-16th-16f-32kdf1.f",[1,3]),
+  ("seq-read-16th-16f-128kdf1.f",[1]),
+  ("seq-read-16th-16f-1024kdf1.f",[1,3]),
+  ("rand-read-16th-16f-4kdf1.f",[1,2,3]),
+  ("rand-read-16th-16f-32kdf1.f",[1,2]),
+  ("rand-read-16th-16f-128kdf1.f",[1,3]),
+  ("rand-read-16th-16f-1024kdf1.f",[2])
 ]
 
 def create_inventory_dict():
@@ -287,14 +287,12 @@ def main():
     master_addr = inv['master']
 
   # Send Workloads to Client Node
-  #send_workloads_to_server()
+  send_workloads_to_server()
 
   if local_filesystem:
 
     for file, tries in workloads_escrita:
       for try_nr in tries:
-    #    stop_monitoring(file[:-2], try_nr)
-    #    clear_fileset()
         clear_caches()
         if fuse_filesystem:
           mount_local_fuse_filesystem()
@@ -306,10 +304,9 @@ def main():
         clear_fileset()
         sleep(time_between_runs)
 
-    #run_filebench("seq-write-1th-4k-write1.f")
+    run_filebench("seq-write-1th-4k-write1.f")
     for file, tries in workloads_leitura_1f:
       for try_nr in tries:
-       # stop_monitoring(file[:-2], try_nr)
         sleep(time_between_runs)
         clear_caches()
         start_monitoring(file[:-2])
@@ -318,14 +315,14 @@ def main():
     clear_fileset()
     
 
-    # run_filebench("seq-write-16th-16f-4k-write16.f")
-    # for file in workloads_leitura_16f:
-    #   sleep(time_between_runs)
-    #   clear_caches()
-    #   start_monitoring(file[:-2])
-    #   run_filebench(file)
-    #   stop_monitoring(file[:-2])
-    # clear_fileset()
+    run_filebench("seq-write-16th-16f-4k-write16.f")
+    for file in workloads_leitura_16f:
+       sleep(time_between_runs)
+       clear_caches()
+       start_monitoring(file[:-2])
+       run_filebench(file)
+       stop_monitoring(file[:-2])
+    clear_fileset()
 
   else:
 
@@ -341,7 +338,7 @@ def main():
         kill_processes()
         sleep(time_between_runs)
 
-    #write_1_file()
+    write_1_file()
     for file, tries in workloads_leitura_1f:
       for try_nr in tries:
         sleep(time_between_runs)
@@ -350,14 +347,14 @@ def main():
         run_filebench(file, try_nr)
         stop_monitoring(file[:-2], try_nr)
 
-#    write_16_files()
-#    for file, tries in workloads_leitura_16f:
-#      for try_nr in tries:
-#        sleep(time_between_runs)
-#        clear_caches()
-#        start_monitoring(file[:-2])
-#        run_filebench(file, try_nr)
-#        stop_monitoring(file[:-2], try_nr)
+    write_16_files()
+    for file, tries in workloads_leitura_16f:
+      for try_nr in tries:
+        sleep(time_between_runs)
+        clear_caches()
+        start_monitoring(file[:-2])
+        run_filebench(file, try_nr)
+        stop_monitoring(file[:-2], try_nr)
 
   if should_destroy_machines:
     destroy_machines()

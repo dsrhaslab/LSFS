@@ -9,8 +9,8 @@ from datetime import datetime
 import json
 
 tensorflow_dir = "/home/danielsf97/tensorflow/"
-local_dataset_dir = "/home/danielsf97/datasets_reduced/imagenet/tf-records"
-#local_dataset_dir = "/home/danielsf97/lsfs-mount/mount/tf_records"
+#local_dataset_dir = "/home/danielsf97/datasets_reduced/imagenet/tf-records"
+local_dataset_dir = "/home/danielsf97/lsfs-mount/mount/tf_records"
 home_dir = "/home/danielsf97/"
 dataset_dir = home_dir + "datasets/imagenet/tf_records"
 mount_folder = home_dir + "lsfs-mount/mount"
