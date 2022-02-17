@@ -6,7 +6,7 @@
 #define P2PFS_DATA_HANDLER_LISTENER_H
 
 
-#include <build/kv_message.pb.h>
+#include <kv_message.pb.h>
 #include "df_pss/pss.h"
 #include "df_store/kv_store.h"
 #include <iostream>

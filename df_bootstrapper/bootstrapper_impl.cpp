@@ -12,7 +12,7 @@
 #include <map>
 #include <unistd.h>
 #include <algorithm>
-#include <build/pss_message.pb.h>
+#include <pss_message.pb.h>
 #include "yaml-cpp/yaml.h"
 
 #define LOG(X) std::cout << X << std::endl;
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
     YAML::Node config = YAML::LoadFile(conf_filename);
     auto main_confs = config["main_confs"];
     int view_size = main_confs["view_size"].as<int>();
-
+/*
     std::string ip;
     try{
         ip = get_local_ip_address();
@@ -283,7 +283,10 @@ int main(int argc, char *argv[]) {
         std::cerr << "Error Obtaining IP Address: " << e << std::endl;
         exit(1);
     }
+    std::cout << ip << std::endl;
+ */   
+    const char* ip = "127.0.0.1";
 
-    std::unique_ptr<Bootstrapper> bootstrapper(new BootstrapperImpl(view_size, ip.c_str()));
+    std::unique_ptr<Bootstrapper> bootstrapper(new BootstrapperImpl(view_size, ip /*ip.c_str()*/));
     bootstrapper->run();
 };

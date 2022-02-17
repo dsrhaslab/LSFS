@@ -9,7 +9,7 @@
 #include <time.h>
 #include "yaml-cpp/yaml.h"
 #include <fstream>
-#include <fuse/fuse_lsfs/metadata.h>
+#include <lsfs/fuse_lsfs/metadata.h>
 #include "df_loadbalancing/load_balancer_listener.h"
 #include "client.h"
 #include "df_loadbalancing/dynamic_load_balancer.h"
@@ -18,9 +18,9 @@
 extern std::string merge_metadata(std::string&, std::string&);
 
 int main(int argc, char **argv) {
-    if(argc < 3){
-        exit(1);
-    }
+    //if(argc < 3){
+    //    exit(1);
+    //}
 
     int lb_port = 50009;
     int kv_port = 50010;
@@ -32,12 +32,12 @@ int main(int argc, char **argv) {
     std::string ip2 = "127.0.0.1";
     long id2 = 3;
 
-    client cli = client(ip, "127.0.0.1", id/*, kv_port, lb_port*/, "../scripts/conf.yaml");
-    client cli2 = client(ip2,"127.0.0.1", id2/*, kv_port2, lb_port2*/, "../scripts/conf.yaml");
+    client cli = client(ip, "127.0.0.1", id/*, kv_port, lb_port*/, "../conf.yaml");
+    // cli2 = client(ip2,"127.0.0.1", id2/*, kv_port2, lb_port2*/, "../scripts/conf.yaml");
 
 
-//    cli.put("/", 0, "ole", 3);
-//    cli.put("/ola", 0, "ole", 3);
+    cli.put("/", 0, "ole", 3);
+    cli.put("/ola", 0, "ole", 3);
 //    cli.put("/tudo/bem", 0, "ole", 3);
 //    cli.put("/crl", 0, "ole", 3);
 //    cli.put("/CVS", 1, "oli", 3);
@@ -73,8 +73,8 @@ int main(int argc, char **argv) {
 //    }
 //
 //    cli.put("/bigfileset/00000001/00000001",version + 1,"KV ALMOST FINISHED", 18, 1);
-    long version = 0;
-    cli.put("/bigfileset/00000001/00000001",version,"KV ALMOST FINISHED", 18, 1);
+//    long version = 0;
+//    cli.put("/bigfileset/00000001/00000001",version,"KV ALMOST FINISHED", 18, 1);
 ////    cli.put(3,1,"KV ALMOST FINISHED");
 ////    cli.put(4,1,"KV ALMOST FINISHED");
 
@@ -87,13 +87,13 @@ int main(int argc, char **argv) {
 //    std::shared_ptr<std::string> data = cli.get("/bigfileset/00000001/00000001",1, &version);
 //    std::string data_s = *data;
 
-    std::shared_ptr<std::string> data1 = cli.get("/bigfileset/00000001/00000001",1);
-    std::string data1_s = *data1;
-    std::cout << data1_s << std::endl;
+//    std::shared_ptr<std::string> data1 = cli.get("/bigfileset/00000001/00000001",1);
+//    std::string data1_s = *data1;
+//    std::cout << data1_s << std::endl;
 //
 //    std::cout << "PUT DONE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 
-
+/*
     struct stat stbuf;
     metadata::initialize_metadata(&stbuf, 301, 2, 0, 1000);
     metadata met(stbuf);
@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
 
     metadata met3 = metadata::deserialize_from_string(*data_res);
     std::cout << met3.stbuf.st_nlink << std::endl;
-
+*/
     cli.stop();
 
     return 0;

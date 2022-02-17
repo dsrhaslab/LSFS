@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <memory>
 #include <netinet/in.h>
-#include <build/kv_message.pb.h>
+#include <kv_message.pb.h>
 
 #include <cstdio>
 #include <sys/socket.h>

@@ -19,9 +19,9 @@
 class peer {
 public:
     inline const static int pss_listener_thread_loop_size = 3;
-    inline const static int pss_port = 12345;
-    inline const static int kv_port = 12346;
-    inline const static int recover_port = 12347;
+    inline const static int pss_port = 12344;
+    inline const static int kv_port = 12348;
+    inline const static int recover_port = 12349;
 
 private:
     long id;

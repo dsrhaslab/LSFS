@@ -234,6 +234,8 @@ int main(int argc, char* argv []){
         exit(1);
     }
 
+    std::cout << ip << std::endl;
+
     YAML::Node config = YAML::LoadFile(conf_filename);
     auto main_confs = config["main_confs"];
     int view_size = main_confs["view_size"].as<int>();
@@ -291,7 +293,7 @@ int main(int argc, char* argv []){
     srand (time(NULL));
     int boot_time = rand() % 10 + 2;
 
-    g_peer_impl = std::make_shared<peer>(id,ip,boot_ip,pos,boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
+    g_peer_impl = std::make_shared<peer>(id,"127.0.0.1",boot_ip,pos,boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
             database_dir, rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, mt_data_handler, logger, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at, recover_database);
     g_peer_impl->start(warmup_interval, restart_database_after_warmup);
     g_peer_impl->join();

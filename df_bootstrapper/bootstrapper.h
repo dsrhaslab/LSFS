@@ -13,7 +13,7 @@
 class Bootstrapper {
 public:
     inline const static int bootstrapper_thread_loop_size = 4;
-    inline const static int boot_port = 12345;
+    inline const static int boot_port = 12344;
 
 public:
     virtual void run() = 0;
