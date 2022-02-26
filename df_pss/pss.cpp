@@ -32,7 +32,7 @@ pss::pss(const char *boot_ip, std::string my_ip, long my_id, double my_pos)
 
     while(!recovered){
         try {
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip, peer::pss_port);
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip, peer::boot_port);
 
             proto::pss_message pss_announce_msg;
             pss_announce_msg.set_type(proto::pss_message_Type::pss_message_Type_ANNOUNCE);
@@ -460,7 +460,7 @@ void pss::stop_thread() {
 
 void pss::bootstrapper_termination_alerting() {
     try {
-        tcp_client_server_connection::tcp_client_connection connection(this->boot_ip, peer::pss_port);
+        tcp_client_server_connection::tcp_client_connection connection(this->boot_ip, peer::boot_port);
 
         //sending termination msg
         proto::pss_message msg_to_send;

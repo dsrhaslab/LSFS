@@ -44,7 +44,8 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, lo
 
     while(!recovered){
         try {
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::lb_port);
+            //tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::lb_port);
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::boot_port);
 
             //sending getview msg
             proto::pss_message msg_to_send;

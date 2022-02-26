@@ -72,7 +72,8 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(client::kv_port);
+        //serverAddr.sin_port = htons(client::kv_port);
+        serverAddr.sin_port = htons(12366);
         serverAddr.sin_addr.s_addr = inet_addr(target_peer.ip.c_str());
 
         msg.set_forwarded_within_group(false);
@@ -169,6 +170,7 @@ int client::send_put_with_merge(std::vector<peer_data>& peers, const std::string
 
 void client::put(const std::string& key, long version, const char *data, size_t size, int wait_for) {
     this->handler->register_put(key, version); // throw const char* (concurrent writes over the same key)
+    std::cout << "Put Registed"  << std::endl;
     kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
     bool succeed = false;
     int curr_timeouts = 0;
@@ -176,6 +178,10 @@ void client::put(const std::string& key, long version, const char *data, size_t 
         int status = 0;
         if (curr_timeouts + 1 <= 2){
             std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_put_request); //throw exception
+            
+            std::cout << peers[0].pos  << std::endl;
+            std::cout << peers[0].id  << std::endl;
+
             status = this->send_put(peers, key, version, data, size);
         }else{
             std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_put_request); //throw exception
@@ -183,6 +189,7 @@ void client::put(const std::string& key, long version, const char *data, size_t 
         }
         if(status == 0){
             try{
+                std::cout << "Waiting for put"  << std::endl;
                 succeed = this->handler->wait_for_put(comp_key, wait_for);
             }catch(TimeoutException& e){
                 curr_timeouts++;

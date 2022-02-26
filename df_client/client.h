@@ -19,8 +19,9 @@
 
 class client {
 public:
-    inline const static int lb_port = 12345;
-    inline const static int kv_port = 12346;
+    inline const static int boot_port = 12345;
+    inline const static int lb_port = 12355;
+    inline const static int kv_port = 12356;
 
 private:
     std::string ip;

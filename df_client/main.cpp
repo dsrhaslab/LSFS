@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
 
     cli.put("/", 0, "ole", 3);
     cli.put("/ola", 0, "ole", 3);
+    std::cout << "Done!"  << std::endl;
 //    cli.put("/tudo/bem", 0, "ole", 3);
 //    cli.put("/crl", 0, "ole", 3);
 //    cli.put("/CVS", 1, "oli", 3);

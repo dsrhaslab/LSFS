@@ -1,5 +1,5 @@
 main_confs:
-  nr_peers: 2
+  nr_peers: 1
   view_size: 8
   gossip_size: 7
   message_passing_interval_sec: 10

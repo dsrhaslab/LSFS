@@ -22,7 +22,7 @@ void data_handler_listener::reply_client(proto::kv_message& message, const std::
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(peer::kv_port);
+        serverAddr.sin_port = htons(12356);
         serverAddr.sin_addr.s_addr = inet_addr(sender_ip.c_str());
 
         message.set_forwarded_within_group(false);
