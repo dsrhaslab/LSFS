@@ -321,7 +321,13 @@ void kv_store_leveldb::print_store(){
         long client_id;
         int res = split_composite_key(comp_key, &key, &version, &client_id);
         if(res == 0){
-            std::cout << key << ": " << version << "#" << client_id << std::endl;
+            std::cout << "  Key: " << key << "#" << version << "#" << client_id << std::endl;
+            
+            kv_store_key_version versionk = kv_store_key_version(version);
+            kv_store_key<std::string> get_key = {key, versionk};
+            std::unique_ptr<std::string> data = get(get_key);
+
+            std::cout << "  Data: " << *data << "\n" << std::endl;
         }
     }
 

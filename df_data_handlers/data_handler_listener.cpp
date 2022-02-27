@@ -228,6 +228,8 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
         bool stored;
         try {
             stored = this->store->put(key, version, client_id, data);
+            this->store->print_store();
+
         }catch(std::exception& e){
             stored = false;
         }
