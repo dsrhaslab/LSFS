@@ -22,17 +22,19 @@ int main(int argc, char **argv) {
     //    exit(1);
     //}
 
-    int lb_port = 50009;
-    int kv_port = 50010;
+    //int lb_port = 50009;
+    //int kv_port = 50010;
     std::string ip = "127.0.0.1";
     long id = 4;
 
-    int lb_port2 = 50007;
-    int kv_port2 = 50008;
+    //int lb_port2 = 50007;
+    //int kv_port2 = 50008;
+    int pss_port = 12355;
+    int kv_port = 12356;
     std::string ip2 = "127.0.0.1";
     long id2 = 3;
 
-    client cli = client(ip, "127.0.0.1", id/*, kv_port, lb_port*/, "conf.yaml");
+    client cli = client(ip, "127.0.0.1", kv_port, pss_port, id, "conf.yaml");
     // cli2 = client(ip2,"127.0.0.1", id2/*, kv_port2, lb_port2*/, "../scripts/conf.yaml");
 
 

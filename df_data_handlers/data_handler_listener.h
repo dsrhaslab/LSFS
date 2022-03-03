@@ -12,11 +12,13 @@
 #include <iostream>
 #include "df_util/randomizer.h"
 #include "anti_entropy.h"
+#include "df_client/client.h"
 #include <chrono>
 
 class data_handler_listener {
 protected:
     std::string ip;
+    int kv_port;
     long id;
     std::shared_ptr<kv_store<std::string>> store;
     group_construction* group_c_ptr;
@@ -29,8 +31,8 @@ protected:
     std::atomic<long> anti_entropy_req_count = 0;
 
 public:
-    data_handler_listener(std::string ip, long id, float chance, pss* pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart);
-    void reply_client(proto::kv_message& message, const std::string& sender_ip);
+    data_handler_listener(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart);
+    void reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port);
     void forward_message(const std::vector<peer_data>& view_to_send, proto::kv_message& message);
     void process_get_message(proto::kv_message &msg);
     void process_get_reply_message(proto::kv_message &msg);

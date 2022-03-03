@@ -17,7 +17,7 @@
 
 #define LOG(X) std::cout << X << std::endl;
 
-BootstrapperImpl::BootstrapperImpl(int viewsize, const char* ip/*, int port*/):
+BootstrapperImpl::BootstrapperImpl(int viewsize, const char* ip):
     connection(tcp_client_server_connection::tcp_server_connection(ip, boot_port)),
     viewsize(viewsize),
     ip(ip)
@@ -46,54 +46,56 @@ std::vector<peer_data> BootstrapperImpl::get_view() {
         this->boot_fila();
     }
 
-    std::vector<std::string> to_send = this->fila.front();
+    std::vector<int> to_send = this->fila.front();
     this->fila.pop();
 
     lk.unlock();
 
     std::vector<peer_data> res;
-    for(std::string peer_ip: to_send){
-        peer_data peer;
-        peer.ip = peer_ip;
-        peer.age = 20;
-        auto id_it = aliveIds.find(peer_ip);
-        if (id_it == aliveIds.end()) {
+    for(int peer_id: to_send){
+        peer_data& peer = this->alivePeers.find(peer_id)->second;
+        peer_data peer_res;
+        peer_res.id = peer.id;
+        peer_res.ip = peer.ip;
+        peer_res.kv_port = peer.kv_port;
+        peer_res.pss_port = peer.pss_port;
+        peer_res.recover_port = peer.recover_port;
+        peer_res.pos = peer.pos;
+        peer_res.age = 20;
+        auto id_it = alivePeers.find(peer.id);
+        if (id_it == alivePeers.end()) {
             this->clear_fila();
             return this->get_view();
-        } else {
-            peer.id = id_it->second;
-        }
-        auto pos_it = alivePos.find(peer_ip);
-        if (pos_it == alivePos.end()) {
-            this->clear_fila();
-            return this->get_view();
-        } else {
-            peer.pos = pos_it->second;
         }
 
-        res.push_back(peer);
+        res.push_back(peer_res);
     }
 
     return res;
 }
 
-void BootstrapperImpl::add_peer(std::string ip, long id, double pos){
+void BootstrapperImpl::add_peer(long id, std::string ip, int kv_port, int pss_port, int recover_port, double pos){
     std::scoped_lock<std::shared_mutex> lk(this->alive_ips_mutex);
-    this->aliveIps.insert(ip);
-    this->aliveIds.insert(std::make_pair(ip,id));
-    this->alivePos.insert(std::make_pair(ip,pos));
+    peer_data peer_res;
+    peer_res.id = id;
+    peer_res.ip = ip;
+    peer_res.kv_port = kv_port;
+    peer_res.pss_port = pss_port;
+    peer_res.recover_port = recover_port;
+    peer_res.pos = pos;
+
+    this->alivePeers.insert(std::make_pair(id, peer_res));
 };
 
-void BootstrapperImpl::remove_peer(std::string ip){
+void BootstrapperImpl::remove_peer(int id){
     std::scoped_lock<std::shared_mutex> lk(this->alive_ips_mutex);
-    this->aliveIps.erase(ip);
-    this->aliveIds.erase(ip);
-    this->alivePos.erase(ip);
+    this->alivePeers.erase(id);
+
 };
 
 void BootstrapperImpl::clear_fila(){
     std::unique_lock<std::recursive_mutex> lk_fila(this->fila_mutex);
-    std::queue<std::vector<std::string>> empty;
+    std::queue<std::vector<int>> empty;
     std::swap( this->fila, empty );
 }
 
@@ -102,36 +104,37 @@ void BootstrapperImpl::boot_fila() {
     std::unique_lock<std::recursive_mutex> lk_fila(this->fila_mutex);
     std::unique_lock<std::shared_mutex> lk(this->alive_ips_mutex);
 
-    std::vector<std::string> res;
-    if(this->aliveIps.size() <= this->viewsize){
-        for (std::string peer_ip: this->aliveIps){
-            res.push_back(peer_ip);
+    //#TODO Ver se e preciso fazer copy
+    std::vector<int> res;
+    if(this->alivePeers.size() <= this->viewsize){
+        for (std::pair<int, peer_data> elem: this->alivePeers){
+            res.push_back(elem.first);
         }
         lk.unlock();
         this->fila.push(res);
     }
-    else if(this->aliveIps.size() < this->viewsize * 10){
-        std::vector<std::string> tmp;
-        for (std::string peer_ip: this->aliveIps){
-            tmp.push_back(peer_ip);
+    else if(this->alivePeers.size() < this->viewsize * 10){
+        std::vector<int> tmp;
+        for (std::pair<int, peer_data> elem: this->alivePeers){
+            tmp.push_back(elem.first);
         }
         lk.unlock();
         std::shuffle(std::begin(tmp), std::end(tmp), std::default_random_engine(0));
         int max_rand = tmp.size() - this->viewsize - 1;
         for(int i = 0; i < this->initialnodes; i++){
             int st_index = std::rand() % (max_rand + 1);
-            res = std::vector<std::string>(std::begin(tmp) + st_index, std::begin(tmp) + st_index + this->viewsize);
+            res = std::vector<int>(std::begin(tmp) + st_index, std::begin(tmp) + st_index + this->viewsize);
             this->fila.push(res);
         }
     }else{
         for(int i = 0; i < this->initialnodes; i++){
-            std::vector<std::string> tmp;
+            std::vector<int> tmp;
             while(tmp.size() < this->viewsize){
-                int st_index = std::rand() % (this->aliveIps.size());
-                auto it = std::begin(this->aliveIps);
+                int st_index = std::rand() % (this->alivePeers.size());
+                auto it = std::begin(this->alivePeers);
                 std::advance(it, st_index);
-                if(std::find(tmp.begin(), tmp.end(), *it) == tmp.end()) {
-                    tmp.push_back(*it);
+                if(std::find(tmp.begin(), tmp.end(), it->first) == tmp.end()) {
+                    tmp.push_back(it->first);
                 }
             }
             this->fila.push(tmp);
@@ -155,11 +158,16 @@ void BootstrapperImpl::boot_worker(int* socket){
                 proto::pss_message msg_to_send;
                 msg_to_send.set_type(proto::pss_message_Type::pss_message_Type_NORMAL);
                 msg_to_send.set_sender_ip(this->get_ip());
+                msg_to_send.set_sender_pss_port(this->boot_port);
+                msg_to_send.set_sender_pss_port(this->boot_port);
                 msg_to_send.set_sender_pos(0); // not used
 
                 for(auto& peer: this->get_view()){
                     proto::peer_data* peer_data = msg_to_send.add_view();
                     peer_data->set_ip(peer.ip);
+                    peer_data->set_kv_port(peer.kv_port);
+                    peer_data->set_pss_port(peer.pss_port);
+                    peer_data->set_recover_port(peer.recover_port);
                     peer_data->set_age(peer.age);
                     peer_data->set_id(peer.id);
                     peer_data->set_pos(peer.pos);
@@ -172,23 +180,28 @@ void BootstrapperImpl::boot_worker(int* socket){
 
                 this->connection.send_msg(socket, buf.data(), buf.size());
 
-                std::cout << rcv_pss_msg.view(0).pos() << std::endl;
-                this->add_peer(rcv_pss_msg.sender_ip(), rcv_pss_msg.view(0).id(), rcv_pss_msg.view(0).pos());
+                std::cout <<rcv_pss_msg.view(0).id() << " - " << rcv_pss_msg.sender_ip() << " - " << rcv_pss_msg.view(0).pos() << std::endl;
+
+                this->add_peer(rcv_pss_msg.view(0).id(), rcv_pss_msg.sender_ip(), rcv_pss_msg.view(0).kv_port(), rcv_pss_msg.view(0).pss_port(), rcv_pss_msg.view(0).recover_port(), rcv_pss_msg.view(0).pos());
                 break;
             }
             case proto::pss_message_Type::pss_message_Type_TERMINATION: {
-                this->remove_peer(rcv_pss_msg.sender_ip());
+                this->remove_peer(rcv_pss_msg.view(0).id());
                 break;
             }
             case proto::pss_message_Type::pss_message_Type_GETVIEW: {
                 proto::pss_message msg_to_send;
                 msg_to_send.set_type(proto::pss_message_Type::pss_message_Type_NORMAL);
                 msg_to_send.set_sender_ip(this->get_ip());
+                msg_to_send.set_sender_pss_port(this->boot_port);
                 msg_to_send.set_sender_pos(0); // not used
 
                 for(auto& peer: this->get_view()){
                     proto::peer_data* peer_data = msg_to_send.add_view();
                     peer_data->set_ip(peer.ip);
+                    peer_data->set_kv_port(peer.kv_port);
+                    peer_data->set_pss_port(peer.pss_port);
+                    peer_data->set_recover_port(peer.recover_port);
                     peer_data->set_age(peer.age);
                     peer_data->set_id(peer.id);
                     peer_data->set_pos(peer.pos);
@@ -287,6 +300,6 @@ int main(int argc, char *argv[]) {
  */   
     const char* ip = "127.0.0.1";
 
-    std::unique_ptr<Bootstrapper> bootstrapper(new BootstrapperImpl(view_size, ip /*ip.c_str()*/));
+    std::unique_ptr<Bootstrapper> bootstrapper(new BootstrapperImpl(view_size, ip));
     bootstrapper->run();
 };

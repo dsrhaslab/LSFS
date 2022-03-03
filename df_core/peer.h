@@ -20,9 +20,6 @@ class peer {
 public:
     inline const static int pss_listener_thread_loop_size = 3;
     inline const static int boot_port = 12345;
-    inline const static int pss_port = 12365;
-    inline const static int kv_port = 12366;
-    inline const static int recover_port = 12367;
 
 private:
     long id;
@@ -60,7 +57,7 @@ private:
 
 
 public:
-    peer(long id, std::string ip, std::string boot_ip, double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
+    peer(long id, std::string ip, std::string boot_ip,  int kv_port, int pss_port, int recover_port, double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
             int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval,
             float reply_chance, bool smart, bool mt_data_handler , std::shared_ptr<spdlog::logger> logger, long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool recover_database);
     void print_view();

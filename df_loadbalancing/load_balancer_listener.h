@@ -15,10 +15,10 @@ private:
     int socket_rcv;
     std::atomic<bool> running;
     std::string ip;
-    int port;
+    int pss_port;
 
 public:
-    load_balancer_listener(std::shared_ptr<load_balancer> lb, std::string ip);
+    load_balancer_listener(std::shared_ptr<load_balancer> lb, std::string ip, int pss_port);
     ~load_balancer_listener();
     void stop();
     void operator()();

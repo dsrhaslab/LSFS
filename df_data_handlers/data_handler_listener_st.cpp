@@ -8,8 +8,8 @@
 #include <df_core/peer.h>
 #include "data_handler_listener_st.h"
 
-data_handler_listener_st::data_handler_listener_st(std::string ip, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
-        : data_handler_listener(std::move(ip), id, chance, pss, group_c, anti_ent, std::move(store), smart), socket_rcv(socket(AF_INET, SOCK_DGRAM, 0)){}
+data_handler_listener_st::data_handler_listener_st(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
+        : data_handler_listener(std::move(ip), kv_port, id, chance, pss, group_c, anti_ent, std::move(store), smart), socket_rcv(socket(AF_INET, SOCK_DGRAM, 0)){}
 
 void data_handler_listener_st::operator()() {
 
@@ -23,7 +23,7 @@ void data_handler_listener_st::operator()() {
 
     memset(&si_me, '\0', sizeof(si_me));
     si_me.sin_family = AF_INET;
-    si_me.sin_port = htons(peer::kv_port);
+    si_me.sin_port = htons(this->kv_port);
     si_me.sin_addr.s_addr = inet_addr(this->ip.c_str());
 
     bind(this->socket_rcv, (struct sockaddr*)&si_me, sizeof(si_me));
@@ -72,7 +72,7 @@ void data_handler_listener_st::stop_thread() {
     memset(&serverAddr, '\0', sizeof(serverAddr));
 
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(peer::kv_port);
+    serverAddr.sin_port = htons(this->kv_port);
     serverAddr.sin_addr.s_addr = inet_addr(this->ip.c_str());
 
     char* buf[1];

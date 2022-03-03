@@ -22,7 +22,7 @@ private:
     int socket_rcv;
 
 public:
-    client_reply_handler_st(std::string ip, long wait_timeout);
+    client_reply_handler_st(std::string ip, int kv_port, int pss_port, long wait_timeout);
     ~client_reply_handler_st();
     void operator ()();
     void stop();

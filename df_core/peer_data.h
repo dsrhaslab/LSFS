@@ -9,6 +9,9 @@
 
 struct peer_data {
     std::string ip;
+    int kv_port; //Data Port
+    int pss_port; //Pss Port
+    int recover_port; //Recover Port - Anti Entropy
     int age;
     long id;
     //group construction
@@ -20,6 +23,7 @@ struct peer_data {
     {
         return id < rhs.id;  //assume that you compare the record based on a
     }
+
 };
 
 #endif //DATAFLASKSCPP_PEER_DATA_H

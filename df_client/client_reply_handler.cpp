@@ -10,8 +10,8 @@
 #include <spdlog/spdlog.h>
 
 
-client_reply_handler::client_reply_handler(std::string ip, long wait_timeout):
-        ip(std::move(ip)), wait_timeout(wait_timeout)
+client_reply_handler::client_reply_handler(std::string ip, int kv_port, int pss_port, long wait_timeout):
+        ip(std::move(ip)), kv_port(kv_port), pss_port(pss_port), wait_timeout(wait_timeout)
 {
     this->put_replies.reserve(100);
     this->put_mutexes.reserve(100);

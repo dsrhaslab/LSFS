@@ -16,8 +16,8 @@
 #include <df_client/client.h>
 #include <df_util/randomizer.h>
 
-smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, long sleep_interval, std::string& config_filename):
-        ip(ip), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
+smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, int pss_port, long sleep_interval, std::string& config_filename):
+        ip(ip), pss_port(pss_port), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {
     std::random_device rd; // only used once to initialise (seed) engine
     this->random_eng = std::mt19937(rd());
@@ -51,6 +51,7 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, lo
             proto::pss_message msg_to_send;
             msg_to_send.set_type(proto::pss_message_Type::pss_message_Type_GETVIEW);
             msg_to_send.set_sender_ip(ip);
+            msg_to_send.set_sender_pss_port(pss_port);
             msg_to_send.set_sender_pos(0); // not used
 
             std::string buf;
@@ -79,6 +80,9 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, lo
             for (auto& peer : pss_view_msg_rcv.view()) {
                 struct peer_data peer_rcv;
                 peer_rcv.ip = peer.ip();
+                peer_rcv.kv_port = peer.kv_port();
+                peer_rcv.pss_port = peer.pss_port();
+                peer_rcv.recover_port = peer.recover_port();
                 peer_rcv.age = peer.age();
                 peer_rcv.id = peer.id();
                 peer_rcv.slice = peer.slice();
@@ -581,6 +585,7 @@ void smart_load_balancer::request_local_message(const std::vector<peer_data>& re
 
     proto::pss_message pss_message;
     pss_message.set_sender_ip(this->ip);
+    pss_message.set_sender_pss_port(this->pss_port);
     pss_message.set_sender_pos(this->position);
     pss_message.set_type(proto::pss_message_Type::pss_message_Type_REQUEST_LOCAL);
 
@@ -598,6 +603,9 @@ void smart_load_balancer::process_msg(proto::pss_message &pss_msg) {
     for(auto& peer: pss_msg.view()){
         peer_data peer_data;
         peer_data.ip = peer.ip();
+        peer_data.kv_port = peer.kv_port();
+        peer_data.pss_port = peer.pss_port();
+        peer_data.recover_port = peer.recover_port();
         peer_data.age = peer.age();
         peer_data.id = peer.id();
         peer_data.slice = peer.slice();
@@ -627,6 +635,7 @@ void smart_load_balancer::operator()() {
 
                     proto::pss_message pss_message;
                     pss_message.set_sender_ip(this->ip);
+                    pss_message.set_sender_pss_port(this->pss_port);
                     pss_message.set_sender_pos(this->position);
                     pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE_LOCAL);
                     this->send_msg(target_peer, pss_message);
@@ -636,6 +645,7 @@ void smart_load_balancer::operator()() {
 
                     proto::pss_message pss_message;
                     pss_message.set_sender_ip(this->ip);
+                    pss_message.set_sender_pss_port(this->pss_port);
                     pss_message.set_sender_pos(this->position);
                     pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE);
                     this->send_msg(target_peer, pss_message);
@@ -660,7 +670,7 @@ void smart_load_balancer::send_msg(const peer_data &target_peer, proto::pss_mess
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(client::lb_port);
+        serverAddr.sin_port = htons(target_peer.pss_port);
         serverAddr.sin_addr.s_addr = inet_addr(target_peer.ip.c_str());
 
         std::string buf;
@@ -672,7 +682,7 @@ void smart_load_balancer::send_msg(const peer_data &target_peer, proto::pss_mess
             spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
         }
     }catch(...){
-        spdlog::error("=============================== Não consegui enviar =================");
+        spdlog::error("====================== Não consegui enviar =================");
     }
 }
 

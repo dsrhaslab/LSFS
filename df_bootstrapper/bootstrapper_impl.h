@@ -28,10 +28,8 @@ private:
     boost::thread_group thread_pool;
     std::shared_mutex alive_ips_mutex;
     std::recursive_mutex fila_mutex;
-    std::unordered_set<std::string> aliveIps;
-    std::unordered_map<std::string, long> aliveIds;
-    std::unordered_map<std::string, double> alivePos;
-    std::queue<std::vector<std::string>> fila; //era concurrent linked queue
+    std::unordered_map<int, peer_data> alivePeers;
+    std::queue<std::vector<int>> fila; //int is Peer id
 
     int viewsize;
     int initialnodes;
@@ -47,8 +45,8 @@ public:
     std::vector<peer_data> get_view();
 
     void boot_worker(int* socket);
-    void add_peer(std::string ip, long id, double pos);
-    void remove_peer(std::string ip);
+    void add_peer(long id, std::string ip, int kv_port, int pss_port, int recover_port, double pos);
+    void remove_peer(int id);
 
     tcp_client_server_connection::tcp_server_connection* get_connection();
     void stopThread();

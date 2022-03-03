@@ -21,11 +21,12 @@ private:
     long sleep_interval;
     int sender_socket;
     std::string ip;
+    int pss_port;
     double pos;
     std::mt19937 random_eng;
 
 public:
-    dynamic_load_balancer(std::string boot_ip, std::string ip, long sleep_interval);
+    dynamic_load_balancer(std::string boot_ip, std::string ip, int pss_port, long sleep_interva);
     peer_data get_peer(const std::string& key) override;
     peer_data get_random_peer() override;
     std::vector<peer_data> get_n_peers(const std::string& key, int nr_peers) override;

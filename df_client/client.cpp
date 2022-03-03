@@ -15,8 +15,8 @@
 #include "client_reply_handler_mt.h"
 #include "exceptions/custom_exceptions.h"
 
-client::client(std::string boot_ip, std::string ip, long id, std::string conf_filename):
-    ip(ip), id(id), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
+client::client(std::string boot_ip, std::string ip, int kv_port, int pss_port, long id, std::string conf_filename):
+    ip(ip), kv_port(kv_port), pss_port(pss_port), id(id), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
     , request_count(0)
 {
     YAML::Node config = YAML::LoadFile(conf_filename);
@@ -33,20 +33,20 @@ client::client(std::string boot_ip, std::string ip, long id, std::string conf_fi
     auto load_balancer_type = main_confs["load_balancer"].as<std::string>();
 
     if(load_balancer_type == "dynamic"){
-        this->lb = std::make_shared<dynamic_load_balancer>(boot_ip, ip, lb_interval);
+        this->lb = std::make_shared<dynamic_load_balancer>(boot_ip, ip, pss_port, lb_interval);
     }else if(load_balancer_type == "smart"){
-        this->lb = std::make_shared<smart_load_balancer>(boot_ip, ip, lb_interval, conf_filename);
+        this->lb = std::make_shared<smart_load_balancer>(boot_ip, ip, pss_port, lb_interval, conf_filename);
     }
-    this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip);
+    this->lb_listener = std::make_shared<load_balancer_listener>(this->lb, ip, pss_port);
 
     this->lb_th = std::thread (std::ref(*this->lb));
     this->lb_listener_th = std::thread (std::ref(*this->lb_listener));
 
     if(mt_client_handler){
         int nr_workers = main_confs["nr_client_handler_ths"].as<int>();
-        this->handler = std::make_shared<client_reply_handler_mt>(ip, this->wait_timeout, nr_workers);
+        this->handler = std::make_shared<client_reply_handler_mt>(ip, kv_port, pss_port, this->wait_timeout, nr_workers);
     }else{
-        this->handler = std::make_shared<client_reply_handler_st>(ip, this->wait_timeout);
+        this->handler = std::make_shared<client_reply_handler_st>(ip, kv_port, pss_port, this->wait_timeout);
     }
     this->handler_th = std::thread (std::ref(*this->handler));
 }
@@ -72,8 +72,7 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        //serverAddr.sin_port = htons(client::kv_port);
-        serverAddr.sin_port = htons(12366);
+        serverAddr.sin_port = htons(target_peer.kv_port);
         serverAddr.sin_addr.s_addr = inet_addr(target_peer.ip.c_str());
 
         msg.set_forwarded_within_group(false);
@@ -86,7 +85,7 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
 
         if(res == -1){spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));}
         else{ return 0; }
-    }catch(...){spdlog::error("=============================== NÂO consegui enviar =================");}
+    }catch(...){spdlog::error("==================== NÂO consegui enviar =================");}
 
     return 1;
 }
@@ -95,6 +94,7 @@ int client::send_get(std::vector<peer_data>& peers, const std::string& key, long
     proto::kv_message msg;
     auto* message_content = new proto::get_message();
     message_content->set_ip(this->ip);
+    message_content->set_port(this->kv_port);
     message_content->set_id(this->id);
     message_content->set_key(key);
     if(version != nullptr){
@@ -118,6 +118,7 @@ int client::send_get_latest_version(std::vector<peer_data>& peers, const std::st
     proto::kv_message msg;
     auto* message_content = new proto::get_latest_version_message();
     message_content->set_ip(this->ip);
+    message_content->set_port(this->kv_port);
     message_content->set_id(this->id);
     message_content->set_key(key);
     message_content->set_reqid(req_id);
@@ -135,6 +136,7 @@ int client::send_put(std::vector<peer_data>& peers, const std::string& key, long
     proto::kv_message msg;
     auto* message_content = new proto::put_message();
     message_content->set_ip(this->ip);
+    message_content->set_port(this->kv_port);
     message_content->set_id(this->id);
     message_content->set_key(key);
     message_content->set_version(version);
@@ -153,6 +155,7 @@ int client::send_put_with_merge(std::vector<peer_data>& peers, const std::string
     proto::kv_message msg;
     auto* message_content = new proto::put_with_merge_message();
     message_content->set_ip(this->ip);
+    message_content->set_port(this->kv_port);
     message_content->set_id(this->id);
     message_content->set_key(key);
     message_content->set_version(version);

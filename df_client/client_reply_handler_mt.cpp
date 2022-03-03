@@ -53,14 +53,14 @@ public:
 
 /*=====================================================================================================================*/
 
-client_reply_handler_mt::client_reply_handler_mt(std::string ip, long wait_timeout, int nr_workers):
-        client_reply_handler(std::move(ip), wait_timeout), nr_worker_threads(nr_workers)
+client_reply_handler_mt::client_reply_handler_mt(std::string ip, int kv_port, int pss_port, long wait_timeout, int nr_workers):
+        client_reply_handler(std::move(ip), kv_port, pss_port, wait_timeout), nr_worker_threads(nr_workers)
 {}
 
 void client_reply_handler_mt::operator()() {
     try {
         client_reply_handler_listener_worker worker(this);
-        udp_async_server server(this->io_service, client::kv_port, (udp_handler*) &worker);
+        udp_async_server server(this->io_service, this->kv_port, (udp_handler*) &worker);
 
         for (unsigned i = 0; i < this->nr_worker_threads; ++i)
             this->thread_pool.create_thread(bind(&asio::io_service::run, ref(this->io_service)));

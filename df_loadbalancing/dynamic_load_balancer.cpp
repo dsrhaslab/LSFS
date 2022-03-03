@@ -11,8 +11,8 @@
 #include <df_client/client.h>
 #include "dynamic_load_balancer.h"
 
-dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, std::string ip, long sleep_interval):
-    ip(ip), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
+dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, std::string ip, int pss_port, long sleep_interval):
+    ip(ip), pss_port(pss_port), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
 {
 
     std::random_device rd; // only used once to initialise (seed) engine
@@ -30,6 +30,7 @@ dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, std::string ip
             proto::pss_message msg_to_send;
             msg_to_send.set_type(proto::pss_message_Type::pss_message_Type_GETVIEW);
             msg_to_send.set_sender_ip(ip);
+            msg_to_send.set_sender_pss_port(pss_port);
             msg_to_send.set_sender_pos(0); // not used
 
             std::string buf;
@@ -57,6 +58,9 @@ dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, std::string ip
             for (auto& peer : pss_view_msg_rcv.view()) {
                 struct peer_data peer_rcv;
                 peer_rcv.ip = peer.ip();
+                peer_rcv.kv_port = peer.kv_port();
+                peer_rcv.pss_port = peer.pss_port();
+                peer_rcv.recover_port = peer.recover_port();
                 peer_rcv.age = peer.age();
                 peer_rcv.id = peer.id();
                 peer_rcv.slice = peer.slice();
@@ -114,6 +118,9 @@ void dynamic_load_balancer::process_msg(proto::pss_message &pss_msg) {
     for(auto& peer: pss_msg.view()){
         peer_data peer_data;
         peer_data.ip = peer.ip();
+        peer_data.kv_port = peer.kv_port();
+        peer_data.pss_port = peer.pss_port();
+        peer_data.recover_port = peer.recover_port();
         peer_data.age = peer.age();
         peer_data.id = peer.id();
         peer_data.slice = peer.slice();
@@ -135,7 +142,7 @@ void dynamic_load_balancer::send_msg(peer_data& target_peer, proto::pss_message&
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(client::lb_port);
+        serverAddr.sin_port = htons(target_peer.pss_port);
         serverAddr.sin_addr.s_addr = inet_addr(target_peer.ip.c_str());
 
         std::string buf;
@@ -162,6 +169,7 @@ void dynamic_load_balancer::operator()() {
 
                 proto::pss_message pss_message;
                 pss_message.set_sender_ip(this->ip);
+                pss_message.set_sender_pss_port(this->pss_port);
                 pss_message.set_sender_pos(0); // not used
                 pss_message.set_type(proto::pss_message::Type::pss_message_Type_LOADBALANCE);
                 this->send_msg(target_peer, pss_message);

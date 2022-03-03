@@ -13,16 +13,16 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-data_handler_listener::data_handler_listener(std::string ip, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
-    : ip(std::move(ip)), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
+data_handler_listener::data_handler_listener(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
+    : ip(std::move(ip)), kv_port(kv_port), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
 
-void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip){
+void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port){
     try{
         struct sockaddr_in serverAddr;
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(12356);
+        serverAddr.sin_port = htons(sender_port);
         serverAddr.sin_addr.s_addr = inet_addr(sender_ip.c_str());
 
         message.set_forwarded_within_group(false);
@@ -38,7 +38,7 @@ void data_handler_listener::reply_client(proto::kv_message& message, const std::
             printf("Oh dear, something went wrong with send()! %s\n", strerror(errno));
         }
     }catch(...){
-        std::cout <<"=============================== Não consegui enviar =================" << std::endl;
+        std::cout <<"================== Não consegui enviar =================" << std::endl;
     }
 
 }
@@ -55,7 +55,7 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
             memset(&serverAddr, '\0', sizeof(serverAddr));
 
             serverAddr.sin_family = AF_INET;
-            serverAddr.sin_port = htons(peer::kv_port);
+            serverAddr.sin_port = htons(peer.kv_port);
             serverAddr.sin_addr.s_addr = inet_addr(peer.ip.c_str());
 
             std::unique_lock<std::mutex> lock (socket_send_mutex);
@@ -74,6 +74,7 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
 void data_handler_listener::process_get_message(proto::kv_message &msg) {
     const proto::get_message& message = msg.get_msg();
     const std::string& sender_ip = message.ip();
+    const int sender_port = message.port();
     const std::string& key = message.key();
     const std::string& req_id = message.reqid();
     std::unique_ptr<std::string> data(nullptr); //*data = undefined
@@ -113,6 +114,7 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
                 proto::kv_message reply_message;
                 auto* message_content = new proto::get_reply_message();
                 message_content->set_ip(this->ip);
+                message_content->set_port(this->kv_port);
                 message_content->set_id(this->id);
                 message_content->set_key(key);
                 message_content->set_version(version.version);
@@ -121,7 +123,7 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
                 message_content->set_data(data->data(), data->size());
                 reply_message.set_allocated_get_reply_msg(message_content);
 
-                this->reply_client(reply_message, sender_ip/*, sender_port*/);
+                this->reply_client(reply_message, sender_ip, sender_port);
                 // forward to other peers from my slice if is the right slice for the key
                 // trying to speed up quorum
                 int obj_slice = this->store->get_slice_for_key(key);
@@ -174,6 +176,7 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
                     proto::kv_message reply_message;
                     auto* message_content = new proto::get_reply_message();
                     message_content->set_ip(this->ip);
+                    message_content->set_port(this->kv_port);
                     message_content->set_id(this->id);
                     message_content->set_key(key);
                     message_content->set_version(version);
@@ -183,7 +186,7 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
                     message_content->set_merge(is_merge);
                     reply_message.set_allocated_get_reply_msg(message_content);
 
-                    this->reply_client(reply_message, sender_ip/*, sender_port*/);
+                    this->reply_client(reply_message, sender_ip, sender_port);
                 }else{
                     // if i don't have the content of the message -> forward it
                     std::vector<peer_data> view = this->pss_ptr->get_view();
@@ -218,6 +221,7 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
 
     const auto& message = msg.put_msg();
     const std::string& sender_ip = message.ip();
+    const int sender_port = message.port();
     const std::string& key = message.key();
     long version = message.version();
     long client_id = message.id();
@@ -242,12 +246,13 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
                 proto::kv_message reply_message;
                 auto *message_content = new proto::put_reply_message();
                 message_content->set_ip(this->ip);
+                message_content->set_port(this->kv_port);
                 message_content->set_id(this->id);
                 message_content->set_key(key);
                 message_content->set_version(version);
                 reply_message.set_allocated_put_reply_msg(message_content);
 
-                this->reply_client(reply_message, sender_ip);
+                this->reply_client(reply_message, sender_ip, sender_port);
                 msg.set_forwarded_within_group(true); //forward within group
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             } else {
@@ -274,6 +279,7 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
 void data_handler_listener::process_put_with_merge_message(proto::kv_message &msg) {
     const auto& message = msg.put_with_merge_msg();
     const std::string& sender_ip = message.ip();
+    const int sender_port = message.port();
     const std::string& key = message.key();
     long version = message.version();
     long client_id = message.id();
@@ -297,12 +303,13 @@ void data_handler_listener::process_put_with_merge_message(proto::kv_message &ms
                 proto::kv_message reply_message;
                 auto *message_content = new proto::put_reply_message();
                 message_content->set_ip(this->ip);
+                message_content->set_port(this->kv_port);
                 message_content->set_id(this->id);
                 message_content->set_key(key);
                 message_content->set_version(version);
                 reply_message.set_allocated_put_reply_msg(message_content);
 
-                this->reply_client(reply_message, sender_ip);
+                this->reply_client(reply_message, sender_ip, sender_port);
                 msg.set_forwarded_within_group(true); //forward within group
                 this->forward_message(view, const_cast<proto::kv_message &>(msg));
             } else {
@@ -349,6 +356,7 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
             proto::kv_message get_msg;
             auto *message_content = new proto::get_message();
             message_content->set_ip(this->ip);
+            message_content->set_port(this->kv_port);
             message_content->set_id(this->id);
             message_content->set_key(key.key);
             message_content->set_version(key.key_version.version);
@@ -356,7 +364,7 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
             message_content->set_reqid(req_id);
             get_msg.set_allocated_get_msg(message_content);
 
-            this->reply_client(get_msg, message.ip());
+            this->reply_client(get_msg, message.ip(), message.port());
         }
     }catch (std::exception& e){
         // Unable to Get Keys
@@ -367,6 +375,7 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
 void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg) {
     const proto::get_latest_version_message& message = msg.get_latest_version_msg();
     const std::string& sender_ip = message.ip();
+    const int sender_port = message.port();
     const std::string& key = message.key();
     const std::string& req_id = message.reqid();
     std::unique_ptr<long> version(nullptr);
@@ -402,12 +411,13 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                 proto::kv_message reply_message;
                 auto* message_content = new proto::get_latest_version_reply_message();
                 message_content->set_ip(this->ip);
+                message_content->set_port(this->kv_port);
                 message_content->set_id(this->id);
                 message_content->set_version(*version);
                 message_content->set_reqid(req_id);
                 reply_message.set_allocated_get_latest_version_reply_msg(message_content);
 
-                this->reply_client(reply_message, sender_ip);
+                this->reply_client(reply_message, sender_ip, sender_port);
 
                 std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
                 msg.set_forwarded_within_group(true); //forward within group
@@ -441,6 +451,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 void data_handler_listener::process_recover_request_msg(proto::kv_message& msg) {
     const proto::recover_request_message& message = msg.recover_request_msg();
     const std::string& sender_ip = message.ip();
+    int sender_recover_port = message.recover_port();
     int nr_slices = message.nr_slices();
     int slice = message.slice();
 
@@ -452,7 +463,7 @@ void data_handler_listener::process_recover_request_msg(proto::kv_message& msg) 
     }
 
     try {
-        tcp_client_server_connection::tcp_client_connection connection(sender_ip.c_str(), peer::recover_port);
+        tcp_client_server_connection::tcp_client_connection connection(sender_ip.c_str(), sender_recover_port);
 
         char rcv_buf[65500];
 

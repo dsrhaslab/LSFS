@@ -15,6 +15,12 @@
 #include "df_core/group_construction.h"
 
 class pss {
+
+public:
+    int kv_port;
+    int pss_port;
+    int recover_port;
+
 private:
     std::recursive_mutex view_mutex;
     std::recursive_mutex last_view_mutex;
@@ -36,8 +42,8 @@ private:
     group_construction* group_c;
 
 public:
-    pss(const char* boot_ip,  std::string my_ip, long id, double pos);
-    pss(const char* boot_ip, std::string my_ip, long id, double pos, long boot_time, int view_size, int sleep, int gossip_size, group_construction* group_c);
+    pss(const char *boot_ip, std::string my_ip, int kv_port, int pss_port, int recover_port, long my_id, double my_pos);
+    pss(const char* boot_ip, std::string my_ip, int kv_port, int pss_port, int recover_port, long id, double pos, long boot_time, int view_size, int sleep, int gossip_size, group_construction* group_c);
     void operator()();
     void print_view();
     void process_msg(const proto::pss_message& message);
@@ -58,8 +64,8 @@ private:
     void complete_view_with_last_sent();
     peer_data* get_older_from_view();
     std::vector<peer_data> select_view_to_send(std::string target_ip);
-    void send_pss_msg(const std::string& target_ip, std::vector<peer_data>& view_to_send, proto::pss_message_Type);
-    void forward_pss_msg(const std::string& target_ip, const proto::pss_message& pss_message);
+    void send_pss_msg(const std::string& target_ip, const int target_pss_port, std::vector<peer_data>& view_to_send, proto::pss_message_Type);
+    void forward_pss_msg(const std::string& target_ip, const int target_pss_port, const proto::pss_message& pss_message);
     void incorporate_in_view(std::vector<peer_data> vector);
     void incorporate_last_sent_view();
 };

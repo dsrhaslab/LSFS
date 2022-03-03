@@ -13,8 +13,8 @@
 #include <regex>
 #include <spdlog/spdlog.h>
 
-client_reply_handler_st::client_reply_handler_st(std::string ip, long wait_timeout):
-    client_reply_handler(ip, wait_timeout),
+client_reply_handler_st::client_reply_handler_st(std::string ip, int kv_port, int pss_port, long wait_timeout):
+    client_reply_handler(ip, kv_port, pss_port, wait_timeout),
     socket_rcv(socket(PF_INET, SOCK_DGRAM, 0))
 {}
 
@@ -31,7 +31,7 @@ void client_reply_handler_st::operator()() {
 
     memset(&si_me, '\0', sizeof(si_me));
     si_me.sin_family = AF_INET;
-    si_me.sin_port = htons(client::kv_port);
+    si_me.sin_port = htons(this->kv_port);
     si_me.sin_addr.s_addr = inet_addr(this->ip.c_str());
 
     bind(this->socket_rcv, (struct sockaddr*)&si_me, sizeof(si_me));
@@ -75,7 +75,7 @@ void client_reply_handler_st::stop() {
     memset(&serverAddr, '\0', sizeof(serverAddr));
 
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(client::kv_port /*this->port*/);
+    serverAddr.sin_port = htons(this->kv_port);
     serverAddr.sin_addr.s_addr = inet_addr(this->ip.c_str());
 
     char* buf[1];

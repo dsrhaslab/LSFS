@@ -21,6 +21,9 @@ private:
     std::unordered_map<std::string, peer_data> local_view; //port -> age
     long id;
     std::string ip;
+    int kv_port;
+    int pss_port;
+    int recover_port;
     double position;
     std::atomic<int> nr_groups;
     std::atomic<int> my_group;
@@ -36,8 +39,8 @@ private:
     std::shared_ptr<spdlog::logger> logger;
 
 public:
-    group_construction(std::string ip, long id, double position, int replication_factor_min,
-                       int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store<std::string>> store, std::shared_ptr<spdlog::logger> logger);
+    group_construction(std::string ip, int kv_port, int pss_port, int recover_port, long id, double position, int replication_factor_min,
+        int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store<std::string>> store, std::shared_ptr<spdlog::logger> logger);
 
     std::vector<peer_data> get_local_view();
 
@@ -68,9 +71,9 @@ public:
 
     void print_view();
 
-    void send_pss_msg(const std::string& target_ip, const std::string &msg_string);
+    void send_pss_msg(const std::string& target_ip, const int target_pss_port, const std::string &msg_string);
 
-    void send_local_message(std::string& target_ip);
+    void send_local_message(std::string& target_ip, int target_pss_port);
 
     void recover_local_view(const std::vector<peer_data>& received);
 

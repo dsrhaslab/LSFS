@@ -10,9 +10,9 @@
 std::unique_ptr<lsfs_state> state;
 std::shared_ptr<client> df_client;
 
-lsfs_impl::lsfs_impl(const std::string& boot_ip, const std::string& ip, long client_id, const std::string& config_filename){
+lsfs_impl::lsfs_impl(const std::string& boot_ip, const std::string& ip, int kv_port, int pss_port, long client_id, const std::string& config_filename){
 
-    df_client = std::make_shared<client>(boot_ip, ip, client_id, config_filename);
+    df_client = std::make_shared<client>(boot_ip, ip, kv_port, pss_port, client_id, config_filename);
 
     YAML::Node config = YAML::LoadFile(config_filename);
     auto main_confs = config["main_confs"];

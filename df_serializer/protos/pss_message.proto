@@ -2,11 +2,14 @@ package proto;
 
 message peer_data {
   required string ip = 1;
-  required int32 age = 3;
-  required int64 id = 4;
-  required int32 nr_slices = 5;
-  required double pos = 6;
-  required int32 slice = 7;
+  required int32 kv_port = 2;
+  required int32 pss_port = 3;
+  required int32 recover_port = 4;
+  required int32 age = 5;
+  required int64 id = 6;
+  required int32 nr_slices = 7;
+  required double pos = 8;
+  required int32 slice = 9;
 }
 
 message pss_message {
@@ -24,6 +27,7 @@ message pss_message {
 
   required Type type = 1;
   required string sender_ip = 2;
+  required int32 sender_pss_port = 3;
   required double sender_pos = 4;
   repeated peer_data view = 5;
 }

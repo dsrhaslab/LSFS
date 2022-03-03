@@ -13,7 +13,7 @@
 
 #define LOG(X) std::cout << X << std::endl;
 
-group_construction::group_construction(std::string ip, long id, double position, int replication_factor_min,
+group_construction::group_construction(std::string ip, int kv_port, int pss_port, int recover_port, long id, double position, int replication_factor_min,
         int replication_factor_max, int max_age, bool local, int local_interval, std::shared_ptr<kv_store<std::string>> store, std::shared_ptr<spdlog::logger> logger){
     this->recovering_local_view = true;
     this->id = id;
@@ -27,6 +27,9 @@ group_construction::group_construction(std::string ip, long id, double position,
     this->local_interval = local_interval;
     this->cycle = 1;
     this->ip = ip;
+    this->kv_port = kv_port;
+    this->pss_port = pss_port;
+    this->recover_port = recover_port;
     this->store = std::move(store);
     this->logger = std::move(logger);
 
@@ -120,6 +123,7 @@ void group_construction::request_local_message(const std::vector<peer_data>& rec
 
     proto::pss_message pss_message;
     pss_message.set_sender_ip(this->ip);
+    pss_message.set_sender_pss_port(this->pss_port);
     pss_message.set_sender_pos(this->position);
     pss_message.set_type(proto::pss_message_Type::pss_message_Type_REQUEST_LOCAL);
 
@@ -129,7 +133,7 @@ void group_construction::request_local_message(const std::vector<peer_data>& rec
     for(const peer_data& peer : received){
         if(peer.id != this->id){
             //send message
-            this->send_pss_msg(peer.ip, buf);
+            this->send_pss_msg(peer.ip, peer.pss_port, buf);
         }
     }
 }
@@ -222,10 +226,10 @@ void group_construction::recover_local_view(const std::vector<peer_data>& receiv
 }
 
 void group_construction::print_view() {
-    spdlog::debug("====== My View[" + this->ip /*std::to_string(this->port)*/ + "] ====");
+    spdlog::debug("====== My View[" + this->ip + std::to_string(this->pss_port) + "] ====");
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(auto const& [key, peer] : this->local_view){
-        spdlog::debug(peer.ip + /*"(" + std::to_string(peer.port) + ")*/" : " + std::to_string(peer.age)  + " -> " + std::to_string(peer.pos) + ":" + std::to_string(group(peer.pos)));
+        spdlog::debug(peer.ip + "(kv-" + std::to_string(peer.kv_port) + ", pss-" + std::to_string(peer.pss_port) + ")" + " : " + std::to_string(peer.age)  + " -> " + std::to_string(peer.pos) + ":" + std::to_string(group(peer.pos)));
     }
     spdlog::debug("==========================");
 }
@@ -322,6 +326,9 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
         std::vector<peer_data> to_send;
         peer_data myself = {
                 this->ip,
+                this->kv_port,
+                this->pss_port,
+                this->recover_port,
                 0,
                 this->id,
                 this->nr_groups,
@@ -336,12 +343,16 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
 
         proto::pss_message pss_message;
         pss_message.set_sender_ip(this->ip);
+        pss_message.set_sender_pss_port(this->pss_port);
         pss_message.set_sender_pos(this->position);
         pss_message.set_type(proto::pss_message_Type::pss_message_Type_LOCAL);
 
         for(auto& peer: to_send){
             proto::peer_data* peer_data = pss_message.add_view();
             peer_data->set_ip(peer.ip);
+            peer_data->set_kv_port(peer.kv_port);
+            peer_data->set_pss_port(peer.pss_port);
+            peer_data->set_recover_port(peer.recover_port);
             peer_data->set_age(peer.age);
             peer_data->set_id(peer.id);
             peer_data->set_pos(peer.pos);
@@ -355,19 +366,19 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
         for(peer_data& peer : to_send){
             if(peer.id != this->id){
                 //send message
-                this->send_pss_msg(peer.ip, buf);
+                this->send_pss_msg(peer.ip, peer.pss_port, buf);
             }
         }
     }
 }
 
-void group_construction::send_pss_msg(const std::string& target_ip, const std::string &msg_string){
+void group_construction::send_pss_msg(const std::string& target_ip, const int target_pss_port, const std::string &msg_string){
     try {
         struct sockaddr_in serverAddr;
         memset(&serverAddr, '\0', sizeof(serverAddr));
 
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(peer::pss_port);
+        serverAddr.sin_port = htons(target_pss_port);
         serverAddr.sin_addr.s_addr = inet_addr(target_ip.c_str());
 
         int res = sendto(this->sender_socket, msg_string.data(), msg_string.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
@@ -376,15 +387,18 @@ void group_construction::send_pss_msg(const std::string& target_ip, const std::s
             spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
         }
     }catch(...){
-        spdlog::error("=============================== Unable to send =================");
+        spdlog::error("===================== Unable to send =================");
     }
 }
 
-void group_construction::send_local_message(std::string& target_ip) {
+void group_construction::send_local_message(std::string& target_ip, int target_pss_port) {
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     std::vector<peer_data> to_send;
     peer_data myself = {
             this->ip,
+            this->kv_port,
+            this->pss_port,
+            this->recover_port,
             0,
             this->id,
             this->nr_groups,
@@ -399,12 +413,16 @@ void group_construction::send_local_message(std::string& target_ip) {
 
     proto::pss_message pss_message;
     pss_message.set_sender_ip(this->ip);
+    pss_message.set_sender_pss_port(this->pss_port);
     pss_message.set_sender_pos(this->position);
     pss_message.set_type(proto::pss_message_Type::pss_message_Type_LOCAL);
 
     for(auto& peer: to_send){
         proto::peer_data* peer_data = pss_message.add_view();
         peer_data->set_ip(peer.ip);
+        peer_data->set_kv_port(peer.kv_port);
+        peer_data->set_pss_port(peer.pss_port);
+        peer_data->set_recover_port(peer.recover_port);
         peer_data->set_age(peer.age);
         peer_data->set_id(peer.id);
         peer_data->set_pos(peer.pos);
@@ -415,7 +433,7 @@ void group_construction::send_local_message(std::string& target_ip) {
     std::string buf;
     pss_message.SerializeToString(&buf);
 
-    this->send_pss_msg(target_ip, buf);
+    this->send_pss_msg(target_ip, target_pss_port, buf);
 }
 
 

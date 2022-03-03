@@ -46,8 +46,8 @@ public:
     }
 };
 
-data_handler_listener_mt::data_handler_listener_mt(std::string ip, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
-        : data_handler_listener(std::move(ip), id, chance, pss, group_c, anti_ent, std::move(store), smart){}
+data_handler_listener_mt::data_handler_listener_mt(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
+        : data_handler_listener(std::move(ip), kv_port, id, chance, pss, group_c, anti_ent, std::move(store), smart){}
 
 void data_handler_listener_mt::operator()() {
 
@@ -56,7 +56,7 @@ void data_handler_listener_mt::operator()() {
 
     try {
         data_handler_listener_worker worker(this);
-        udp_async_server server(this->io_service, peer::kv_port, (udp_handler*) &worker);
+        udp_async_server server(this->io_service, this->kv_port, (udp_handler*) &worker);
 
         for (unsigned i = 0; i < this->nr_worker_threads; ++i)
             this->thread_pool.create_thread(bind(&asio::io_service::run, ref(this->io_service)));

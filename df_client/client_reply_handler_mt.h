@@ -25,7 +25,7 @@ private:
     boost::thread_group thread_pool;
 
 public:
-    client_reply_handler_mt(std::string ip, long wait_timeout, int nr_workers);
+    client_reply_handler_mt(std::string ip, int kv_port, int pss_port, long wait_timeout, int nr_workers);
     ~client_reply_handler_mt() = default;
     void operator ()();
     void stop();

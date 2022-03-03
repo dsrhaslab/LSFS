@@ -32,6 +32,7 @@ private:
     long sleep_interval;
     int sender_socket;
     std::string ip;
+    int pss_port;
 
 private:
     void print_view();
@@ -52,7 +53,7 @@ private:
     void send_msg(const peer_data& target_peer, proto::pss_message& msg);
 
 public:
-    smart_load_balancer(std::string boot_ip, std::string ip, long sleep_interval, std::string& config_filename);
+    smart_load_balancer(std::string boot_ip, std::string ip, int pss_port, long sleep_interval, std::string& config_filename);
     peer_data get_peer(const std::string& key) override;
     peer_data get_random_peer() override;
     std::vector<peer_data> get_n_peers(const std::string& key, int nr_peers) override;
