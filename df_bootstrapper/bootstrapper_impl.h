@@ -28,8 +28,8 @@ private:
     boost::thread_group thread_pool;
     std::shared_mutex alive_ips_mutex;
     std::recursive_mutex fila_mutex;
-    std::unordered_map<int, peer_data> alivePeers;
-    std::queue<std::vector<int>> fila; //int is Peer id
+    std::unordered_map<long, peer_data> alivePeers;
+    std::queue<std::vector<long>> fila; //int is Peer id
 
     int viewsize;
     int initialnodes;

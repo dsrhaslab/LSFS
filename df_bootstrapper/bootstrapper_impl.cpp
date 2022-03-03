@@ -46,7 +46,7 @@ std::vector<peer_data> BootstrapperImpl::get_view() {
         this->boot_fila();
     }
 
-    std::vector<int> to_send = this->fila.front();
+    std::vector<long> to_send = this->fila.front();
     this->fila.pop();
 
     lk.unlock();
@@ -105,17 +105,17 @@ void BootstrapperImpl::boot_fila() {
     std::unique_lock<std::shared_mutex> lk(this->alive_ips_mutex);
 
     //#TODO Ver se e preciso fazer copy
-    std::vector<int> res;
+    std::vector<long> res;
     if(this->alivePeers.size() <= this->viewsize){
-        for (std::pair<int, peer_data> elem: this->alivePeers){
+        for (std::pair<long, peer_data> elem: this->alivePeers){
             res.push_back(elem.first);
         }
         lk.unlock();
         this->fila.push(res);
     }
     else if(this->alivePeers.size() < this->viewsize * 10){
-        std::vector<int> tmp;
-        for (std::pair<int, peer_data> elem: this->alivePeers){
+        std::vector<long> tmp;
+        for (std::pair<long, peer_data> elem: this->alivePeers){
             tmp.push_back(elem.first);
         }
         lk.unlock();
@@ -123,12 +123,12 @@ void BootstrapperImpl::boot_fila() {
         int max_rand = tmp.size() - this->viewsize - 1;
         for(int i = 0; i < this->initialnodes; i++){
             int st_index = std::rand() % (max_rand + 1);
-            res = std::vector<int>(std::begin(tmp) + st_index, std::begin(tmp) + st_index + this->viewsize);
+            res = std::vector<long>(std::begin(tmp) + st_index, std::begin(tmp) + st_index + this->viewsize);
             this->fila.push(res);
         }
     }else{
         for(int i = 0; i < this->initialnodes; i++){
-            std::vector<int> tmp;
+            std::vector<long> tmp;
             while(tmp.size() < this->viewsize){
                 int st_index = std::rand() % (this->alivePeers.size());
                 auto it = std::begin(this->alivePeers);
