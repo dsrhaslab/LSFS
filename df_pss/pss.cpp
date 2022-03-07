@@ -84,7 +84,7 @@ pss::pss(const char *boot_ip, std::string my_ip, int kv_port, int pss_port, int 
                 peer_rcv.slice = peer.slice();
                 peer_rcv.nr_slices = peer.nr_slices();
                 peer_rcv.pos = peer.pos();
-                this->view.insert(std::make_pair(peer.ip(), std::move(peer_rcv)));
+                this->view.insert(std::make_pair(peer.id(), std::move(peer_rcv)));
             }
 
         }catch(const char* e){
@@ -113,7 +113,7 @@ pss::pss(const char *boot_ip, std::string my_ip, int kv_port, int pss_port, int 
     this->group_c = group_c;
 }
 
-std::vector<peer_data> pss::select_view_to_send(std::string target_ip) {
+std::vector<peer_data> pss::select_view_to_send(std::string target_ip, int target_pss_port) {
     std::vector<peer_data> res;
     peer_data myself = {
             this->ip,
@@ -132,8 +132,8 @@ std::vector<peer_data> pss::select_view_to_send(std::string target_ip) {
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
 
     std::vector<peer_data> my_view_elements;
-    for(auto& [ip, peer]: this->view){
-        if(ip != target_ip) {
+    for(auto& [id, peer]: this->view){
+        if(peer.ip != target_ip || peer.pss_port != target_pss_port) {
             my_view_elements.push_back(peer);
         }
     }
@@ -143,7 +143,7 @@ std::vector<peer_data> pss::select_view_to_send(std::string target_ip) {
 
     for(peer_data& peer: my_view_elements){
         if(res.size() < this->gossip_size){
-            this->view.erase(peer.ip);
+            this->view.erase(peer.id);
             res.push_back(std::move(peer));
         }
     }
@@ -154,7 +154,7 @@ std::vector<peer_data> pss::have_peer_from_slice(int slice){
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
 
     std::vector<peer_data> res;
-    for(auto& [ip, peer]: this->view){
+    for(auto& [id, peer]: this->view){
         if(this->group_c->group(peer.pos) == slice){
             res.push_back(peer);
         }
@@ -167,7 +167,7 @@ std::vector<peer_data> pss::get_view(){
 
     std::vector<peer_data> res;
 
-    for(auto& [ip, peer]: this->view){
+    for(auto& [id, peer]: this->view){
         res.push_back(peer);
     }
     for(auto& peer: this->last_sent_view){
@@ -261,16 +261,17 @@ void pss::operator()() {
 
             this->incorporate_last_sent_view();
             this->age_view_members();
+            
             peer_data* target_ptr = this->get_older_from_view();
 
             if(target_ptr != nullptr){
                 peer_data target = *target_ptr;
-                this->view.erase(target.ip);
-                std::vector<peer_data> view_to_send = this->select_view_to_send(target.ip);
+                this->view.erase(target.id);
+                std::vector<peer_data> view_to_send = this->select_view_to_send(target.ip, target.pss_port);
 
                 this->last_sent_view = std::vector<peer_data>();
                 for(peer_data& peer : view_to_send){
-                    if(peer.ip != this->ip)
+                    if(peer.id != this->id)
                         this->last_sent_view.push_back(peer);
                 }
 
@@ -280,11 +281,20 @@ void pss::operator()() {
     }
 }
 
+void pss::print_vector_peer_data(std::vector<peer_data> vv, std::string vector_name) {
+    std::cout << "Vector \"" << vector_name << "\": ";
+    for(auto const& peer: vv){
+        std::cout << peer.id << " age:" << peer.age;
+    }
+    std::cout << std::endl;
+}
+
+
 void pss::print_view() {
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     std::cout << "View: ";
-    for(auto const& [key, peer] : this->view){
-        std::cout << peer.id << " ";
+    for(auto const& [id, peer] : this->view){
+        std::cout << peer.id << " age:" << peer.age;
     }
     std::cout << std::endl;
 }
@@ -299,7 +309,7 @@ int pss::get_nr_groups(){
 
 void pss::age_view_members() {
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
-    for(auto& [ip, peer]: this->view){
+    for(auto& [id, peer]: this->view){
         peer.age += 1;
     }
 }
@@ -308,7 +318,7 @@ peer_data* pss::get_older_from_view() {
     peer_data* older_peer = nullptr;
 
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
-    for(auto& [ip, peer] : this->view){
+    for(auto& [id, peer] : this->view){
         if(older_peer == nullptr || peer.age > (*older_peer).age){
             older_peer = &peer;
         }
@@ -356,6 +366,7 @@ void pss::process_msg(const proto::pss_message& pss_msg){
                 this->ip,
                 this->kv_port,
                 this->pss_port,
+                this->recover_port,
                 0,
                 this->id,
                 this->group_c->get_nr_groups(),
@@ -375,13 +386,13 @@ void pss::process_msg(const proto::pss_message& pss_msg){
 
         // 1- select a view to send and remove selected nodes from current node view
         // because we need to make space for the received nodes
-        std::vector<peer_data> view_to_send = this->select_view_to_send(pss_msg.sender_ip());
+        std::vector<peer_data> view_to_send = this->select_view_to_send(pss_msg.sender_ip(), pss_msg.sender_pss_port());
 
         // 2- from the selected nodes to send, copy them as they may be useful to complete
         // the node view in case of receiving less nodes than the sent ones
         std::vector<peer_data> to_fill_view;
         for(peer_data peer: view_to_send){
-            if(peer.ip != this->ip)
+            if(peer.id != this->id)
                 to_fill_view.push_back(peer);
         }
 
@@ -410,15 +421,15 @@ void pss::incorporate_in_view(std::vector<peer_data> source) {
     while(this->view.size() < this->view_size && !source.empty()){
         peer_data tmp = source.front();
         source.erase(source.begin());
-        if(tmp.ip != this->ip){
-            auto current_it = this->view.find(tmp.ip);
+        if(tmp.id != this->id){
+            auto current_it = this->view.find(tmp.id);
             if(current_it != this->view.end()){
                 int current_age = current_it->second.age;
                 if(current_age > tmp.age) {
                     current_it->second = tmp;
                 }
             }else{
-                this->view.insert(std::make_pair(tmp.ip, tmp));
+                this->view.insert(std::make_pair(tmp.id, tmp));
             }
         }
     }
@@ -431,7 +442,7 @@ void pss::complete_view_with_last_sent() {
 
     while(this->view.size() < this->view_size && this->last_sent_view.size() > 0){
 
-        this->view.insert(std::make_pair(it->ip, *it));
+        this->view.insert(std::make_pair(it->id, *it));
         it = this->last_sent_view.erase(it);
     }
 
@@ -441,7 +452,7 @@ void pss::incorporate_last_sent_view() {
     std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
     while(this->view.size() < this->view_size && this->last_sent_view.size() > 0){
         peer_data tmp = this->last_sent_view.front();
-        this->view.insert(std::make_pair(tmp.ip, tmp));
+        this->view.insert(std::make_pair(tmp.id, tmp));
         this->last_sent_view.erase(this->last_sent_view.begin());
     }
     print_view();
@@ -451,13 +462,30 @@ std::vector<long> pss::get_peers_from_view() {
     std::vector<long> res;
 
     std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
-    for (auto&[ip, peer]: this->view) {
-        res.push_back(/*port*/ peer.id);
+    for (auto&[id, peer]: this->view) {
+        res.push_back(peer.id);
     }
 
     auto it = this->last_sent_view.begin();
     while (res.size() < this->view_size && it != this->last_sent_view.end()) {
         res.push_back(it->id);
+        ++it;
+    }
+
+    return std::move(res);
+}
+
+std::vector<peer_data> pss::get_peers_from_view_peers() {
+    std::vector<peer_data> res;
+
+    std::scoped_lock<std::recursive_mutex, std::recursive_mutex> lk(this->view_mutex, this->last_view_mutex);
+    for (auto&[id, peer]: this->view) {
+        res.push_back(peer);
+    }
+
+    auto it = this->last_sent_view.begin();
+    while (res.size() < this->view_size && it != this->last_sent_view.end()) {
+        res.push_back(*it);
         ++it;
     }
 
@@ -471,6 +499,16 @@ std::vector<long> pss::get_group_view() {
         res.push_back(peer.id);
     return std::move(res);
 }
+
+std::vector<peer_data> pss::get_group_view_peers() {
+    auto peers =  this->group_c->get_local_view();
+    std::vector<peer_data> res;
+    for(auto& peer: peers)
+        res.push_back(peer);
+    return std::move(res);
+}
+
+
 
 void pss::stop_thread() {
     this->running = false;
@@ -487,6 +525,7 @@ void pss::bootstrapper_termination_alerting() {
         proto::pss_message msg_to_send;
         msg_to_send.set_type(proto::pss_message_Type::pss_message_Type_TERMINATION);
         msg_to_send.set_sender_ip(this->ip);
+        msg_to_send.set_sender_pss_port(this->pss_port);
         msg_to_send.set_sender_pos(0); // not used
 
         std::string buf;

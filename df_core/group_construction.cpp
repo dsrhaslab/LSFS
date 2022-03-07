@@ -46,7 +46,7 @@ std::vector<peer_data> group_construction::get_local_view(){
     std::vector<peer_data> res;
 
     std::scoped_lock<std::recursive_mutex> lk(this->view_mutex);
-    for (auto [port, peer]: this->local_view) {
+    for (auto [id, peer]: this->local_view) {
         res.push_back(peer);
     }
 
@@ -97,13 +97,13 @@ void group_construction::incorporate_local_peers(const std::vector<peer_data>& r
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(const peer_data& peer: received){
         if(group(peer.pos) == this->my_group && peer.id != this->id){
-            auto current_it = this->local_view.find(peer.ip);
+            auto current_it = this->local_view.find(peer.id);
             if(current_it != this->local_view.end()){ //the element exists in the map
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second.age = peer.age;
             }else{
-                this->local_view.insert(std::make_pair(peer.ip, peer));
+                this->local_view.insert(std::make_pair(peer.id, peer));
             }
         }
     }
@@ -228,7 +228,7 @@ void group_construction::recover_local_view(const std::vector<peer_data>& receiv
 void group_construction::print_view() {
     spdlog::debug("====== My View[" + this->ip + std::to_string(this->pss_port) + "] ====");
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
-    for(auto const& [key, peer] : this->local_view){
+    for(auto const& [id, peer] : this->local_view){
         spdlog::debug(peer.ip + "(kv-" + std::to_string(peer.kv_port) + ", pss-" + std::to_string(peer.pss_port) + ")" + " : " + std::to_string(peer.age)  + " -> " + std::to_string(peer.pos) + ":" + std::to_string(group(peer.pos)));
     }
     spdlog::debug("==========================");
@@ -245,7 +245,7 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
 
     //aging view
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
-    for(auto& [port, peer]: this->local_view){
+    for(auto& [id, peer]: this->local_view){
         peer.age += 1;
     }
 
@@ -254,14 +254,14 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
     //add received
     for (const peer_data& peer: received){
         if(group(peer.pos) == this->my_group && peer.id != this->id){
-            auto current_it = this->local_view.find(peer.ip);
+            auto current_it = this->local_view.find(peer.id);
             if(current_it != this->local_view.end()){ // the element exists in the map
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second = peer;
 
             }else{
-                this->local_view.insert(std::make_pair(peer.ip, peer));
+                this->local_view.insert(std::make_pair(peer.id, peer));
             }
         }else{
             not_added.push_back(peer);
@@ -269,20 +269,20 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
     }
 
     // clean local view
-    std::vector<std::string> to_rem;
-    for (auto& [ip, peer] : this->local_view){
+    std::vector<long> to_rem;
+    for (auto& [id, peer] : this->local_view){
         if(group(peer.pos) != this->my_group){
-            to_rem.push_back(ip);
+            to_rem.push_back(id);
             not_added.push_back(peer);
         }
         else{
             if(peer.age > max_age){
-                to_rem.push_back(ip);
+                to_rem.push_back(id);
             }
         }
     }
-    for(std::string ip : to_rem){
-        this->local_view.erase(ip);
+    for(long id : to_rem){
+        this->local_view.erase(id);
     }
 
     //SEARCH FOR VIOLATIONS
@@ -302,7 +302,7 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
     this->store->update_partition(this->my_group, this->nr_groups);
 
     std::string local_view_str = "{";
-    for(auto& [port, peer] : this->local_view){
+    for(auto& [id, peer] : this->local_view){
         local_view_str += peer.ip+ ":" + std::to_string(peer.age) + ", ";
     }
     local_view_str +=  "} -> {";
@@ -311,13 +311,13 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
     //to the current group match now the group in question
     for(auto& peer : not_added){
         if(group(peer.pos) == this->my_group && peer.id != this->id) {
-            this->local_view.insert(std::make_pair(peer.ip, peer));
+            this->local_view.insert(std::make_pair(peer.id, peer));
         }
     }
 
 
-    for(auto& [/*port*/ ip, peer] : this->local_view){
-        local_view_str +=  ip + ":" + std::to_string(peer.age) + ", ";
+    for(auto& [id, peer] : this->local_view){
+        local_view_str +=  peer.ip + ":" + std::to_string(peer.age) + ", ";
     }
     this->logger->info("[Group Construction] Received Message " + local_view_str + "}");
 
@@ -337,7 +337,7 @@ void group_construction::receive_message(const std::vector<peer_data>& received)
         };
 
         to_send.push_back(myself);
-        for(auto [ip, peer]: this->local_view){
+        for(auto [id, peer]: this->local_view){
             to_send.push_back(peer);
         }
 
@@ -407,7 +407,7 @@ void group_construction::send_local_message(std::string& target_ip, int target_p
     };
 
     to_send.push_back(myself);
-    for(auto [ip, peer]: this->local_view){
+    for(auto [id, peer]: this->local_view){
         to_send.push_back(peer);
     }
 

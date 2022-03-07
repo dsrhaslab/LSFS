@@ -23,6 +23,7 @@ public:
             }else if(msg.has_get_reply_msg()){
                 data_handler->process_get_reply_message(msg);
             }else if(msg.has_put_msg()){
+                 std::cout << "Received put Message from client " << std::endl;
                 data_handler->process_put_message(msg);
             }else if(msg.has_put_with_merge_msg()){
                 data_handler->process_put_with_merge_message(msg);

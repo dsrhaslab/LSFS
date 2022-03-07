@@ -165,7 +165,7 @@ void dynamic_load_balancer::operator()() {
         std::this_thread::sleep_for (std::chrono::seconds(this->sleep_interval));
         if(this->running){
             try{
-                peer_data target_peer = this->get_peer(); //pair (port, age)
+                peer_data target_peer = this->get_peer(); 
 
                 proto::pss_message pss_message;
                 pss_message.set_sender_ip(this->ip);

@@ -13,7 +13,7 @@ class smart_load_balancer: public load_balancer {
 private:
     std::vector<std::unique_ptr<std::vector<peer_data>>> view;
     std::recursive_mutex view_mutex;
-    std::unordered_map<std::string, peer_data> local_view;
+    std::unordered_map<long, peer_data> local_view;
     std::recursive_mutex local_view_mutex;
     int nr_saved_peers_by_group;
     bool local;

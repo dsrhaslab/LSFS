@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     std::string ip2 = "127.0.0.1";
     long id2 = 3;
 
-    client cli = client(ip, "127.0.0.1", kv_port, pss_port, id, "conf.yaml");
+    client cli = client(ip, "127.0.0.1", kv_port, pss_port, id2, "conf.yaml");
     // cli2 = client(ip2,"127.0.0.1", id2/*, kv_port2, lb_port2*/, "../scripts/conf.yaml");
 
 
@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
 
 //    cli.put("/crl", 1, "oli", 3);
 //    cli.put("/crl", 2, "olo", 3);
-
+/*
     long version;
     try {
         version = cli.get_latest_version("/", 1);
@@ -56,11 +56,11 @@ int main(int argc, char **argv) {
         version = -1;
     }
     std::cout << "Latest version: " << version << std::endl;
+*/
+    //std::shared_ptr<std::string> data = cli.get("/",1, &version);
+    //std::string data_s = *data;
 
-    std::shared_ptr<std::string> data = cli.get("/",1, &version);
-    std::string data_s = *data;
-
-    std::cout << "Data: " << data_s << std::endl;
+    //std::cout << "Data: " << data_s << std::endl;
 
 //    cli.put("/bigfileset/00000001/00000001",version + 1,
 //    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum eget elit eget purus tristique aliquam sit amet ut dolor. Sed dapibus, orci sed laoreet sodales, urna ante dictum lacus, convallis rhoncus dolor metus at massa. Proin egestas mauris diam, eu vestibulum lectus cursus eget. Integer iaculis neque ac hendrerit consectetur. Nullam dui est, semper at commodo sit amet, mollis eu purus. Cras eget malesuada diam. Vivamus imperdiet porta libero, eu egestas lectus consectetur quis. Fusce sed pulvinar nisi, id tempus sapien. Aliquam vel risus nibh. Fusce vulputate congue ligula, non elementum enim consequat sit amet. Aliquam finibus at elit ac varius. Ut magna ipsum, sodales id aliquet quis, varius nec ligula. Quisque auctor fringilla mi eget hendrerit. Quisque est orci, eleifend nec turpis eget, condimentum blandit urna.\n"

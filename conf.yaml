@@ -11,9 +11,9 @@ main_confs:
   logging_dir: /home/branco/Mestrado/5ano/LSFS//logging/
   results_dir: /home/branco/Mestrado/5ano/LSFS//results/
   database_base_path: /home/branco/
-  rep_max: 10
-  rep_min: 5
-  max_age: 40
+  rep_max: 2
+  rep_min: 1
+  max_age: 100
   local_message: true
   local_interval_sec: 8
   anti_entropy_interval_sec: 20

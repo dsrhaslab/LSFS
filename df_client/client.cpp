@@ -185,7 +185,9 @@ void client::put(const std::string& key, long version, const char *data, size_t 
             std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_put_request); //throw exception
             
             //std::cout << peers[0].pos  << std::endl;
-            //std::cout << peers[0].id  << std::endl;
+            //for(auto& peer: peers)
+            //    std::cout << peer.id << ", ";
+            //std::cout << std::endl;
 
             status = this->send_put(peers, key, version, data, size);
         }else{

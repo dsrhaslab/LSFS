@@ -95,7 +95,7 @@ void BootstrapperImpl::remove_peer(int id){
 
 void BootstrapperImpl::clear_fila(){
     std::unique_lock<std::recursive_mutex> lk_fila(this->fila_mutex);
-    std::queue<std::vector<int>> empty;
+    std::queue<std::vector<long>> empty;
     std::swap( this->fila, empty );
 }
 
@@ -158,7 +158,6 @@ void BootstrapperImpl::boot_worker(int* socket){
                 proto::pss_message msg_to_send;
                 msg_to_send.set_type(proto::pss_message_Type::pss_message_Type_NORMAL);
                 msg_to_send.set_sender_ip(this->get_ip());
-                msg_to_send.set_sender_pss_port(this->boot_port);
                 msg_to_send.set_sender_pss_port(this->boot_port);
                 msg_to_send.set_sender_pos(0); // not used
 

@@ -18,7 +18,7 @@
 class group_construction {
 private:
     std::recursive_mutex view_mutex;
-    std::unordered_map<std::string, peer_data> local_view; //port -> age
+    std::unordered_map<long, peer_data> local_view; //id -> peer
     long id;
     std::string ip;
     int kv_port;

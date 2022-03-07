@@ -78,9 +78,9 @@ public:
             timed_json += "\"group\":" + std::to_string(this->cyclon_ptr->get_my_group()) + ",";
             timed_json += "\"group_view\":[";
             int i = 0;
-            for(auto& peer_id: this->cyclon_ptr->get_group_view()){
+            for(auto& peer: this->cyclon_ptr->get_group_view_peers()){
                 if (i != 0) timed_json += ",";
-                timed_json += std::to_string(peer_id);
+                timed_json += std::to_string(peer.id) + "(age: " + std::to_string(peer.age) + ")" ;
                 i++;
             }
             timed_json += "],";
@@ -90,9 +90,9 @@ public:
             timed_json += "\"time\":\"" + std::to_string(localTime->tm_hour) + ":" + std::to_string(localTime->tm_min) + ":" + std::to_string(localTime->tm_sec) + "\",";
             timed_json += "\"view\":[";
             i = 0;
-            for(auto& peer_id/*port*/: this->cyclon_ptr->get_peers_from_view()){
+            for(auto& peer/*port*/: this->cyclon_ptr->get_peers_from_view_peers()){
                 if (i != 0) timed_json += ",";
-                timed_json += std::to_string(peer_id);
+                timed_json += std::to_string(peer.id) + "(age: " + std::to_string(peer.age) + ")" ;
                 i++;
             }
             timed_json += "]}";

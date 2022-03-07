@@ -133,7 +133,7 @@ void insert_peer_data_with_order(std::unique_ptr<std::vector<peer_data>>& view, 
     bool inserted = false;
 
     for(auto it = view->begin(); it != view->end(); ++it){
-        if(it->ip == peer.ip){
+        if(it->id == peer.id){
             if(it->age > peer.age){
                 view->erase(it);
                 insert_peer_data_with_order(view, peer);
@@ -158,13 +158,13 @@ void smart_load_balancer::incorporate_local_peers(const std::vector<peer_data>& 
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
     for(const peer_data& peer: received){
         if(group(peer.pos) == this->my_group){
-            auto current_it = this->local_view.find(peer.ip);
+            auto current_it = this->local_view.find(peer.id);
             if(current_it != this->local_view.end()){ //element exists in map
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second.age = peer.age;
             }else{
-                this->local_view.insert(std::make_pair(peer.ip, peer));
+                this->local_view.insert(std::make_pair(peer.id, peer));
             }
         }
     }
@@ -332,7 +332,7 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
     std::scoped_lock<std::recursive_mutex> lk_local (this->local_view_mutex);
 
     // aging local view
-    for(auto& [ip, peer]: this->local_view){
+    for(auto& [id, peer]: this->local_view){
         peer.age += 1;
     }
 
@@ -341,14 +341,14 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
     // add received nodes
     for (peer_data& peer: received){
         if(group(peer.pos) == this->my_group){
-            auto current_it = this->local_view.find(peer.ip);
+            auto current_it = this->local_view.find(peer.id);
             if(current_it != this->local_view.end()){ //o elemento existe no mapa
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second = peer;
 
             }else{
-                this->local_view.insert(std::make_pair(peer.ip, peer));
+                this->local_view.insert(std::make_pair(peer.id, peer));
             }
         }else{
             not_added.push_back(peer);
@@ -356,20 +356,20 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
     }
 
     // clean local view
-    std::vector<std::string> to_rem;
-    for (auto& [ip,peer] : this->local_view){
+    std::vector<long> to_rem;
+    for (auto& [id, peer] : this->local_view){
         if(group(peer.pos) != this->my_group){
-            to_rem.push_back(ip);
+            to_rem.push_back(id);
             not_added.push_back(peer);
         }
         else{
             if(peer.age > max_age){
-                to_rem.push_back(ip);
+                to_rem.push_back(id);
             }
         }
     }
-    for(std::string ip : to_rem){
-        this->local_view.erase(ip);
+    for(long id : to_rem){
+        this->local_view.erase(id);
     }
 
     std::scoped_lock<std::recursive_mutex> lk (this->view_mutex);
@@ -404,13 +404,13 @@ void smart_load_balancer::receive_message(std::vector<peer_data> received) {
     //to the current group match now the group in question
     for(auto& peer : not_added){
         if(group(peer.pos) == this->my_group) {
-            auto current_it = this->local_view.find(peer.ip);
+            auto current_it = this->local_view.find(peer.id);
             if(current_it != this->local_view.end()){ // element exists in map
                 int current_age = current_it->second.age;
                 if(current_age > peer.age)
                     current_it->second = peer;
             }else{
-                this->local_view.insert(std::make_pair(peer.ip, peer));
+                this->local_view.insert(std::make_pair(peer.id, peer));
             }
         }
     }

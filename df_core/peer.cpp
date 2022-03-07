@@ -165,7 +165,7 @@ static struct argp_option options[] = {
 
 struct arguments
 {
-    char *args[4];                /* arg1 & arg2 */
+    char *args[7];                /* arg1 & arg2 */
     bool no_recover;
 };
 
@@ -184,7 +184,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
             break;
 
         case ARGP_KEY_ARG:
-            if (state->arg_num >= 4)
+            if (state->arg_num >= 7)
                 /* Too many arguments. */
                 argp_usage (state);
 
@@ -193,7 +193,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
             break;
 
         case ARGP_KEY_END:
-            if (state->arg_num < 4)
+            if (state->arg_num < 7)
                 /* Not enough arguments. */
                 argp_usage (state);
             break;
@@ -224,6 +224,9 @@ int main(int argc, char* argv []){
     double pos = atof(arguments.args[1]);
     const char* conf_filename = arguments.args[2];
     const char* boot_ip = arguments.args[3];
+    int pss_port = atoi(arguments.args[4]); //12365;
+    int kv_port = atoi(arguments.args[5]); //12366;
+    int recover_port = atoi(arguments.args[6]); //12367;
     bool recover_database = !arguments.no_recover;
 
     std::string ip;
@@ -292,11 +295,6 @@ int main(int argc, char* argv []){
 
     srand (time(NULL));
     int boot_time = rand() % 10 + 2;
-
-    int pss_port = 12365;
-    int kv_port = 12366;
-    int recover_port = 12367;
-
 
     g_peer_impl = std::make_shared<peer>(id,"127.0.0.1",boot_ip, kv_port, pss_port, recover_port, pos, boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
             database_dir, rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, mt_data_handler, logger, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at, recover_database);
