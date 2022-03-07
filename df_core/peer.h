@@ -5,16 +5,34 @@
 #ifndef DATAFLASKSCPP_PEER_H
 #define DATAFLASKSCPP_PEER_H
 
+#include <memory>
+#include <thread>
+#include <chrono>
+#include <signal.h>
+#include <time.h>
+#include <fstream>
+#include <stdlib.h>
+#include <argp.h>
+#include <iostream>
+
+#include <spdlog/logger.h>
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
+#include "yaml-cpp/yaml.h"
+
 #include "df_pss/pss.h"
 #include "df_pss/pss_listener.h"
 #include "df_pss/view_logger.h"
 #include "df_data_handlers/data_handler_listener.h"
-#include "group_construction.h"
-#include <memory>
-#include <thread>
+#include <df_data_handlers/data_handler_listener_mt.h>
+#include <df_data_handlers/data_handler_listener_st.h>
 #include "df_data_handlers/anti_entropy.h"
 #include "df_store/kv_store.h"
-#include <spdlog/logger.h>
+#include "df_store/kv_store_leveldb.h"
+#include "group_construction.h"
+#include "clock_vv.h"
+
+
 
 class peer {
 public:
@@ -30,6 +48,7 @@ private:
     std::shared_ptr<kv_store<std::string>> store;
     pss cyclon;
     group_construction group_c;
+    clocks clock;
     pss_listener listener;
     view_logger v_logger;
     std::thread pss_th;

@@ -69,6 +69,8 @@ add_executable( peer_exe
         df_communication/udp_async_server.cpp
         df_core/group_construction.cpp
         df_core/group_construction.h
+        df_core/clock_vv.h 
+        df_core/clock_vv.cpp
         df_data_handlers/data_handler_listener.cpp
         df_data_handlers/data_handler_listener.h
         df_store/kv_store.h df_store/kv_store_key.h
