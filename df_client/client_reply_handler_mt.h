@@ -12,11 +12,21 @@
 #include <mutex>
 #include <condition_variable>
 #include <map>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <iostream>
 #include <boost/asio/io_service.hpp>
 #include <boost/thread/thread.hpp>
+#include <regex>
+#include <utility>
+
 #include <kv_message.pb.h>
-#include "df_store/kv_store_key.h"
+
 #include "client_reply_handler.h"
+#include "exceptions/custom_exceptions.h"
+#include "df_store/kv_store_key.h"
+
 
 class client_reply_handler_mt : public client_reply_handler{
 private:

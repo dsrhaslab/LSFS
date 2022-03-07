@@ -2,13 +2,6 @@
 // Created by danielsf97 on 1/27/20.
 //
 
-#include "df_tcp_client_server_connection/tcp_client_server_connection.h"
-#include <thread>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <spdlog/spdlog.h>
-#include <df_client/client.h>
 #include "dynamic_load_balancer.h"
 
 dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, std::string ip, int pss_port, long sleep_interval):
@@ -24,7 +17,7 @@ dynamic_load_balancer::dynamic_load_balancer(std::string boot_ip, std::string ip
         try {
 
             //tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::lb_port);
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::boot_port);
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), boot_port);
 
             //sending getview msg
             proto::pss_message msg_to_send;

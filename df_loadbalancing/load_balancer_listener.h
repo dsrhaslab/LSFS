@@ -7,6 +7,11 @@
 
 
 #include <memory>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <utility>
+
 #include "dynamic_load_balancer.h"
 
 class load_balancer_listener {

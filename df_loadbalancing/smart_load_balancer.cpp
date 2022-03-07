@@ -2,19 +2,8 @@
 // Created by danielsf97 on 4/5/20.
 //
 
-#include <spdlog/spdlog.h>
+
 #include "smart_load_balancer.h"
-#include "df_tcp_client_server_connection/tcp_client_server_connection.h"
-#include <thread>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <random>
-#include <yaml-cpp/node/node.h>
-#include <yaml-cpp/yaml.h>
-#include <boost/concept_check.hpp>
-#include <df_client/client.h>
-#include <df_util/randomizer.h>
 
 smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, int pss_port, long sleep_interval, std::string& config_filename):
         ip(ip), pss_port(pss_port), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))
@@ -45,7 +34,7 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, in
     while(!recovered){
         try {
             //tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::lb_port);
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), client::boot_port);
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip.c_str(), boot_port);
 
             //sending getview msg
             proto::pss_message msg_to_send;

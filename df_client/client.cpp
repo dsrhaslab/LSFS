@@ -3,17 +3,6 @@
 //
 
 #include "client.h"
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <cstring>
-#include <iostream>
-#include <memory>
-#include <df_loadbalancing/smart_load_balancer.h>
-#include "yaml-cpp/yaml.h"
-#include "df_core/peer.h"
-#include "client_reply_handler_mt.h"
-#include "exceptions/custom_exceptions.h"
 
 client::client(std::string boot_ip, std::string ip, int kv_port, int pss_port, long id, std::string conf_filename):
     ip(ip), kv_port(kv_port), pss_port(pss_port), id(id), sender_socket(socket(PF_INET, SOCK_DGRAM, 0))

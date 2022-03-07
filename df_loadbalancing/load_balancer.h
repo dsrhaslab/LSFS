@@ -10,6 +10,8 @@
 
 class load_balancer{
 public:
+    inline const static int boot_port = 12345;
+    
     virtual peer_data get_peer(const std::string& key) = 0;
     virtual peer_data get_random_peer() = 0;
     virtual std::vector<peer_data> get_n_peers(const std::string& key, int nr_peers) = 0;

@@ -7,6 +7,8 @@
 
 #include <boost/asio/io_service.hpp>
 #include <boost/thread/thread.hpp>
+
+#include <df_communication/udp_async_server.h>
 #include "data_handler_listener.h"
 
 class data_handler_listener_mt : public data_handler_listener{

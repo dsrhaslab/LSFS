@@ -11,11 +11,18 @@
 #include <mutex>
 #include <condition_variable>
 #include <map>
+#include <vector>
+#include <boost/container/flat_map.hpp>
+#include <boost/regex.hpp>
+#include <utility>
+
+#include <kv_message.pb.h>
+#include <spdlog/spdlog.h>
+
 #include "df_store/kv_store_key.h"
 #include "df_store/kv_store_key_version.h"
-#include <vector>
-#include <kv_message.pb.h>
-#include <boost/container/flat_map.hpp>
+#include "exceptions/custom_exceptions.h"
+
 
 class client_reply_handler {
 

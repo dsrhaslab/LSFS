@@ -2,26 +2,7 @@
 // Created by danielsf97 on 10/8/19.
 //
 
-#include <errno.h>
-#include <string.h>
-#include <iostream>
-#include <fstream>
 #include "pss.h"
-#include "df_tcp_client_server_connection/tcp_client_server_connection.h"
-#include "pss_message.pb.h"
-#include <thread>
-#include <chrono>         // std::chrono::seconds
-#include <algorithm>    // std::random_shuffle
-#include <random>      // std::rand, std::srand
-#include <mutex>
-#include <nlohmann/json.hpp>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <memory>
-#include <spdlog/spdlog.h>
-#include <df_core/peer.h>
-
 
 using json = nlohmann::json;
 #define LOG(X) std::cout << X << std::endl;
@@ -32,7 +13,7 @@ pss::pss(const char *boot_ip, std::string my_ip, int kv_port, int pss_port, int 
 
     while(!recovered){
         try {
-            tcp_client_server_connection::tcp_client_connection connection(boot_ip, peer::boot_port);
+            tcp_client_server_connection::tcp_client_connection connection(boot_ip, boot_port);
 
             proto::pss_message pss_announce_msg;
             pss_announce_msg.set_type(proto::pss_message_Type::pss_message_Type_ANNOUNCE);
@@ -519,7 +500,7 @@ void pss::stop_thread() {
 
 void pss::bootstrapper_termination_alerting() {
     try {
-        tcp_client_server_connection::tcp_client_connection connection(this->boot_ip, peer::boot_port);
+        tcp_client_server_connection::tcp_client_connection connection(this->boot_ip, boot_port);
 
         //sending termination msg
         proto::pss_message msg_to_send;

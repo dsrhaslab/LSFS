@@ -2,21 +2,8 @@
 // Created by danielsf97 on 10/8/19.
 //
 
-#include <argp.h>
-#include <iostream>
 #include "peer.h"
-#include <thread>
-#include <chrono>
-#include <signal.h>
-#include <time.h>
-#include "yaml-cpp/yaml.h"
-#include <fstream>
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/basic_file_sink.h"
-#include <stdlib.h>
-#include <df_data_handlers/data_handler_listener_mt.h>
-#include <df_data_handlers/data_handler_listener_st.h>
-#include "df_store/kv_store_leveldb.h"
+
 
 // definition
 extern std::string merge_metadata(const std::string&, const std::string&);

@@ -5,11 +5,25 @@
 #ifndef P2PFS_SMART_LOAD_BALANCER_H
 #define P2PFS_SMART_LOAD_BALANCER_H
 
+#include <thread>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <random>
+#include <yaml-cpp/node/node.h>
+#include <yaml-cpp/yaml.h>
+#include <boost/concept_check.hpp>
+
+#include <spdlog/spdlog.h>
 
 #include "load_balancer.h"
-#include <random>
+#include "df_tcp_client_server_connection/tcp_client_server_connection.h"
+#include <df_util/randomizer.h>
+
+
 
 class smart_load_balancer: public load_balancer {
+
 private:
     std::vector<std::unique_ptr<std::vector<peer_data>>> view;
     std::recursive_mutex view_mutex;

@@ -6,15 +6,18 @@
 #define P2PFS_VIEW_LOGGER_H
 
 #include <atomic>
-#include "pss.h"
 #include <thread>
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <sys/stat.h>
+#include <filesystem>
+
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/spdlog.h>
-#include <filesystem>
+
+#include "pss.h"
 #include "df_data_handlers/anti_entropy.h"
+
 #define LOG(X) std::cout << X << std::endl;
 
 using json = nlohmann::json;

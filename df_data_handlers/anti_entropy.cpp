@@ -2,15 +2,7 @@
 // Created by danielsf97 on 1/30/20.
 //
 
-#include "df_tcp_client_server_connection/tcp_client_server_connection.h"
-#include <thread>
-#include <utility>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <spdlog/spdlog.h>
-#include <df_core/peer.h>
-#include <exceptions/custom_exceptions.h>
+
 #include "anti_entropy.h"
 
 anti_entropy::anti_entropy(std::string ip, int kv_port, int recover_port, long id, double pos, pss *pss_ptr, group_construction* group_c,

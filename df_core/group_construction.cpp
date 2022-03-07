@@ -3,13 +3,7 @@
 //
 
 #include "group_construction.h"
-#include "peer.h"
-#include <netinet/in.h>
-#include <vector>
-#include <math.h>
-#include <pss_message.pb.h>
-#include <arpa/inet.h>
-#include <spdlog/spdlog.h>
+
 
 #define LOG(X) std::cout << X << std::endl;
 

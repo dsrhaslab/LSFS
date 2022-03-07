@@ -5,6 +5,9 @@
 #ifndef P2PFS_DATA_HANDLER_LISTENER_ST_H
 #define P2PFS_DATA_HANDLER_LISTENER_ST_H
 
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 #include "data_handler_listener.h"
 

@@ -13,7 +13,7 @@
 #include "df_loadbalancing/load_balancer_listener.h"
 #include "client.h"
 #include "df_loadbalancing/dynamic_load_balancer.h"
-#include "df_core/peer.h"
+
 
 extern std::string merge_metadata(std::string&, std::string&);
 

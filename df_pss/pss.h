@@ -6,13 +6,30 @@
 #define DATAFLASKSCPP_PSS_H
 
 #include <unordered_map>
-#include <memory>
 #include <vector>
-#include "df_core/peer_data.h"
 #include <mutex>
 #include <atomic>
+#include <thread>
+#include <chrono>         // std::chrono::seconds
+#include <algorithm>    // std::random_shuffle
+#include <random>      // std::rand, std::srand
+#include <nlohmann/json.hpp>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <memory>
+#include <errno.h>
+#include <string.h>
+#include <iostream>
+#include <fstream>
+
 #include <pss_message.pb.h>
+#include <spdlog/spdlog.h>
+
+#include "df_core/peer_data.h"
 #include "df_core/group_construction.h"
+#include "df_tcp_client_server_connection/tcp_client_server_connection.h"
+
 
 class pss {
 
@@ -20,6 +37,7 @@ public:
     int kv_port;
     int pss_port;
     int recover_port;
+    inline const static int boot_port = 12345;
 
 private:
     std::recursive_mutex view_mutex;
