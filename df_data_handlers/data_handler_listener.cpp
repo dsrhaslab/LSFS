@@ -5,8 +5,8 @@
 #include "data_handler_listener.h"
 #include "df_communication/udp_async_server.h"
 
-data_handler_listener::data_handler_listener(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
-    : ip(std::move(ip)), kv_port(kv_port), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
+data_handler_listener::data_handler_listener(std::string ip, int kv_port, long id, float chance, clock_vv* clock, pss* pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
+    : ip(std::move(ip)), kv_port(kv_port), id(id), chance(chance), clock_ptr(clock), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
 
 void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port){
     try{
@@ -231,6 +231,9 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
         }
 
         if (stored) {
+            this->clock_ptr->increment();
+            this->clock_ptr->print();
+
             float achance = random_float(0.0, 1.0);
 
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
@@ -287,6 +290,8 @@ void data_handler_listener::process_put_with_merge_message(proto::kv_message &ms
         }
 
         if (stored) {
+
+            this->clock_ptr->increment();
 
             float achance = random_float(0.0, 1.0);
 
