@@ -3,17 +3,7 @@
 //
 
 #include "bootstrapper_impl.h"
-#include <iostream>
-#include <memory>
-#include <thread>
 
-#include <algorithm>    // std::random_shuffle
-#include <random>      // std::rand, std::srand
-#include <map>
-#include <unistd.h>
-#include <algorithm>
-#include <pss_message.pb.h>
-#include "yaml-cpp/yaml.h"
 
 #define LOG(X) std::cout << X << std::endl;
 

@@ -136,11 +136,15 @@ bool anti_entropy::recover_state(tcp_client_server_connection::tcp_server_connec
                 finished_recovering = true;
             }else if (kv_message_rcv.has_recover_data_msg()) {
                 const proto::recover_data_message& message = kv_message_rcv.recover_data_msg();
+                
+                kv_store_key_version version;
+                for (auto c : message.version())
+                    version.vv.emplace(c.client_id(), c.clock());
 
                 if(message.merge()){
-                    this->store->put_with_merge(message.key(), message.version(), message.version_client_id(), message.data());
+                    this->store->put_with_merge(message.key(), version, message.data());
                 }else{
-                    this->store->put(message.key(), message.version(), message.version_client_id(), message.data());
+                    this->store->put(message.key(), version, message.data());
                 }
             }
         }catch(const char* e) {
@@ -206,8 +210,11 @@ void anti_entropy::phase_operating(){
         for (auto &key : this->store->get_keys()) {
             proto::kv_store_key *kv_key = message_content->add_keys();
             kv_key->set_key(key.key);
-            kv_key->set_version(key.key_version.version);
-            kv_key->set_client_id(key.key_version.client_id);
+            for(auto pair : key.key_version.vv){
+                proto::kv_store_version *kv_version = kv_key->add_version();
+                kv_version->set_client_id(pair.first);
+                kv_version->set_clock(pair.second);
+            }
         }
         message.set_allocated_anti_entropy_msg(message_content);
         this->send_peer_keys(slice_view, message);

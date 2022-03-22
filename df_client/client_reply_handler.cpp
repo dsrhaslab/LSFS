@@ -13,7 +13,7 @@ client_reply_handler::client_reply_handler(std::string ip, int kv_port, int pss_
     this->put_mutexes.reserve(100);
 }
 
-long client_reply_handler::register_put(const std::string& key, long version) {
+std::map<long, long> client_reply_handler::register_put(const std::string& key, std::map<long, long> version) {
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
 
     kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
@@ -236,7 +236,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::strin
 
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
-            auto max_version = kv_store_key_version(-1);
+            kv_store_key_version max_version;
             for(auto& entry : it->second){
                 if(entry.first > max_version){
                     max_version = entry.first;
@@ -296,7 +296,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_until(const std:
 
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
-            auto max_version = kv_store_key_version(-1);
+            kv_store_key_version max_version;
             for(auto& entry : it->second){
                 if(entry.first > max_version){
                     max_version = entry.first;
@@ -347,8 +347,8 @@ void client_reply_handler::register_get_latest_version(const std::string& req_id
     register_get(req_id);
 }
 
-std::unique_ptr<long> client_reply_handler::wait_for_get_latest_version(const std::string& req_id, int wait_for) {
-    std::unique_ptr<long> res (nullptr);
+std::unique_ptr<kv_store_key_version> client_reply_handler::wait_for_get_latest_version(const std::string& req_id, int wait_for) {
+    std::unique_ptr<kv_store_key_version> res (nullptr);
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
@@ -384,13 +384,13 @@ std::unique_ptr<long> client_reply_handler::wait_for_get_latest_version(const st
 
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
-            long max_version = -1;
+            kv_store_key_version max_version;
             for(auto& entry : it->second){
-                if(entry.first.version > max_version){
-                    max_version = entry.first.version;
+                if(entry.first > max_version){
+                    max_version = entry.first;
                 }
             }
-            res = std::make_unique<long>(max_version);
+            res = std::make_unique<kv_store_key_version>(max_version);
             this->get_replies.erase(it);
 
             // We don't need to awake threads that can be strapped on cond variable
@@ -428,9 +428,13 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
         std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
         lock.unlock(); //free global get lock
 
+        std::map<long, long> vector;
+        for (auto c : msg.version())
+            vector.emplace(c.client_id(), c.clock());
+
+
         it->second.emplace_back(std::make_pair<kv_store_key_version, std::unique_ptr<std::string>>(
-                kv_store_key_version(msg.version(), msg.version_client_id()),
-                std::make_unique<std::string>(data)
+                kv_store_key_version(vector), std::make_unique<std::string>(data)
         ));
         sync_pair->second.notify_all();
         reqid_lock.unlock();
@@ -441,8 +445,11 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
 
 void client_reply_handler::process_put_reply_msg(const proto::put_reply_message &msg) {
     const std::string& key = msg.key();
-    long version = msg.version();
-    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
+    kv_store_key_version version;
+    for (auto c : msg.version())
+        version.vv.emplace(c.client_id(), c.clock());
+
+    kv_store_key<std::string> comp_key = {key, version};
     long replier_id = msg.id();
 
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
@@ -479,8 +486,13 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
         std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
         lock.unlock(); //free global get lock
 
+        std::map<long, long> vector;
+        for (auto c : msg.version())
+            vector.emplace(c.client_id(), c.clock());
+
+
         it->second.emplace_back(std::make_pair<kv_store_key_version, std::unique_ptr<std::string>>(
-                kv_store_key_version(msg.version()),
+                kv_store_key_version(vector),
                 nullptr
         ));
         sync_pair->second.notify_all();

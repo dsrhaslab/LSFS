@@ -15,7 +15,7 @@ message get_latest_version_reply_message {
   int32 port = 2;
   int64 id = 3;
   string reqid = 4;
-  int64 version = 5;
+  repeated kv_store_version version = 5;
 }
 
 message get_message {
@@ -25,10 +25,9 @@ message get_message {
   string key = 4;
   oneof version_avail {
     bool version_none = 5;  // always set this to "true" when null
-    int64 version = 6;
   }
-  int64 version_client_id = 7;
-  string reqid = 8;
+  repeated kv_store_version version = 6;
+  string reqid = 7;
 }
 
 message get_reply_message {
@@ -36,11 +35,10 @@ message get_reply_message {
   int32 port = 2;
   int64 id = 3;
   string key = 4;
-  int64 version = 5;
-  int64 version_client_id = 6;
-  string reqid = 7;
-  bytes data = 8;
-  bool merge = 9; //anti-entropy purposes
+  repeated kv_store_version version = 5;
+  string reqid = 6;
+  bytes data = 7;
+  bool merge = 8; //anti-entropy purposes
 }
 
 message put_message {
@@ -48,7 +46,7 @@ message put_message {
   int32 port = 2;
   int64 id = 3;
   string key = 4;
-  int64 version = 5;
+  repeated kv_store_version version = 5;
   bytes data = 6;
 }
 
@@ -57,7 +55,7 @@ message put_with_merge_message {
   int32 port = 2;
   int64 id = 3;
   string key = 4;
-  int64 version = 5;
+  repeated kv_store_version version = 5;
   bytes data = 6;
 }
 
@@ -66,7 +64,7 @@ message put_reply_message {
   int32 port = 2;
   int64 id = 3;
   string key = 4;
-  int64 version = 5;
+  repeated kv_store_version version = 5;
 }
 
 message recover_request_message {
@@ -82,18 +80,21 @@ message recover_offset_message {
 
 message recover_data_message {
   string key = 1;
-  int64 version = 2;
-  int64 version_client_id = 3;
-  bool merge = 4;
-  bytes data = 5;
+  repeated kv_store_version version = 2;
+  bool merge = 3;
+  bytes data = 4;
 }
 
 message recover_termination_message {}
 
+message kv_store_version {
+  int64 client_id = 1;
+  int64 clock = 2;
+}
+
 message kv_store_key {
   string key = 1;
-  int64 version = 2;
-  int64 client_id = 3;
+  repeated kv_store_version version = 2;
 }
 
 message anti_entropy_message {

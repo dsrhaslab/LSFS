@@ -25,22 +25,29 @@ int main(int argc, char **argv) {
     //int lb_port = 50009;
     //int kv_port = 50010;
     std::string ip = "127.0.0.1";
-    long id = 4;
+    long id = 2;
 
     //int lb_port2 = 50007;
     //int kv_port2 = 50008;
-    int pss_port = 12355;
-    int kv_port = 12356;
+    int pss_port = 12357;
+    int kv_port = 12358;
     std::string ip2 = "127.0.0.1";
-    long id2 = 3;
+    long id2 = 1;
 
     client cli = client(ip, "127.0.0.1", kv_port, pss_port, id2, "conf.yaml");
     // cli2 = client(ip2,"127.0.0.1", id2/*, kv_port2, lb_port2*/, "../scripts/conf.yaml");
 
-
-    cli.put("/", 0, "ole", 3);
-    cli.put("/ola", 0, "ole", 3);
-    std::cout << "Done!"  << std::endl;
+    std::map<long, long> version ({{id2, 1000},{id, 1}});
+    std::map<long, long> version2 ({{id2, 1000},{id, 1},{3,1}});
+    std::map<long, long> version3 ({{id2, 1001}});
+    //std::map<long, long> version2 ({{id2, 2}});
+    
+    
+    //cli.put("/LSFS", &version, "ole", 3);
+    //cli.put("/LSFS", &version2, "olev4", 5);
+    //cli.put("/LSFS", &version3, "olev3", 5);
+    //cli.put("/ola", 0, "ole", 3);
+    //std::cout << "Done!"  << std::endl;
 //    cli.put("/tudo/bem", 0, "ole", 3);
 //    cli.put("/crl", 0, "ole", 3);
 //    cli.put("/CVS", 1, "oli", 3);
@@ -48,15 +55,17 @@ int main(int argc, char **argv) {
 
 //    cli.put("/crl", 1, "oli", 3);
 //    cli.put("/crl", 2, "olo", 3);
-/*
-    long version;
-    try {
-        version = cli.get_latest_version("/", 1);
-    }catch(...){
-        version = -1;
-    }
-    std::cout << "Latest version: " << version << std::endl;
-*/
+
+    //std::map<long, long> version2 ({{4, 1}});
+    std::unique_ptr<std::string> data = cli.get("/LSFS", 3, &version3);
+    std::cout << "Data: " << *data << std::endl ;
+
+    //kv_store_key_version versionres;
+    //versionres = cli.get_latest_version("/LSFS", 1);
+    
+    //for(auto x: versionres.vv)
+      //  std::cout << x.first << "@" << x.second << std::endl;
+
     //std::shared_ptr<std::string> data = cli.get("/",1, &version);
     //std::string data_s = *data;
 
