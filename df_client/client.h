@@ -77,10 +77,14 @@ public:
     inline void put_with_merge(const std::string& key, std::map<long, long>* version, const char* data, size_t size) {
         put_with_merge(key, version, data, size, nr_puts_required);
     };
+    void del(const std::string& key, std::map<long, long>* version, int wait_for);
+    inline void del(const std::string& key, std::map<long, long>* version){
+        del(key, version, nr_puts_required);
+    };
     void get_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs, int wait_for);
     inline void get_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs){
         get_batch(keys, data_strs, nr_gets_required);
-    }
+    };
     std::unique_ptr<std::string> get(const std::string& key, int wait_for, std::map<long, long>* version = nullptr);
     inline std::unique_ptr<std::string> get(const std::string& key, std::map<long, long>* version = nullptr){
         return get(key, nr_gets_required, version);
@@ -95,6 +99,7 @@ private:
     int send_msg(peer_data& target_peer, proto::kv_message& msg);
     int send_get(std::vector<peer_data>& peers, const std::string& key, std::map<long,long>* version, const std::string& req_id);
     int send_put(std::vector<peer_data>& peers, const std::string& key, std::map<long,long>* version, const char* data, size_t size);
+    int send_delete(std::vector<peer_data>& peers, const std::string& key, std::map<long, long>* version);
     int send_put_with_merge(std::vector<peer_data>& peers, const std::string& key, std::map<long, long>* version, const char* data, size_t size);
     int send_get_latest_version(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id);
 };

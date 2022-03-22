@@ -43,6 +43,10 @@ void data_handler_listener_st::operator()() {
                     this->process_put_with_merge_message(msg);
                 }else if(msg.has_put_reply_msg()){
                     // This case doesn't happen, because peers shouldn't receive put reply messages
+                }else if(msg.has_delete_msg()){
+                    this->process_delete_message(msg);
+                }else if(msg.has_delete_reply_msg()){
+                    // This case doesn't happen, because peers shouldn't receive put reply messages
                 }else if(msg.has_anti_entropy_msg()){
                     this->process_anti_entropy_message(msg);
                 }else if(msg.has_get_latest_version_msg()){

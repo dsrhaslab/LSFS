@@ -48,6 +48,10 @@ void client_reply_handler_st::operator()() {
 
                     const proto::get_latest_version_reply_message& msg = message.get_latest_version_reply_msg();
                     process_get_latest_version_reply_msg(msg);
+                }else if (message.has_delete_reply_msg()) {
+
+                    const proto::delete_reply_message &msg = message.delete_reply_msg();
+                    process_delete_reply_msg(msg);
                 }
             }
             catch(const char* e){

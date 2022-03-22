@@ -147,6 +147,29 @@ int client::send_put(std::vector<peer_data>& peers, const std::string& key, std:
     return (nr_send_errors >= peers.size())? 1 : 0;
 }
 
+int client::send_delete(std::vector<peer_data>& peers, const std::string& key, std::map<long, long>* version) {
+    proto::kv_message msg;
+    auto* message_content = new proto::delete_message();
+    message_content->set_ip(this->ip);
+    message_content->set_port(this->kv_port);
+    message_content->set_id(this->id);
+    message_content->set_key(key);
+    for(auto const c: *version){
+        proto::kv_store_version *kv_version = message_content->add_version();
+        kv_version->set_client_id(c.first);
+        kv_version->set_clock(c.second);
+    }
+    msg.set_allocated_delete_msg(message_content);
+
+    int nr_send_errors = 0;
+    for(auto& peer: peers){
+        nr_send_errors += send_msg(peer, msg);
+    }
+
+    return (nr_send_errors >= peers.size())? 1 : 0;
+}
+
+
 int client::send_put_with_merge(std::vector<peer_data>& peers, const std::string& key, std::map<long, long>* version, const char *data, size_t size) {
     proto::kv_message msg;
     auto* message_content = new proto::put_with_merge_message();
@@ -285,6 +308,40 @@ void client::put_with_merge(const std::string& key, std::map<long, long>* versio
         if(status == 0){
             try{
                 succeed = this->handler->wait_for_put(comp_key, wait_for);
+            }catch(TimeoutException& e){
+                curr_timeouts++;
+            }
+        }
+    }
+
+    if(!succeed){
+        throw TimeoutException();
+    }
+}
+
+void client::del(const std::string& key, std::map<long, long>* version, int wait_for) {
+    this->handler->register_delete(key, *version); // throw const char* (concurrent writes over the same key)
+    
+    //std::cout << "Put Registed"  << std::endl;
+    
+    kv_store_key<std::string> comp_key = {key, kv_store_key_version(*version)};
+    bool succeed = false;
+    int curr_timeouts = 0;
+    while(!succeed && curr_timeouts < this->max_timeouts){
+        int status = 0;
+        if (curr_timeouts + 1 <= 2){
+            std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_put_request); //throw exception
+
+            status = this->send_delete(peers, key, version);
+        }else{
+            std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_put_request); //throw exception
+            status = this->send_delete(peers, key, version);
+        }
+        if(status == 0){
+            try{
+                std::cout << "Waiting for delete of key: " << key << std::endl;
+            
+                succeed = this->handler->wait_for_delete(comp_key, wait_for);
             }catch(TimeoutException& e){
                 curr_timeouts++;
             }

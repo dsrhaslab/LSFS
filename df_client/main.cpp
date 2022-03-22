@@ -40,13 +40,14 @@ int main(int argc, char **argv) {
     std::map<long, long> version ({{id2, 1000},{id, 1}});
     std::map<long, long> version2 ({{id2, 1000},{id, 1},{3,1}});
     std::map<long, long> version3 ({{id2, 1001}});
-    //std::map<long, long> version2 ({{id2, 2}});
+    std::map<long, long> version4 ({{5, 2}});
     
     
     //cli.put("/LSFS", &version, "ole", 3);
     //cli.put("/LSFS", &version2, "olev4", 5);
     //cli.put("/LSFS", &version3, "olev3", 5);
-    //cli.put("/ola", 0, "ole", 3);
+    //cli.put("/LSFS", &version4, "este vai ser deleted", 20);
+    //cli.del("/LSFS", &version2, 2);
     //std::cout << "Done!"  << std::endl;
 //    cli.put("/tudo/bem", 0, "ole", 3);
 //    cli.put("/crl", 0, "ole", 3);
@@ -57,14 +58,14 @@ int main(int argc, char **argv) {
 //    cli.put("/crl", 2, "olo", 3);
 
     //std::map<long, long> version2 ({{4, 1}});
-    std::unique_ptr<std::string> data = cli.get("/LSFS", 3, &version3);
-    std::cout << "Data: " << *data << std::endl ;
+    //std::unique_ptr<std::string> data = cli.get("/LSFS", 2, &version2);
+    //std::cout << "Data: " << *data << std::endl ;
 
-    //kv_store_key_version versionres;
-    //versionres = cli.get_latest_version("/LSFS", 1);
+    kv_store_key_version versionres;
+    versionres = cli.get_latest_version("/LSFS", 1);
     
-    //for(auto x: versionres.vv)
-      //  std::cout << x.first << "@" << x.second << std::endl;
+    for(auto x: versionres.vv)
+        std::cout << x.first << "@" << x.second << std::endl;
 
     //std::shared_ptr<std::string> data = cli.get("/",1, &version);
     //std::string data_s = *data;

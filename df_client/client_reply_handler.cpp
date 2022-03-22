@@ -163,6 +163,86 @@ void client_reply_handler::clear_put_keys_entries(std::vector<kv_store_key<std::
     }
 }
 
+std::map<long, long> client_reply_handler::register_delete(const std::string& key, std::map<long, long> version) {
+    std::unique_lock<std::mutex> lock(this->delete_global_mutex);
+
+    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
+
+    auto it = this->delete_replies.find(comp_key);
+    if(it == this->delete_replies.end()){
+        // key does not exist
+        std::set<long> temp;
+        this->delete_replies.emplace(comp_key, std::move(temp));
+        auto sync_pair = std::make_unique<std::pair<std::mutex, std::condition_variable>>();
+        this->delete_mutexes.emplace(std::move(comp_key), std::move(sync_pair));
+    }else{
+        throw ConcurrentWritesSameKeyException();
+    }
+
+    lock.unlock();
+    return version;
+}
+
+
+bool client_reply_handler::wait_for_delete(const kv_store_key<std::string>& key, int wait_for){
+    bool succeed = false;
+
+    std::unique_lock<std::mutex> lock(this->delete_global_mutex);
+
+    bool timeout_happened = false;
+    bool waited = false;
+
+    auto it = this->delete_replies.find(key);
+    if(it != this->delete_replies.end()) {
+        // if key exists, lock key
+        auto &sync_pair = this->delete_mutexes.find(key)->second;
+        std::unique_lock<std::mutex> lock_key(sync_pair->first);
+
+        if (it->second.size() < wait_for) {
+            // if we still don't have the number of needed replies
+
+            // unlock global put lock
+            lock.unlock();
+            //unlock for key notify -> it performs automatic lock of the key
+            std::cv_status status = sync_pair->second.wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
+            if(status == std::cv_status::timeout) timeout_happened = true;
+            waited = true;
+            // unlock key mutex, because we must get locks in the same order
+            lock_key.unlock();
+            lock.lock();
+            lock_key.lock();
+        }
+
+        // verify if put has been performed with success
+        if(waited) {
+            it = this->delete_replies.find(key);
+        }
+        succeed = it->second.size() >= wait_for;
+        if (succeed) {
+
+            // if put has already been successfully performed, since we have all locks
+            // we can remove the key entries
+            this->delete_replies.erase(it);
+            // We don't need to awake threads that can be strapped on cond variable
+            // since it's certain that a single thread is able to wait for a same key
+            auto it_key = this->delete_mutexes.find(key);
+            // It's strictly needes to free key lock as if we don't, when leaving scope it will
+            // try to perform a release on a non-existent mutex (SIGSEV)
+            lock_key.unlock();
+            this->delete_mutexes.erase(it_key);
+        }
+    }
+
+    lock.unlock();
+
+    if(!succeed && timeout_happened)
+        throw TimeoutException();
+
+    return succeed;
+}
+
+
+
 void client_reply_handler::register_get(const std::string& req_id) {
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
@@ -180,7 +260,7 @@ void client_reply_handler::register_get(const std::string& req_id) {
     lock.unlock();
 }
 
-long client_reply_handler::change_get_reqid(const std::string &latest_reqid_str, const std::string &new_reqid) {
+void client_reply_handler::change_get_reqid(const std::string &latest_reqid_str, const std::string &new_reqid) {
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
     auto it = this->get_replies.find(latest_reqid_str);
@@ -467,6 +547,33 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
         key_lock.unlock();
     }else{
         spdlog::debug("PUT REPLY IGNORED - NON EXISTENT KEY");
+    }
+}
+
+void client_reply_handler::process_delete_reply_msg(const proto::delete_reply_message &msg) {
+    const std::string& key = msg.key();
+    kv_store_key_version version;
+    for (auto c : msg.version())
+        version.vv.emplace(c.client_id(), c.clock());
+
+    kv_store_key<std::string> comp_key = {key, version};
+    long replier_id = msg.id();
+
+    std::unique_lock<std::mutex> lock(this->delete_global_mutex);
+
+    auto it = this->delete_replies.find(comp_key);
+    if(it != this->delete_replies.end()){
+        // key exists
+        auto& sync_pair = this->delete_mutexes.find(comp_key)->second;
+        std::unique_lock<std::mutex> key_lock(sync_pair->first);
+
+        lock.unlock(); //free global put lock
+
+        it->second.emplace(replier_id);
+        sync_pair->second.notify_all();
+        key_lock.unlock();
+    }else{
+        spdlog::debug("DELETE REPLY IGNORED - NON EXISTENT KEY");
     }
 }
 

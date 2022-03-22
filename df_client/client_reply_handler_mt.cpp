@@ -34,6 +34,10 @@ public:
 
                 const proto::get_latest_version_reply_message& msg = message.get_latest_version_reply_msg();
                 reply_handler->process_get_latest_version_reply_msg(msg);
+            }else if (message.has_delete_reply_msg()) {
+
+                const proto::delete_reply_message &msg = message.delete_reply_msg();
+                reply_handler->process_delete_reply_msg(msg);
             }
         }
         catch (const char *e) {

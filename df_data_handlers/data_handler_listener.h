@@ -49,6 +49,7 @@ public:
     void process_get_reply_message(proto::kv_message &msg);
     void process_put_message(proto::kv_message &msg);
     void process_put_with_merge_message(proto::kv_message &msg);
+    void process_delete_message(proto::kv_message &msg);
     long get_anti_entropy_req_count();
     void process_anti_entropy_message(proto::kv_message &msg);
     void process_get_latest_version_msg(proto::kv_message msg);

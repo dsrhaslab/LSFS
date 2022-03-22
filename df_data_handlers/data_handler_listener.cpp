@@ -275,8 +275,6 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
         }
 
         if (stored) {
-            this->clock_ptr->increment();
-            this->clock_ptr->print();
 
             float achance = random_float(0.0, 1.0);
 
@@ -343,8 +341,6 @@ void data_handler_listener::process_put_with_merge_message(proto::kv_message &ms
 
         if (stored) {
 
-            this->clock_ptr->increment();
-
             float achance = random_float(0.0, 1.0);
 
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
@@ -386,6 +382,82 @@ void data_handler_listener::process_put_with_merge_message(proto::kv_message &ms
         }
     }
 }
+
+
+void data_handler_listener::process_delete_message(proto::kv_message &msg) {
+
+    const auto& message = msg.delete_msg();
+    const std::string& sender_ip = message.ip();
+    const int sender_port = message.port();
+    const std::string& key = message.key();
+    
+    kv_store_key_version version;
+    for (auto c : message.version())
+        version.vv.emplace(c.client_id(), c.clock());
+
+    bool request_already_replied = msg.forwarded_within_group();
+    std::cout << " Starting Delete " << std::endl;
+    if (!this->store->have_seen_deleted(key, version)) {
+        bool deleted;
+        try {
+
+            deleted = this->store->remove(key, version);
+
+            std::cout << " Delete return " << deleted << std::endl;
+    
+            std::cout << " Starting print " << std::endl;
+    
+            this->store->print_store();
+
+        }catch(std::exception& e){
+            deleted = false;
+        }
+
+        if (deleted) {
+
+            float achance = random_float(0.0, 1.0);
+
+            std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+            if (!request_already_replied|| achance <= this->chance) {
+                proto::kv_message reply_message;
+                auto *message_content = new proto::delete_reply_message();
+                message_content->set_ip(this->ip);
+                message_content->set_port(this->kv_port);
+                message_content->set_id(this->id);
+                message_content->set_key(key);
+                
+                for(auto const c: version.vv){
+                    proto::kv_store_version *kv_version = message_content->add_version();
+                    kv_version->set_client_id(c.first);
+                    kv_version->set_clock(c.second);
+                }
+                reply_message.set_allocated_delete_reply_msg(message_content);
+
+                this->reply_client(reply_message, sender_ip, sender_port);
+                msg.set_forwarded_within_group(true); //forward within group
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            } else {
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
+        } else {
+            if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
+        }
+    }
+}
+
+
 
 long data_handler_listener::get_anti_entropy_req_count(){
     return this->anti_entropy_req_count += 1;

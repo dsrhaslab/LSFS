@@ -67,6 +67,22 @@ message put_reply_message {
   repeated kv_store_version version = 5;
 }
 
+message delete_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string key = 4;
+  repeated kv_store_version version = 5;
+}
+
+message delete_reply_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string key = 4;
+  repeated kv_store_version version = 5;
+}
+
 message recover_request_message {
   string ip = 1;
   int32 recover_port = 2;
@@ -112,12 +128,14 @@ message kv_message {
         put_message                         put_msg = 4;
         put_with_merge_message              put_with_merge_msg = 5;
         put_reply_message                   put_reply_msg = 6;
-        anti_entropy_message                anti_entropy_msg = 7;
-        get_latest_version_message          get_latest_version_msg = 8;
-        get_latest_version_reply_message    get_latest_version_reply_msg = 9;
-        recover_request_message             recover_request_msg = 10;
-        recover_offset_message              recover_offset_msg = 11;
-        recover_data_message                recover_data_msg = 12;
-        recover_termination_message         recover_termination_msg = 13;
+        delete_message                      delete_msg = 7;
+        delete_reply_message                delete_reply_msg = 8;
+        anti_entropy_message                anti_entropy_msg = 9;
+        get_latest_version_message          get_latest_version_msg = 10;
+        get_latest_version_reply_message    get_latest_version_reply_msg = 11;
+        recover_request_message             recover_request_msg = 12;
+        recover_offset_message              recover_offset_msg = 13;
+        recover_data_message                recover_data_msg = 14;
+        recover_termination_message         recover_termination_msg = 15;
     }
 }

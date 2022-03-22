@@ -37,6 +37,7 @@ class kv_store_leveldb: public kv_store<std::string>{
 private:
     leveldb::DB* db;
     leveldb::DB* db_merge_log;
+    leveldb::DB* db_deleted;
 
     std::atomic<long> record_count = 0;
     std::atomic<long> record_count_cycle = 0;
@@ -45,6 +46,10 @@ private:
 
 private:
     void refresh_nr_keys_count();
+    int open(leveldb::Options& options, std::string db_name, std::string& db_name_path, leveldb::DB** db);
+    void print_db(leveldb::DB* database);
+    std::unique_ptr<std::string> get_db(kv_store_key<std::string>& key, leveldb::DB* database);
+
 
 public:
     ~kv_store_leveldb();
@@ -61,7 +66,7 @@ public:
     bool put(const std::string& key, kv_store_key_version version, const std::string& bytes, bool is_merge) override; // use string.c_str() to convert string to const char*
     bool put_with_merge(const std::string& key, kv_store_key_version version, const std::string& bytes) override;
     std::unique_ptr<std::string> get(kv_store_key<std::string>& key) override;
-    std::unique_ptr<std::string> remove(const kv_store_key<std::string>& key) override;
+    bool remove(const std::string& key, kv_store_key_version version) override;
     std::unique_ptr<std::string> get_latest(const std::string& key, kv_store_key_version* kv_version) override;
     std::unique_ptr<std::map<long, long>> get_latest_version(const std::string& key) override;
     std::unique_ptr<std::string> get_anti_entropy(const kv_store_key<std::string>& key, bool* is_merge) override;
@@ -78,6 +83,7 @@ kv_store_leveldb::kv_store_leveldb(std::string (*f)(const std::string&,const std
 
 kv_store_leveldb::~kv_store_leveldb() {
     delete db;
+    delete db_deleted;
 }
 
 void kv_store_leveldb::close() {
@@ -85,6 +91,7 @@ void kv_store_leveldb::close() {
 
     delete this->db;
     delete this->db_merge_log;
+    delete this->db_deleted;
 }
 
 std::string kv_store_leveldb::db_name() const {
@@ -107,37 +114,39 @@ int kv_store_leveldb::init(void* path, long id){
     options.create_if_missing = true;
     std::string db_name = this->path + std::to_string(id);
     std::string db_merge_log_name = db_name + "_merge";
+    std::string db_delete_name = db_name + "_deleted";
 
-    std::cout << "Opening Database" << std::endl;
+    int res = 0;
 
-    leveldb::Status status = leveldb::DB::Open(options, db_name, &db);
-
-    if (!status.ok())
-    {
-        fprintf(stderr,
-                "Unable to open/create test database %s\n",
-                db_name.c_str());
-        return -1;
-    }
-
-    std::cout << "Opened db Database" << std::endl;
-
-    status = leveldb::DB::Open(options, db_merge_log_name, &db_merge_log);
-
-    std::cout << "Opened merge Database" << std::endl;
-
-    if (!status.ok())
-    {
-        fprintf(stderr,
-                "Unable to open/create test database %s\n",
-                db_name.c_str());
-        return -1;
-    }
+    res = open(options, "DB", db_name, &db);
+    if(res == -1) return -1;
+    res = open(options, "DB_MERGE", db_merge_log_name, &db_merge_log);
+    if(res == -1) return -1;
+    res = open(options, "DB_DELETED", db_delete_name, &db_deleted);
 
     std::cout << "All done" << std::endl;
 
+    return res;
+}
+
+int kv_store_leveldb::open(leveldb::Options& options, std::string db_name, std::string& db_name_path, leveldb::DB** db){
+    
+    std::cout << "Opening " << db_name  <<" Database" << std::endl;
+
+    leveldb::Status status = leveldb::DB::Open(options, db_name_path, db);
+
+    if (!status.ok())
+    {
+        fprintf(stderr,
+                "Unable to open/create test database db %s\n",
+                db_name.c_str());
+        return -1;
+    }
+
     return 0;
 }
+
+
 
 std::vector<std::string> kv_store_leveldb::get_last_keys_limit4(){
 
@@ -308,9 +317,25 @@ bool kv_store_leveldb::put(const std::string& key, kv_store_key_version version,
     }
 }
 
+
 void kv_store_leveldb::print_store(){
 
-    leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+    std::cout << "\nPrinting DB" << std::endl;
+
+    print_db(db);
+    
+    std::cout << "\nPrinting DB_DELETED" << std::endl;
+    
+    print_db(db_deleted);
+    
+    std::cout << std::endl;
+}
+
+
+
+void kv_store_leveldb::print_db(leveldb::DB* database){
+
+    leveldb::Iterator* it = database->NewIterator(leveldb::ReadOptions());
     
     for (it->SeekToFirst(); it->Valid(); it->Next())
     {
@@ -325,9 +350,10 @@ void kv_store_leveldb::print_store(){
             std::cout << "  Key: " << key << "#" << std::endl;
             
             kv_store_key<std::string> get_key = {key, kv_store_key_version(vector)};
-            std::unique_ptr<std::string> data = get(get_key);
+            std::unique_ptr<std::string> data = get_db(get_key, database);
 
-            std::cout << "  Data: " << *data << "\n" << std::endl;
+            if(data != nullptr) std::cout << "  Data: " << *data << std::endl;
+            else std::cout << "  Data: **NULLPTR**"<< std::endl;
         }
     }
 
@@ -338,7 +364,7 @@ void kv_store_leveldb::print_store(){
     }
 }
 
-std::unique_ptr<std::string> kv_store_leveldb::get(kv_store_key<std::string>& key) {
+std::unique_ptr<std::string> kv_store_leveldb::get_db(kv_store_key<std::string>& key, leveldb::DB* database) {
 
     if(key.key_version.vv.empty()){
         std::cout << "Empty vector " << std::endl;
@@ -361,7 +387,7 @@ std::unique_ptr<std::string> kv_store_leveldb::get(kv_store_key<std::string>& ke
     comp_key = compose_key_toString(key.key, key.key_version);
     std::cout << "Get key " << comp_key << std::endl;
         
-    leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
+    leveldb::Status s = database->Get(leveldb::ReadOptions(), comp_key, &value);
 
     if (s.ok()){
         std::cout << "Returning " << comp_key << std::endl;
@@ -369,6 +395,11 @@ std::unique_ptr<std::string> kv_store_leveldb::get(kv_store_key<std::string>& ke
     }else{
         return nullptr;
     }
+}
+
+
+std::unique_ptr<std::string> kv_store_leveldb::get(kv_store_key<std::string>& key) {
+    return get_db(key, db);
 }
 
 std::unique_ptr<std::string> kv_store_leveldb::get_anti_entropy(const kv_store_key<std::string>& key, bool* is_merge) {
@@ -427,26 +458,33 @@ std::unique_ptr<std::string> kv_store_leveldb::get_latest(const std::string& key
 }
 
 
-std::unique_ptr<std::string> kv_store_leveldb::remove(const kv_store_key<std::string>& key) {
+bool kv_store_leveldb::remove(const std::string& key, kv_store_key_version version) {
+    this->seen_it_deleted(key, version);
+    int k_slice = this->get_slice_for_key(key);
 
-    std::string value;
-    std::string comp_key;
-    //comp_key.reserve(50);
-    comp_key = compose_key_toString(key.key, key.key_version);
-    leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
+    if(this->slice == k_slice){
+        std::string value;
+        std::string comp_key;
+        //comp_key.reserve(50);
+        comp_key = compose_key_toString(key, version);
+        leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
 
-    if (s.ok()){
-        s = db->Delete(leveldb::WriteOptions(), comp_key);
-        if(!s.ok())throw LevelDBException();
-        this->record_count--; //removed record from database
-        s = db_merge_log->Delete(leveldb::WriteOptions(), comp_key);
-        if(!s.ok()) throw LevelDBException();
+        if (s.ok()){
+            s = db->Delete(leveldb::WriteOptions(), comp_key);
+            if(!s.ok())throw LevelDBException();
+            this->record_count--; //removed record from database
+            s = db_merge_log->Delete(leveldb::WriteOptions(), comp_key);
+            if(!s.ok()) throw LevelDBException();
 
-        return std::make_unique<std::string>(std::move(value));
-    }else{
-        return nullptr;
+            s = db_deleted->Put(leveldb::WriteOptions(), comp_key, value);
+            if(!s.ok()) throw LevelDBException();
+
+            return true;
+        }
     }
+    return false;
 }
+
 
 bool kv_store_leveldb::put_with_merge(const std::string& key, kv_store_key_version version, const std::string& bytes) {
     try{

@@ -20,13 +20,16 @@ protected:
     std::atomic<int> slice = 1; //[1, nr_slices]
     std::atomic<int> nr_slices = 1;
     std::unordered_map<kv_store_key<T>, bool> seen;
+    std::unordered_map<kv_store_key<T>, bool> seen_deleted;
     std::unordered_map<std::string, bool> request_log;
     std::unordered_map<std::string, bool> anti_entropy_log;
     std::recursive_mutex seen_mutex;
+    std::recursive_mutex seen_deleted_mutex;
     std::recursive_mutex req_log_mutex;
     std::recursive_mutex anti_entropy_log_mutex;
     std::string(*merge_function) (const std::string& bytes, const std::string& new_bytes);
     std::atomic<long> seen_count = 0;
+    std::atomic<long> seen_deleted_count = 0;
     std::atomic<long> req_count = 0;
     std::atomic<long> anti_entropy_count = 0;
     long seen_log_garbage_at;
@@ -47,7 +50,7 @@ public:
     virtual bool put_with_merge(const T& key, kv_store_key_version version, const std::string& bytes) = 0;
     
     virtual std::unique_ptr<std::string> get(kv_store_key<T>& key) = 0;
-    virtual std::unique_ptr<std::string> remove(const kv_store_key<T>& key) = 0;
+    virtual bool remove(const T& key, kv_store_key_version version) = 0;
     virtual std::unique_ptr<std::string> get_latest(const T& key, kv_store_key_version* version) = 0;
     virtual std::unique_ptr<std::map<long, long>> get_latest_version(const T& key) = 0;
     virtual std::unique_ptr<std::string> get_anti_entropy(const kv_store_key<std::string>& key, bool* is_merge) = 0;
@@ -55,10 +58,13 @@ public:
     virtual void print_store() = 0;
 
     int get_slice_for_key(const T& key);
+    void clear_seen_log();
     bool have_seen(const T& key, kv_store_key_version version);
     void seen_it(const T& key, kv_store_key_version version);
-    void unseen_it(const T& key, kv_store_key_version version) ;
-    void clear_seen_log();
+    void unseen_it(const T& key, kv_store_key_version version);
+    void clear_seen_deleted_log();
+    bool have_seen_deleted(const T& key, kv_store_key_version version);
+    void seen_it_deleted(const T& key, kv_store_key_version version);
     int get_slice();
     void set_slice(int slice);
     int get_nr_slices();
@@ -129,6 +135,37 @@ void kv_store<T>::seen_it(const T& key, kv_store_key_version version) {
         seen_count = 0;
     }
     this->seen.insert_or_assign(std::move(key_to_insert), true);
+}
+
+template <typename T>
+void kv_store<T>::clear_seen_deleted_log() {
+    std::scoped_lock<std::recursive_mutex> lk(this->seen_deleted_mutex);
+    this->seen_deleted.clear();
+}
+
+template <typename T>
+bool kv_store<T>::have_seen_deleted(const T& key, kv_store_key_version version) {
+    kv_store_key<T> key_to_check({key, kv_store_key_version(version)});
+
+    std::scoped_lock<std::recursive_mutex> lk(this->seen_deleted_mutex);
+    auto it = this->seen_deleted.find(key_to_check);
+    if(it == this->seen_deleted.end()){ // key does not exist in seen map
+        return false;
+    }else{
+        return it->second;
+    }
+}
+
+template <typename T>
+void kv_store<T>::seen_it_deleted(const T& key, kv_store_key_version version) {
+    seen_deleted_count +=1 ;
+    kv_store_key<T> key_to_insert({key, kv_store_key_version(version)});
+    std::scoped_lock<std::recursive_mutex> lk(this->seen_deleted_mutex);
+    if(seen_deleted_count % seen_log_garbage_at == 0){
+        this->clear_seen_deleted_log();
+        seen_deleted_count = 0;
+    }
+    this->seen_deleted.insert_or_assign(std::move(key_to_insert), true);
 }
 
 template <typename T>
