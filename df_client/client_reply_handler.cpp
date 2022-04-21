@@ -16,7 +16,7 @@ client_reply_handler::client_reply_handler(std::string ip, int kv_port, int pss_
 std::map<long, long> client_reply_handler::register_put(const std::string& key, std::map<long, long> version) {
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
 
-    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
+    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version), false}; //is_merge not needed here
 
     auto it = this->put_replies.find(comp_key);
     if(it == this->put_replies.end()){
@@ -166,7 +166,7 @@ void client_reply_handler::clear_put_keys_entries(std::vector<kv_store_key<std::
 std::map<long, long> client_reply_handler::register_delete(const std::string& key, std::map<long, long> version) {
     std::unique_lock<std::mutex> lock(this->delete_global_mutex);
 
-    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version)};
+    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version), true};
 
     auto it = this->delete_replies.find(comp_key);
     if(it == this->delete_replies.end()){
@@ -249,7 +249,8 @@ void client_reply_handler::register_get(const std::string& req_id) {
     auto it = this->get_replies.find(req_id);
     if(it == this->get_replies.end()){
         // key exists
-        std::vector<std::pair<kv_store_key_version, std::unique_ptr<std::string>>> temp;
+        get_Replies temp = {.keys = std::unordered_map<kv_store_key<std::string>, std::unique_ptr<std::string>> (), .deleted_keys = std::unordered_map<kv_store_key<std::string>, std::unique_ptr<std::string>> (),
+                         .count = 0};
         this->get_replies.emplace(req_id, std::move(temp));
         auto sync_pair = std::make_unique<std::pair<std::mutex, std::condition_variable>>();
         this->get_mutexes.emplace(req_id, std::move(sync_pair));
@@ -258,6 +259,30 @@ void client_reply_handler::register_get(const std::string& req_id) {
     }
 
     lock.unlock();
+}
+
+void client_reply_handler::register_get_data(const std::string& req_id) {
+    register_get(req_id);
+}
+
+void client_reply_handler::register_get_latest_version(const std::string& req_id) {
+    // are used the same structures as for the gets
+    register_get(req_id);
+}
+
+void client_reply_handler::clear_get_keys_entries(std::vector<std::string>& erasing_keys){
+    std::scoped_lock<std::mutex> lock(this->get_global_mutex);
+    for(auto& key : erasing_keys) {
+        auto it = this->get_replies.find(key);
+        if (it != this->get_replies.end()) {
+            // key exists, lock key
+            auto it_key = this->get_mutexes.find(key);
+            std::unique_lock<std::mutex> lock_key(it_key->second->first);
+            this->get_replies.erase(it);
+            lock_key.unlock();
+            this->get_mutexes.erase(it_key);
+        }
+    }
 }
 
 void client_reply_handler::change_get_reqid(const std::string &latest_reqid_str, const std::string &new_reqid) {
@@ -279,21 +304,20 @@ void client_reply_handler::change_get_reqid(const std::string &latest_reqid_str,
     lock.unlock();
 }
 
-std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::string& req_id, int wait_for) {
+std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::string& req_id, int wait_for, Response* get_res) {
     std::unique_ptr<std::string> res (nullptr);
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
     bool timeout_happened = false;
     bool waited = false;
-
     auto it = this->get_replies.find(req_id);
     if(it != this->get_replies.end()) {
         // if exists a entry for the key, lock that entry
         auto &sync_pair = this->get_mutexes.find(req_id)->second;
         std::unique_lock<std::mutex> lock_key(sync_pair->first);
 
-        if (it->second.size() < wait_for) {
+        if (it->second.count < wait_for) {
             // if we still don't have the number of needed replies
 
             // unlock global get lock
@@ -312,17 +336,24 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::strin
         if(waited) {
             it = this->get_replies.find(req_id);
         }
-        if(it->second.size() >= wait_for){
-
+        if(it->second.count >= wait_for){
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
-            kv_store_key_version max_version;
-            for(auto& entry : it->second){
-                if(entry.first > max_version){
-                    max_version = entry.first;
-                    res = std::move(entry.second);
-                }
+
+            auto& map_keys = it->second.keys;
+            auto& map_del_keys = it->second.deleted_keys;
+        
+
+            if(map_del_keys.size() > 0){
+                *get_res = Response::Deleted;
+            } else {
+                if(map_keys.size() > 0){
+                    res = std::move(map_keys.begin()->second);
+                    *get_res = Response::Ok;
+                } else 
+                    *get_res = Response::NoData;
             }
+
             this->get_replies.erase(it);
 
             // We don't need to awake threads that can be strapped on cond variable
@@ -337,14 +368,15 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::strin
 
     lock.unlock();
 
-    if(res == nullptr && timeout_happened)
+    if(res == nullptr && timeout_happened){
         throw TimeoutException();
+    }
 
     return res;
 }
 
 std::unique_ptr<std::string> client_reply_handler::wait_for_get_until(const std::string &req_id, int wait_for,
-                                                                      std::chrono::system_clock::time_point &wait_until){
+                                                                      std::chrono::system_clock::time_point &wait_until, Response* get_res){
     std::unique_ptr<std::string> res (nullptr);
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
@@ -364,7 +396,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_until(const std:
         auto &sync_pair = it_key->second;
         std::unique_lock<std::mutex> lock_key(sync_pair->first);
 
-        if (it->second.size() < wait_for) {
+        if (it->second.count < wait_for) {
             // if we still don't have the necessary repies
 
             // wait for key notify -> it performs automatic lock of the key
@@ -372,17 +404,25 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_until(const std:
             if(status == std::cv_status::timeout) timeout_happened = true;
         }
 
-        if(it->second.size() >= wait_for){
+        if(it->second.count >= wait_for){
 
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
-            kv_store_key_version max_version;
-            for(auto& entry : it->second){
-                if(entry.first > max_version){
-                    max_version = entry.first;
-                    res = std::move(entry.second);
-                }
+            
+            auto& map_keys = it->second.keys;
+            auto& map_del_keys = it->second.deleted_keys;
+        
+
+            if(map_del_keys.size() > 0){
+                *get_res = Response::Deleted;
+            } else {
+                if(map_keys.size() > 0){
+                    res = std::move(map_keys.begin()->second);
+                    *get_res = Response::Ok;
+                } else 
+                    *get_res = Response::NoData;
             }
+
 
             // unlock key mutex because we have to get locks in order
             lock_key.unlock();
@@ -407,28 +447,8 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_until(const std:
     return res;
 }
 
-void client_reply_handler::clear_get_keys_entries(std::vector<std::string>& erasing_keys){
-    std::scoped_lock<std::mutex> lock(this->get_global_mutex);
-    for(auto& key : erasing_keys) {
-        auto it = this->get_replies.find(key);
-        if (it != this->get_replies.end()) {
-            // key exists, lock key
-            auto it_key = this->get_mutexes.find(key);
-            std::unique_lock<std::mutex> lock_key(it_key->second->first);
-            this->get_replies.erase(it);
-            lock_key.unlock();
-            this->get_mutexes.erase(it_key);
-        }
-    }
-}
-
-void client_reply_handler::register_get_latest_version(const std::string& req_id) {
-    // are used the same structures as for the gets
-    register_get(req_id);
-}
-
-std::unique_ptr<kv_store_key_version> client_reply_handler::wait_for_get_latest_version(const std::string& req_id, int wait_for) {
-    std::unique_ptr<kv_store_key_version> res (nullptr);
+std::unique_ptr<std::vector<kv_store_key_version>> client_reply_handler::wait_for_get_latest_version(const std::string& req_id, int wait_for) {
+    std::unique_ptr<std::vector<kv_store_key_version>> res (nullptr);
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
@@ -441,7 +461,7 @@ std::unique_ptr<kv_store_key_version> client_reply_handler::wait_for_get_latest_
         auto &sync_pair = this->get_mutexes.find(req_id)->second;
         std::unique_lock<std::mutex> lock_key(sync_pair->first);
 
-        if (it->second.size() < wait_for) {
+        if (it->second.count < wait_for) {
             // if we still don't have the number of needed replies
 
             // unlock global get lock
@@ -460,17 +480,44 @@ std::unique_ptr<kv_store_key_version> client_reply_handler::wait_for_get_latest_
         if(waited){
             it = this->get_replies.find(req_id);
         }
-        if(it->second.size() >= wait_for){
-
+        if(it->second.count >= wait_for){
+            std::cout << "Recebi todas as respostas que queria" << std::endl;
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
-            kv_store_key_version max_version;
-            for(auto& entry : it->second){
-                if(entry.first > max_version){
-                    max_version = entry.first;
+            
+            auto& map_keys = it->second.keys;
+            auto& map_del_keys = it->second.deleted_keys;
+
+            std::vector<kv_store_key_version> max_vv;
+
+            for(auto& kv : map_keys){
+                bool deleted = false;
+                for(auto& kv_del : map_del_keys){
+                    kVersionComp comp_del = comp_version(kv.first.key_version, kv_del.first.key_version);
+                    
+                    if(comp_del == kVersionComp::Lower || comp_del == kVersionComp::Equal){
+                        deleted = true;
+                        break;
+                    }
+                }
+                if(!deleted){
+                    int cout_concurrent = 0;
+                    for(int i = 0; i < max_vv.size(); i++){
+                        kVersionComp comp_max = comp_version(kv.first.key_version, max_vv.at(i));
+                        if(comp_max == kVersionComp::Bigger){
+                            max_vv.at(i) = kv.first.key_version;
+                            break;
+                        } else if(comp_max == kVersionComp::Concurrent)
+                            cout_concurrent++;
+                    }
+                    if(cout_concurrent == max_vv.size())
+                        max_vv.push_back(kv.first.key_version);
                 }
             }
-            res = std::make_unique<kv_store_key_version>(max_version);
+
+            res = std::make_unique<std::vector<kv_store_key_version>>(max_vv);
+
+
             this->get_replies.erase(it);
 
             // We don't need to awake threads that can be strapped on cond variable
@@ -493,7 +540,12 @@ std::unique_ptr<kv_store_key_version> client_reply_handler::wait_for_get_latest_
 
 void client_reply_handler::process_get_reply_msg(const proto::get_reply_message &msg) {
     const std::string& req_id = msg.reqid();
-    const std::string& data = msg.data();
+    const bool is_deleted = msg.version_is_deleted();
+                        
+    std::unique_ptr<std::string> data(nullptr);
+    if(!is_deleted){
+        data = std::make_unique<std::string>(msg.data());
+    }
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
@@ -508,14 +560,62 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
         std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
         lock.unlock(); //free global get lock
 
-        std::map<long, long> vector;
-        for (auto c : msg.version())
-            vector.emplace(c.client_id(), c.clock());
+        kv_store_key_version version;
+        for (auto c : msg.key().version())
+            version.vv.emplace(c.client_id(), c.clock());
 
+        kv_store_key<std::string> st_key = {msg.key().key(), version, is_deleted};
 
-        it->second.emplace_back(std::make_pair<kv_store_key_version, std::unique_ptr<std::string>>(
-                kv_store_key_version(vector), std::make_unique<std::string>(data)
-        ));
+        if(!is_deleted)
+            it->second.keys.insert(std::make_pair(st_key, std::move(data)));
+        else
+            it->second.deleted_keys.insert(std::make_pair(st_key, nullptr));
+        
+        it->second.count++;
+
+        sync_pair->second.notify_all();
+        reqid_lock.unlock();
+    }else{
+        spdlog::debug("GET REPLY IGNORED - NON EXISTENT KEY");
+    }
+}
+
+void client_reply_handler::process_get_latest_version_reply_msg(const proto::get_latest_version_reply_message& msg) {
+    const std::string& req_id = msg.reqid();
+
+    std::unique_lock<std::mutex> lock(this->get_global_mutex);
+
+    boost::regex composite_key(".+:(\\d+)$");
+    boost::cmatch match;
+    auto res = boost::regex_search(req_id.c_str(), match, composite_key);
+
+    auto it = this->get_replies.find(req_id);
+    if(it != this->get_replies.end()){
+        // a chave existe
+        auto& sync_pair = this->get_mutexes.find(req_id)->second;
+        std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
+        lock.unlock(); //free global get lock
+
+        for(auto k : msg.last_v()){
+            kv_store_key_version kv;
+            for (auto c : k.version()){
+                kv.vv.emplace(c.client_id(), c.clock());
+            }
+            kv_store_key<std::string> st_key = {msg.key(), kv, false};
+            it->second.keys.insert(std::make_pair(st_key, nullptr));
+        }
+
+       for(auto k : msg.last_deleted_v()){
+            kv_store_key_version kv_del;
+            for (auto c : k.version()){
+                kv_del.vv.emplace(c.client_id(), c.clock());
+            }
+            kv_store_key<std::string> st_del_key = {msg.key(), kv_del, true};
+            it->second.deleted_keys.insert(std::make_pair(st_del_key, nullptr));
+        }
+
+        it->second.count++;
+
         sync_pair->second.notify_all();
         reqid_lock.unlock();
     }else{
@@ -524,12 +624,12 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
 }
 
 void client_reply_handler::process_put_reply_msg(const proto::put_reply_message &msg) {
-    const std::string& key = msg.key();
+    const std::string& key = msg.key().key();
     kv_store_key_version version;
-    for (auto c : msg.version())
+    for (auto c : msg.key().version())
         version.vv.emplace(c.client_id(), c.clock());
 
-    kv_store_key<std::string> comp_key = {key, version};
+    kv_store_key<std::string> comp_key = {key, version, false};
     long replier_id = msg.id();
 
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
@@ -551,12 +651,12 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
 }
 
 void client_reply_handler::process_delete_reply_msg(const proto::delete_reply_message &msg) {
-    const std::string& key = msg.key();
+    const std::string& key = msg.key().key();
     kv_store_key_version version;
-    for (auto c : msg.version())
+    for (auto c : msg.key().version())
         version.vv.emplace(c.client_id(), c.clock());
 
-    kv_store_key<std::string> comp_key = {key, version};
+    kv_store_key<std::string> comp_key = {key, version, true};
     long replier_id = msg.id();
 
     std::unique_lock<std::mutex> lock(this->delete_global_mutex);
@@ -574,37 +674,5 @@ void client_reply_handler::process_delete_reply_msg(const proto::delete_reply_me
         key_lock.unlock();
     }else{
         spdlog::debug("DELETE REPLY IGNORED - NON EXISTENT KEY");
-    }
-}
-
-void client_reply_handler::process_get_latest_version_reply_msg(const proto::get_latest_version_reply_message& msg) {
-    const std::string& req_id = msg.reqid();
-
-    std::unique_lock<std::mutex> lock(this->get_global_mutex);
-
-    boost::regex composite_key(".+:(\\d+)$");
-    boost::cmatch match;
-    auto res = boost::regex_search(req_id.c_str(), match, composite_key);
-
-    auto it = this->get_replies.find(req_id);
-    if(it != this->get_replies.end()){
-        // a chave existe
-        auto& sync_pair = this->get_mutexes.find(req_id)->second;
-        std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
-        lock.unlock(); //free global get lock
-
-        std::map<long, long> vector;
-        for (auto c : msg.version())
-            vector.emplace(c.client_id(), c.clock());
-
-
-        it->second.emplace_back(std::make_pair<kv_store_key_version, std::unique_ptr<std::string>>(
-                kv_store_key_version(vector),
-                nullptr
-        ));
-        sync_pair->second.notify_all();
-        reqid_lock.unlock();
-    }else{
-        spdlog::debug("GET REPLY IGNORED - NON EXISTENT KEY");
     }
 }

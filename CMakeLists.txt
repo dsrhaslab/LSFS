@@ -71,6 +71,8 @@ add_executable( peer_exe
         df_core/group_construction.h
         df_core/clock_vv.h 
         df_core/clock_vv.cpp
+        df_util/message_builder/message_builder.cpp
+        df_util/message_builder/message_builder.h
         df_data_handlers/data_handler_listener.cpp
         df_data_handlers/data_handler_listener.h
         df_store/kv_store.h df_store/kv_store_key.h
@@ -132,6 +134,10 @@ add_executable( client_exe
         df_loadbalancing/dynamic_load_balancer.h
         df_loadbalancing/load_balancer_listener.cpp
         df_loadbalancing/load_balancer_listener.h
+        df_util/message_builder/message_builder.cpp
+        df_util/message_builder/message_builder.h
+        df_util/util.cpp
+        df_util/util.h
         df_client/client.cpp
         df_client/client.h
         df_client/client_reply_handler_st.cpp

@@ -12,6 +12,10 @@
 
 static boost::regex composite_key("(.+)#(.+)$");
 
+enum kVersionComp 
+{
+    Lower, Bigger, Equal, Concurrent
+};
 
 int split_composite_total(std::string comp_key, std::string* key, std::map<long, long>* version);
 
@@ -22,5 +26,7 @@ std::string compose_key_toString(std::string key, kv_store_key_version version);
 std::map<long, long>* str2vv(std::string vv_str);
 
 std::string vv2str(std::map<long, long> vv);
+
+kVersionComp comp_version (const kv_store_key_version& k1, const kv_store_key_version k2);
 
 #endif //P2PFS_UTIL_H

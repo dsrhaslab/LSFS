@@ -40,7 +40,7 @@ void client_reply_handler_st::operator()() {
 
                     const proto::get_reply_message &msg = message.get_reply_msg();
                     process_get_reply_msg(msg);
-                } else if (message.has_put_reply_msg()) {
+                }else if (message.has_put_reply_msg()) {
 
                     const proto::put_reply_message &msg = message.put_reply_msg();
                     process_put_reply_msg(msg);

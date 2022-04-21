@@ -11,7 +11,9 @@ template <typename T>
 struct kv_store_key {
     T key;
     kv_store_key_version key_version;
-
+    bool is_deleted = false;
+    bool is_merge = false;
+    
     inline bool operator==(const kv_store_key& other) const
     {
         return this->key == other.key && this->key_version == other.key_version;
@@ -35,6 +37,12 @@ struct kv_store_key {
         }
     }
 };
+
+/*
+std::ostream& operator<<(std::ostream& os, const kv_store_key<std::string>& other)
+{
+        return os << other.key << "#" << other.key_version;
+}*/
 
 namespace std {
 

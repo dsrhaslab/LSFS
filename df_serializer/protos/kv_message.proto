@@ -2,12 +2,40 @@ syntax = "proto3";
 
 package proto;
 
+//-------------------------------------------------------------------
+//          key-value message structures (key, version) 
+//-------------------------------------------------------------------
+
+message kv_store_version {
+  int64 client_id = 1;
+  int64 clock = 2;
+}
+
+message kv_store_key_version {
+  repeated kv_store_version version = 1;
+}
+
+message kv_store_key {
+  string key = 1;
+  repeated kv_store_version version = 2;
+}
+
+message kv_store {
+  kv_store_key key = 1;
+  bool is_deleted = 2;
+  bool is_merge = 3;
+}
+
+//-------------------------------------------------------------------
+//                         Get messages 
+//-------------------------------------------------------------------
+
 message get_latest_version_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  string key = 4;
-  string reqid = 5;
+  string reqid = 4;
+  string key = 5;
 }
 
 message get_latest_version_reply_message {
@@ -15,73 +43,110 @@ message get_latest_version_reply_message {
   int32 port = 2;
   int64 id = 3;
   string reqid = 4;
-  repeated kv_store_version version = 5;
+  string key = 5;
+  repeated kv_store_key_version last_v = 6;
+  repeated kv_store_key_version last_deleted_v = 7;
 }
 
 message get_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  string key = 4;
-  oneof version_avail {
-    bool version_none = 5;  // always set this to "true" when null
-  }
-  repeated kv_store_version version = 6;
-  string reqid = 7;
+  string reqid = 4;
+  kv_store_key key = 6;
 }
 
 message get_reply_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  string key = 4;
-  repeated kv_store_version version = 5;
-  string reqid = 6;
-  bytes data = 7;
-  bool merge = 8; //anti-entropy purposes
+  string reqid = 4;
+  kv_store_key key = 5;
+  bytes data = 6;
+  bool version_is_deleted = 7;          //set if version is deleted         
 }
+
+
+//-------------------------------------------------------------------
+//                        Put messages 
+//-------------------------------------------------------------------
 
 message put_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  string key = 4;
-  repeated kv_store_version version = 5;
-  bytes data = 6;
+  kv_store_key key = 4;
+  bytes data = 5;
 }
 
 message put_with_merge_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  string key = 4;
-  repeated kv_store_version version = 5;
-  bytes data = 6;
+  kv_store_key key = 4;
+  bytes data = 5;
 }
 
 message put_reply_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  string key = 4;
-  repeated kv_store_version version = 5;
+  kv_store_key key = 4;
 }
+
+//-------------------------------------------------------------------
+//                        Delete messages 
+//-------------------------------------------------------------------
 
 message delete_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  string key = 4;
-  repeated kv_store_version version = 5;
+  kv_store_key key = 4;
 }
 
 message delete_reply_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
-  string key = 4;
-  repeated kv_store_version version = 5;
+  kv_store_key key = 4;
 }
+
+
+//-------------------------------------------------------------------
+//                      Anti-Entropy messages
+//-------------------------------------------------------------------
+
+message anti_entropy_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  repeated kv_store store_keys = 4;
+}
+
+message anti_entropy_get_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string reqid = 4;
+  kv_store_key key = 6;
+  bool is_deleted = 7;
+}
+
+message anti_entropy_get_reply_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string reqid = 4;
+  kv_store_key key = 5;
+  bytes data = 6;
+  bool is_deleted = 7;            
+  bool is_merge = 8;             
+}
+
+//-------------------------------------------------------------------
+//                         Recover messages
+//-------------------------------------------------------------------
 
 message recover_request_message {
   string ip = 1;
@@ -92,33 +157,17 @@ message recover_request_message {
 
 message recover_offset_message {
   repeated string keys = 1;
+  repeated string deleted_keys = 2;
 }
 
 message recover_data_message {
-  string key = 1;
-  repeated kv_store_version version = 2;
-  bool merge = 3;
-  bytes data = 4;
+  kv_store store_keys = 1;
+  bytes data = 2;
 }
 
 message recover_termination_message {}
 
-message kv_store_version {
-  int64 client_id = 1;
-  int64 clock = 2;
-}
-
-message kv_store_key {
-  string key = 1;
-  repeated kv_store_version version = 2;
-}
-
-message anti_entropy_message {
-  string ip = 1;
-  int32 port = 2;
-  int64 id = 3;
-  repeated kv_store_key keys = 4;
-}
+//--------------------------------------------------------------------
 
 message kv_message {
     bool forwarded_within_group = 1;
@@ -131,11 +180,13 @@ message kv_message {
         delete_message                      delete_msg = 7;
         delete_reply_message                delete_reply_msg = 8;
         anti_entropy_message                anti_entropy_msg = 9;
-        get_latest_version_message          get_latest_version_msg = 10;
-        get_latest_version_reply_message    get_latest_version_reply_msg = 11;
-        recover_request_message             recover_request_msg = 12;
-        recover_offset_message              recover_offset_msg = 13;
-        recover_data_message                recover_data_msg = 14;
-        recover_termination_message         recover_termination_msg = 15;
+        anti_entropy_get_message            anti_entropy_get_msg = 10;
+        anti_entropy_get_reply_message      anti_entropy_get_reply_msg = 11;
+        get_latest_version_message          get_latest_version_msg = 12;
+        get_latest_version_reply_message    get_latest_version_reply_msg = 13;
+        recover_request_message             recover_request_msg = 14;
+        recover_offset_message              recover_offset_msg = 15;
+        recover_data_message                recover_data_msg = 16;
+        recover_termination_message         recover_termination_msg = 17;
     }
 }

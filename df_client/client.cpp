@@ -81,23 +81,9 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
 
 int client::send_get(std::vector<peer_data>& peers, const std::string& key, std::map<long,long>* version, const std::string& req_id) {
     proto::kv_message msg;
-    auto* message_content = new proto::get_message();
-    message_content->set_ip(this->ip);
-    message_content->set_port(this->kv_port);
-    message_content->set_id(this->id);
-    message_content->set_key(key);
-    if(version != nullptr){
-        for(auto const c: *version){
-            proto::kv_store_version *kv_version = message_content->add_version();
-            kv_version->set_client_id(c.first);
-            kv_version->set_clock(c.second);
-        }
-    }else{
-        message_content->set_version_none(true);
-    }
-    message_content->set_reqid(req_id);
-    msg.set_allocated_get_msg(message_content);
 
+    build_get_message(&msg, this->ip, this->kv_port, this->id, req_id, key, kv_store_key_version(*version));
+    
     int nr_send_errors = 0;
     for(auto& peer: peers){
         nr_send_errors += send_msg(peer, msg);
@@ -108,13 +94,8 @@ int client::send_get(std::vector<peer_data>& peers, const std::string& key, std:
 
 int client::send_get_latest_version(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id) {
     proto::kv_message msg;
-    auto* message_content = new proto::get_latest_version_message();
-    message_content->set_ip(this->ip);
-    message_content->set_port(this->kv_port);
-    message_content->set_id(this->id);
-    message_content->set_key(key);
-    message_content->set_reqid(req_id);
-    msg.set_allocated_get_latest_version_msg(message_content);
+    
+    build_get_latest_version_message(&msg, this->ip, this->kv_port, this->id, req_id, key);
 
     int nr_send_errors = 0;
     for(auto& peer: peers){
@@ -126,18 +107,8 @@ int client::send_get_latest_version(std::vector<peer_data>& peers, const std::st
 
 int client::send_put(std::vector<peer_data>& peers, const std::string& key, std::map<long, long>* version, const char *data, size_t size) {
     proto::kv_message msg;
-    auto* message_content = new proto::put_message();
-    message_content->set_ip(this->ip);
-    message_content->set_port(this->kv_port);
-    message_content->set_id(this->id);
-    message_content->set_key(key);
-    for(auto const c: *version){
-        proto::kv_store_version *kv_version = message_content->add_version();
-        kv_version->set_client_id(c.first);
-        kv_version->set_clock(c.second);
-    }
-    message_content->set_data(data, size);
-    msg.set_allocated_put_msg(message_content);
+
+    build_put_message(&msg, this->ip, this->kv_port, this->id, key, kv_store_key_version(*version), data, size);
 
     int nr_send_errors = 0;
     for(auto& peer: peers){
@@ -149,17 +120,8 @@ int client::send_put(std::vector<peer_data>& peers, const std::string& key, std:
 
 int client::send_delete(std::vector<peer_data>& peers, const std::string& key, std::map<long, long>* version) {
     proto::kv_message msg;
-    auto* message_content = new proto::delete_message();
-    message_content->set_ip(this->ip);
-    message_content->set_port(this->kv_port);
-    message_content->set_id(this->id);
-    message_content->set_key(key);
-    for(auto const c: *version){
-        proto::kv_store_version *kv_version = message_content->add_version();
-        kv_version->set_client_id(c.first);
-        kv_version->set_clock(c.second);
-    }
-    msg.set_allocated_delete_msg(message_content);
+
+    build_delete_message(&msg, this->ip, this->kv_port, this->id, key, kv_store_key_version(*version));
 
     int nr_send_errors = 0;
     for(auto& peer: peers){
@@ -172,18 +134,8 @@ int client::send_delete(std::vector<peer_data>& peers, const std::string& key, s
 
 int client::send_put_with_merge(std::vector<peer_data>& peers, const std::string& key, std::map<long, long>* version, const char *data, size_t size) {
     proto::kv_message msg;
-    auto* message_content = new proto::put_with_merge_message();
-    message_content->set_ip(this->ip);
-    message_content->set_port(this->kv_port);
-    message_content->set_id(this->id);
-    message_content->set_key(key);
-    for(auto const c: *version){
-        proto::kv_store_version *kv_version = message_content->add_version();
-        kv_version->set_client_id(c.first);
-        kv_version->set_clock(c.second);
-    }
-    message_content->set_data(data, size);
-    msg.set_allocated_put_with_merge_msg(message_content);
+
+    build_put_with_merge_message(&msg, this->ip, this->kv_port, this->id, key, kv_store_key_version(*version), data, size);
 
     int nr_send_errors = 0;
     for(auto& peer: peers){
@@ -199,7 +151,7 @@ void client::put(const std::string& key, std::map<long, long>* version, const ch
     
     //std::cout << "Put Registed"  << std::endl;
     
-    kv_store_key<std::string> comp_key = {key, kv_store_key_version(*version)};
+    kv_store_key<std::string> comp_key = {key, kv_store_key_version(*version), false};
     bool succeed = false;
     int curr_timeouts = 0;
     while(!succeed && curr_timeouts < this->max_timeouts){
@@ -255,7 +207,7 @@ void client::put_batch(const std::vector<std::string> &keys, const std::vector<s
         for(size_t i = 0; i < completed.size(); i++){
             if(!completed[i]){
                 try{
-                    kv_store_key<std::string> comp_key = {keys[i], kv_store_key_version(*versions[i])};
+                    kv_store_key<std::string> comp_key = {keys[i], kv_store_key_version(*versions[i]), false};
                     completed[i] = this->handler->wait_for_put_until(comp_key, wait_for, wait_until);
                 }catch(TimeoutException& e){
                     std::cout << "Timeout" << std::endl;
@@ -280,7 +232,7 @@ void client::put_batch(const std::vector<std::string> &keys, const std::vector<s
     std::vector<kv_store_key<std::string>> erasing_keys;
     for(size_t i = 0; i < completed.size(); i++){
         if(!completed[i]){
-            erasing_keys.push_back({keys[i], kv_store_key_version(*versions[i])});
+            erasing_keys.push_back({keys[i], kv_store_key_version(*versions[i]), false});
         }
     }
     this->handler->clear_put_keys_entries(erasing_keys);
@@ -293,7 +245,7 @@ void client::put_batch(const std::vector<std::string> &keys, const std::vector<s
 
 void client::put_with_merge(const std::string& key, std::map<long, long>* version, const char *data, size_t size, int wait_for) {
     this->handler->register_put(key, *version); // throw const char* (concurrent writes over the same key)
-    kv_store_key<std::string> comp_key = {key, kv_store_key_version(*version)};
+    kv_store_key<std::string> comp_key = {key, kv_store_key_version(*version), false};
     bool succeed = false;
     int curr_timeouts = 0;
     while(!succeed && curr_timeouts < this->max_timeouts){
@@ -324,7 +276,7 @@ void client::del(const std::string& key, std::map<long, long>* version, int wait
     
     //std::cout << "Put Registed"  << std::endl;
     
-    kv_store_key<std::string> comp_key = {key, kv_store_key_version(*version)};
+    kv_store_key<std::string> comp_key = {key, kv_store_key_version(*version), true};
     bool succeed = false;
     int curr_timeouts = 0;
     while(!succeed && curr_timeouts < this->max_timeouts){
@@ -354,7 +306,7 @@ void client::del(const std::string& key, std::map<long, long>* version, int wait
 }
 
 
-
+/*
 void client::get_batch(const std::vector<std::string> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for) {
 
     long nr_reads = keys.size();
@@ -365,7 +317,7 @@ void client::get_batch(const std::vector<std::string> &keys, std::vector<std::sh
         long req_id = this->inc_and_get_request_count();
         req_ids[i].reserve(100);
         req_ids[i].append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
-        this->handler->register_get(req_ids[i]);
+        this->handler->register_get_data(req_ids[i]);
         std::vector<peer_data> peers = this->lb->get_n_peers(keys[i], this->max_nodes_to_send_get_request); //throw exception (empty view)
         this->send_get(peers, keys[i], nullptr, req_ids[i]);
     }
@@ -421,7 +373,7 @@ void client::get_batch(const std::vector<std::string> &keys, std::vector<std::sh
         // Nr of timeouts exceeded
         throw TimeoutException();
     }
-}
+}*/
 
 std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, std::map<long, long>* version) {
     long req_id = this->inc_and_get_request_count();
@@ -429,18 +381,15 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, s
     req_id_str.reserve(100);
     req_id_str.append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
     
-    std::cout << "Register Get "<< std::endl ;
-
-    this->handler->register_get(req_id_str);
+    this->handler->register_get_data(req_id_str);
     std::unique_ptr<std::string> res (nullptr);
-    
-    std::cout << "Get Registed "<< std::endl ;
 
     int curr_timeouts = 0;
-    while(res == nullptr && curr_timeouts < this->max_timeouts){
+    client_reply_handler::Response get_res = client_reply_handler::Response::Init;
+
+    while(get_res == client_reply_handler::Response::Init && curr_timeouts < this->max_timeouts){
         int status = 0;
         if (curr_timeouts + 1 <= 2){
-            std::cout << "Sending to Peers "<< std::endl ;
             std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_get_request); //throw exception
             status = this->send_get(peers, key, version, req_id_str);
         }else{
@@ -449,8 +398,8 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, s
         }
         if (status == 0) {
             try{
-                std::cout << "Waiting for Get "<< std::endl ;
-                res = this->handler->wait_for_get(req_id_str, wait_for);
+                std::cout << "Waiting for Get "<< std::endl;
+                res = this->handler->wait_for_get(req_id_str, wait_for, &get_res);
             }catch(TimeoutException& e){
                 curr_timeouts++;
                 req_id = this->inc_and_get_request_count();
@@ -461,21 +410,29 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, s
             }
         }
     }
-
-    if(res == nullptr){
+    if(curr_timeouts >= this->max_timeouts){
         throw TimeoutException();
     }
+
+    if (get_res == client_reply_handler::Response::Ok)
+        std::cout << "Data Found, Ok "<< std::endl ;
+    else if(get_res == client_reply_handler::Response::Deleted)
+        std::cout << "Searched key has been deleted "<< std::endl ;
+    else if (get_res == client_reply_handler::Response::NoData)
+        std::cout << "Key was found but data is null "<< std::endl ;
+    else if (get_res == client_reply_handler::Response::Init)
+        std::cout << " No response obtained/Timeout "<< std::endl ;
 
     return res;
 }
 
-kv_store_key_version client::get_latest_version(const std::string& key, int wait_for) {
+std::vector<kv_store_key_version> client::get_latest_version(const std::string& key, int wait_for) {
     long req_id = this->inc_and_get_request_count();
     std::string req_id_str;
     req_id_str.reserve(100);
     req_id_str.append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
     this->handler->register_get_latest_version(req_id_str);
-    std::unique_ptr<kv_store_key_version> res (nullptr);
+    std::unique_ptr<std::vector<kv_store_key_version>> res (nullptr);
 
     int curr_timeouts = 0;
     while(res == nullptr && curr_timeouts < this->max_timeouts){

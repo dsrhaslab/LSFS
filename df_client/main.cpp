@@ -13,6 +13,7 @@
 #include "df_loadbalancing/load_balancer_listener.h"
 #include "client.h"
 #include "df_loadbalancing/dynamic_load_balancer.h"
+#include "df_util/util.h"
 
 
 extern std::string merge_metadata(std::string&, std::string&);
@@ -43,11 +44,15 @@ int main(int argc, char **argv) {
     std::map<long, long> version4 ({{5, 2}});
     
     
-    //cli.put("/LSFS", &version, "ole", 3);
-    //cli.put("/LSFS", &version2, "olev4", 5);
-    //cli.put("/LSFS", &version3, "olev3", 5);
-    //cli.put("/LSFS", &version4, "este vai ser deleted", 20);
-    //cli.del("/LSFS", &version2, 2);
+    //   cli.put("/LSFS", &version, "vv1", 3);
+    //   cli.put("/LSFS", &version2, "vv2v7", 5);
+    //   cli.put("/LSFS", &version3, "vv3v7", 5);
+    //   cli.put("/LSFS", &version4, "vv4v7", 5);
+    // cli.del("/LSFS", &version, 1);
+    // cli.del("/LSFS", &version2, 1);
+    // cli.del("/LSFS", &version3, 1);
+    // cli.del("/LSFS", &version4, 1);
+    
     //std::cout << "Done!"  << std::endl;
 //    cli.put("/tudo/bem", 0, "ole", 3);
 //    cli.put("/crl", 0, "ole", 3);
@@ -57,20 +62,46 @@ int main(int argc, char **argv) {
 //    cli.put("/crl", 1, "oli", 3);
 //    cli.put("/crl", 2, "olo", 3);
 
-    //std::map<long, long> version2 ({{4, 1}});
-    //std::unique_ptr<std::string> data = cli.get("/LSFS", 2, &version2);
-    //std::cout << "Data: " << *data << std::endl ;
+    // std::map<long, long> version2 ({{4, 1}});
+      std::unique_ptr<std::string> data = cli.get("/LSFS", 2, &version);
+      if(data == nullptr) std::cout << "Data is NULL "<< std::endl ;
+      else std::cout << "Data: " << *data << std::endl ;
 
-    kv_store_key_version versionres;
-    versionres = cli.get_latest_version("/LSFS", 1);
-    
-    for(auto x: versionres.vv)
-        std::cout << x.first << "@" << x.second << std::endl;
-
+    //  std::vector<kv_store_key_version> versionres;
+    //  versionres = cli.get_latest_version("/LSFS", 1);
+    // std::cout << versionres.size() << std::endl;
+    // for(auto x: versionres){
+    //     for(auto c : x.vv)
+    //         std::cout << c.first << "@" << c.second << std::endl;
+    // }
     //std::shared_ptr<std::string> data = cli.get("/",1, &version);
     //std::string data_s = *data;
 
     //std::cout << "Data: " << data_s << std::endl;
+
+
+//-------------------------------------------------------------------------------------
+    // std::map<long, long> v ({{id2, 1000},{id, 1}});
+    // std::map<long, long> v2 ({{id2, 1000},{id, 1},{3,1}});
+    // std::map<long, long> v3 ({{id2, 1001}});
+    // std::map<long, long> v4 ({{5, 2}});
+
+    // kVersionComp cc = comp_version(kv_store_key_version(v4), kv_store_key_version(v3));
+    // if(cc==kVersionComp::Equal) std::cout << "Equal" << std::endl;
+    // if(cc==kVersionComp::Lower) std::cout << "Lower" << std::endl;
+    // if(cc==kVersionComp::Bigger) std::cout << "Bigger" << std::endl;
+    // if(cc==kVersionComp::Concurrent) std::cout << "Concurrent" << std::endl;
+
+
+
+
+
+
+
+
+
+
+
 
 //    cli.put("/bigfileset/00000001/00000001",version + 1,
 //    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum eget elit eget purus tristique aliquam sit amet ut dolor. Sed dapibus, orci sed laoreet sodales, urna ante dictum lacus, convallis rhoncus dolor metus at massa. Proin egestas mauris diam, eu vestibulum lectus cursus eget. Integer iaculis neque ac hendrerit consectetur. Nullam dui est, semper at commodo sit amet, mollis eu purus. Cras eget malesuada diam. Vivamus imperdiet porta libero, eu egestas lectus consectetur quis. Fusce sed pulvinar nisi, id tempus sapien. Aliquam vel risus nibh. Fusce vulputate congue ligula, non elementum enim consequat sit amet. Aliquam finibus at elit ac varius. Ut magna ipsum, sodales id aliquet quis, varius nec ligula. Quisque auctor fringilla mi eget hendrerit. Quisque est orci, eleifend nec turpis eget, condimentum blandit urna.\n"

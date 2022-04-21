@@ -104,12 +104,15 @@ bool anti_entropy::recover_state(tcp_client_server_connection::tcp_server_connec
     /*TODO Optmization -> get last 4 keys stored in order to not recover the whole database everytime
     */
     std::vector<std::string> keys_offset; //= this->store->get_last_keys_limit4();
+    std::vector<std::string> keys_deleted_offset;
 
     proto::kv_message kv_message;
     kv_message.set_forwarded_within_group(false);
     auto* message_content = new proto::recover_offset_message();
     for(std::string& key: keys_offset)
         message_content->add_keys(key);
+    for(std::string& del_key: keys_deleted_offset)
+        message_content->add_deleted_keys(del_key);
     kv_message.set_allocated_recover_offset_msg(message_content);
 
     std::string buf;
@@ -136,15 +139,17 @@ bool anti_entropy::recover_state(tcp_client_server_connection::tcp_server_connec
                 finished_recovering = true;
             }else if (kv_message_rcv.has_recover_data_msg()) {
                 const proto::recover_data_message& message = kv_message_rcv.recover_data_msg();
-                
-                kv_store_key_version version;
-                for (auto c : message.version())
-                    version.vv.emplace(c.client_id(), c.clock());
+                const proto::kv_store& store = message.store_keys();
+                const proto::kv_store_key& key = store.key();
 
-                if(message.merge()){
-                    this->store->put_with_merge(message.key(), version, message.data());
+                kv_store_key_version version;
+                for (auto c : key.version())
+                    version.vv.emplace(c.client_id(), c.clock());
+                    
+                if(store.is_deleted()){
+                    this->store->anti_entropy_remove(key.key(), version, message.data());
                 }else{
-                    this->store->put(message.key(), version, message.data());
+                    this->store->anti_entropy_put(key.key(), version, message.data(), store.is_merge());
                 }
             }
         }catch(const char* e) {
@@ -184,6 +189,8 @@ void anti_entropy::phase_recovering() {
                     std::lock_guard<std::mutex> lck(this->phase_mutex);
                     this->phase = anti_entropy::Phase::Operating;
                     recovering = false;
+                    std::cout << "##### Recover Done #####" << std::endl;
+
                 }
                 this->phase_cv.notify_all();
             }
@@ -207,17 +214,68 @@ void anti_entropy::phase_operating(){
         message_content->set_ip(this->ip);
         message_content->set_port(this->kv_port);
         message_content->set_id(this->id);
+        //Add random keys to propagate
         for (auto &key : this->store->get_keys()) {
-            proto::kv_store_key *kv_key = message_content->add_keys();
+
+            std::cout << "##### SENDING NORMAL KEY #####" << std::endl;
+
+            proto::kv_store* store = message_content->add_store_keys();
+            proto::kv_store_key* kv_key = new proto::kv_store_key();
             kv_key->set_key(key.key);
+
+            std::cout << "Key: " << key.key << std::endl;
+            std::cout << "Version: ";
+
             for(auto pair : key.key_version.vv){
+
+                std::cout <<  pair.first << "@" << pair.second << ",";
+
                 proto::kv_store_version *kv_version = kv_key->add_version();
                 kv_version->set_client_id(pair.first);
                 kv_version->set_clock(pair.second);
             }
+            store->set_allocated_key(kv_key);
+            store->set_is_deleted(false);
+            //TODO : not sending merge keys;
+            store->set_is_merge(false);
+
+            std::cout << "--------------------------" << std::endl;
         }
+        //Add random deleted keys to propagate
+        for (auto &deleted_key : this->store->get_deleted_keys()) {
+            std::cout << "##### SENDING DELETED KEY #####" << std::endl;
+
+            proto::kv_store* store_del = message_content->add_store_keys();
+            proto::kv_store_key *deleted_kv_key = new proto::kv_store_key();
+            deleted_kv_key->set_key(deleted_key.key);
+
+            std::cout << "Key: " << deleted_key.key << std::endl;
+            std::cout << "Version: ";
+
+            for(auto pair : deleted_key.key_version.vv){
+
+                std::cout <<  pair.first << "@" << pair.second << ",";
+
+                proto::kv_store_version *deleted_kv_version = deleted_kv_key->add_version();
+                deleted_kv_version->set_client_id(pair.first);
+                deleted_kv_version->set_clock(pair.second);
+            }
+            store_del->set_allocated_key(deleted_kv_key);
+            store_del->set_is_deleted(true);
+            //TODO : not sending merge keys;
+            store_del->set_is_merge(false);
+
+
+            std::cout << "--------------------------" << std::endl;
+        }
+
+       
+
         message.set_allocated_anti_entropy_msg(message_content);
-        this->send_peer_keys(slice_view, message);
+
+        std::cout << "################### Sending Anti-Entropy.... "<< std::endl;
+
+        //this->send_peer_keys(slice_view, message);
     }catch (std::exception& e){
         // Unable to get Keys -> Do nothing
     }
@@ -243,7 +301,7 @@ void anti_entropy::operator()() {
                 case anti_entropy::Phase::Recovering:
                     lck.unlock();
                     this->phase_recovering();
-                    break;
+                    break;   
                 case anti_entropy::Phase::Operating:
                     lck.unlock();
                     this->phase_operating();

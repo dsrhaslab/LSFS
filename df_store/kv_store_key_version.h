@@ -40,6 +40,11 @@ struct kv_store_key_version {
         return  this->vv.size() == other.vv.size();
     }
 
+    inline bool operator!=(const kv_store_key_version& other) const
+    {
+        return !(*this == other);
+    }
+
     inline bool operator<(const kv_store_key_version& other) const
     {
         for(auto x: this->vv){
@@ -74,6 +79,8 @@ struct kv_store_key_version {
         return *this == other || *this < other;
     }
 };
+
+
 
 
 #endif //P2PFS_KV_STORE_KEY_VERSION_H

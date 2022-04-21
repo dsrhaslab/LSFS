@@ -27,7 +27,6 @@
 #include <df_data_handlers/data_handler_listener_mt.h>
 #include <df_data_handlers/data_handler_listener_st.h>
 #include "df_data_handlers/anti_entropy.h"
-#include "df_store/kv_store.h"
 #include "df_store/kv_store_leveldb.h"
 #include "group_construction.h"
 #include "clock_vv.h"

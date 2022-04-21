@@ -20,26 +20,22 @@ public:
             if(msg.has_get_msg()){
                 std::cout << "Received get Message from client " << std::endl;
                 data_handler->process_get_message(msg);
-            }else if(msg.has_get_reply_msg()){
-                data_handler->process_get_reply_message(msg);
+            }else if(msg.has_get_latest_version_msg()){
+                std::cout << "Received get latest Message from client " << std::endl;
+                data_handler->process_get_latest_version_msg(msg);
             }else if(msg.has_put_msg()){
                 std::cout << "Received put Message from client " << std::endl;
                 data_handler->process_put_message(msg);
             }else if(msg.has_put_with_merge_msg()){
                 data_handler->process_put_with_merge_message(msg);
-            }else if(msg.has_put_reply_msg()){
-                // This case doesn't happen, because peers shouldn't receive put reply messages
             }else if(msg.has_delete_msg()){
                 data_handler->process_delete_message(msg);
-            }else if(msg.has_delete_reply_msg()){
-                // This case doesn't happen, because peers shouldn't receive put reply messages
             }else if(msg.has_anti_entropy_msg()){
                 data_handler->process_anti_entropy_message(msg);
-            }else if(msg.has_get_latest_version_msg()){
-                std::cout << "Received get latest Message from client " << std::endl;
-                data_handler->process_get_latest_version_msg(msg);
-            }else if(msg.has_get_latest_version_reply_msg()){
-                // This case doesn't happen, because peers shouldn't receive get version reply messages
+            }else if(msg.has_anti_entropy_get_msg()){
+                data_handler->process_anti_entropy_get_message(msg);
+            }else if(msg.has_anti_entropy_get_reply_msg()){
+                data_handler->process_anti_entropy_get_reply_message(msg);
             }else if(msg.has_recover_request_msg()){
                 data_handler->process_recover_request_msg(msg);
             }

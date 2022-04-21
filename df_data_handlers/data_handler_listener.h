@@ -20,9 +20,11 @@
 #include "df_pss/pss.h"
 #include "df_store/kv_store.h"
 #include "df_util/randomizer.h"
+#include "df_util/util.h"
 #include "df_client/client.h"
 #include "anti_entropy.h"
 #include "df_core/clock_vv.h"
+#include "df_util/message_builder/message_builder.h"
 
 
 class data_handler_listener {
@@ -46,13 +48,14 @@ public:
     void reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port);
     void forward_message(const std::vector<peer_data>& view_to_send, proto::kv_message& message);
     void process_get_message(proto::kv_message &msg);
-    void process_get_reply_message(proto::kv_message &msg);
+    void process_get_latest_version_msg(proto::kv_message msg);
     void process_put_message(proto::kv_message &msg);
     void process_put_with_merge_message(proto::kv_message &msg);
     void process_delete_message(proto::kv_message &msg);
     long get_anti_entropy_req_count();
     void process_anti_entropy_message(proto::kv_message &msg);
-    void process_get_latest_version_msg(proto::kv_message msg);
+    void process_anti_entropy_get_message(proto::kv_message& msg);
+    void process_anti_entropy_get_reply_message(proto::kv_message &msg);
     void process_recover_request_msg(proto::kv_message& message);
 
     virtual void operator ()() = 0;

@@ -89,3 +89,53 @@ std::map<long, long>* str2vv(std::string vv_str){
     } 
     return vv;
 }
+
+        //<x@1, y@2, z@1> < <x@2, y@2, z@1>
+        //<x@1, y@2, z@1> > <x@0, y@2, z@1>
+        //<y@2, z@1> < <x@0, y@2, z@1>
+        //<y@3, z@1> =/= <x@0, y@2, z@1>
+         //<y@3, z@1, u@3> =/= <x@0, y@2, z@1>
+         //<y@3, z@1, u@3, x@0> =/= <x@1, y@2, z@1>
+         //<y@3, z@1, u@3, x@2> > <x@1, y@2, z@1>
+
+
+kVersionComp comp_version(const kv_store_key_version& k1, const kv_store_key_version k2){
+    bool is_equal = true;
+    bool is_lower = true;
+    bool is_bigger = true;
+    int is_bigger_count = 0;
+    bool is_concurrent = true;
+    
+    for(auto & x: k1.vv){
+        auto it = k2.vv.find(x.first);
+        //Se nao encontrou, nunca podera ser igual ou menor
+        if(it == k2.vv.end()){
+            is_equal = false;
+            is_lower = false;
+        }
+        //Se ate encontrou, mas o clock não coincide 
+        else{
+            if(x.second != it->second)
+                is_equal = false;
+            
+            if(x.second > it->second)
+                is_lower = false;
+            
+            if(x.second < it->second)
+                is_bigger = false;
+
+            if(x.second >= it->second)
+                is_bigger_count++; 
+        }
+            
+    }
+
+    if(is_equal && k1.vv.size() == k2.vv.size())
+        return kVersionComp::Equal;
+    if(is_lower && k1.vv.size() <= k2.vv.size())
+        return kVersionComp::Lower;
+    if(is_bigger && is_bigger_count == k2.vv.size() && k1.vv.size() >= k2.vv.size())
+        return kVersionComp::Bigger;
+
+    return kVersionComp::Concurrent;
+}

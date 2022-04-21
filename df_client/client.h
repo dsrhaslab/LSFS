@@ -24,12 +24,13 @@
 
 #include "client_reply_handler_mt.h"
 #include "client_reply_handler_st.h"
+#include "client_reply_handler.h"
 #include "df_core/peer_data.h"
 #include "df_loadbalancing/dynamic_load_balancer.h"
 #include "df_loadbalancing/smart_load_balancer.h"
 #include "df_loadbalancing/load_balancer_listener.h"
 #include "exceptions/custom_exceptions.h"
-
+#include "df_util/message_builder/message_builder.h"
 
 
 
@@ -85,12 +86,12 @@ public:
     inline void get_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs){
         get_batch(keys, data_strs, nr_gets_required);
     };
-    std::unique_ptr<std::string> get(const std::string& key, int wait_for, std::map<long, long>* version = nullptr);
-    inline std::unique_ptr<std::string> get(const std::string& key, std::map<long, long>* version = nullptr){
+    std::unique_ptr<std::string> get(const std::string& key, int wait_for, std::map<long, long>* version);
+    inline std::unique_ptr<std::string> get(const std::string& key, std::map<long, long>* version){
         return get(key, nr_gets_required, version);
     };
-    kv_store_key_version get_latest_version(const std::string& key, int wait_for);
-    inline kv_store_key_version get_latest_version(const std::string& key){
+    std::vector<kv_store_key_version> get_latest_version(const std::string& key, int wait_for);
+    inline std::vector<kv_store_key_version> get_latest_version(const std::string& key){
         return get_latest_version(key, nr_gets_version_required);
     };
 

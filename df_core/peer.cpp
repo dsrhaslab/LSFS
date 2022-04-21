@@ -217,6 +217,7 @@ int main(int argc, char* argv []){
     int kv_port = atoi(arguments.args[5]); //12366;
     int recover_port = atoi(arguments.args[6]); //12367;
     bool recover_database = !arguments.no_recover;
+    std::cout << "Is db to recover? " << recover_database << std::endl; 
 
     std::string ip;
     try{
