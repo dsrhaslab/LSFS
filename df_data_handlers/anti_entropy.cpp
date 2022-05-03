@@ -236,8 +236,7 @@ void anti_entropy::phase_operating(){
             }
             store->set_allocated_key(kv_key);
             store->set_is_deleted(false);
-            //TODO : not sending merge keys;
-            store->set_is_merge(false);
+            store->set_is_merge(key.is_merge);
 
             std::cout << "--------------------------" << std::endl;
         }
@@ -262,7 +261,6 @@ void anti_entropy::phase_operating(){
             }
             store_del->set_allocated_key(deleted_kv_key);
             store_del->set_is_deleted(true);
-            //TODO : not sending merge keys;
             store_del->set_is_merge(false);
 
 

@@ -63,9 +63,9 @@ int main(int argc, char **argv) {
 //    cli.put("/crl", 2, "olo", 3);
 
     // std::map<long, long> version2 ({{4, 1}});
-      std::unique_ptr<std::string> data = cli.get("/LSFS", 2, &version);
-      if(data == nullptr) std::cout << "Data is NULL "<< std::endl ;
-      else std::cout << "Data: " << *data << std::endl ;
+    //   std::unique_ptr<std::string> data = cli.get("/LSFS", 2, &version);
+    //   if(data == nullptr) std::cout << "Data is NULL "<< std::endl ;
+    //   else std::cout << "Data: " << *data << std::endl ;
 
     //  std::vector<kv_store_key_version> versionres;
     //  versionres = cli.get_latest_version("/LSFS", 1);

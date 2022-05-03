@@ -85,6 +85,8 @@ public:
     void remove_from_set_existent_deleted_keys(std::unordered_set<kv_store_key<std::string>>& deleted_keys) override;
     void print_store() override;
     bool check_if_deleted(const std::string& key, kv_store_key_version version) override;
+    bool check_if_put_merged(const std::string& key, kv_store_key_version version) override;
+    bool check_if_put_merged(const std::string& comp_key) override;
     std::unordered_set<kv_store_key<std::string>> get_deleted_keys() override;
 };
 
@@ -218,11 +220,14 @@ std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_keys() {
     //A partir dessa iterator(key), guardar anti_entropy_max_keys para enviar
     for(int i = 0; i < anti_entropy_num_keys && it->Valid(); i++, it->Next()){
         std::string comp_key = it->key().ToString();
+        
+        bool is_merge = check_if_put_merged(comp_key);
+
         std::string key;
         std::map<long, long> vector;
         int res = split_composite_total(comp_key, &key, &vector);
         if(res == 0){
-            keys.insert({key, kv_store_key_version(vector)});
+            keys.insert({key, kv_store_key_version(vector), false, is_merge});
         }
     }
 
@@ -614,7 +619,7 @@ bool kv_store_leveldb::anti_entropy_put(const std::string& key, kv_store_key_ver
 
 
 bool kv_store_leveldb::remove(const std::string& key, kv_store_key_version version) {
-    kv_store_key<std::string> key_comp = {key, version, true, false};
+    kv_store_key<std::string> key_comp = {key, version, true};
     this->seen_it_deleted(key_comp);
     int k_slice = this->get_slice_for_key(key);
 
@@ -658,43 +663,79 @@ bool kv_store_leveldb::check_if_deleted(const std::string& key, kv_store_key_ver
 }
 
 
+bool kv_store_leveldb::check_if_put_merged(const std::string& key, kv_store_key_version version){
+    std::string comp_key = compose_key_toString(key, version);
+    std::string value;
+    leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value);
+    bool is_merge = s.ok();
+    return is_merge;
+}
+
+bool kv_store_leveldb::check_if_put_merged(const std::string& comp_key){
+    std::string value;
+    leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value);
+    bool is_merge = s.ok();
+    return is_merge;
+}
+
+
 bool kv_store_leveldb::put_with_merge(const std::string& key, kv_store_key_version version, const std::string& bytes) {
     try{
-        kv_store_key_version* kv_latest_version;
-        //We only need to merge with latest version
-        //TODO - ISTO ESTA EM COMENT PORQUE A FUNCAO DESAPARECEU, DAVA OS DADOS DA ULTIMA VERSAO
-        //std::unique_ptr<std::string> data = get_latest(key, kv_latest_version);
-        std::unique_ptr<std::string> data(nullptr);
+
+        //This vector should only have one kv_store_key_version
+        //if it has more, something was wrong 
+
+        std::unique_ptr<std::vector<kv_store_key_version>> last_vkv = get_latest_version(key);
+        std::vector<std::unique_ptr<std::string>> last_vdata;
+
+        for(auto &kv: *last_vkv){
+            kv_store_key<std::string> key_v = {key, kv};
+            last_vdata.emplace_back(get(key_v));
+        }
+
+        kv_store_key_version last_kv;
+        std::unique_ptr<std::string> last_data;
         
-        if(data != nullptr){
-            //If latest version exists and is bigger than version received merge version received with latest version
-            //and overwrite latest version
-            if(version < *kv_latest_version){
-                this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
-                int res = put(key, *kv_latest_version, this->merge_function(*data, bytes), true);
-                if(res){
-                    //Ensure received version stays logged in the database. (for anti-entropy reasons)
-                    return put(key, version, bytes, true);
-                }else{
-                    return false;
-                }
-            }
-            //If version received is bigger than latest version than merge and put merged data
-            //with version received
-            else if (version > *kv_latest_version){
-                this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
-                return put(key, version, this->merge_function(*data, bytes), true);
-            }
-            //If latest version is equal to version received
-            else{
-                //do nothing
-                return true;
-            }
-        }else{
-            //if there no entry for the key, no need for merge
+        //if no key was found in the system, just insert it with merge = true
+        if( last_vkv == nullptr || last_vkv->size() <= 0){
             return put(key, version, bytes, true);
         }
-    }catch(LevelDBException& e){
+        // if the vector has more than one version, just merge everything in the vector
+        // 
+        else if(last_vkv->size() > 1){
+            last_kv = merge_vkv(*last_vkv);
+            last_data = std::move(last_vdata.front());
+            int i = 0;
+            for(auto const & ptr_d : last_vdata){
+                if(i > 0)
+                    last_data = std::make_unique<std::string>(this->merge_function(*last_data, *ptr_d));
+                i++;
+            }
+        }
+        //retrieve first and unique elem
+        else {
+            last_kv = last_vkv->front();
+        }
+
+        // They should always be concurrent
+        if(comp_version(last_kv, version) == kVersionComp::Concurrent){
+            this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
+            int res = put(key, merge_kv(last_kv, version), this->merge_function(*last_data, bytes), true);
+            if(res){
+                //Ensure received version stays logged in the database. (for anti-entropy reasons)
+                return put(key, version, bytes, true);
+            }
+            else {
+                return false;
+            }
+        }
+        // if not just insert with merge = true
+        else {
+            return put(key, version, bytes, true);
+        }
+
+    }
+    catch(LevelDBException& e){
         return false;
     }
 }

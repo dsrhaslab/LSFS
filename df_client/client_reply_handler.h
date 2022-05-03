@@ -64,12 +64,12 @@ public:
 
     client_reply_handler(std::string ip, int kv_port, int pss_port, long wait_timeout);
 
-    std::map<long, long> register_put(const std::string& key, std::map<long, long> version);
+    kv_store_key_version register_put(const std::string& key, const kv_store_key_version& version);
     void change_get_reqid(const std::string& latest_reqid_str, const std::string& new_reqid);
     bool wait_for_put(const kv_store_key<std::string>& key, int wait_for);
     bool wait_for_put_until(const kv_store_key<std::string>& key, int wait_for, std::chrono::system_clock::time_point& wait_until);
     void clear_put_keys_entries(std::vector<kv_store_key<std::string>>& erasing_keys);
-    std::map<long, long> register_delete(const std::string& key, std::map<long, long> version);
+    kv_store_key_version register_delete(const std::string& key, const kv_store_key_version& version);
     bool wait_for_delete(const kv_store_key<std::string>& key, int wait_for);
     void register_get_data(const std::string& req_id);
     std::unique_ptr<std::string> wait_for_get(const std::string& req_id, int wait_for, Response* get_res);

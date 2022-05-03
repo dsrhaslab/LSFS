@@ -13,10 +13,10 @@ client_reply_handler::client_reply_handler(std::string ip, int kv_port, int pss_
     this->put_mutexes.reserve(100);
 }
 
-std::map<long, long> client_reply_handler::register_put(const std::string& key, std::map<long, long> version) {
+kv_store_key_version client_reply_handler::register_put(const std::string& key, const kv_store_key_version& version) {
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
 
-    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version), false}; //is_merge not needed here
+    kv_store_key<std::string> comp_key = {key, version, false}; //is_merge not needed here
 
     auto it = this->put_replies.find(comp_key);
     if(it == this->put_replies.end()){
@@ -163,10 +163,10 @@ void client_reply_handler::clear_put_keys_entries(std::vector<kv_store_key<std::
     }
 }
 
-std::map<long, long> client_reply_handler::register_delete(const std::string& key, std::map<long, long> version) {
+kv_store_key_version client_reply_handler::register_delete(const std::string& key, const kv_store_key_version& version) {
     std::unique_lock<std::mutex> lock(this->delete_global_mutex);
 
-    kv_store_key<std::string> comp_key = {key, kv_store_key_version(version), true};
+    kv_store_key<std::string> comp_key = {key, version, true};
 
     auto it = this->delete_replies.find(comp_key);
     if(it == this->delete_replies.end()){

@@ -139,3 +139,70 @@ kVersionComp comp_version(const kv_store_key_version& k1, const kv_store_key_ver
 
     return kVersionComp::Concurrent;
 }
+
+
+kv_store_key_version merge_vkv(const std::vector<kv_store_key_version>& vkv){
+    kv_store_key_version res;
+
+    for(auto &kv: vkv){
+        for(auto p: kv.vv){
+            auto it = res.vv.find(p.first);
+            if(it == res.vv.end())
+                res.vv.insert(std::make_pair(p.first, p.second));
+            else {
+                if(it->second < p.second)
+                    it->second = p.second;
+            }
+                
+        }
+    }
+    return res;
+}
+
+kv_store_key_version merge_kv(const kv_store_key_version& k1, const kv_store_key_version& k2){
+    kv_store_key_version res = k1;
+
+    for(auto p: k2.vv){
+        auto it = res.vv.find(p.first);
+        if(it == res.vv.end())
+            res.vv.insert(std::make_pair(p.first, p.second));
+        else {
+            if(it->second < p.second)
+                it->second = p.second;
+        }
+            
+    }
+    return res;
+}
+
+
+
+int sum_vv_clock(kv_store_key_version& v){
+    int sum = 0;
+    for(auto &cc: v.vv){
+        sum += cc.second;
+    }
+    return sum;
+}
+
+// PODEM ACONTECER INCONSISTENCIA NA ESCOLHA
+kv_store_key_version choose_latest_version(std::vector<kv_store_key_version>& kvv_v){
+
+    kv_store_key_version max_v;
+    int max_v_size = 0;
+
+    for(auto &kvv: kvv_v){
+        int temp_s = kvv.vv.size();
+        if(temp_s > max_v_size){
+            max_v_size = temp_s;
+            max_v.vv = kvv.vv;
+        }else if(temp_s == max_v_size){
+            int sum_tmp = sum_vv_clock(kvv);
+            if(sum_tmp > sum_vv_clock(max_v)){
+                max_v_size = temp_s;
+                max_v.vv = kvv.vv;
+            }
+        }
+    }
+    return max_v;
+}

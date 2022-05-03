@@ -494,6 +494,7 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
             message_content->set_id(this->id);
             message_content->set_reqid(req_id);
             message_content->set_is_deleted(false);
+            message_content->set_is_merge(key.is_merge);
             
             proto::kv_store_key* kv_key = new proto::kv_store_key();
             kv_key->set_key(key.key);
@@ -523,6 +524,7 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
             message_content->set_id(this->id);
             message_content->set_reqid(req_id);
             message_content->set_is_deleted(true);
+            message_content->set_is_merge(false);
             
             proto::kv_store_key* kv_key = new proto::kv_store_key();
             kv_key->set_key(deleted_key.key);

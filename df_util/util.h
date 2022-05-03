@@ -29,4 +29,10 @@ std::string vv2str(std::map<long, long> vv);
 
 kVersionComp comp_version (const kv_store_key_version& k1, const kv_store_key_version k2);
 
+kv_store_key_version merge_vkv(const std::vector<kv_store_key_version>& vkv);
+
+kv_store_key_version merge_kv(const kv_store_key_version& k1, const kv_store_key_version& k2);
+
+kv_store_key_version choose_latest_version(std::vector<kv_store_key_version>& kvv_v);
+
 #endif //P2PFS_UTIL_H

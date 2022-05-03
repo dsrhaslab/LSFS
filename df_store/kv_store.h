@@ -61,6 +61,8 @@ public:
     virtual void remove_from_set_existent_deleted_keys(std::unordered_set<kv_store_key<T>>& deleted_keys) = 0;
     virtual void print_store() = 0;
     virtual bool check_if_deleted(const T& key, kv_store_key_version version) = 0;
+    virtual bool check_if_put_merged(const std::string& key, kv_store_key_version version) = 0;
+    virtual bool check_if_put_merged(const std::string& comp_key) = 0;
     virtual std::unordered_set<kv_store_key<T>> get_deleted_keys() = 0;
 
     int get_slice_for_key(const T& key);
