@@ -53,7 +53,7 @@ private:
     void refresh_nr_keys_count();
     void refresh_nr_deleted_keys_count();
     int open(leveldb::Options& options, std::string db_name, std::string& db_name_path, leveldb::DB** db);
-    void print_db(leveldb::DB* database);
+    void print_db(leveldb::DB* database, long id, std::string filename);
     std::unique_ptr<std::string> get_db(kv_store_key<std::string>& key, leveldb::DB* database);
     std::unique_ptr<std::vector<kv_store_key_version>> get_latest_version_db(const std::string& key, leveldb::DB* database);
 
@@ -80,10 +80,12 @@ public:
     bool remove(const std::string& key, kv_store_key_version version) override;
     std::unique_ptr<std::vector<kv_store_key_version>> get_latest_version(const std::string& key) override;
     std::unique_ptr<std::vector<kv_store_key_version>> get_latest_deleted_version(const std::string& key) override;
+    std::unique_ptr<std::vector<kv_store_key_version>> get_latest_data_version(const std::string& key, std::vector<std::unique_ptr<std::string>>& last_data) override;
+
     std::unique_ptr<std::string> get_anti_entropy(const kv_store_key<std::string>& key, bool* is_merge) override;
     void remove_from_set_existent_keys(std::unordered_set<kv_store_key<std::string>>& keys) override;
     void remove_from_set_existent_deleted_keys(std::unordered_set<kv_store_key<std::string>>& deleted_keys) override;
-    void print_store() override;
+    void print_store(long id) override;
     bool check_if_deleted(const std::string& key, kv_store_key_version version) override;
     bool check_if_put_merged(const std::string& key, kv_store_key_version version) override;
     bool check_if_put_merged(const std::string& comp_key) override;
@@ -432,6 +434,56 @@ std::unique_ptr<std::vector<kv_store_key_version>> kv_store_leveldb::get_latest_
     return nullptr;
 }
 
+std::unique_ptr<std::vector<kv_store_key_version>> kv_store_leveldb::get_latest_data_version(const std::string& key, std::vector<std::unique_ptr<std::string>>& last_data){
+    leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+    std::string prefix = key + "#";
+    bool exists = false;
+
+    std::vector<kv_store_key_version> current_max_versions;
+    int i = 0;
+    for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next(), i++) {
+        std::string comp_key = it->key().ToString();
+        std::string value = it->value().ToString();
+        std::string current_key;
+        std::map<long, long> current_vector;
+        int res = split_composite_total(comp_key, &current_key, &current_vector);
+        if(res == 0){
+            if(i == 0){
+                current_max_versions.emplace_back(kv_store_key_version(current_vector));
+                last_data.emplace_back(std::make_unique<std::string>(std::move(value)));
+                exists = true;
+            } else {
+                auto temp_version = kv_store_key_version(current_vector);
+                int cout_concurrent = 0;
+                for(int j = 0; j < current_max_versions.size(); j++){
+                    kVersionComp vcomp = comp_version(temp_version, current_max_versions.at(j));
+                    if(vcomp == kVersionComp::Bigger){
+                        current_max_versions.at(j) = temp_version;
+                        last_data.at(j) = std::make_unique<std::string>(std::move(value));
+                        break;
+                    }
+                    else if(vcomp == kVersionComp::Concurrent)
+                        cout_concurrent++;
+                }
+                if(cout_concurrent == current_max_versions.size()){
+                    current_max_versions.emplace_back(temp_version);
+                    last_data.emplace_back(std::make_unique<std::string>(std::move(value)));
+                }
+            }
+        }        
+    }
+        
+    if(!it->status().ok()){
+        delete it;
+        throw LevelDBException();
+    }else if(exists){
+        delete it;
+        return std::make_unique<std::vector<kv_store_key_version>>(current_max_versions);
+    }
+    delete it;
+    return nullptr;
+}
+
 bool kv_store_leveldb::put(const std::string& key, kv_store_key_version version, const std::string& bytes, bool is_merge) {
     kv_store_key<std::string> key_comp = {key, version, false, is_merge};
     this->seen_it(key_comp);
@@ -455,44 +507,52 @@ bool kv_store_leveldb::put(const std::string& key, kv_store_key_version version,
 }
 
 
-void kv_store_leveldb::print_store(){
+void kv_store_leveldb::print_store(long id){
 
     std::cout << "\nPrinting DB" << std::endl;
 
-    print_db(db);
+    print_db(db, id, "db_");
     
     std::cout << "\nPrinting DB_DELETED" << std::endl;
     
-    print_db(db_deleted);
+    print_db(db_deleted, id, "deleted_db_");
     
     std::cout << std::endl;
 }
 
 
 
-void kv_store_leveldb::print_db(leveldb::DB* database){
+void kv_store_leveldb::print_db(leveldb::DB* database, long id, std::string filename){
 
     leveldb::Iterator* it = database->NewIterator(leveldb::ReadOptions());
+    std::string filename2 = filename + to_string(id);
+    std::ofstream db_file(filename2);
+
+    db_file << "###########################################################"<< "\n";
+    db_file << "###################### LSFS DATABASE ######################"<< "\n";
+    db_file << "###########################################################"<< "\n";
     
     for (it->SeekToFirst(); it->Valid(); it->Next())
     {
         std::string comp_key = it->key().ToString();
-        std::cout << " Complete Key " << comp_key << std::endl;
-    
+        db_file << " Complete Key " << comp_key << "\n";
+    /*
         std::string key;
         std::map<long, long> vector;
         int res = split_composite_total(comp_key, &key, &vector);
 
         if(res == 0){
-            std::cout << "  Key: " << key << "#" << std::endl;
+            db_file << "  Key: " << key << "#" << "\n";
             
             kv_store_key<std::string> get_key = {key, kv_store_key_version(vector)};
             std::unique_ptr<std::string> data = get_db(get_key, database);
 
-            if(data != nullptr) std::cout << "  Data: " << *data << std::endl;
-            else std::cout << "  Data: **NULLPTR**"<< std::endl;
+            if(data != nullptr) db_file << "  Data: " << *data << "\n";
+            else db_file << "  Data: **NULLPTR**"<< "\n";
         }
+        */
     }
+    db_file.close();
 
     if (!it->status().ok())
     {
@@ -523,7 +583,7 @@ std::unique_ptr<std::string> kv_store_leveldb::get_db(kv_store_key<std::string>&
     std::string comp_key;
     //comp_key.reserve(50);
     comp_key = compose_key_toString(key.key, key.key_version);
-    std::cout << "Get key " << comp_key << std::endl;
+    //std::cout << "Get key " << comp_key << std::endl;
         
     leveldb::Status s = database->Get(leveldb::ReadOptions(), comp_key, &value);
 
@@ -717,6 +777,8 @@ bool kv_store_leveldb::put_with_merge(const std::string& key, kv_store_key_versi
             last_kv = last_vkv->front();
         }
 
+        std::cout << "Checking if version and last version are concurrent" << std::endl;
+                
         // They should always be concurrent
         if(comp_version(last_kv, version) == kVersionComp::Concurrent){
             this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
@@ -731,6 +793,7 @@ bool kv_store_leveldb::put_with_merge(const std::string& key, kv_store_key_versi
         }
         // if not just insert with merge = true
         else {
+            std::cout << "Just inserting the key with updated metadata" << std::endl;
             return put(key, version, bytes, true);
         }
 

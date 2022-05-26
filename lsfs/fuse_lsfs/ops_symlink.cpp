@@ -14,6 +14,8 @@ int lsfs_impl::_symlink(
     const char *from, const char *to
     )
 {
+    std::cout << "### SysCall: _symlink" << std::endl;
+
     if (!fuse_pt_impersonate_calling_process_highlevel(NULL))
         return -errno;
 
@@ -28,6 +30,8 @@ int lsfs_impl::_readlink(
     const char *path, char *buf, size_t size
     )
 {
+    std::cout << "### SysCall: _readlink" << std::endl;
+
     if (size == 0)
         return -EINVAL;
 

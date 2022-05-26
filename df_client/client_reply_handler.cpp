@@ -13,10 +13,8 @@ client_reply_handler::client_reply_handler(std::string ip, int kv_port, int pss_
     this->put_mutexes.reserve(100);
 }
 
-kv_store_key_version client_reply_handler::register_put(const std::string& key, const kv_store_key_version& version) {
+void client_reply_handler::register_put(const kv_store_key<std::string>& comp_key) {
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
-
-    kv_store_key<std::string> comp_key = {key, version, false}; //is_merge not needed here
 
     auto it = this->put_replies.find(comp_key);
     if(it == this->put_replies.end()){
@@ -30,7 +28,6 @@ kv_store_key_version client_reply_handler::register_put(const std::string& key, 
     }
 
     lock.unlock();
-    return version;
 }
 
 bool client_reply_handler::wait_for_put(const kv_store_key<std::string>& key, int wait_for){
@@ -68,7 +65,6 @@ bool client_reply_handler::wait_for_put(const kv_store_key<std::string>& key, in
         }
         succeed = it->second.size() >= wait_for;
         if (succeed) {
-
             // if put has already been successfully performed, since we have all locks
             // we can remove the key entries
             this->put_replies.erase(it);
@@ -163,10 +159,8 @@ void client_reply_handler::clear_put_keys_entries(std::vector<kv_store_key<std::
     }
 }
 
-kv_store_key_version client_reply_handler::register_delete(const std::string& key, const kv_store_key_version& version) {
+void client_reply_handler::register_delete(const kv_store_key<std::string>& comp_key) {
     std::unique_lock<std::mutex> lock(this->delete_global_mutex);
-
-    kv_store_key<std::string> comp_key = {key, version, true};
 
     auto it = this->delete_replies.find(comp_key);
     if(it == this->delete_replies.end()){
@@ -180,7 +174,6 @@ kv_store_key_version client_reply_handler::register_delete(const std::string& ke
     }
 
     lock.unlock();
-    return version;
 }
 
 
@@ -441,14 +434,14 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_until(const std:
         }
     }
 
-    if(res == nullptr && timeout_happened)
+    if(res == nullptr && timeout_happened){
         throw TimeoutException();
-
+    }
     return res;
 }
 
-std::unique_ptr<std::vector<kv_store_key_version>> client_reply_handler::wait_for_get_latest_version(const std::string& req_id, int wait_for) {
-    std::unique_ptr<std::vector<kv_store_key_version>> res (nullptr);
+std::unique_ptr<kv_store_key_version> client_reply_handler::wait_for_get_latest_version(const std::string& req_id, int wait_for, Response* get_res) {
+    std::unique_ptr<kv_store_key_version> res (nullptr);
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
@@ -481,7 +474,7 @@ std::unique_ptr<std::vector<kv_store_key_version>> client_reply_handler::wait_fo
             it = this->get_replies.find(req_id);
         }
         if(it->second.count >= wait_for){
-            std::cout << "Recebi todas as respostas que queria" << std::endl;
+            //std::cout << "Recebi todas as respostas que queria" << std::endl;
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
             
@@ -515,8 +508,18 @@ std::unique_ptr<std::vector<kv_store_key_version>> client_reply_handler::wait_fo
                 }
             }
 
-            res = std::make_unique<std::vector<kv_store_key_version>>(max_vv);
-
+            kv_store_key_version last_v;
+            if(max_vv.size() > 1)
+                last_v = choose_latest_version(max_vv);
+            else if(max_vv.size() == 1)
+                last_v = max_vv.front();
+             
+            if(!max_vv.empty()){
+                res = std::make_unique<kv_store_key_version>(last_v);
+                *get_res = Response::Ok;
+            }else{
+                *get_res = Response::NoData;
+            }
 
             this->get_replies.erase(it);
 
@@ -537,6 +540,118 @@ std::unique_ptr<std::vector<kv_store_key_version>> client_reply_handler::wait_fo
 
     return std::move(res);
 }
+
+std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest_until(const std::string &key, const std::string &req_id, int wait_for,
+                                                                      std::chrono::system_clock::time_point &wait_until, Response* get_res){
+    std::unique_ptr<std::string> res (nullptr);
+
+    std::unique_lock<std::mutex> lock(this->get_global_mutex);
+
+    bool timeout_happened = false;
+
+    auto it = this->get_replies.find(req_id);
+    if(it != this->get_replies.end()) {
+        // if exists a entry for the key, lock that entry
+        auto it_key = this->get_mutexes.find(req_id);
+
+        // I already have the pointer to the replies and mutexes map so i can unlock because as
+        // the only thread that can remove the key from the mais is the one itself, and the iterators
+        // don't invalidate with other removals, it's certain that the pointers remain valid.
+
+        auto &sync_pair = it_key->second;
+        std::unique_lock<std::mutex> lock_key(sync_pair->first);
+
+        lock.unlock();
+
+        if (it->second.count < wait_for) {
+            // if we still don't have the necessary repies
+
+            // wait for key notify -> it performs automatic lock of the key
+            std::cv_status status = sync_pair->second.wait_until(lock_key, wait_until);
+            if(status == std::cv_status::timeout) timeout_happened = true;
+        }
+
+        if(it->second.count >= wait_for){
+            //std::cout << "Recebi todas as respostas que queria" << std::endl;
+            // if we already have the majority of replies, as we still hold the locks
+            // we can remove the entries for the key
+            
+            auto& map_keys = it->second.keys;
+            auto& map_del_keys = it->second.deleted_keys;
+
+            std::vector<kv_store_key_version> max_vv;
+
+            for(auto& kv : map_keys){
+                bool deleted = false;
+                for(auto& kv_del : map_del_keys){
+                    kVersionComp comp_del = comp_version(kv.first.key_version, kv_del.first.key_version);
+                    
+                    if(comp_del == kVersionComp::Lower || comp_del == kVersionComp::Equal){
+                        deleted = true;
+                        break;
+                    }
+                }
+                if(!deleted){
+                    int cout_concurrent = 0;
+                    for(int i = 0; i < max_vv.size(); i++){
+                        kVersionComp comp_max = comp_version(kv.first.key_version, max_vv.at(i));
+                        if(comp_max == kVersionComp::Bigger){
+                            max_vv.at(i) = kv.first.key_version;
+                            break;
+                        } else if(comp_max == kVersionComp::Concurrent)
+                            cout_concurrent++;
+                    }
+                    if(cout_concurrent == max_vv.size())
+                        max_vv.push_back(kv.first.key_version);
+                }
+            }
+
+            kv_store_key_version last_v;
+            if(max_vv.size() > 1)
+                last_v = choose_latest_version(max_vv);
+            else if(max_vv.size() == 1)
+                last_v = max_vv.front();
+            
+
+            if(!max_vv.empty()){
+                auto it = map_keys.find({key, last_v, false});
+                if(it != map_keys.end()){
+                    res = std::move(it->second);
+                    *get_res = Response::Ok;
+                }else{
+                    *get_res = Response::NoData;
+                }
+            }else if(!it->second.deleted_keys.empty()){
+                *get_res = Response::Deleted;
+            }else{
+                *get_res = Response::NoData;
+            }
+            
+
+            // unlock key mutex because we have to get locks in order
+            lock_key.unlock();
+            lock.lock();
+            lock_key.lock();
+
+            this->get_replies.erase(it);
+
+            // It's strictly needes to free key lock as if we don't, when leaving scope it will
+            // try to perform a release on a non-existent mutex (SIGSEV)
+            lock_key.unlock();
+
+            this->get_mutexes.erase(it_key);
+
+            lock.unlock();
+        }
+    }
+
+    if(*get_res == Response::Init && timeout_happened)
+        throw TimeoutException();
+
+    return res;
+}
+
+
 
 void client_reply_handler::process_get_reply_msg(const proto::get_reply_message &msg) {
     const std::string& req_id = msg.reqid();
@@ -601,8 +716,14 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
             for (auto c : k.version()){
                 kv.vv.emplace(c.client_id(), c.clock());
             }
+            
             kv_store_key<std::string> st_key = {msg.key(), kv, false};
-            it->second.keys.insert(std::make_pair(st_key, nullptr));
+            
+            std::unique_ptr<std::string> data(nullptr);
+            if(!k.data().empty())
+                data = std::make_unique<std::string>(k.data());
+            
+            it->second.keys.insert(std::make_pair(st_key, std::move(data)));
         }
 
        for(auto k : msg.last_deleted_v()){
@@ -629,7 +750,9 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
     for (auto c : msg.key().version())
         version.vv.emplace(c.client_id(), c.clock());
 
-    kv_store_key<std::string> comp_key = {key, version, false};
+    bool is_merge = msg.is_merge();
+
+    kv_store_key<std::string> comp_key = {key, version, false, is_merge};
     long replier_id = msg.id();
 
     std::unique_lock<std::mutex> lock(this->put_global_mutex);

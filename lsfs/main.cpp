@@ -43,7 +43,7 @@ std::string get_local_ip_address(){
 int main(int argc, char *argv[])
 {
 
-    if(argc < 6){
+    if(argc < 7){
         exit(1);
     }
 
@@ -84,8 +84,8 @@ int main(int argc, char *argv[])
     int pss_port = 12355;
     int kv_port = 12356;
 
-    lsfs_impl fs(boot_ip, ip, kv_port, pss_port, client_id, config_filename);
-    int status = fs.run(argc - 3, argv + 3, NULL);
+    lsfs_impl fs(boot_ip, "127.0.0.1", kv_port, pss_port, client_id, config_filename);
+    int status = fs.run(argc - 4, argv + 4, NULL);
 
     return status;
 }

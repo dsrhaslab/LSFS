@@ -15,6 +15,11 @@ message kv_store_key_version {
   repeated kv_store_version version = 1;
 }
 
+message kv_store_key_version_w_data {
+  repeated kv_store_version version = 1;
+  bytes data = 2;
+}
+
 message kv_store_key {
   string key = 1;
   repeated kv_store_version version = 2;
@@ -36,6 +41,7 @@ message get_latest_version_message {
   int64 id = 3;
   string reqid = 4;
   string key = 5;
+  bool get_data = 6;
 }
 
 message get_latest_version_reply_message {
@@ -44,7 +50,7 @@ message get_latest_version_reply_message {
   int64 id = 3;
   string reqid = 4;
   string key = 5;
-  repeated kv_store_key_version last_v = 6;
+  repeated kv_store_key_version_w_data last_v = 6;
   repeated kv_store_key_version last_deleted_v = 7;
 }
 
@@ -92,6 +98,7 @@ message put_reply_message {
   int32 port = 2;
   int64 id = 3;
   kv_store_key key = 4;
+  bool is_merge = 5;
 }
 
 //-------------------------------------------------------------------

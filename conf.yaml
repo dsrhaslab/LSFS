@@ -25,7 +25,7 @@ main_confs:
   log_level: off
   seen_log_garbage_at: 1000
   request_log_garbage_at: 1000
-  anti_entropy_log_garbage_at: 1000
+  anti_entropy_log_garbage_at: 100
   warmup_interval: 60
   restart_database_after_warmup: true
 
@@ -33,13 +33,13 @@ main_confs:
   #               Client               #
   ######################################
 
-  nr_puts_required: 1
+  nr_puts_required: 2
   nr_gets_required: 1
   nr_gets_version_required: 1
-  client_wait_timeout: 5
+  client_wait_timeout: 10
   mt_client_handler: true
   nr_client_handler_ths: 3
-  max_nr_requests_timeouts: 1000
+  max_nr_requests_timeouts: 10
   load_balancer: dynamic
   smart_load_balancer_group_knowledge: 3
   max_smart_view_age: 50

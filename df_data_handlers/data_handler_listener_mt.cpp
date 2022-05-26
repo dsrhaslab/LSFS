@@ -27,8 +27,10 @@ public:
                 std::cout << "Received put Message from client " << std::endl;
                 data_handler->process_put_message(msg);
             }else if(msg.has_put_with_merge_msg()){
+                std::cout << "Received put with merge Message from client " << std::endl;
                 data_handler->process_put_with_merge_message(msg);
             }else if(msg.has_delete_msg()){
+                std::cout << "Received delete Message from client " << std::endl;
                 data_handler->process_delete_message(msg);
             }else if(msg.has_anti_entropy_msg()){
                 data_handler->process_anti_entropy_message(msg);

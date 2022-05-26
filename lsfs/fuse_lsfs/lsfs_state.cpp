@@ -35,11 +35,9 @@ int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, 
     size_t read_off = 0;
     size_t nr_blocks = (size / block_size) + (size % block_size == 0 ? 0 : 1);
     // array for the keys
-    std::vector<std::string> keys;
+    std::vector<kv_store_key<std::string>> keys;
     keys.reserve(nr_blocks);
-    // array for versions
-    std::vector<long> versions;
-    versions.reserve(nr_blocks);
+    
     // array for buffer pointers
     std::vector<const char*> buffers;
     buffers.reserve(nr_blocks);
@@ -49,30 +47,29 @@ int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, 
 
 
     try{
-
+        //Ate ter os blocos todos prontos
         while (read_off < size) {
             size_t write_size = (read_off + BLK_SIZE) > size ? (size - read_off) : BLK_SIZE;
             current_blk++;
             std::string blk_path;
             blk_path.reserve(100);
             blk_path.append(base_path).append(":").append(std::to_string(current_blk));
+            
+            std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(blk_path);
+            
+            kv_store_key_version version;
+            if(last_v != nullptr)
+                version = *last_v;
 
-            long version;
-            if(timestamp_version){
-                version = std::chrono::duration_cast< std::chrono::nanoseconds >( std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 100u;
-            }else{
-                version = df_client->get_latest_version(blk_path) + 1;
-            }
-
-            keys.emplace_back(std::move(blk_path));
-            versions.emplace_back(version);
+            kv_store_key<std::string> kv = {blk_path, version, false};
+            keys.emplace_back(kv);
             buffers.emplace_back(&buf[read_off]);
             sizes.emplace_back(write_size);
 
             read_off += BLK_SIZE;
         }
 
-        df_client->put_batch(keys, versions, buffers, sizes);
+        df_client->put_batch(keys, buffers, sizes);
 
         return_value = 0;
     }catch(EmptyViewException& e){
@@ -125,10 +122,12 @@ size_t lsfs_state::read_fixed_size_blocks_to_buffer(char *buf, size_t size, size
         keys.emplace_back(std::move(blk_path));
         data_strs.emplace_back(nullptr);
     }
-
-    df_client->get_batch(keys, data_strs);
+    
+    df_client->get_latest_batch(keys, data_strs);
 
     for(const std::shared_ptr<std::string>& data_blk: data_strs){
+        if(data_blk == nullptr) std::cout << "\n\n\n\n\n\n\n\n\n\n Um dos blocos retornou null \n\n\n\n\n\n\n\n\n" << std::endl;
+
         size_t blk_write_size = std::min((data_blk->size()), (size - read_off));
         data_blk->copy(&buf[read_off], blk_write_size);
         read_off += blk_write_size;
@@ -141,12 +140,14 @@ int lsfs_state::put_block(const std::string& path, const char* buf, size_t size,
     int return_value;
 
     try{
-        long version;
-        if(timestamp_version){
-            version = std::chrono::duration_cast< std::chrono::nanoseconds >( std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 100u;
-        }else{
-            version = df_client->get_latest_version(path) + 1;
-        }
+        // if(timestamp_version){
+        //     version = std::chrono::duration_cast< std::chrono::nanoseconds >( std::chrono::high_resolution_clock::now().time_since_epoch()).count() / 100u;
+        
+        std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path);
+        kv_store_key_version version; 
+        if(last_v != nullptr)
+            version = *last_v;        
+        
         df_client->put(path, version, buf, size);
         return_value = 0;
     }catch(EmptyViewException& e){
@@ -179,7 +180,11 @@ int lsfs_state::put_with_merge_metadata(metadata& met, const std::string& path){
     int return_value;
 
     try{
-        long version  = df_client->get_latest_version(path) + 1;
+        std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path);
+        kv_store_key_version version; 
+        if(last_v != nullptr)
+            version = *last_v; 
+
         df_client->put_with_merge(path, version, metadata_str.data(), metadata_str.size());
         return_value = 0;
     }catch(EmptyViewException& e){
@@ -203,12 +208,13 @@ int lsfs_state::put_with_merge_metadata(metadata& met, const std::string& path){
 std::unique_ptr<metadata> lsfs_state::get_metadata(const std::string& path){
     std::unique_ptr<metadata> res = nullptr;
     try{
-        long version = df_client->get_latest_version(path);
-        if(version == -1){
+        std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path);
+
+        if(last_v == nullptr){
             errno = ENOENT;
         }else{
             //Fazer um get de metadados ao dataflasks
-            std::shared_ptr<std::string> data = df_client->get(path, 1, &version);
+            std::shared_ptr<std::string> data = df_client->get(path, 1, *last_v);
             res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
         }
     }catch(TimeoutException& e){
@@ -251,22 +257,38 @@ std::unique_ptr<metadata> lsfs_state::add_child_to_working_dir_and_retreive(cons
 int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
     std::unique_ptr<std::string> parent_path = get_parent_dir(path);
     std::unique_ptr<std::string> child_name = get_child_name(path);
+
     if(parent_path != nullptr){
+        std::cout << "Parent Path: " << *parent_path << std::endl;
+
         std::unique_ptr<metadata> met(nullptr);
         met = this->add_child_to_working_dir_and_retreive(*parent_path, *child_name, is_dir);
         if(met == nullptr){
+            std::cout << "Parent folder is not a working directory " << std::endl;
             //parent folder is not a working directory
-            try {
-                std::unique_ptr<std::string> data = df_client->get(*parent_path /*, &version*/);
-                // reconstruir a struct stat com o resultado
-                met = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
-                // remove last version added/removed child log
-                met->reset_add_remove_log();
-                // add child path to metadata
-                met->add_child(*child_name, is_dir);
+            try {                
+                std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(*parent_path);
+                //TODO check if this error is valid 
+                if(last_v == nullptr){
+                   std::cout << "Got latest but is nullptr " << std::endl;
+                   return -errno;
+                }
+                else{
+                    std::cout << "Got latest " << std::endl;
+                    print_kv(*last_v);
+                
+                    std::unique_ptr<std::string> data = df_client->get(*parent_path, *last_v);
+                    std::cout << "Got parent path metadata " << std::endl;
+                    // reconstruir a struct stat com o resultado
+                    met = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
+                    // remove last version added/removed child log
+                    met->reset_add_remove_log();
+                    // add child path to metadata
+                    met->add_child(*child_name, is_dir);
 
-                if(*parent_path != "/"){
-                    add_or_refresh_working_directory(*parent_path, *met);
+                    if(*parent_path != "/"){
+                        add_or_refresh_working_directory(*parent_path, *met);
+                    }
                 }
             }catch(TimeoutException& e){
                 errno = EHOSTUNREACH; // Not Reachable Host
@@ -275,6 +297,8 @@ int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
         }
 
         if(is_working_directory(*parent_path)){
+            std::cout << "Trying to update metadata of parent path " << std::endl;
+                
             // put metadata
             int res = put_metadata(*met, *parent_path, true);
             if(res != 0){
@@ -283,6 +307,8 @@ int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
             //on successful put metadata clear add remove childs log
             this->reset_working_directory_add_remove_log(*parent_path);
         }else{
+            std::cout << "Trying to update metadata -- put with merge -- of parent path " << std::endl;
+
             int res = put_with_merge_metadata(*met, *parent_path);
             if(res != 0){
                 return -errno;

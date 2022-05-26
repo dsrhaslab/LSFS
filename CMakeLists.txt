@@ -69,8 +69,6 @@ add_executable( peer_exe
         df_communication/udp_async_server.cpp
         df_core/group_construction.cpp
         df_core/group_construction.h
-        df_core/clock_vv.h 
-        df_core/clock_vv.cpp
         df_util/message_builder/message_builder.cpp
         df_util/message_builder/message_builder.h
         df_data_handlers/data_handler_listener.cpp
@@ -138,6 +136,7 @@ add_executable( client_exe
         df_util/message_builder/message_builder.h
         df_util/util.cpp
         df_util/util.h
+        df_client/clock_vv.h 
         df_client/client.cpp
         df_client/client.h
         df_client/client_reply_handler_st.cpp
@@ -194,6 +193,11 @@ add_executable( lsfs_exe
         df_loadbalancing/dynamic_load_balancer.h
         df_loadbalancing/load_balancer_listener.cpp
         df_loadbalancing/load_balancer_listener.h
+        df_util/message_builder/message_builder.cpp
+        df_util/message_builder/message_builder.h
+        df_util/util.cpp
+        df_util/util.h
+        df_client/clock_vv.h 
         df_client/client.cpp
         df_client/client.h
         df_client/client_reply_handler_st.cpp

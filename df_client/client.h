@@ -31,6 +31,8 @@
 #include "df_loadbalancing/load_balancer_listener.h"
 #include "exceptions/custom_exceptions.h"
 #include "df_util/message_builder/message_builder.h"
+#include "clock_vv.h"
+#include "df_util/util.h"
 
 
 
@@ -54,6 +56,8 @@ private:
     int max_timeouts;
     int wait_timeout;
 
+    clock_vv clock; 
+
     std::shared_ptr<load_balancer> lb;
     std::thread lb_th;
 
@@ -66,11 +70,11 @@ private:
 public:
     client(std::string boot_ip, std::string ip, int kv_port, int pss_port, long id, std::string conf_filename);
     void stop();
-    void put(const std::string& key, const kv_store_key_version& version, const char* data, size_t size, int wait_for);
-    void put_batch(const std::vector<std::string>& keys, const std::vector<kv_store_key_version>& versions, const std::vector<const char*>& datas, const std::vector<size_t>& sizes, int wait_for);
-    inline void put_batch(const std::vector<std::string>& keys, const std::vector<kv_store_key_version>& versions, const std::vector<const char*>& datas, const std::vector<size_t>& sizes) {
-        put_batch(keys, versions, datas, sizes, nr_puts_required);
+    void put_batch(const std::vector<kv_store_key<std::string>> &keys, const std::vector<const char*>& datas, const std::vector<size_t>& sizes, int wait_for);
+    inline void put_batch(const std::vector<kv_store_key<std::string>> &keys, const std::vector<const char*>& datas, const std::vector<size_t>& sizes) {
+        put_batch(keys, datas, sizes, nr_puts_required);
     };
+    void put(const std::string& key, const kv_store_key_version& version, const char* data, size_t size, int wait_for);
     inline void put(const std::string& key, const kv_store_key_version& version, const char* data, size_t size) {
         put(key, version, data, size, nr_puts_required);
     };
@@ -82,16 +86,16 @@ public:
     inline void del(const std::string& key, const kv_store_key_version& version){
         del(key, version, nr_puts_required);
     };
-    // void get_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs, int wait_for);
-    // inline void get_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs){
-    //     get_batch(keys, data_strs, nr_gets_required);
-    // };
     std::unique_ptr<std::string> get(const std::string& key, int wait_for, const kv_store_key_version& version);
     inline std::unique_ptr<std::string> get(const std::string& key, const kv_store_key_version& version){
         return get(key, nr_gets_required, version);
     };
-    std::vector<kv_store_key_version> get_latest_version(const std::string& key, int wait_for);
-    inline std::vector<kv_store_key_version> get_latest_version(const std::string& key){
+    void get_latest_batch(const std::vector<std::string> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for);
+    inline void get_latest_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs){
+        get_latest_batch(keys, data_strs, nr_gets_required);
+    };
+    std::unique_ptr<kv_store_key_version> get_latest_version(const std::string& key, int wait_for);
+    inline std::unique_ptr<kv_store_key_version> get_latest_version(const std::string& key){
         return get_latest_version(key, nr_gets_version_required);
     };
 
@@ -102,7 +106,7 @@ private:
     int send_put(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const char* data, size_t size);
     int send_delete(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version);
     int send_put_with_merge(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const char* data, size_t size);
-    int send_get_latest_version(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id);
+    int send_get_latest_version(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id, bool with_data = false);
 };
 
 #endif //P2PFS_CLIENT_H

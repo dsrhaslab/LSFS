@@ -57,6 +57,8 @@ int lsfs_impl::_create(
         struct fuse_file_info *fi
 )
 {
+    std::cout << "### SysCall: _create" << std::endl;
+
     if (!fuse_pt_impersonate_calling_process_highlevel(&mode))
         return -errno;
 
@@ -85,6 +87,7 @@ int lsfs_impl::_open(
         struct fuse_file_info *fi
 )
 {
+    std::cout << "### SysCall: _open" << std::endl;
 
     int return_value;
 
@@ -118,6 +121,8 @@ int lsfs_impl::_flush(const char *path, struct fuse_file_info *fi){
 
     (void)path;
 
+    std::cout << "### SysCall: _flush ---> Path:" << (std::string) path << std::endl;
+
     if(!is_temp_file(path)) {
         return state->flush_open_file(path);
     }else{
@@ -130,6 +135,8 @@ int lsfs_impl::_release(
         struct fuse_file_info *fi
 )
 {
+    std::cout << "### SysCall: _release" << std::endl;
+
     const int fd = (int)fi->fh;
 
     (void)path;
@@ -146,6 +153,8 @@ int lsfs_impl::_fsync(
         struct fuse_file_info *fi
 )
 {
+    std::cout << "### SysCall: _fsync" << std::endl;
+
     const int fd = (int)fi->fh;
 
     (void)path;
@@ -166,6 +175,8 @@ int lsfs_impl::_read(
         struct fuse_file_info *fi
 )
 {
+    std::cout << "### SysCall: _read" << std::endl;
+
     (void)path;
 
     size_t bytes_count;
@@ -174,7 +185,7 @@ int lsfs_impl::_read(
 
         // get file info
         struct stat stbuf;
-        int res = lsfs_impl::_getattr(path, &stbuf,NULL);
+        int res = lsfs_impl::_getattr(path, &stbuf, NULL);
         if(res != 0){
             return -errno; //res = -errno
         }
@@ -197,7 +208,7 @@ int lsfs_impl::_read(
                 int bytes_read = lsfs_impl::_read(path, ini_buf, BLK_SIZE, off_ini_blk, NULL);
                 if (bytes_read < 0) return -errno;
                 else {
-                    size_t ini_size = (size <= bytes_read)? size : std::min((int)(BLK_SIZE - off_blk), bytes_read);
+                    size_t ini_size = (size <= bytes_read)? size : std::min((int)(BLK_SIZE - off_blk), bytes_read); 
                     memcpy(&buf[bytes_count], &ini_buf[off_blk], ini_size * sizeof(char));
                     bytes_count += ini_size;
                 }
@@ -206,7 +217,8 @@ int lsfs_impl::_read(
 
             // What's left to read is the minimum between what I'm supposed to read
             // and the file size from the point I'm reading
-            size_t missing_read_size = std::min((size - bytes_count),(file_size - offset - bytes_count));
+            //Ou le ate size ou ate ao final do ficheiro que e possivel ver pelo file_size
+            size_t missing_read_size = std::min((size - bytes_count),(file_size - offset - bytes_count)); 
             if(missing_read_size > 0){
                 bytes_count += state->read_fixed_size_blocks_to_buffer_limited_paralelization(&buf[bytes_count], missing_read_size, BLK_SIZE, path, current_blk);
             }
@@ -234,6 +246,8 @@ int lsfs_impl::_write(
         struct fuse_file_info *fi
 )
 {
+    std::cout << "### SysCall: _write" << std::endl;
+
     (void)path;
     int result;
 
@@ -278,8 +292,8 @@ int lsfs_impl::_write(
                         current_blk++;
                         std::string blk_path;
                         blk_path.reserve(100);
-                        blk_path.append(path).append(":").append(std::to_string(current_blk));
-                        int res = state->put_block(blk_path, buf, size, true);
+                        blk_path.append(path).append(":").append(std::to_string(current_blk)); //Isto aqui segundo o paper nao seria o current_blk, mas sim o current block * blk_size
+                        int res = state->put_block(blk_path, put_buf, first_block_size, true); //ACHO QUE AQUI NÃO É SIZE, mas sim read_off
                         if(res == -1){
                             return -errno;
                         }

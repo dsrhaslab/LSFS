@@ -39,6 +39,9 @@ int lsfs_impl::_unlink(
     const char *path
     )
 {
+
+
+    
     return (unlink(path) == 0) ? 0 : -errno;
 }
 
@@ -93,6 +96,8 @@ int lsfs_impl::_mkdir(
     const char *path, mode_t mode
     )
 {
+    std::cout << "### SysCall: _mkdir" << std::endl;
+
     if (!fuse_pt_impersonate_calling_process_highlevel(&mode))
         return -errno;
 
@@ -104,14 +109,22 @@ int lsfs_impl::_mkdir(
     // create metadata object
     metadata to_send(stbuf);
     // put metadata
+
+    std::cout << "Putting metadata of " << path << std::endl;
+
     int res = state->put_metadata(to_send, path);
     if(res == -1){
         return -errno;
     }
+
+    std::cout << "Trying to add child to parent dir " << std::endl;
+
     res = state->add_child_to_parent_dir(path, true);
     if(res != 0){
         return res;
     }
+
+    std::cout << "Refreshing working dir " << std::endl;
 
     state->add_or_refresh_working_directory(path, to_send);
 
@@ -124,6 +137,7 @@ int lsfs_impl::_rmdir(
     const char *path
     )
 {
+    std::cout << "### SysCall: _rmdir" << std::endl;
     return (rmdir(path) == 0) ? 0 : -errno;
 }
 

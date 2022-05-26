@@ -23,7 +23,6 @@
 #include "df_util/util.h"
 #include "df_client/client.h"
 #include "anti_entropy.h"
-#include "df_core/clock_vv.h"
 #include "df_util/message_builder/message_builder.h"
 
 

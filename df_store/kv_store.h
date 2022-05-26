@@ -56,10 +56,11 @@ public:
     virtual bool remove(const T& key, kv_store_key_version version) = 0;
     virtual std::unique_ptr<std::vector<kv_store_key_version>> get_latest_version(const T& key) = 0;
     virtual std::unique_ptr<std::vector<kv_store_key_version>> get_latest_deleted_version(const T& key) = 0;
+    virtual std::unique_ptr<std::vector<kv_store_key_version>> get_latest_data_version(const T& key, std::vector<std::unique_ptr<std::string>>& last_data) = 0;
     virtual std::unique_ptr<std::string> get_anti_entropy(const kv_store_key<T>& key, bool* is_merge) = 0;
     virtual void remove_from_set_existent_keys(std::unordered_set<kv_store_key<T>>& keys) = 0;
     virtual void remove_from_set_existent_deleted_keys(std::unordered_set<kv_store_key<T>>& deleted_keys) = 0;
-    virtual void print_store() = 0;
+    virtual void print_store(long id) = 0;
     virtual bool check_if_deleted(const T& key, kv_store_key_version version) = 0;
     virtual bool check_if_put_merged(const std::string& key, kv_store_key_version version) = 0;
     virtual bool check_if_put_merged(const std::string& comp_key) = 0;

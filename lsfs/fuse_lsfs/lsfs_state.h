@@ -16,7 +16,8 @@
 #include "metadata.h"
 #include "util.h"
 #include "exceptions/custom_exceptions.h"
-#include "lsfs/fuse_common/macros.h"
+#include "lsfs/fuse_common/macros.h"    
+#include "df_util/util.h"
 
 namespace FileAccess{
     enum FileAccess {CREATED, MODIFIED, ACCESSED};

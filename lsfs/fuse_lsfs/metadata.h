@@ -69,6 +69,7 @@ public:
     static void initialize_metadata(struct stat* stbuf, mode_t mode, nlink_t nlink, gid_t gid, uid_t uid);
     void add_child(std::string path, bool is_dir);
     void reset_add_remove_log();
+    static void print_metadata(metadata& met);
 };
 
 template<class Archive>

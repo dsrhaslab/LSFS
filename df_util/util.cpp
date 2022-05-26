@@ -90,6 +90,25 @@ std::map<long, long>* str2vv(std::string vv_str){
     return vv;
 }
 
+void print_kv(const kv_store_key<std::string>& kv){
+    std::cout << "##### Key: " << kv.key << " Vector: <";
+
+    for(auto pair: kv.key_version.vv)
+        std::cout << "(" <<  pair.first << "@" << pair.second << "),";
+    
+    std::cout << ">" << std::endl;
+}
+
+
+void print_kv(const kv_store_key_version& kv){
+    std::cout << " Vector: <";
+
+    for(auto pair: kv.vv)
+        std::cout << "(" <<  pair.first << "@" << pair.second << "),";
+    
+    std::cout << ">" << std::endl;
+}
+
         //<x@1, y@2, z@1> < <x@2, y@2, z@1>
         //<x@1, y@2, z@1> > <x@0, y@2, z@1>
         //<y@2, z@1> < <x@0, y@2, z@1>
@@ -175,6 +194,11 @@ kv_store_key_version merge_kv(const kv_store_key_version& k1, const kv_store_key
     return res;
 }
 
+kv_store_key_version add_vv(std::pair<long, long> version, const kv_store_key_version& k2){
+    kv_store_key_version k1;
+    k1.vv.insert(version);
+    return merge_kv(k1, k2);
+}
 
 
 int sum_vv_clock(kv_store_key_version& v){

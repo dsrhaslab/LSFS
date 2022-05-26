@@ -54,3 +54,13 @@ void metadata::initialize_metadata(struct stat* stbuf, mode_t mode, nlink_t nlin
 void metadata::reset_add_remove_log(){
     this->added_childs.clear();
 }
+
+
+void metadata::print_metadata(metadata& met){
+    std::cout << "Printing Metadata: <";
+    for(auto& child: met.childs)
+        std::cout << child << ", ";
+    
+    std::cout << ">" << std::endl;
+
+}

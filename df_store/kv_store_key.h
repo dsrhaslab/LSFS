@@ -16,9 +16,11 @@ struct kv_store_key {
     
     inline bool operator==(const kv_store_key& other) const
     {
-        return this->key == other.key && this->key_version == other.key_version;
+        return this->key == other.key && this->key_version == other.key_version 
+                && this->is_deleted == other.is_deleted && this->is_merge == other.is_merge;
     }
 
+    //I think it is not needed
     inline bool operator<(const kv_store_key& other) const
     {
         if(this->key == other.key){
@@ -37,12 +39,6 @@ struct kv_store_key {
         }
     }
 };
-
-/*
-std::ostream& operator<<(std::ostream& os, const kv_store_key<std::string>& other)
-{
-        return os << other.key << "#" << other.key_version;
-}*/
 
 namespace std {
 

@@ -18,6 +18,7 @@
 
 #include "util.h"
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
+#include "metadata.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -40,6 +41,7 @@ int lsfs_impl::_opendir(
     struct fuse_file_info *fi
     )
 {
+    std::cout << "### SysCall: _opendir" << std::endl;
     return 0;
 }
 
@@ -49,6 +51,7 @@ int lsfs_impl::_releasedir(
     )
 {
     (void)path;
+    std::cout << "### SysCall: _releasedir" << std::endl;
 
     return 0;
 }
@@ -59,6 +62,7 @@ int lsfs_impl::_fsyncdir(
     )
 {
     (void)path;
+    std::cout << "### SysCall: _fsyncdir" << std::endl;
 
     return 0;
 }
@@ -69,6 +73,8 @@ int lsfs_impl::_readdir(
         enum fuse_readdir_flags flags)
 {
     (void)path;
+
+    std::cout << "### SysCall: _readdir" << std::endl;
 
     enum fuse_fill_dir_flags fill_flags = static_cast<fuse_fill_dir_flags>(0);
 
@@ -82,6 +88,8 @@ int lsfs_impl::_readdir(
     if(met == nullptr){
         return -errno;
     }
+
+    metadata::print_metadata(*met);
 
     for(auto& child: met->childs){
         filler(buf, child.c_str(), NULL, 0, fill_flags);
