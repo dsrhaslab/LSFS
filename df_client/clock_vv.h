@@ -14,8 +14,7 @@ class clock_vv {
 
 private:
 
-    std::atomic<long> clock; //Clock for version vector 
-    
+    std::atomic<long> clock;     
 
 public:
     clock_vv(){

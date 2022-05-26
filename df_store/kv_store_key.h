@@ -19,25 +19,6 @@ struct kv_store_key {
         return this->key == other.key && this->key_version == other.key_version 
                 && this->is_deleted == other.is_deleted && this->is_merge == other.is_merge;
     }
-
-    //I think it is not needed
-    inline bool operator<(const kv_store_key& other) const
-    {
-        if(this->key == other.key){
-            return (this->key_version < other.key_version);
-        }else{
-            return (this->key < other.key);
-        }
-    }
-
-    inline bool operator>(const kv_store_key& other) const
-    {
-        if(this->key == other.key){
-            return (this->key_version > other.key_version);
-        }else{
-            return (this->key > other.key);
-        }
-    }
 };
 
 namespace std {

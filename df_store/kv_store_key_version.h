@@ -36,7 +36,7 @@ struct kv_store_key_version {
             else if(x.second != it->second)
                 return false;
         }
-        //Se chegou aqui todos se encontram no other, o único caso pode ser o other ser maior
+        //Se chegou aqui todos os que estao no this->vv encontram-se no other, o único caso pode ser o other ser maior
         return  this->vv.size() == other.vv.size();
     }
 
@@ -44,43 +44,7 @@ struct kv_store_key_version {
     {
         return !(*this == other);
     }
-
-    inline bool operator<(const kv_store_key_version& other) const
-    {
-        for(auto x: this->vv){
-            auto it = other.vv.find(x.first);
-            if(it == other.vv.end())
-                return false;
-            else if(x.second > it->second)
-                return false;
-        }
-        return true;
-    }
-
-    inline bool operator>(const kv_store_key_version& other) const
-    {
-        for(auto x: other.vv){
-            auto it = this->vv.find(x.first);
-            if(it == this->vv.end())
-                return false;
-            else if(x.second > it->second)
-                return false;
-        }
-        return true;
-    }
-
-    inline bool operator>=(const kv_store_key_version& other) const
-    {
-        return *this == other || *this > other;
-    }
-
-    inline bool operator<=(const kv_store_key_version& other) const
-    {
-        return *this == other || *this < other;
-    }
 };
-
-
 
 
 #endif //P2PFS_KV_STORE_KEY_VERSION_H

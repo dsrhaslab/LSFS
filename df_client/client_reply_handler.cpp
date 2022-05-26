@@ -655,13 +655,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest_until(con
 
 void client_reply_handler::process_get_reply_msg(const proto::get_reply_message &msg) {
     const std::string& req_id = msg.reqid();
-    const bool is_deleted = msg.version_is_deleted();
-                        
-    std::unique_ptr<std::string> data(nullptr);
-    if(!is_deleted){
-        data = std::make_unique<std::string>(msg.data());
-    }
-
+                    
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
     boost::regex composite_key(".+:(\\d+)$");
@@ -670,10 +664,17 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
 
     auto it = this->get_replies.find(req_id);
     if(it != this->get_replies.end()){
-        // key exists
+        
         auto& sync_pair = this->get_mutexes.find(req_id)->second;
         std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
         lock.unlock(); //free global get lock
+
+        const bool is_deleted = msg.version_is_deleted();
+
+        std::unique_ptr<std::string> data(nullptr);
+        if(!is_deleted){
+            data = std::make_unique<std::string>(msg.data());
+        }
 
         kv_store_key_version version;
         for (auto c : msg.key().version())
@@ -706,7 +707,7 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
 
     auto it = this->get_replies.find(req_id);
     if(it != this->get_replies.end()){
-        // a chave existe
+        
         auto& sync_pair = this->get_mutexes.find(req_id)->second;
         std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
         lock.unlock(); //free global get lock
@@ -753,17 +754,18 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
     bool is_merge = msg.is_merge();
 
     kv_store_key<std::string> comp_key = {key, version, false, is_merge};
-    long replier_id = msg.id();
 
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
 
     auto it = this->put_replies.find(comp_key);
     if(it != this->put_replies.end()){
-        // key exists
+        
         auto& sync_pair = this->put_mutexes.find(comp_key)->second;
         std::unique_lock<std::mutex> key_lock(sync_pair->first);
 
         lock.unlock(); //free global put lock
+
+        long replier_id = msg.id();
 
         it->second.emplace(replier_id);
         sync_pair->second.notify_all();
@@ -786,7 +788,7 @@ void client_reply_handler::process_delete_reply_msg(const proto::delete_reply_me
 
     auto it = this->delete_replies.find(comp_key);
     if(it != this->delete_replies.end()){
-        // key exists
+        
         auto& sync_pair = this->delete_mutexes.find(comp_key)->second;
         std::unique_lock<std::mutex> key_lock(sync_pair->first);
 

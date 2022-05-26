@@ -72,9 +72,9 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
         int res = sendto(this->sender_socket, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
         lock.unlock();
 
-        if(res == -1){spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));}
+        if(res == -1){spdlog::error("Something went wrong with read()! %s\n", strerror(errno));}
         else{ return 0; }
-    }catch(...){spdlog::error("==================== NÂO consegui enviar =================");}
+    }catch(...){spdlog::error("======= Não consegui enviar =======");}
 
     return 1;
 }
@@ -147,12 +147,8 @@ int client::send_put_with_merge(std::vector<peer_data>& peers, const std::string
 
 
 void client::put(const std::string& key, const kv_store_key_version& version, const char *data, size_t size, int wait_for) {
-    std::cout << "Incrementing clock -- " << clock.get() << std::endl;
     long n_clock = clock.increment_and_get();
-    std::cout << "Incremented -- " << n_clock << std::endl;
     kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), version);
-
-    print_kv(new_version);
     
     kv_store_key<std::string> comp_key = {key, new_version, false};
     this->handler->register_put(comp_key); // throw const char* (concurrent writes over the same key)
@@ -163,7 +159,6 @@ void client::put(const std::string& key, const kv_store_key_version& version, co
         int status = 0;
         if (curr_timeouts + 1 <= 2){
             std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_put_request); //throw exception
-
             status = this->send_put(peers, key, new_version, data, size);
         }else{
             std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_put_request); //throw exception
@@ -221,7 +216,7 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
                 try{
                     completed[i] = this->handler->wait_for_put_until(keys_w_new_versions[i], wait_for, wait_until);
                 }catch(TimeoutException& e){
-                    std::cout << "Timeout" << std::endl;
+                    std::cout << "####### Timeout" << std::endl;
                     loop_timeout = true;
                     if (curr_timeouts + 1 <= 2){
                         std::vector<peer_data> peers = this->lb->get_n_peers(keys_w_new_versions[i].key, this->max_nodes_to_send_put_request); //throw exception
@@ -329,8 +324,6 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, c
     std::string req_id_str;
     req_id_str.reserve(100);
     req_id_str.append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
-    
-    print_kv(version);
 
     this->handler->register_get_data(req_id_str);
     std::unique_ptr<std::string> res (nullptr);
@@ -413,16 +406,10 @@ void client::get_latest_batch(const std::vector<std::string> &keys, std::vector<
                         req_ids[i].append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
                         this->handler->change_get_reqid(latest_reqid_str, req_ids[i]);
                         if (curr_timeouts + 1 <= 2){
-                            std::vector<peer_data> peers = this->lb->get_n_peers(keys[i], this->max_nodes_to_send_get_request); //throw exception (empty view)
-                            
-                            std::cout << "Sending message to peer: " << peers[0].id << std::endl;
-                            
+                            std::vector<peer_data> peers = this->lb->get_n_peers(keys[i], this->max_nodes_to_send_get_request); //throw exception (empty view)                            
                             this->send_get_latest_version(peers, keys[i], req_ids[i], true);
                         }else{
                             std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_get_request); //throw exception (empty view)
-
-                            std::cout << "Sending message to peer: " << peers[0].id << std::endl;
-                            
                             this->send_get_latest_version(peers, keys[i], req_ids[i], true);
                         }
                         timeout[i] = false;
