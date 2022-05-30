@@ -51,6 +51,7 @@ void client_reply_handler_st::operator()() {
                 }else if (message.has_delete_reply_msg()) {
 
                     const proto::delete_reply_message &msg = message.delete_reply_msg();
+                    std::cout << "Received delete reply message" << std::endl;
                     process_delete_reply_msg(msg);
                 }
             }

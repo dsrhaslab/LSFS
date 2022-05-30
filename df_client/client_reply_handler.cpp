@@ -517,6 +517,8 @@ std::unique_ptr<kv_store_key_version> client_reply_handler::wait_for_get_latest_
             if(!max_vv.empty()){
                 res = std::make_unique<kv_store_key_version>(last_v);
                 *get_res = Response::Ok;
+             }else if(!it->second.deleted_keys.empty()){
+                *get_res = Response::Deleted;
             }else{
                 *get_res = Response::NoData;
             }

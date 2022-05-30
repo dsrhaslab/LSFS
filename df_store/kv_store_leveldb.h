@@ -669,14 +669,22 @@ bool kv_store_leveldb::remove(const std::string& key, kv_store_key_version versi
         std::string value;
         std::string comp_key;
         comp_key = compose_key_toString(key, version);
+        std::cout << "A chave é: " << comp_key << std::endl;
         leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
 
         if (s.ok()){
+            std::cout << "Tenho a chave" << std::endl;
+
             s = db->Delete(leveldb::WriteOptions(), comp_key);
             if(!s.ok())throw LevelDBException();
             this->record_count--; //removed record from database
-            s = db_merge_log->Delete(leveldb::WriteOptions(), comp_key);
-            if(!s.ok()) throw LevelDBException();
+            
+            std::string value2;
+            s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value2);
+            if(s.ok()){
+                s = db_merge_log->Delete(leveldb::WriteOptions(), comp_key);
+                if(!s.ok()) throw LevelDBException();
+            }
 
             s = db_deleted->Put(leveldb::WriteOptions(), comp_key, value);
             if(!s.ok()) throw LevelDBException();

@@ -205,6 +205,28 @@ int lsfs_state::put_with_merge_metadata(metadata& met, const std::string& path){
     return return_value;
 }
 
+
+int lsfs_state::delete_file_or_dir(const std::string& path){
+    
+    std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path);
+    kv_store_key_version version; 
+    if(last_v != nullptr)
+        version = *last_v; 
+
+    print_kv(version);
+
+    df_client->del(path, version);
+    int return_value = 0;
+
+    //TODO catch exceptions
+
+    return return_value;
+}
+
+
+
+
+
 std::unique_ptr<metadata> lsfs_state::get_metadata(const std::string& path){
     std::unique_ptr<metadata> res = nullptr;
     try{
@@ -213,9 +235,12 @@ std::unique_ptr<metadata> lsfs_state::get_metadata(const std::string& path){
         if(last_v == nullptr){
             errno = ENOENT;
         }else{
+            std::cout << "Path: " << path << std::endl; 
+            print_kv(*last_v);
             //Fazer um get de metadados ao dataflasks
             std::shared_ptr<std::string> data = df_client->get(path, 1, *last_v);
             res = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
+            metadata::print_metadata(*res);
         }
     }catch(TimeoutException& e){
         errno = EHOSTUNREACH; // Not Reachable Host
@@ -239,6 +264,22 @@ void lsfs_state::add_or_refresh_working_directory(const std::string& path, metad
     }
     this->working_directories.emplace_back(path, std::make_unique<metadata>(met));
 }
+
+void lsfs_state::remove_and_refresh_working_directory(const std::string& path) {
+    std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
+
+    for(auto it = working_directories.begin(); it != working_directories.end(); ++it){
+        if(it->first == path){
+            it = working_directories.erase(it);
+            break;
+        }
+    }
+    if(this->working_directories.size() == this->max_working_directories_cache){
+        this->working_directories.erase(this->working_directories.begin());
+    }
+}
+
+
 
 std::unique_ptr<metadata> lsfs_state::add_child_to_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir){
     std::unique_ptr<metadata> res(nullptr);
@@ -321,6 +362,89 @@ int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
     // root directory doesn't have a parent
     return 0;
 }
+
+std::unique_ptr<metadata> lsfs_state::remove_child_from_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir){
+    std::unique_ptr<metadata> res(nullptr);
+    std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
+    for(auto & working_directory : working_directories){
+        if(working_directory.first == parent_path){
+            working_directory.second->remove_child(child_name, is_dir);
+            res = std::make_unique<metadata>(*working_directory.second);
+            this->add_or_refresh_working_directory(parent_path, *res);
+        }
+    }
+    return res;
+}
+
+int lsfs_state::remove_child_from_parent_dir(const std::string& path, bool is_dir) {
+    std::unique_ptr<std::string> parent_path = get_parent_dir(path);
+    std::unique_ptr<std::string> child_name = get_child_name(path);
+
+    if(parent_path != nullptr){
+        std::cout << "Parent Path: " << *parent_path << std::endl;
+
+        std::unique_ptr<metadata> met(nullptr);
+        met = this->remove_child_from_working_dir_and_retreive(*parent_path, *child_name, is_dir);
+        if(met == nullptr){
+            std::cout << "Parent folder is not a working directory " << std::endl;
+            //parent folder is not a working directory
+            try {                
+                std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(*parent_path);
+                //TODO check if this error is valid 
+                if(last_v == nullptr){
+                   std::cout << "Got latest but is nullptr " << std::endl;
+                   return -errno;
+                }
+                else{
+                    std::cout << "Got latest " << std::endl;
+                    print_kv(*last_v);
+                
+                    std::unique_ptr<std::string> data = df_client->get(*parent_path, *last_v);
+                    std::cout << "Got parent path metadata " << std::endl;
+                    // reconstruir a struct stat com o resultado
+                    met = std::make_unique<metadata>(metadata::deserialize_from_string(*data));
+                    // remove last version added/removed child log
+                    met->reset_add_remove_log();
+                    // add child path to metadata
+                    met->remove_child(*child_name, is_dir);
+
+                    if(*parent_path != "/"){
+                        add_or_refresh_working_directory(*parent_path, *met);
+                    }
+                }
+            }catch(TimeoutException& e){
+                errno = EHOSTUNREACH; // Not Reachable Host
+                return -errno;
+            }
+        }
+
+        if(is_working_directory(*parent_path)){
+            std::cout << "Trying to update metadata of parent path " << std::endl;
+                
+            // put metadata
+            int res = put_metadata(*met, *parent_path, true);
+            if(res != 0){
+                return -errno;
+            }
+            //on successful put metadata clear add remove childs log
+            this->reset_working_directory_add_remove_log(*parent_path);
+        }else{
+            std::cout << "Trying to update metadata -- put with merge -- of parent path " << std::endl;
+            metadata::print_metadata(*met);
+
+            int res = put_with_merge_metadata(*met, *parent_path);
+            if(res != 0){
+                return -errno;
+            }
+        }
+
+        return 0;
+    }
+
+    // root directory doesn't have a parent
+    return 0;
+}
+
 
 void lsfs_state::add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
@@ -462,6 +586,22 @@ bool lsfs_state::get_metadata_if_dir_opened(const std::string& path, struct stat
 
     return false;
 }
+
+
+std::unique_ptr<metadata> lsfs_state::get_metadata_if_dir_opened(const std::string& path){
+    std::unique_ptr<metadata> res(nullptr);
+    std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
+    for(auto & working_directory : working_directories){
+        if(working_directory.first == path){
+            res = std::make_unique<metadata>(*working_directory.second);
+            break;
+        }
+    }
+
+    return res;
+}
+
+
 
 int lsfs_state::flush_open_file(const std::string& path){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);

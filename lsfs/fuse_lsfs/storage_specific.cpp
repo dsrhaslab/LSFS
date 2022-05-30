@@ -18,6 +18,15 @@ std::string merge_metadata(const std::string& bytes, const std::string& new_byte
             }
         }
     }
+    for(auto& child_pair: met2.removed_childs){
+        auto it = met1.childs.find(child_pair.second);
+        if(it != met1.childs.end()){
+            met1.childs.erase(it);
+            if(child_pair.first == FileType::DIRECTORY){
+                met1.stbuf.st_nlink > 0 ? met1.stbuf.st_nlink-- : 0;
+            }
+        }
+    }
 
     if(met1.stbuf.st_atim < met2.stbuf.st_atim){
         met1.stbuf.st_atim = met2.stbuf.st_atim;

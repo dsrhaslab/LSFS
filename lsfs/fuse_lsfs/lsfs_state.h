@@ -30,7 +30,7 @@ public:
 
 public:
     std::recursive_mutex open_files_mutex;
-    std::unordered_map<std::string, std::pair<FileAccess::FileAccess ,std::shared_ptr<struct stat>>> open_files; // path => version
+    std::unordered_map<std::string, std::pair<FileAccess::FileAccess ,std::shared_ptr<struct stat>>> open_files;
     std::recursive_mutex working_directories_mutex;
     std::vector<std::pair<std::string, std::unique_ptr<metadata>>> working_directories;
     std::shared_ptr<client> df_client;
@@ -41,9 +41,13 @@ public:
     lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size);
     int add_child_to_parent_dir(const std::string& path, bool is_dir);
     std::unique_ptr<metadata> add_child_to_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir);
+    void remove_and_refresh_working_directory(const std::string& path);
     int put_block(const std::string& path, const char* buf, size_t size, bool timestamp_version = false);
     int put_metadata(metadata& met, const std::string& path, bool timestamp_version = false);
     int put_with_merge_metadata(metadata& met, const std::string& path);
+    std::unique_ptr<metadata> remove_child_from_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir);
+    int remove_child_from_parent_dir(const std::string& path, bool is_dir);
+    int delete_file_or_dir(const std::string& path);
     std::unique_ptr<metadata> get_metadata(const std::string& path);
     void add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access);
     bool is_file_opened(const std::string& path);
@@ -53,6 +57,7 @@ public:
     bool update_file_time_if_opened(const std::string& path, const struct timespec ts[2]);
     bool get_metadata_if_file_opened(const std::string& path, struct stat* stbuf);
     bool get_metadata_if_dir_opened(const std::string& path, struct stat* stbuf);
+    std::unique_ptr<metadata> get_metadata_if_dir_opened(const std::string& path);
     int flush_open_file(const std::string& path);
     int flush_and_release_open_file(const std::string& path);
     void add_or_refresh_working_directory(const std::string& path, metadata& met);

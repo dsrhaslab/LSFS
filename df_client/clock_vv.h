@@ -21,6 +21,10 @@ public:
         this->clock = 0;
     }
 
+    void increment(){
+        this->clock++;
+    }
+
     long increment_and_get(){
         return ++this->clock;
     }

@@ -39,10 +39,24 @@ int lsfs_impl::_unlink(
     const char *path
     )
 {
+    std::cout << "### SysCall: _unlink" << std::endl;
 
+    std::cout << "Deleting file " << path << std::endl;
+
+    int res = state->delete_file_or_dir(path);
+    if(res == -1){
+        return -errno;
+    }
+
+    std::cout << "Deleting file from parent metadata "<< std::endl;
+
+    res = state->remove_child_from_parent_dir(path, false);
+    if(res != 0){
+        return res;
+    }
 
     
-    return (unlink(path) == 0) ? 0 : -errno;
+    return 0;
 }
 
 int lsfs_impl::_rename(
@@ -138,7 +152,39 @@ int lsfs_impl::_rmdir(
     )
 {
     std::cout << "### SysCall: _rmdir" << std::endl;
-    return (rmdir(path) == 0) ? 0 : -errno;
+
+    std::unique_ptr<metadata> met = state->get_metadata_if_dir_opened(path);
+
+    if(met == nullptr){
+        std::unique_ptr<metadata> met2 = state->get_metadata(path);
+        if(met2 == nullptr){
+            return -errno;
+        }
+    }
+
+    metadata::print_metadata(*met);
+
+    if(!met->is_empty()){
+        errno = ENOTEMPTY;
+        return -errno;
+    }
+    
+    int res = state->delete_file_or_dir(path);
+    if(res == -1){
+        return -errno;
+    }
+
+    state->remove_and_refresh_working_directory(path);
+
+    std::cout << "Deleting file from parent metadata "<< std::endl;
+
+    res = state->remove_child_from_parent_dir(path, true);
+    if(res != 0){
+        return res;
+    }
+
+
+    return 0;
 }
 
 /* -------------------------------------------------------------------------- */

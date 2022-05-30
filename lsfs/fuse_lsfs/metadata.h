@@ -59,6 +59,7 @@ public:
     struct stat stbuf;
     std::set<std::string> childs;
     std::set<std::pair<FileType::FileType , std::string>> added_childs;
+    std::set<std::pair<FileType::FileType , std::string>> removed_childs;
 
 public:
     template<class Archive> void serialize(Archive& ar, const unsigned int version);
@@ -68,7 +69,9 @@ public:
     static metadata deserialize_from_string(const std::string& string_serial);
     static void initialize_metadata(struct stat* stbuf, mode_t mode, nlink_t nlink, gid_t gid, uid_t uid);
     void add_child(std::string path, bool is_dir);
+    void remove_child(std::string path, bool is_dir);
     void reset_add_remove_log();
+    bool is_empty();
     static void print_metadata(metadata& met);
 };
 

@@ -283,10 +283,9 @@ void client::put_with_merge(const std::string& key, const kv_store_key_version& 
 }
 
 void client::del(const std::string& key, const kv_store_key_version& version, int wait_for) {
-    long n_clock = clock.increment_and_get();
-    kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), version);
+    clock.increment();
 
-    kv_store_key<std::string> comp_key = {key, new_version, true};
+    kv_store_key<std::string> comp_key = {key, version, true};
     this->handler->register_delete(comp_key); // throw const char* (concurrent writes over the same key)
     
     bool succeed = false;
@@ -295,11 +294,10 @@ void client::del(const std::string& key, const kv_store_key_version& version, in
         int status = 0;
         if (curr_timeouts + 1 <= 2){
             std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_put_request); //throw exception
-
-            status = this->send_delete(peers, key, new_version);
+            status = this->send_delete(peers, key, version);
         }else{
             std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_put_request); //throw exception
-            status = this->send_delete(peers, key, new_version);
+            status = this->send_delete(peers, key, version);
         }
         if(status == 0){
             try{
@@ -370,6 +368,7 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, c
     return res;
 }
 
+
 //Sera que pode acontecer do bloco do meio ser apagado?, nao estou a considerar esse caso por achar que não acontece
 void client::get_latest_batch(const std::vector<std::string> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for) {
 
@@ -394,6 +393,7 @@ void client::get_latest_batch(const std::vector<std::string> &keys, std::vector<
     bool happend_timeout = false;
     int res_count = 0;
     do{
+        //wait until - numero de segundos que se espera para receber todos os 32k do batch, se exceder timeout
         auto wait_until = std::chrono::system_clock::now() + std::chrono::seconds(this->wait_timeout);
 
         for(size_t i = 0; i < data_strs.size(); i++){

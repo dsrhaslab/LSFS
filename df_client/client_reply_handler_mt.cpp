@@ -37,6 +37,7 @@ public:
             }else if (message.has_delete_reply_msg()) {
 
                 const proto::delete_reply_message &msg = message.delete_reply_msg();
+                std::cout << "Received delete reply message" << std::endl;
                 reply_handler->process_delete_reply_msg(msg);
             }
         }
