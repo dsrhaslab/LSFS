@@ -62,7 +62,7 @@ int lsfs_impl::_create(
     if (!fuse_pt_impersonate_calling_process_highlevel(&mode))
         return -errno;
 
-    int return_value;
+    int res = 0;
 
     if(!is_temp_file(path)) {
         const struct fuse_context* ctx = fuse_get_context();
@@ -71,15 +71,14 @@ int lsfs_impl::_create(
         metadata::initialize_metadata(&stbuf, mode, 1, ctx->gid, ctx->uid);
 
         state->add_open_file(path, stbuf, FileAccess::CREATED);
-
-        return_value = 0;
+        
     }else{
-        return_value = create_or_open(true, path, mode, fi);
+        res = create_or_open(true, path, mode, fi);
     }
 
     fuse_pt_unimpersonate();
 
-    return return_value;
+    return res;
 }
 
 int lsfs_impl::_open(
@@ -89,31 +88,40 @@ int lsfs_impl::_open(
 {
     std::cout << "### SysCall: _open" << std::endl;
 
-    int return_value;
+    int res = 0;
 
     if(!is_temp_file(path)) {
         try{
-            if(!state->is_file_opened(path)){
-                std::shared_ptr<metadata> met = state->get_metadata(path);
-                if(met == nullptr){
-                    return -errno;
-                }else{
-                    state->add_open_file(path, met->stbuf, FileAccess::ACCESSED);
-                }
+
+            if(fi->flags & O_TRUNC){
+                lsfs_impl::_truncate(path, 0, fi);
             }
 
-            return_value = 0;
 
-        }catch(TimeoutException &e){
-            errno = EHOSTUNREACH;
-            return_value = -errno;
+            if(!state->is_file_opened(path)){
+                std::shared_ptr<metadata> met = state->get_metadata(path);
+                
+                if(met == nullptr)
+                    return -errno;
+                else
+                    state->add_open_file(path, met->stbuf, FileAccess::ACCESSED);
+            }
+
+        }catch(TimeoutException& e){
+            e.what();
+            errno = EHOSTUNREACH; // Not Reachable Host
+            return -errno;
+        }catch(EmptyViewException& e){
+            e.what();
+            errno = EAGAIN; //resource unavailable
+            return -errno;
         }
 
     }else{
-        return_value = create_or_open(false, path, 0, fi);
+        res = create_or_open(false, path, 0, fi);
     }
 
-    return return_value;
+    return res;
 }
 
 int lsfs_impl::_flush(const char *path, struct fuse_file_info *fi){
@@ -121,13 +129,30 @@ int lsfs_impl::_flush(const char *path, struct fuse_file_info *fi){
 
     (void)path;
 
-    std::cout << "### SysCall: _flush ---> Path:" << (std::string) path << std::endl;
+    std::cout << "### SysCall: _flush  ==> Path:" << (std::string) path << std::endl;
 
     if(!is_temp_file(path)) {
-        return state->flush_open_file(path);
-    }else{
-        return 0;
+        try{
+
+            return state->flush_open_file(path);
+        
+        }catch(EmptyViewException& e){
+            e.what();
+            errno = EAGAIN; //resource unavailable
+            return -errno;
+        }catch(ConcurrentWritesSameKeyException& e){
+            e.what();
+            errno = EPERM; //operation not permitted
+            return -errno;
+        }catch(TimeoutException& e){
+            e.what();
+            errno = EHOSTUNREACH;
+            return -errno;
+        }
     }
+    
+    return 0;
+    
 }
 
 int lsfs_impl::_release(
@@ -142,10 +167,26 @@ int lsfs_impl::_release(
     (void)path;
 
     if(!is_temp_file(path)) {
-        return state->flush_and_release_open_file(path);
-    }else{
-        return (close((int)fi->fh) == 0) ? 0 : -errno;
+        try{
+            return state->flush_and_release_open_file(path);
+
+        }catch(EmptyViewException& e){
+            e.what();
+            errno = EAGAIN; //resource unavailable
+            return -errno;
+        }catch(ConcurrentWritesSameKeyException& e){
+            e.what();
+            errno = EPERM; //operation not permitted
+            return -errno;
+        }catch(TimeoutException& e){
+            e.what();
+            errno = EHOSTUNREACH;
+            return -errno;
+        }
     }
+        
+    return (close((int)fi->fh) == 0) ? 0 : -errno;
+    
 }
 
 int lsfs_impl::_fsync(
@@ -159,15 +200,31 @@ int lsfs_impl::_fsync(
 
     (void)path;
 
-    int result;
+    int res;
 
     if(!is_temp_file(path)) {
-        return state->flush_open_file(path);
+        try{
+            return state->flush_open_file(path);
+
+        }catch(EmptyViewException& e){
+            e.what();
+            errno = EAGAIN; //resource unavailable
+            return -errno;
+        }catch(ConcurrentWritesSameKeyException& e){
+            e.what();
+            errno = EPERM; //operation not permitted
+            return -errno;
+        }catch(TimeoutException& e){
+            e.what();
+            errno = EHOSTUNREACH;
+            return -errno;
+        }
     }else{
-        result = isdatasync ? fdatasync(fd) : fsync(fd);
+
+        res = isdatasync ? fdatasync(fd) : fsync(fd);
     }
 
-    return (result == 0) ? 0 : -errno;
+    return (res == 0) ? 0 : -errno;
 }
 
 int lsfs_impl::_read(
@@ -187,7 +244,7 @@ int lsfs_impl::_read(
         struct stat stbuf;
         int res = lsfs_impl::_getattr(path, &stbuf, NULL);
         if(res != 0){
-            return -errno; //res = -errno
+            return -errno; 
         }
         size_t file_size = stbuf.st_size;
 
@@ -222,12 +279,17 @@ int lsfs_impl::_read(
             if(missing_read_size > 0){
                 bytes_count += state->read_fixed_size_blocks_to_buffer_limited_paralelization(&buf[bytes_count], missing_read_size, BLK_SIZE, path, current_blk);
             }
+
         }catch (EmptyViewException& e) {
-            // empty view -> nothing to do
             e.what();
             errno = EAGAIN; //resource unavailable
             return -errno;
+        }catch(ConcurrentWritesSameKeyException& e){
+            e.what();
+            errno = EPERM; //operation not permitted
+            return -errno;
         }catch(TimeoutException& e){
+            e.what();
             errno = EHOSTUNREACH; // Not Reachable Host
             return -errno;
         }
@@ -260,7 +322,7 @@ int lsfs_impl::_write(
 
         int res = lsfs_impl::_getattr(path, &stbuf,NULL);
         if(res != 0){
-            return -errno; //res = -errno
+            return -errno;
         }
 
         size_t current_size = stbuf.st_size;
@@ -292,8 +354,8 @@ int lsfs_impl::_write(
                         current_blk++;
                         std::string blk_path;
                         blk_path.reserve(100);
-                        blk_path.append(path).append(":").append(std::to_string(current_blk)); //Isto aqui segundo o paper nao seria o current_blk, mas sim o current block * blk_size
-                        int res = state->put_block(blk_path, put_buf, first_block_size, true); //ACHO QUE AQUI NÃO É SIZE, mas sim read_off
+                        blk_path.append(path).append(":").append(std::to_string(current_blk)); 
+                        int res = state->put_block(blk_path, put_buf, first_block_size); 
                         if(res == -1){
                             return -errno;
                         }
@@ -304,7 +366,7 @@ int lsfs_impl::_write(
                 }
             }
 
-            res = state->put_fixed_size_blocks_from_buffer_limited_paralelization(&buf[read_off], size-read_off, BLK_SIZE, path, current_blk, true);
+            res = state->put_fixed_size_blocks_from_buffer_limited_paralelization(&buf[read_off], size-read_off, BLK_SIZE, path, current_blk);
             if(res == -1){
                 return -errno;
             }else{
@@ -320,16 +382,15 @@ int lsfs_impl::_write(
 
             result = size;
         } catch (EmptyViewException& e) {
-            // empty view -> nothing to do
             e.what();
             errno = EAGAIN; //resource unavailable
             return -errno;
         } catch (ConcurrentWritesSameKeyException& e) {
-            // empty view -> nothing to do
             e.what();
             errno = EPERM; //operation not permitted
             return -errno;
         } catch(TimeoutException& e){
+            e.what();
             errno = EHOSTUNREACH;
             return -errno;
         }

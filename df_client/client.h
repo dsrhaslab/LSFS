@@ -86,18 +86,43 @@ public:
     inline void del(const std::string& key, const kv_store_key_version& version){
         del(key, version, nr_puts_required);
     };
-    std::unique_ptr<std::string> get(const std::string& key, int wait_for, const kv_store_key_version& version);
-    inline std::unique_ptr<std::string> get(const std::string& key, const kv_store_key_version& version){
-        return get(key, nr_gets_required, version);
+    std::unique_ptr<std::string> get(const std::string& key, const kv_store_key_version& version, client_reply_handler::Response* response, int wait_for);
+    inline std::unique_ptr<std::string> get(const std::string& key, const kv_store_key_version& version, client_reply_handler::Response* response){
+        return get(key, version, response, nr_gets_required);
     };
     void get_latest_batch(const std::vector<std::string> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for);
     inline void get_latest_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs){
         get_latest_batch(keys, data_strs, nr_gets_required);
     };
-    std::unique_ptr<kv_store_key_version> get_latest_version(const std::string& key, int wait_for);
-    inline std::unique_ptr<kv_store_key_version> get_latest_version(const std::string& key){
-        return get_latest_version(key, nr_gets_version_required);
+    std::unique_ptr<kv_store_key_version> get_latest_version(const std::string& key, client_reply_handler::Response* response, int wait_for);
+    inline std::unique_ptr<kv_store_key_version> get_latest_version(const std::string& key, client_reply_handler::Response* response){
+        return get_latest_version(key, response, nr_gets_version_required);
     };
+    std::unique_ptr<std::string> get_latest(const std::string& key, client_reply_handler::Response* response, int wait_for);
+    inline std::unique_ptr<std::string> get_latest(const std::string& key, client_reply_handler::Response* response){
+        return get_latest(key, response, nr_gets_version_required);
+    };
+
+    void put_child(const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir, int wait_for);
+    inline void put_child(const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir){
+        return put_child(key, version, child_path, is_create, is_dir, nr_puts_required);
+    }
+    
+    std::unique_ptr<std::string> get_latest_metadata_size(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version, int wait_for);
+    inline std::unique_ptr<std::string> get_latest_metadata_size(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version) {
+        return get_latest_metadata_size(key, response, last_version, nr_gets_version_required);
+    }
+
+    std::unique_ptr<std::string> get_latest_metadata_stat(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version, int wait_for);
+    inline std::unique_ptr<std::string> get_latest_metadata_stat(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version) {
+        return get_latest_metadata_stat(key, response, last_version, nr_gets_version_required);
+    }
+
+    void get_metadata_batch(const std::vector<kv_store_key<std::string>> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for);
+    inline void get_metadata_batch(const std::vector<kv_store_key<std::string>> &keys, std::vector<std::shared_ptr<std::string>> &data_strs){
+        return get_metadata_batch(keys, data_strs, nr_gets_required);
+    }
+
 
 private:
     long inc_and_get_request_count();
@@ -107,6 +132,12 @@ private:
     int send_delete(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version);
     int send_put_with_merge(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const char* data, size_t size);
     int send_get_latest_version(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id, bool with_data = false);
+    int send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir);
+    int send_get_latest_met_size_or_stat(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id, bool get_size, bool get_stat);
+    int send_get_metadata(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const std::string& req_id);
+
+    std::unique_ptr<std::string> get_latest_metadata_size_or_stat(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version, bool get_size, bool get_stat, int wait_for);
+
 };
 
 #endif //P2PFS_CLIENT_H

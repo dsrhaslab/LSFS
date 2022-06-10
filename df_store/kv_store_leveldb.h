@@ -534,7 +534,7 @@ void kv_store_leveldb::print_db(leveldb::DB* database, long id, std::string file
     {
         std::string comp_key = it->key().ToString();
         db_file << " Complete Key " << comp_key << "\n";
-    /*
+    
         std::string key;
         std::map<long, long> vector;
         int res = split_composite_total(comp_key, &key, &vector);
@@ -545,10 +545,10 @@ void kv_store_leveldb::print_db(leveldb::DB* database, long id, std::string file
             kv_store_key<std::string> get_key = {key, kv_store_key_version(vector)};
             std::unique_ptr<std::string> data = get_db(get_key, database);
 
-            if(data != nullptr) db_file << "  Data: " << *data << "\n";
+            if(data != nullptr) db_file << "  Size: " << data->size() << "\n";
             else db_file << "  Data: **NULLPTR**"<< "\n";
         }
-        */
+        
     }
     db_file.close();
 

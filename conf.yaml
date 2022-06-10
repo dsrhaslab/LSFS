@@ -23,9 +23,9 @@ main_confs:
   smart: true
   mt_data_handler: true
   log_level: off
-  seen_log_garbage_at: 1000
-  request_log_garbage_at: 1000
-  anti_entropy_log_garbage_at: 100
+  seen_log_garbage_at: 500
+  request_log_garbage_at: 500
+  anti_entropy_log_garbage_at: 500
   warmup_interval: 60
   restart_database_after_warmup: true
 

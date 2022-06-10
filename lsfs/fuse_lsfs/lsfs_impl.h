@@ -11,7 +11,8 @@
 #include "lsfs/fuse_common/fuse_wrapper.h"
 #include "lsfs/fuse_common/fuse_wrapper.cpp"
 #include "df_client/client.h"
-#include "metadata.h"
+#include "metadata/metadata_attr.h"
+#include "metadata/metadata_childs.h"
 #include "exceptions/custom_exceptions.h"
 #include "util.h"
 

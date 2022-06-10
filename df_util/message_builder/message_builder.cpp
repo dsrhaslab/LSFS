@@ -208,3 +208,63 @@ void build_delete_reply_message(proto::kv_message* msg, std::string& ip, int kv_
     msg->set_allocated_delete_reply_msg(message_content);
 
 }
+
+void build_put_child_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, 
+                                const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir){
+    
+    auto* message_content = new proto::put_child_message();
+    message_content->set_ip(ip);
+    message_content->set_port(kv_port);
+    message_content->set_id(id);
+    proto::kv_store_key* kv_key = new proto::kv_store_key();
+    kv_key->set_key(key);
+    for(auto const c: version.vv){
+        proto::kv_store_version *kv_version = kv_key->add_version();
+        kv_version->set_client_id(c.first);
+        kv_version->set_clock(c.second);
+    }
+    message_content->set_allocated_key(kv_key);
+
+    message_content->set_is_create(is_create);
+    message_content->set_is_dir(is_dir);
+    message_content->set_child_path(child_path);
+    
+    msg->set_allocated_put_child_msg(message_content);
+}
+
+void build_get_latest_metadata_size_or_stat_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id,
+                                const std::string& key, bool get_size, bool get_stat){
+    
+    auto* message_content = new proto::get_latest_metadata_size_or_stat_message();
+    message_content->set_ip(ip);
+    message_content->set_port(kv_port);
+    message_content->set_id(id);
+    message_content->set_reqid(req_id);
+    message_content->set_key(key);
+    message_content->set_get_size(get_size);
+    message_content->set_get_stat(get_stat);
+    
+    msg->set_allocated_get_latest_met_size_or_stat_msg(message_content);
+}
+
+
+void build_get_metadata_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id,
+                                const std::string& key, const kv_store_key_version& version){
+    
+    auto* message_content = new proto::get_metadata_message();
+    message_content->set_ip(ip);
+    message_content->set_port(kv_port);
+    message_content->set_id(id);
+    message_content->set_reqid(req_id);
+
+    proto::kv_store_key* kv_key = new proto::kv_store_key();
+    kv_key->set_key(key);
+    for(auto const c: version.vv){
+        proto::kv_store_version *kv_version = kv_key->add_version();
+        kv_version->set_client_id(c.first);
+        kv_version->set_clock(c.second);
+    }
+    message_content->set_allocated_key(kv_key);
+    
+    msg->set_allocated_get_met_msg(message_content);
+}

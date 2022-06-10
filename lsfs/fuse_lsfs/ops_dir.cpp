@@ -83,16 +83,25 @@ int lsfs_impl::_readdir(
         filler(buf, "..", NULL, 0, fill_flags); // Parent Directory
     }
 
-    std::unique_ptr<metadata> met = state->get_metadata(path);
+    try{
 
-    if(met == nullptr){
+        std::unique_ptr<metadata> met = state->get_metadata(path);
+
+        if(met == nullptr)
+            return -errno;
+        
+        for(auto& child: met->childs){
+            filler(buf, child.c_str(), NULL, 0, fill_flags);
+        }
+
+    }catch(EmptyViewException& e){
+        e.what();
+        errno = EAGAIN; //resource unavailable  
         return -errno;
-    }
-
-    metadata::print_metadata(*met);
-
-    for(auto& child: met->childs){
-        filler(buf, child.c_str(), NULL, 0, fill_flags);
+    }catch(TimeoutException& e){
+        e.what();
+        errno = EHOSTUNREACH;
+        return -errno;
     }
 
     return 0;

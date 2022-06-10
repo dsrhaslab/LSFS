@@ -23,7 +23,7 @@ int lsfs_impl::_getattr(
 {
     std::cout << "### SysCall: _getattr" << std::endl;
 
-    int result;
+    int res = 0;
 
     if(!is_temp_file(path)){
 
@@ -33,21 +33,30 @@ int lsfs_impl::_getattr(
             got_metadata = state->get_metadata_if_dir_opened(path, stbuf);
         }
         if(!got_metadata){
-            std::unique_ptr<metadata> res = state->get_metadata(path);
-            if(res == nullptr){
+            try{
+                std::unique_ptr<metadata> met = state->get_metadata(path);
+                if(met == nullptr)
+                    return -errno;
+
+                // copy metadata received to struct stat
+                memcpy(stbuf, &met->stbuf, sizeof(struct stat));
+                
+            } catch (EmptyViewException& e) {
+                e.what();
+                errno = EAGAIN; //resource unavailable
+                return -errno;
+            } catch(TimeoutException& e){
+                e.what();
+                errno = EHOSTUNREACH;
                 return -errno;
             }
-
-            // copy metadata received to struct stat
-            memcpy(stbuf, &res->stbuf, sizeof(struct stat));
         }
 
-        result = 0;
     }else{
-        result = fi ? fstat((int)fi->fh, stbuf) : lstat(path, stbuf);
+        res = fi ? fstat((int)fi->fh, stbuf) : lstat(path, stbuf);
     }
 
-    return (result == 0) ? 0 : -errno;
+    return (res == 0) ? 0 : -errno;
 }
 
 int lsfs_impl::_chmod(
@@ -92,7 +101,7 @@ int lsfs_impl::_utimens(
             struct stat stbuf;
             int res = lsfs_impl::_getattr(path, &stbuf, NULL);
             if (res != 0) {
-                return -errno; //res = -errno
+                return -errno; 
             }
 
             stbuf.st_atim = ts[0];
@@ -101,9 +110,22 @@ int lsfs_impl::_utimens(
             metadata to_send(stbuf);
             // serialize metadata object
 
-            bool is_dir = S_ISDIR(stbuf.st_mode);
-            res = state->put_metadata(to_send, path, (is_dir == false));
-            if (res == -1) {
+            try{
+                res = state->put_metadata(to_send, path);
+                if (res == -1) 
+                    return -errno;
+                
+            } catch (EmptyViewException& e) {
+                e.what();
+                errno = EAGAIN; //resource unavailable
+                return -errno;
+            } catch (ConcurrentWritesSameKeyException& e) {
+                e.what();
+                errno = EPERM; //operation not permitted
+                return -errno;
+            } catch(TimeoutException& e){
+                e.what();
+                errno = EHOSTUNREACH;
                 return -errno;
             }
         }
@@ -136,7 +158,7 @@ int lsfs_impl::_truncate(
             struct stat stbuf;
             int res = lsfs_impl::_getattr(path, &stbuf,NULL);
             if(res != 0){
-                return -errno; //res = -errno
+                return -errno; 
             }
 
             int nr_b_blks = size / BLK_SIZE;
@@ -149,10 +171,25 @@ int lsfs_impl::_truncate(
             stbuf.st_mtim = stbuf.st_ctim;
             metadata to_send(stbuf);
             // serialize metadata object
-            res = state->put_metadata(to_send, path, true);
-            if(res == -1){
+
+            try{
+                res = state->put_metadata(to_send, path);
+                if(res == -1)
+                    return -errno;
+                
+            } catch (EmptyViewException& e) {
+                e.what();
+                errno = EAGAIN; //resource unavailable
                 return -errno;
-            } 
+            } catch (ConcurrentWritesSameKeyException& e) {
+                e.what();
+                errno = EPERM; //operation not permitted
+                return -errno;
+            } catch(TimeoutException& e){
+                e.what();
+                errno = EHOSTUNREACH;
+                return -errno;
+            }
         }
 
         result = 0;

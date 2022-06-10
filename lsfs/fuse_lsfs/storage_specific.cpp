@@ -2,12 +2,12 @@
 // Created by danielsf97 on 3/25/20.
 //
 
-#include "metadata.h"
+#include "metadata_childs.h"
 #include "util.h"
 
 std::string merge_metadata(const std::string& bytes, const std::string& new_bytes){
-    metadata met1 = metadata::deserialize_from_string(bytes);
-    metadata met2 = metadata::deserialize_from_string(new_bytes);
+    metadata_childs met1 = metadata_childs::deserialize_from_string(bytes);
+    metadata_childs met2 = metadata_childs::deserialize_from_string(new_bytes);
 
     for(auto& child_pair: met2.added_childs){
         auto res_pair = met1.childs.emplace(child_pair.second);
@@ -38,6 +38,6 @@ std::string merge_metadata(const std::string& bytes, const std::string& new_byte
         met1.stbuf.st_ctim = met2.stbuf.st_ctim; //or of permissions
     }
 
-    return metadata::serialize_to_string(met1);
+    return metadata_childs::serialize_to_string(met1);
 }
 

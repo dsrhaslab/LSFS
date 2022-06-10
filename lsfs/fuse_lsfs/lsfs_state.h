@@ -13,7 +13,9 @@
 #include <sys/statvfs.h>
 #include <spdlog/logger.h>
 #include "df_client/client.h"
-#include "metadata.h"
+#include "df_client/client_reply_handler.h"
+#include "metadata/metadata_attr.h"
+#include "metadata/metadata_childs.h"
 #include "util.h"
 #include "exceptions/custom_exceptions.h"
 #include "lsfs/fuse_common/macros.h"    
@@ -24,6 +26,11 @@ namespace FileAccess{
 }
 
 class lsfs_state {
+
+struct metadata {
+    metadata_attr met_attr;
+    metadata_childs met_childs;
+};
 
 public:
     static const int max_working_directories_cache = 16;
@@ -42,13 +49,13 @@ public:
     int add_child_to_parent_dir(const std::string& path, bool is_dir);
     std::unique_ptr<metadata> add_child_to_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir);
     void remove_and_refresh_working_directory(const std::string& path);
-    int put_block(const std::string& path, const char* buf, size_t size, bool timestamp_version = false);
-    int put_metadata(metadata& met, const std::string& path, bool timestamp_version = false);
+    int put_block(const std::string& path, const char* buf, size_t size);
+    int put_metadata(metadata_attr& met, const std::string& path);
     int put_with_merge_metadata(metadata& met, const std::string& path);
     std::unique_ptr<metadata> remove_child_from_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir);
     int remove_child_from_parent_dir(const std::string& path, bool is_dir);
     int delete_file_or_dir(const std::string& path);
-    std::unique_ptr<metadata> get_metadata(const std::string& path);
+    std::unique_ptr<metadata_attr> get_metadata(const std::string& path);
     void add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access);
     bool is_file_opened(const std::string& path);
     bool is_working_directory(const std::string& path);
@@ -63,10 +70,13 @@ public:
     void add_or_refresh_working_directory(const std::string& path, metadata& met);
     void clear_working_directories_cache();
     void reset_working_directory_add_remove_log(const std::string& path);
-    int put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk,  bool timestamp_version = false );
-    int put_fixed_size_blocks_from_buffer_limited_paralelization(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk,  bool timestamp_version = false );
+    int put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk);
+    int put_fixed_size_blocks_from_buffer_limited_paralelization(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk);
     size_t read_fixed_size_blocks_to_buffer(char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk);
     size_t read_fixed_size_blocks_to_buffer_limited_paralelization(char *buf, size_t size, size_t block_size, const char *base_path, size_t current_blk);
+
+    metadata_childs reconstruct_childs_met(std::string &base_path, size_t total_s);
+    int fragment_childs_met(std::string &base_path, metadata_childs &met);
 };
 
 #endif //P2PFS_LSFS_STATE_H

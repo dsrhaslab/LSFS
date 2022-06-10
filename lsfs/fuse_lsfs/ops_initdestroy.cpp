@@ -59,15 +59,25 @@ void*  lsfs_impl::_init(
     // ensure root directory exists
 
     const char* root_path = "/";
+    try{
 
-    std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(root_path);
+        client_reply_handler::Response response = client_reply_handler::Response::Init;    
+        std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(root_path, &response);
 
-    if(last_v == nullptr){
-        //filesystem not initialize
-        int res = _mkdir(root_path, 0777);
-        if(res != 0){
-            exit(1);
+         if(response == client_reply_handler::Response::NoData || response == client_reply_handler::Response::Deleted){
+            //filesystem not initialize
+            int res = _mkdir(root_path, 0777);
+            if(res != 0){
+                exit(1);
+            }
         }
+    
+    } catch (EmptyViewException& e) {
+        e.what();
+        exit(1);
+    } catch(TimeoutException& e){
+        e.what();
+        exit(1);
     }
 
     state->clear_working_directories_cache();

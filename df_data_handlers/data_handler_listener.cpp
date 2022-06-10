@@ -30,7 +30,7 @@ void data_handler_listener::reply_client(proto::kv_message& message, const std::
             printf("Something went wrong with send()! %s\n", strerror(errno));
         }
     }catch(...){
-        std::cout <<"===== Não consegui enviar =====" << std::endl;
+        std::cout <<"===== Unable to send =====" << std::endl;
     }
 
 }

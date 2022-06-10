@@ -120,6 +120,42 @@ message delete_reply_message {
 }
 
 
+
+//-------------------------------------------------------------------
+//                    Metadata Dedicated messages 
+//-------------------------------------------------------------------
+
+
+message put_child_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  kv_store_key key = 4;
+  bool is_create = 5;           // false = delete
+  bool is_dir = 6;              //false = file
+  string child_path = 7;
+}
+
+message get_latest_metadata_size_or_stat_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string reqid = 4;
+  string key = 5;
+  bool get_size = 6;            // only one is true;
+  bool get_stat = 7;            //
+}
+
+message get_metadata_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string reqid = 4;
+  kv_store_key key = 5;
+}
+
+
+
 //-------------------------------------------------------------------
 //                      Anti-Entropy messages
 //-------------------------------------------------------------------
@@ -180,21 +216,24 @@ message recover_termination_message {}
 message kv_message {
     bool forwarded_within_group = 1;
     oneof msg {
-        get_message                         get_msg = 2;
-        get_reply_message                   get_reply_msg = 3;
-        put_message                         put_msg = 4;
-        put_with_merge_message              put_with_merge_msg = 5;
-        put_reply_message                   put_reply_msg = 6;
-        delete_message                      delete_msg = 7;
-        delete_reply_message                delete_reply_msg = 8;
-        anti_entropy_message                anti_entropy_msg = 9;
-        anti_entropy_get_message            anti_entropy_get_msg = 10;
-        anti_entropy_get_reply_message      anti_entropy_get_reply_msg = 11;
-        get_latest_version_message          get_latest_version_msg = 12;
-        get_latest_version_reply_message    get_latest_version_reply_msg = 13;
-        recover_request_message             recover_request_msg = 14;
-        recover_offset_message              recover_offset_msg = 15;
-        recover_data_message                recover_data_msg = 16;
-        recover_termination_message         recover_termination_msg = 17;
+        get_message                                       get_msg = 2;
+        get_reply_message                                 get_reply_msg = 3;
+        put_message                                       put_msg = 4;
+        put_with_merge_message                            put_with_merge_msg = 5;
+        put_reply_message                                 put_reply_msg = 6;
+        delete_message                                    delete_msg = 7;
+        delete_reply_message                              delete_reply_msg = 8;
+        anti_entropy_message                              anti_entropy_msg = 9;
+        anti_entropy_get_message                          anti_entropy_get_msg = 10;
+        anti_entropy_get_reply_message                    anti_entropy_get_reply_msg = 11;
+        get_latest_version_message                        get_latest_version_msg = 12;
+        get_latest_version_reply_message                  get_latest_version_reply_msg = 13;
+        recover_request_message                           recover_request_msg = 14;
+        recover_offset_message                            recover_offset_msg = 15;
+        recover_data_message                              recover_data_msg = 16;
+        recover_termination_message                       recover_termination_msg = 17;
+        put_child_message                                 put_child_msg = 18;
+        get_latest_metadata_size_or_stat_message          get_latest_met_size_or_stat_msg = 19;
+        get_metadata_message                              get_met_msg = 20;
     }
 }

@@ -2,11 +2,10 @@
 // Created by danielsf97 on 2/26/20.
 //
 
-#ifndef P2PFS_METADATA_H
-#define P2PFS_METADATA_H
+#ifndef P2PFS_METADATA_ATTR_H
+#define P2PFS_METADATA_ATTR_H
 
 #include <boost/serialization/access.hpp>
-//#include <boost/serialization/map.hpp>
 #include <boost/serialization/set.hpp>
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/utility.hpp>
@@ -48,35 +47,29 @@ namespace boost {
             ar & FileType::enum_wrapper(g);
         }
 
-    } // namespace serialization
-} // namespace boost
+    } 
+} 
 
-class metadata {
+class metadata_attr {
 private:
     friend class boost::serialization::access;
 
 public:
+    size_t metadata_childs_size;
     struct stat stbuf;
-    std::set<std::string> childs;
-    std::set<std::pair<FileType::FileType , std::string>> added_childs;
-    std::set<std::pair<FileType::FileType , std::string>> removed_childs;
 
 public:
     template<class Archive> void serialize(Archive& ar, const unsigned int version);
-    metadata(struct stat& stbuf);
-    metadata() = default;
-    static std::string serialize_to_string(metadata& met);
-    static metadata deserialize_from_string(const std::string& string_serial);
+    metadata_attr(size_t metadata_child_size, struct stat& stbuf);
+    metadata_attr() = default;
+    static std::string serialize_to_string(metadata_attr& met);
+    static metadata_attr deserialize_from_string(const std::string& string_serial);
     static void initialize_metadata(struct stat* stbuf, mode_t mode, nlink_t nlink, gid_t gid, uid_t uid);
-    void add_child(std::string path, bool is_dir);
-    void remove_child(std::string path, bool is_dir);
-    void reset_add_remove_log();
-    bool is_empty();
-    static void print_metadata(metadata& met);
 };
 
 template<class Archive>
-void metadata::serialize(Archive &ar, const unsigned int version) {
+void metadata_attr::serialize(Archive &ar, const unsigned int version) {
+    ar&this->metadata_childs_size;
     ar&this->stbuf.st_dev;
     ar&this->stbuf.st_ino;
     ar&this->stbuf.st_nlink;
@@ -97,8 +90,6 @@ void metadata::serialize(Archive &ar, const unsigned int version) {
     ar&this->stbuf.__glibc_reserved[0];
     ar&this->stbuf.__glibc_reserved[1];
     ar&this->stbuf.__glibc_reserved[2];
-    ar&this->childs;
-    ar&this->added_childs;
 }
 
-#endif //P2PFS_METADATA_H
+#endif //P2PFS_METADATA_ATTR_H

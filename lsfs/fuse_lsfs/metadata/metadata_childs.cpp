@@ -2,27 +2,28 @@
 // Created by danielsf97 on 2/26/20.
 //
 
-#include "metadata.h"
+#include "metadata_childs.h"
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
 
-metadata::metadata(struct stat& stbuf): stbuf(stbuf){};
+metadata_childs::metadata_childs()
+{
+    this->childs = std::set<std::string>();
+    this->added_childs = std::set<std::pair<FileType::FileType , std::string>>();
+    this->removed_childs = std::set<std::pair<FileType::FileType , std::string>>();
+};
 
-void metadata::add_child(std::string path, bool is_dir) {
+void metadata_childs::add_child(std::string path, bool is_dir) {
     this->childs.insert(path);
     this->added_childs.emplace(is_dir? FileType::DIRECTORY : FileType::FILE, path);
-    // increase parent hard links if its a directory
-    if(is_dir){
-        this->stbuf.st_nlink++;
-    }
 }
 
-void metadata::remove_child(std::string path, bool is_dir) {
+void metadata_childs::remove_child(std::string path, bool is_dir) {
     this->childs.erase(path);
     this->added_childs.emplace(is_dir? FileType::DIRECTORY : FileType::FILE, path);
 }
 
 
-std::string metadata::serialize_to_string(metadata& met){
+std::string metadata_childs::serialize_to_string(metadata_childs& met){
     std::string metadata_str;
     boost::iostreams::back_insert_device<std::string> inserter(metadata_str);
     boost::iostreams::stream<boost::iostreams::back_insert_device<std::string> > s_s(inserter);
@@ -32,41 +33,27 @@ std::string metadata::serialize_to_string(metadata& met){
     return std::move(metadata_str);
 }
 
-metadata metadata::deserialize_from_string(const std::string& serial_str) {
+metadata_childs metadata_childs::deserialize_from_string(const std::string& serial_str) {
     boost::iostreams::basic_array_source<char> device(serial_str.data(), serial_str.size());
     boost::iostreams::stream<boost::iostreams::basic_array_source<char> > s_u(device);
     boost::archive::binary_iarchive ia(s_u);
 
-    metadata res;
+    metadata_childs res;
     ia >> res;
 
     return std::move(res);
 }
 
-void metadata::initialize_metadata(struct stat* stbuf, mode_t mode, nlink_t nlink, gid_t gid, uid_t uid){
-    memset(stbuf, 0, sizeof(struct stat));
-    stbuf->st_mode = mode;
-    stbuf->st_gid = gid;
-    stbuf->st_uid = uid;
-    stbuf->st_nlink = nlink;
-    timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    stbuf->st_atim = ts;
-    stbuf->st_ctim = ts;
-    stbuf->st_mtim = ts;
-    stbuf->st_blksize = BLK_SIZE;
-}
-
-void metadata::reset_add_remove_log(){
+void metadata_childs::reset_add_remove_log(){
     this->added_childs.clear();
     this->removed_childs.clear();
 }
 
-bool metadata::is_empty() {
+bool metadata_childs::is_empty() {
     return this->childs.empty();
 }
 
-void metadata::print_metadata(metadata& met){
+void metadata_childs::print_metadata(metadata_childs& met){
     std::cout << "Printing Metadata: <";
     for(auto& child: met.childs)
         std::cout << child << ", ";

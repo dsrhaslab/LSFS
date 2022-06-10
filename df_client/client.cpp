@@ -72,9 +72,15 @@ int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
         int res = sendto(this->sender_socket, buf.data(), buf.size(), 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
         lock.unlock();
 
-        if(res == -1){spdlog::error("Something went wrong with read()! %s\n", strerror(errno));}
-        else{ return 0; }
-    }catch(...){spdlog::error("======= Não consegui enviar =======");}
+        if(res == -1){
+            printf("Something went wrong with send()! %s\n", strerror(errno));
+        }
+        else{ 
+            return 0; 
+        }
+    }catch(...){
+        std::cout <<"===== Unable to send =====" << std::endl;
+    }
 
     return 1;
 }
@@ -165,9 +171,7 @@ void client::put(const std::string& key, const kv_store_key_version& version, co
             status = this->send_put(peers, key, new_version, data, size);
         }
         if(status == 0){
-            try{
-                std::cout << "Waiting for put of key: " << key   << std::endl;
-            
+            try{         
                 succeed = this->handler->wait_for_put(comp_key, wait_for);
             }catch(TimeoutException& e){
                 curr_timeouts++;
@@ -216,7 +220,6 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
                 try{
                     completed[i] = this->handler->wait_for_put_until(keys_w_new_versions[i], wait_for, wait_until);
                 }catch(TimeoutException& e){
-                    std::cout << "####### Timeout" << std::endl;
                     loop_timeout = true;
                     if (curr_timeouts + 1 <= 2){
                         std::vector<peer_data> peers = this->lb->get_n_peers(keys_w_new_versions[i].key, this->max_nodes_to_send_put_request); //throw exception
@@ -244,7 +247,6 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
     this->handler->clear_put_keys_entries(erasing_keys);
 
     if(!all_completed){
-        // Nr of timeouts exceeded
         throw TimeoutException();
     }
 }
@@ -269,7 +271,6 @@ void client::put_with_merge(const std::string& key, const kv_store_key_version& 
         }
         if(status == 0){
             try{
-                 std::cout << "Waiting for put_w_merge of key: " << key   << std::endl;
                 succeed = this->handler->wait_for_put(comp_key, wait_for);
             }catch(TimeoutException& e){
                 curr_timeouts++;
@@ -301,8 +302,6 @@ void client::del(const std::string& key, const kv_store_key_version& version, in
         }
         if(status == 0){
             try{
-                std::cout << "Waiting for delete of key: " << key << std::endl;
-            
                 succeed = this->handler->wait_for_delete(comp_key, wait_for);
             }catch(TimeoutException& e){
                 curr_timeouts++;
@@ -317,7 +316,7 @@ void client::del(const std::string& key, const kv_store_key_version& version, in
 
 
 
-std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, const kv_store_key_version& version) {
+std::unique_ptr<std::string> client::get(const std::string& key, const kv_store_key_version& version, client_reply_handler::Response* response, int wait_for) {
     long req_id = this->inc_and_get_request_count();
     std::string req_id_str;
     req_id_str.reserve(100);
@@ -327,9 +326,8 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, c
     std::unique_ptr<std::string> res (nullptr);
 
     int curr_timeouts = 0;
-    client_reply_handler::Response get_res = client_reply_handler::Response::Init;
 
-    while(get_res == client_reply_handler::Response::Init && curr_timeouts < this->max_timeouts){
+    while((*response) == client_reply_handler::Response::Init && curr_timeouts < this->max_timeouts){
         int status = 0;
         if (curr_timeouts + 1 <= 2){
             std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_get_request); //throw exception
@@ -340,8 +338,7 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, c
         }
         if (status == 0) {
             try{
-                std::cout << "Waiting for Get "<< std::endl;
-                res = this->handler->wait_for_get(req_id_str, wait_for, &get_res);
+                res = this->handler->wait_for_get(req_id_str, wait_for, response);
             }catch(TimeoutException& e){
                 curr_timeouts++;
                 req_id = this->inc_and_get_request_count();
@@ -356,20 +353,10 @@ std::unique_ptr<std::string> client::get(const std::string& key, int wait_for, c
         throw TimeoutException();
     }
 
-    if (get_res == client_reply_handler::Response::Ok)
-        std::cout << "Data Found, Ok "<< std::endl ;
-    else if(get_res == client_reply_handler::Response::Deleted)
-        std::cout << "Searched key has been deleted "<< std::endl ;
-    else if (get_res == client_reply_handler::Response::NoData)
-        std::cout << "Key was found but data is null "<< std::endl ;
-    else if (get_res == client_reply_handler::Response::Init)
-        std::cout << " No response obtained/Timeout "<< std::endl ;
-
     return res;
 }
 
 
-//Sera que pode acontecer do bloco do meio ser apagado?, nao estou a considerar esse caso por achar que não acontece
 void client::get_latest_batch(const std::vector<std::string> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for) {
 
     long nr_reads = keys.size();
@@ -449,12 +436,11 @@ void client::get_latest_batch(const std::vector<std::string> &keys, std::vector<
     this->handler->clear_get_keys_entries(req_ids);
 
     if(!all_completed){
-        // Nr of timeouts exceeded
         throw TimeoutException();
     }
 }
 
-std::unique_ptr<kv_store_key_version> client::get_latest_version(const std::string& key, int wait_for) {
+std::unique_ptr<kv_store_key_version> client::get_latest_version(const std::string& key, client_reply_handler::Response* response, int wait_for) {
     long req_id = this->inc_and_get_request_count();
     std::string req_id_str;
     req_id_str.reserve(100);
@@ -462,10 +448,8 @@ std::unique_ptr<kv_store_key_version> client::get_latest_version(const std::stri
     this->handler->register_get_latest_version(req_id_str);
     std::unique_ptr<kv_store_key_version> res (nullptr);
 
-    client_reply_handler::Response get_res = client_reply_handler::Response::Init;
-
     int curr_timeouts = 0;
-    while(get_res == client_reply_handler::Response::Init && curr_timeouts < this->max_timeouts){
+    while((*response) == client_reply_handler::Response::Init && curr_timeouts < this->max_timeouts){
         int status = 0;
         if (curr_timeouts + 1 <= 2){
             std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_get_request); //throw exception
@@ -476,7 +460,7 @@ std::unique_ptr<kv_store_key_version> client::get_latest_version(const std::stri
         }
         if (status == 0) {
             try{
-                res = this->handler->wait_for_get_latest_version(req_id_str, wait_for, &get_res);
+                res = this->handler->wait_for_get_latest_version(req_id_str, wait_for, response);
             }catch(TimeoutException& e){
                 curr_timeouts++;
                 req_id = this->inc_and_get_request_count();
@@ -493,4 +477,261 @@ std::unique_ptr<kv_store_key_version> client::get_latest_version(const std::stri
     }
 
     return res;
+}
+
+
+std::unique_ptr<std::string> client::get_latest(const std::string& key, client_reply_handler::Response* response, int wait_for) {
+    long req_id = this->inc_and_get_request_count();
+    std::string req_id_str;
+    req_id_str.reserve(100);
+    req_id_str.append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+    this->handler->register_get_latest_version(req_id_str);
+    std::unique_ptr<std::string> res (nullptr);
+
+    int curr_timeouts = 0;
+    while((*response) == client_reply_handler::Response::Init && curr_timeouts < this->max_timeouts){
+        int status = 0;
+        if (curr_timeouts + 1 <= 2){
+            std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_get_request); //throw exception
+            status = this->send_get_latest_version(peers, key, req_id_str, true);
+        }else{
+            std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_get_request); //throw exception
+            status = this->send_get_latest_version(peers, key, req_id_str, true);
+        }
+        if (status == 0) {
+            try{
+                kv_store_key_version last_version;
+                res = this->handler->wait_for_get_latest(key, req_id_str, wait_for, response, &last_version);
+            }catch(TimeoutException& e){
+                curr_timeouts++;
+                req_id = this->inc_and_get_request_count();
+                std::string latest_reqid_str = req_id_str;
+                req_id_str.clear();
+                req_id_str.append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+                this->handler->change_get_reqid(latest_reqid_str, req_id_str);
+            }
+        }
+    }
+
+    if(curr_timeouts >= this->max_timeouts){
+        throw TimeoutException();
+    }
+
+    return res;
+}
+
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+//---------------------------------       Metadata Dedicated Requests       -------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+
+
+int client::send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir) {
+    proto::kv_message msg;
+
+    build_put_child_message(&msg, this->ip, this->kv_port, this->id, key, version, child_path, is_create, is_dir);
+
+    int nr_send_errors = 0;
+    for(auto& peer: peers){
+        nr_send_errors += send_msg(peer, msg);
+    }
+
+    return (nr_send_errors >= peers.size())? 1 : 0;
+}
+
+
+int client::send_get_latest_met_size_or_stat(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id, bool get_size, bool get_stat) {
+    proto::kv_message msg;
+
+    build_get_latest_metadata_size_or_stat_message(&msg, this->ip, this->kv_port, this->id, req_id, key, get_size, get_stat);
+
+    int nr_send_errors = 0;
+    for(auto& peer: peers){
+        nr_send_errors += send_msg(peer, msg);
+    }
+
+    return (nr_send_errors >= peers.size())? 1 : 0;
+}
+
+int client::send_get_metadata(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const std::string& req_id) {
+    proto::kv_message msg;
+
+    build_get_metadata_message(&msg, this->ip, this->kv_port, this->id, req_id, key, version);
+
+    int nr_send_errors = 0;
+    for(auto& peer: peers){
+        nr_send_errors += send_msg(peer, msg);
+    }
+
+    return (nr_send_errors >= peers.size())? 1 : 0;
+}
+
+
+
+void client::put_child(const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir, int wait_for) {
+    long n_clock = clock.increment_and_get();
+    kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), version);
+    
+    kv_store_key<std::string> comp_key = {key, new_version, false};
+    this->handler->register_put(comp_key); // throw const char* (concurrent writes over the same key)
+    
+    bool succeed = false;
+    int curr_timeouts = 0;
+    while(!succeed && curr_timeouts < this->max_timeouts){
+        int status = 0;
+        if (curr_timeouts + 1 <= 2){
+            std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_put_request); //throw exception
+            status = this->send_put_child(peers, key, new_version, child_path, is_create, is_dir);
+        }else{
+            std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_put_request); //throw exception
+            status = this->send_put_child(peers, key, new_version, child_path, is_create, is_dir);
+        }
+        if(status == 0){
+            try{         
+                succeed = this->handler->wait_for_put(comp_key, wait_for);
+            }catch(TimeoutException& e){
+                curr_timeouts++;
+            }
+        }
+    }
+
+    if(!succeed){
+        throw TimeoutException();
+    }
+}
+
+
+std::unique_ptr<std::string> client::get_latest_metadata_size(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version, int wait_for) {
+    return get_latest_metadata_size_or_stat(key, response, last_version, true, false, wait_for);
+}
+
+
+std::unique_ptr<std::string> client::get_latest_metadata_stat(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version, int wait_for) {
+    return get_latest_metadata_size_or_stat(key, response, last_version, false, true, wait_for);
+}
+
+
+std::unique_ptr<std::string> client::get_latest_metadata_size_or_stat(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version, bool get_size, bool get_stat, int wait_for) {
+    long req_id = this->inc_and_get_request_count();
+    std::string req_id_str;
+    req_id_str.reserve(100);
+    req_id_str.append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+    this->handler->register_get_latest_version(req_id_str);
+    std::unique_ptr<std::string> res(nullptr);
+
+    int curr_timeouts = 0;
+    while((*response) == client_reply_handler::Response::Init && curr_timeouts < this->max_timeouts){
+        int status = 0;
+        if (curr_timeouts + 1 <= 2){
+            std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_get_request); //throw exception
+            status = this->send_get_latest_met_size_or_stat(peers, key, req_id_str, get_size, get_stat);
+        }else{
+            std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_get_request); //throw exception
+            status = this->send_get_latest_met_size_or_stat(peers, key, req_id_str, get_size, get_stat);
+        }
+        if (status == 0) {
+            try{
+                res = this->handler->wait_for_get_latest(key, req_id_str, wait_for, response, last_version);
+            }catch(TimeoutException& e){
+                curr_timeouts++;
+                req_id = this->inc_and_get_request_count();
+                std::string latest_reqid_str = req_id_str;
+                req_id_str.clear();
+                req_id_str.append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+                this->handler->change_get_reqid(latest_reqid_str, req_id_str);
+            }
+        }
+    }
+
+    if(curr_timeouts >= this->max_timeouts){
+        throw TimeoutException();
+    }
+
+    return res;
+}
+
+
+// if data_strs null then the data was deleted!
+void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for) {
+
+    long nr_reads = keys.size();
+    std::vector<std::string> req_ids(nr_reads);
+
+    //register all the keys and send first get
+    for(size_t i = 0; i < keys.size(); i++){
+        long req_id = this->inc_and_get_request_count();
+        req_ids[i].reserve(100);
+        req_ids[i].append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+        
+        this->handler->register_get_data(req_ids[i]);
+
+        std::vector<peer_data> peers = this->lb->get_n_peers(keys[i].key, this->max_nodes_to_send_get_request); //throw exception (empty view)
+        this->send_get_metadata(peers, keys[i].key, keys[i].key_version, req_ids[i]);
+    }
+
+    long curr_timeouts = 0;
+    bool all_completed = false;
+    std::vector<bool> timeout(nr_reads, false);
+    bool happend_timeout = false;
+    int res_count = 0;
+    do{
+        //wait until - numero de segundos que se espera para receber todos os 32k do batch, se exceder timeout
+        auto wait_until = std::chrono::system_clock::now() + std::chrono::seconds(this->wait_timeout);
+
+        for(size_t i = 0; i < data_strs.size(); i++){
+            if(data_strs[i] == nullptr){
+                try{
+                    if(timeout[i]){
+                        long req_id = this->inc_and_get_request_count();
+                        std::string latest_reqid_str = req_ids[i];
+                        req_ids[i].clear();
+                        req_ids[i].append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+                        this->handler->change_get_reqid(latest_reqid_str, req_ids[i]);
+                        if (curr_timeouts + 1 <= 2){
+                            std::vector<peer_data> peers = this->lb->get_n_peers(keys[i].key, this->max_nodes_to_send_get_request); //throw exception (empty view)                            
+                            this->send_get_latest_version(peers, keys[i].key, req_ids[i], true);
+                        }else{
+                            std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_get_request); //throw exception (empty view)
+                            this->send_get_latest_version(peers, keys[i].key, req_ids[i], true);
+                        }
+                        timeout[i] = false;
+                    }
+
+                    client_reply_handler::Response get_res = client_reply_handler::Response::Init;
+                    data_strs[i] = this->handler->wait_for_get_until(req_ids[i], wait_for, wait_until, &get_res);
+                    
+                    if(get_res == client_reply_handler::Response::Ok || get_res == client_reply_handler::Response::Deleted) 
+                        res_count++;
+
+                }catch(TimeoutException& e){
+                    std::cout << "Timeout key: " << keys[i].key << std::endl;
+                    timeout[i] = true;
+                    happend_timeout = true;
+                }
+            }
+        }
+        if(happend_timeout){
+            curr_timeouts++;
+            happend_timeout = false;
+        }
+        all_completed = res_count == data_strs.size();
+    }while( !all_completed && curr_timeouts < this->max_timeouts); // do while there are incompleted gets
+
+    // clear not succeded keys from put maps
+    auto it_req_ids = req_ids.begin();
+    for(size_t i = 0; i < data_strs.size(); i++){
+        if(data_strs[i] != nullptr){
+            // if the block read succedded, remove entry from req_ids
+            // as it's not necessary to remove that key from the get map
+            it_req_ids = req_ids.erase(it_req_ids);
+        }else{
+            ++it_req_ids;
+        }
+    }
+    this->handler->clear_get_keys_entries(req_ids);
+
+    if(!all_completed){
+        throw TimeoutException();
+    }
 }

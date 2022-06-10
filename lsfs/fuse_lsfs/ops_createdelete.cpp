@@ -39,24 +39,31 @@ int lsfs_impl::_unlink(
     const char *path
     )
 {
-    std::cout << "### SysCall: _unlink" << std::endl;
+    std::cout << "### SysCall: _unlink  ==> Path: " << path  << std::endl;
 
-    std::cout << "Deleting file " << path << std::endl;
+    int res = 0;
 
-    int res = state->delete_file_or_dir(path);
-    if(res == -1){
+    try{
+        res = state->delete_file_or_dir(path);
+        if(res != 0) return -errno;
+
+        res = state->remove_child_from_parent_dir(path, false);
+
+    }catch(EmptyViewException& e){
+        e.what();
+        errno = EAGAIN; //resource unavailable
+        return -errno;
+    }catch(ConcurrentWritesSameKeyException& e){
+        e.what();
+        errno = EPERM; //operation not permitted
+        return -errno;
+    }catch(TimeoutException& e){
+        e.what();
+        errno = EHOSTUNREACH;
         return -errno;
     }
-
-    std::cout << "Deleting file from parent metadata "<< std::endl;
-
-    res = state->remove_child_from_parent_dir(path, false);
-    if(res != 0){
-        return res;
-    }
-
     
-    return 0;
+    return res == 0? 0 : -errno;
 }
 
 int lsfs_impl::_rename(
@@ -110,7 +117,8 @@ int lsfs_impl::_mkdir(
     const char *path, mode_t mode
     )
 {
-    std::cout << "### SysCall: _mkdir" << std::endl;
+    std::cout << "### SysCall: _mkdir  ==> Path: " << path << std::endl;
+    
 
     if (!fuse_pt_impersonate_calling_process_highlevel(&mode))
         return -errno;
@@ -119,72 +127,83 @@ int lsfs_impl::_mkdir(
     struct stat stbuf;
     // init file stat
     nlink_t n_link = (strcmp(path, "/") == 0) ? 1 : 2;
-    metadata::initialize_metadata(&stbuf, S_IFDIR | mode, n_link, ctx->gid, ctx->uid);
+    metadata_attr::initialize_metadata(&stbuf, S_IFDIR | mode, n_link, ctx->gid, ctx->uid);
     // create metadata object
-    metadata to_send(stbuf);
-    // put metadata
+    metadata_attr to_send(0, stbuf);
 
-    std::cout << "Putting metadata of " << path << std::endl;
+    int res = 0;
 
-    int res = state->put_metadata(to_send, path);
-    if(res == -1){
-        return -errno;
+    try{
+
+        res = state->put_metadata(to_send, path);
+
+        res = state->add_child_to_parent_dir(path, true);
+
+        state->add_or_refresh_working_directory(path, to_send);
+
+    }catch(EmptyViewException& e){
+        e.what();
+        errno = EAGAIN; //resource unavailable  
+        res = -1;
+    }catch(ConcurrentWritesSameKeyException& e){
+        e.what();
+        errno = EPERM; //operation not permitted
+        res = -1;
+    }catch(TimeoutException& e){
+        e.what();
+        errno = EHOSTUNREACH;
+        res = -1;
     }
-
-    std::cout << "Trying to add child to parent dir " << std::endl;
-
-    res = state->add_child_to_parent_dir(path, true);
-    if(res != 0){
-        return res;
-    }
-
-    std::cout << "Refreshing working dir " << std::endl;
-
-    state->add_or_refresh_working_directory(path, to_send);
 
     fuse_pt_unimpersonate();
 
-    return 0;
+    return res == 0? 0 : -errno;
 }
 
 int lsfs_impl::_rmdir(
     const char *path
     )
 {
-    std::cout << "### SysCall: _rmdir" << std::endl;
+    std::cout << "### SysCall: _rmdir  ==> Path: " << path << std::endl;
 
-    std::unique_ptr<metadata> met = state->get_metadata_if_dir_opened(path);
+    int res = 0;
 
-    if(met == nullptr){
-        std::unique_ptr<metadata> met2 = state->get_metadata(path);
-        if(met2 == nullptr){
+    try{
+        std::unique_ptr<metadata> met = state->get_metadata_if_dir_opened(path);
+
+        if(met == nullptr){
+            met = state->get_metadata(path);
+            if(met == nullptr)
+                return -errno;
+        }
+
+        if(!met->is_empty()){
+            errno = ENOTEMPTY;
             return -errno;
         }
-    }
+        
+        res = state->delete_file_or_dir(path);
+        if(res != 0) return -errno;
 
-    metadata::print_metadata(*met);
+        state->remove_and_refresh_working_directory(path);
 
-    if(!met->is_empty()){
-        errno = ENOTEMPTY;
+        res = state->remove_child_from_parent_dir(path, true);
+
+    }catch(EmptyViewException& e){
+        e.what();
+        errno = EAGAIN; //resource unavailable  
+        return -errno;
+    }catch(ConcurrentWritesSameKeyException& e){
+        e.what();
+        errno = EPERM; //operation not permitted
+        return -errno;
+    }catch(TimeoutException& e){
+        e.what();
+        errno = EHOSTUNREACH;
         return -errno;
     }
-    
-    int res = state->delete_file_or_dir(path);
-    if(res == -1){
-        return -errno;
-    }
 
-    state->remove_and_refresh_working_directory(path);
-
-    std::cout << "Deleting file from parent metadata "<< std::endl;
-
-    res = state->remove_child_from_parent_dir(path, true);
-    if(res != 0){
-        return res;
-    }
-
-
-    return 0;
+    return res == 0? 0 : -errno;
 }
 
 /* -------------------------------------------------------------------------- */
