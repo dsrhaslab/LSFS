@@ -62,3 +62,10 @@ scripts/log*
 
 # Protobuf auto-generated files
 *.pb.*
+
+# Database log
+db_1
+db_2
+deleted_db_*
+
+mkdirf.sh
