@@ -53,6 +53,40 @@ int split_composite_key(std::string comp_key, std::string* key){
 
 
 
+int get_base_path(const std::string& key, std::string* base_path){
+    boost::cmatch match;
+    auto res = boost::regex_search(key.c_str(), match, base_path_pattern);
+
+    try{
+        if(!match.empty()){
+            *base_path = std::string(match[1].str());
+        }
+    }catch(std::invalid_argument e){
+        return -1;
+    }
+    return 0;
+
+}
+
+int get_blk_num(const std::string& key, std::string* blk_num){
+    boost::cmatch match;
+    auto res = boost::regex_search(key.c_str(), match, base_path_pattern);
+
+    try{
+        if(!match.empty()){
+            *blk_num = std::string(match[1].str());
+        }
+    }catch(std::invalid_argument e){
+        return -1;
+    }
+    return 0;
+
+}
+
+
+
+
+
 // Version Vector to string
 std::string vv2str(std::map<long, long> vv){
     std::string mapStr;
@@ -230,3 +264,4 @@ kv_store_key_version choose_latest_version(std::vector<kv_store_key_version>& kv
     }
     return max_v;
 }
+

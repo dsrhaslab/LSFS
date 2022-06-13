@@ -26,12 +26,6 @@ namespace FileAccess{
 }
 
 class lsfs_state {
-
-struct metadata {
-    metadata_attr met_attr;
-    metadata_childs met_childs;
-};
-
 public:
     static const int max_working_directories_cache = 16;
 

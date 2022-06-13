@@ -86,8 +86,13 @@ add_executable( peer_exe
 
         #necessary for merge function
         lsfs/fuse_lsfs/storage_specific.cpp
-        lsfs/fuse_lsfs/metadata.h
-        lsfs/fuse_lsfs/metadata.cpp
+        lsfs/fuse_lsfs/metadata/metadata.h
+        lsfs/fuse_lsfs/metadata/metadata.cpp
+        lsfs/fuse_lsfs/metadata/metadata_attr.h
+        lsfs/fuse_lsfs/metadata/metadata_attr.cpp
+        lsfs/fuse_lsfs/metadata/metadata_childs.h
+        lsfs/fuse_lsfs/metadata/metadata_childs.cpp
+        lsfs/fuse_lsfs/metadata/serialize.h
         lsfs/fuse_lsfs/util.h
         lsfs/fuse_lsfs/util.cpp
         df_data_handlers/data_handler_listener_mt.cpp
@@ -153,8 +158,13 @@ add_executable( client_exe
 
         #necessary for merge function
         lsfs/fuse_lsfs/storage_specific.cpp
-        lsfs/fuse_lsfs/metadata.h
-        lsfs/fuse_lsfs/metadata.cpp
+        lsfs/fuse_lsfs/metadata/metadata.h
+        lsfs/fuse_lsfs/metadata/metadata.cpp
+        lsfs/fuse_lsfs/metadata/metadata_attr.h
+        lsfs/fuse_lsfs/metadata/metadata_attr.cpp
+        lsfs/fuse_lsfs/metadata/metadata_childs.h
+        lsfs/fuse_lsfs/metadata/metadata_childs.cpp
+        lsfs/fuse_lsfs/metadata/serialize.h
         lsfs/fuse_lsfs/util.h
         lsfs/fuse_lsfs/util.cpp
         df_loadbalancing/smart_load_balancer.cpp
@@ -219,8 +229,15 @@ add_executable( lsfs_exe
         exceptions/empty_view_exception.h
         exceptions/concurrent_writes_same_key.h
         exceptions/custom_exceptions.h
-        lsfs/fuse_lsfs/metadata.h
-        lsfs/fuse_lsfs/metadata.cpp
+        
+        lsfs/fuse_lsfs/metadata/metadata.h
+        lsfs/fuse_lsfs/metadata/metadata.cpp
+        lsfs/fuse_lsfs/metadata/metadata_attr.h
+        lsfs/fuse_lsfs/metadata/metadata_attr.cpp
+        lsfs/fuse_lsfs/metadata/metadata_childs.h
+        lsfs/fuse_lsfs/metadata/metadata_childs.cpp
+        lsfs/fuse_lsfs/metadata/serialize.h
+        
         df_client/client_reply_handler_mt.cpp
         df_client/client_reply_handler_mt.h
         exceptions/timeout_exception.h

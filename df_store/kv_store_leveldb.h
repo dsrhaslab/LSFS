@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <random>
+#include "lsfs/fuse_lsfs/metadata/metadata.h"
 
 namespace fs = std::filesystem;
 
@@ -71,10 +72,13 @@ public:
     void update_partition(int p, int np) override;
     std::unordered_set<kv_store_key<std::string>> get_keys() override;
     bool put(const std::string& key, kv_store_key_version version, const std::string& bytes, bool is_merge) override;
+    bool put_metadata_child(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir) override;
     bool put_with_merge(const std::string& key, kv_store_key_version version, const std::string& bytes) override;
     bool anti_entropy_put(const std::string& key, kv_store_key_version version, const std::string& value, bool is_merge) override;
     std::unique_ptr<std::string> get(kv_store_key<std::string>& key) override;
     std::unique_ptr<std::string> get_deleted(kv_store_key<std::string>& key) override;
+    std::unique_ptr<std::vector<kv_store_key_version>> get_metadata_size(const std::string& key, std::vector<std::unique_ptr<std::string>>& last_data) override;
+    std::unique_ptr<std::vector<kv_store_key_version>> get_metadata_stat(const std::string& key, std::vector<std::unique_ptr<std::string>>& data_v) override;
     bool put_deleted(const std::string& key, kv_store_key_version version, const std::string& value) override;
     bool anti_entropy_remove(const std::string& key, kv_store_key_version version, const std::string& value) override;
     bool remove(const std::string& key, kv_store_key_version version) override;
@@ -502,6 +506,67 @@ bool kv_store_leveldb::put(const std::string& key, kv_store_key_version version,
         //Object received but does not belong to this df_store.
         return false;
     }
+}
+
+
+bool kv_store_leveldb::put_metadata_child(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir){
+    kv_store_key<std::string> key_comp = {key, version, false};
+    this->seen_it(key_comp);
+    int k_slice = this->get_slice_for_key(key);
+
+    if(this->slice == k_slice){
+
+        std::string value;
+        std::string comp_key;
+        comp_key = compose_key_toString(key, past_version);
+        
+        leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
+
+        if (s.ok()){
+            metadata met = metadata::deserialize_from_string(value);
+
+            if(is_create) met.childs.add_child(child_path, is_dir);
+            else met.childs.remove_child(child_path, is_dir);
+
+            std::string bytes = metadata::serialize_to_string(met);
+
+            leveldb::WriteOptions writeOptions;
+            db->Put(writeOptions, comp_key, bytes);
+
+        }
+    }else{
+        //Object received but does not belong to this df_store.
+        return false;
+    }
+
+    return true;
+}
+
+
+
+std::unique_ptr<std::vector<kv_store_key_version>> kv_store_leveldb::get_metadata_size(const std::string& key, std::vector<std::unique_ptr<std::string>>& data_v){
+    std::unique_ptr<std::vector<kv_store_key_version>> version = get_latest_data_version(key, data_v);
+
+    for(int i = 0; i < data_v.size(); i++){
+        size_t size = data_v[i]->size();
+        std::cout << "Request metadata_size = " << size << std::endl;
+        data_v[i] = std::make_unique<std::string>(to_string(size));
+    }
+
+    return std::move(version);
+}
+
+std::unique_ptr<std::vector<kv_store_key_version>> kv_store_leveldb::get_metadata_stat(const std::string& key, std::vector<std::unique_ptr<std::string>>& data_v){
+    std::unique_ptr<std::vector<kv_store_key_version>> version = get_latest_data_version(key, data_v);
+
+    for(int i = 0; i < data_v.size(); i++){
+        metadata met = metadata::deserialize_from_string(*(data_v[i]));
+        std::string value_stat = metadata_attr::serialize_to_string(met.attr);
+        
+        data_v[i] = std::make_unique<std::string>(to_string(value_stat));
+    }
+
+    return std::move(version);
 }
 
 

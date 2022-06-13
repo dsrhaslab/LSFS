@@ -527,10 +527,10 @@ std::unique_ptr<std::string> client::get_latest(const std::string& key, client_r
 //---------------------------------------------------------------------------------------------------------------------------
 
 
-int client::send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir) {
+int client::send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, std::string& child_path, bool is_create, bool is_dir) {
     proto::kv_message msg;
 
-    build_put_child_message(&msg, this->ip, this->kv_port, this->id, key, version, child_path, is_create, is_dir);
+    build_put_child_message(&msg, this->ip, this->kv_port, this->id, key, version, past_version, child_path, is_create, is_dir);
 
     int nr_send_errors = 0;
     for(auto& peer: peers){
@@ -582,10 +582,10 @@ void client::put_child(const std::string& key, const kv_store_key_version& versi
         int status = 0;
         if (curr_timeouts + 1 <= 2){
             std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_put_request); //throw exception
-            status = this->send_put_child(peers, key, new_version, child_path, is_create, is_dir);
+            status = this->send_put_child(peers, key, new_version, version, child_path, is_create, is_dir);
         }else{
             std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_put_request); //throw exception
-            status = this->send_put_child(peers, key, new_version, child_path, is_create, is_dir);
+            status = this->send_put_child(peers, key, new_version, version, child_path, is_create, is_dir);
         }
         if(status == 0){
             try{         

@@ -132,7 +132,7 @@ private:
     int send_delete(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version);
     int send_put_with_merge(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const char* data, size_t size);
     int send_get_latest_version(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id, bool with_data = false);
-    int send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir);
+    int send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, std::string& child_path, bool is_create, bool is_dir);
     int send_get_latest_met_size_or_stat(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id, bool get_size, bool get_stat);
     int send_get_metadata(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const std::string& req_id);
 

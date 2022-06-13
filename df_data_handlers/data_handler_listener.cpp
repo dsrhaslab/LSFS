@@ -415,6 +415,296 @@ void data_handler_listener::process_delete_message(proto::kv_message &msg) {
 
 
 
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+//---------------------------------       Metadata Dedicated Requests       -------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+
+
+
+void data_handler_listener::process_put_child_message(proto::kv_message &msg) {
+    const auto& message = msg.put_child_msg();
+    const std::string& sender_ip = message.ip();
+    const int sender_port = message.port();
+    const std::string& key = message.key().key();
+    const long id = message.id();
+
+    bool request_already_replied = msg.forwarded_within_group();
+    
+    kv_store_key_version version;
+    for (auto c : message.key().version())
+        version.vv.emplace(c.client_id(), c.clock());
+    
+    kv_store_key<std::string> key_comp = {key, version, false, false};
+
+    kv_store_key_version past_v;
+    for (auto c : message.past_key_version().version())
+        past_v.vv.emplace(c.client_id(), c.clock());
+
+    const bool is_create = message.is_create();
+    const bool is_dir = message.is_dir();
+    const std::string& child_path = message.child_path();
+
+    if (!this->store->have_seen(key_comp)) {
+        bool stored;
+        try {
+            stored = this->store->put_metadata_child(key, version, past_v, child_path, is_create, is_dir);
+
+        }catch(std::exception& e){
+            stored = false;
+        }
+
+        if (stored) {
+
+            float achance = random_float(0.0, 1.0);
+
+            std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+            if (!request_already_replied|| achance <= this->chance) {
+                proto::kv_message reply_message;
+
+                build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
+
+                this->reply_client(reply_message, sender_ip, sender_port);
+
+                msg.set_forwarded_within_group(true);
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            } else {
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
+        } else {
+            if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
+        }
+    }
+}
+
+
+
+void data_handler_listener::process_get_latest_metadata_size_or_stat_msg(proto::kv_message msg) {
+    const auto& message = msg.get_latest_met_size_or_stat_msg();
+    const std::string& sender_ip = message.ip();
+    const int sender_port = message.port();
+    const std::string& key = message.key();
+    const std::string& req_id = message.reqid();
+    const bool get_size = message.get_size();
+    const bool get_stat = message.get_stat();
+
+    bool request_already_replied = msg.forwarded_within_group();
+    // if request has not yet been processed
+    if(!this->store->in_log(req_id)){
+        this->store->log_req(req_id);
+
+        std::unique_ptr<std::vector<kv_store_key_version>> version(nullptr);
+        std::unique_ptr<std::vector<kv_store_key_version>> del_v(nullptr);
+        std::vector<std::unique_ptr<std::string>> data_v;
+
+        // It only make sense to query for the last known version of the key
+        // to peers that belong to the same slice of the key
+        if(this->store->get_slice_for_key(key) == this->store->get_slice()){
+            try {
+                
+                if(get_size)
+                    version = this->store->get_metadata_size(key, data_v);
+                else
+                    version = this->store->get_metadata_stat(key, data_v);
+
+                del_v = this->store->get_latest_deleted_version(key);
+                
+                // when the peer was supposed to have a key but it doesn't, replies with key version -1
+                // to prevent for the client to have to wait for a timeout if a certain key does not exist.
+                
+                if(version == nullptr) 
+                    version = std::make_unique<std::vector<kv_store_key_version>>();
+                if(del_v == nullptr)
+                    del_v = std::make_unique<std::vector<kv_store_key_version>>();
+                
+            }catch(std::exception& e){
+                //LevelDBException
+                e.what();
+            }
+        }
+
+        if(version != nullptr || del_v != nullptr){
+            
+            float achance = random_float(0.0, 1.0);
+
+            if(!request_already_replied || achance <= this->chance){
+                proto::kv_message reply_message;
+
+                build_get_latest_version_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, *version, true, data_v, *del_v);
+
+                this->reply_client(reply_message, sender_ip, sender_port);
+
+                std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
+                msg.set_forwarded_within_group(true); 
+                this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+
+            }else{
+                std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
+                if(!slice_peers.empty() && this->smart_forward){
+                    // forward to other peers from my slice as its the right slice for the key
+                    // trying to speed up quorum
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }else{
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                }
+            }
+        }else{
+            //se não tenho o conteudo da chave -> fazer forward
+            int obj_slice = this->store->get_slice_for_key(key);
+            std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+            if(!slice_peers.empty() && this->smart_forward){
+                this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+            }else{
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
+        }
+    }
+}
+
+
+void data_handler_listener::process_get_metadata_message(proto::kv_message &msg) {
+    const proto::get_message& message = msg.get_msg();
+    const std::string& sender_ip = message.ip();
+    const int sender_port = message.port();
+    const std::string& key = message.key().key();
+    const std::string& req_id = message.reqid();
+    bool request_already_replied = msg.forwarded_within_group();
+
+    // if the request hasn't yet been processed
+    if(!this->store->in_log(req_id)){
+        this->store->log_req(req_id);
+
+        std::unique_ptr<std::string> data(nullptr); 
+        std::unique_ptr<std::vector<kv_store_key_version>> del_v(nullptr);
+        bool is_deleted = false;
+        kv_store_key_version version;
+
+        for (auto c : message.key().version())
+            version.vv.emplace(c.client_id(), c.clock());
+
+        std::string base_path;
+        std::string blk_num_str;
+
+        int res_1 = get_base_path(key, &base_path);
+        int res_2 = get_blk_num(key, &blk_num_str);
+
+        if(res_1 == 0 && res_2 == 0){
+
+            int blk_num = std::stoi(blk_num_str);  
+
+            if(this->store->get_slice_for_key(base_path) == this->store->get_slice())
+                del_v = this->store->get_latest_deleted_version(base_path);
+
+            
+            if(del_v != nullptr){
+                for(auto dv : *del_v){
+                    kVersionComp comp = comp_version(version, dv);
+                    if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
+                        is_deleted = true;
+                        break;
+                    }     
+                }
+            }
+
+            if(!is_deleted){
+                kv_store_key<std::string> get_key = {base_path, version};
+                data = this->store->get(get_key);
+
+                size_t NR_BLKS = (data->size() / BLK_SIZE) + 1;
+
+                size_t pos = (blk_num-1)*BLK_SIZE;
+
+                std::string value;
+
+                //Last block
+                if(blk_num == NR_BLKS){
+                    value = data->substr(pos);  
+                }else{
+                    value = data->substr(pos, BLK_SIZE); 
+                }
+
+                data = std::make_unique<std::string>(value);
+            }
+        }
+
+        if(data != nullptr || is_deleted){
+
+            float achance = random_float(0.0, 1.0);
+
+            if(!request_already_replied || achance <= this->chance){
+                proto::kv_message reply_message;
+
+                build_get_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, std::move(data), key, version, is_deleted);
+
+                this->reply_client(reply_message, sender_ip, sender_port);
+
+                // forward to other peers from my slice if is the right slice for the key
+                // trying to speed up quorum
+                int obj_slice = this->store->get_slice_for_key(key);
+                if(this->store->get_slice() == obj_slice){
+                    std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+                    msg.set_forwarded_within_group(true); //forward within group
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                }
+            }else{
+                // if the message has already been replied by an element of the group and
+                // the probability is for forward the message, we don't change the content of the message
+                // just forward it
+                int obj_slice = this->store->get_slice_for_key(key);
+                if(this->store->get_slice() == obj_slice){
+                    std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                }else {
+                    std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                    if (!slice_peers.empty() && this->smart_forward) {
+                        this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                    } else {
+                        std::vector<peer_data> view = this->pss_ptr->get_view();
+                        this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                    }
+                }
+            }
+        }else{
+            // if i don't have the content of the message -> forward it
+            int obj_slice = this->store->get_slice_for_key(key);
+            std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+            if(!slice_peers.empty() && this->smart_forward){
+                this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+            }else{
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
 long data_handler_listener::get_anti_entropy_req_count(){
     return this->anti_entropy_req_count += 1;
 }

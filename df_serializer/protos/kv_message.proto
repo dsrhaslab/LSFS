@@ -134,6 +134,7 @@ message put_child_message {
   bool is_create = 5;           // false = delete
   bool is_dir = 6;              //false = file
   string child_path = 7;
+  kv_store_key_version past_key_version = 8;
 }
 
 message get_latest_metadata_size_or_stat_message {

@@ -9,7 +9,7 @@
 #include <time.h>
 #include "yaml-cpp/yaml.h"
 #include <fstream>
-#include <lsfs/fuse_lsfs/metadata.h>
+//#include <lsfs/fuse_lsfs/metadata.h>
 #include "df_loadbalancing/load_balancer_listener.h"
 #include "client.h"
 #include "df_loadbalancing/dynamic_load_balancer.h"

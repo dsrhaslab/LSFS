@@ -5,13 +5,6 @@
 #include "metadata_childs.h"
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
 
-metadata_childs::metadata_childs()
-{
-    this->childs = std::set<std::string>();
-    this->added_childs = std::set<std::pair<FileType::FileType , std::string>>();
-    this->removed_childs = std::set<std::pair<FileType::FileType , std::string>>();
-};
-
 void metadata_childs::add_child(std::string path, bool is_dir) {
     this->childs.insert(path);
     this->added_childs.emplace(is_dir? FileType::DIRECTORY : FileType::FILE, path);

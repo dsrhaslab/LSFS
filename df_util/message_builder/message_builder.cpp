@@ -210,7 +210,7 @@ void build_delete_reply_message(proto::kv_message* msg, std::string& ip, int kv_
 }
 
 void build_put_child_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, 
-                                const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir){
+                                const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, std::string& child_path, bool is_create, bool is_dir){
     
     auto* message_content = new proto::put_child_message();
     message_content->set_ip(ip);
@@ -224,6 +224,14 @@ void build_put_child_message(proto::kv_message* msg, std::string& ip, int kv_por
         kv_version->set_clock(c.second);
     }
     message_content->set_allocated_key(kv_key);
+
+    proto::kv_store_key_version* kv_vv = new proto::kv_store_key_version();
+    for(auto const c: past_version.vv){
+        proto::kv_store_version *past_kv_version = kv_vv->add_version();
+        past_kv_version->set_client_id(c.first);
+        past_kv_version->set_clock(c.second);
+    }
+    message_content->set_allocated_past_key_version(kv_vv);
 
     message_content->set_is_create(is_create);
     message_content->set_is_dir(is_dir);

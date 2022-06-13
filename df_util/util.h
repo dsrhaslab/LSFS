@@ -11,6 +11,8 @@
 #include <iostream>
 
 static boost::regex composite_key("(.+)#(.+)$");
+static boost::regex base_path_pattern("(.*):[^:]+$");
+static boost::regex blk_num_pattern(":([^:]+)$");
 
 enum kVersionComp 
 {
@@ -22,6 +24,10 @@ int split_composite_total(std::string comp_key, std::string* key, std::map<long,
 int split_composite_key(std::string comp_key, std::string* key);
 
 std::string compose_key_toString(std::string key, kv_store_key_version version);
+
+int get_base_path(const std::string& key, std::string* base_path);
+
+int get_blk_num(const std::string& key, std::string* blk_num);
 
 std::map<long, long>* str2vv(std::string vv_str);
 

@@ -24,6 +24,7 @@
 #include "df_client/client.h"
 #include "anti_entropy.h"
 #include "df_util/message_builder/message_builder.h"
+#include "lsfs/fuse_common/macros.h"
 
 
 class data_handler_listener {
@@ -51,6 +52,10 @@ public:
     void process_put_message(proto::kv_message &msg);
     void process_put_with_merge_message(proto::kv_message &msg);
     void process_delete_message(proto::kv_message &msg);
+    void process_put_child_message(proto::kv_message &msg);
+    void process_get_latest_metadata_size_or_stat_msg(proto::kv_message msg);
+    void process_get_metadata_message(proto::kv_message &msg);
+
     long get_anti_entropy_req_count();
     void process_anti_entropy_message(proto::kv_message &msg);
     void process_anti_entropy_get_message(proto::kv_message& msg);
