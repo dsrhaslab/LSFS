@@ -18,12 +18,14 @@ lsfs_impl::lsfs_impl(const std::string& boot_ip, const std::string& ip, int kv_p
     auto main_confs = config["main_confs"];
     auto max_parallel_write_size = main_confs["limit_write_paralelization_to"].as<std::string>();
     auto max_parallel_read_size = main_confs["limit_read_paralelization_to"].as<std::string>();
+    bool benchmark_performance = main_confs["benchmark_performance"].as<bool>();
+    bool maximize_cache = main_confs["maximize_cache"].as<bool>();
 
     try
     {
         size_t max_parallel_write_size_bytes = convert_string_size_to_num_bytes(max_parallel_write_size);
         size_t max_parallel_read_size_bytes = convert_string_size_to_num_bytes(max_parallel_read_size);
-        state = std::make_unique<lsfs_state>(df_client, max_parallel_read_size_bytes, max_parallel_write_size_bytes);
+        state = std::make_unique<lsfs_state>(df_client, max_parallel_read_size_bytes, max_parallel_write_size_bytes, benchmark_performance, maximize_cache);
     }catch (const char* msg){
         std::cerr << msg << std::endl;
         exit(1);

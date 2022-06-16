@@ -14,7 +14,7 @@
 
 #include "util.h"
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
-#include "metadata.h"
+#include "metadata/metadata.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -68,7 +68,7 @@ int lsfs_impl::_create(
         const struct fuse_context* ctx = fuse_get_context();
         struct stat stbuf;
         // init file stat
-        metadata::initialize_metadata(&stbuf, mode, 1, ctx->gid, ctx->uid);
+        metadata_attr::initialize_metadata(&stbuf, mode, 1, ctx->gid, ctx->uid);
 
         state->add_open_file(path, stbuf, FileAccess::CREATED);
         
@@ -99,12 +99,12 @@ int lsfs_impl::_open(
 
 
             if(!state->is_file_opened(path)){
-                std::shared_ptr<metadata> met = state->get_metadata(path);
+                std::shared_ptr<metadata> met = state->get_metadata_stat(path);
                 
                 if(met == nullptr)
                     return -errno;
                 else
-                    state->add_open_file(path, met->stbuf, FileAccess::ACCESSED);
+                    state->add_open_file(path, met->attr.stbuf, FileAccess::ACCESSED);
             }
 
         }catch(TimeoutException& e){

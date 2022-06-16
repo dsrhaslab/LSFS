@@ -7,9 +7,9 @@
 #include <utility>
 #include <spdlog/spdlog.h>
 
-lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size):
+lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool benchmark_performance, bool maximize_cache):
         df_client(std::move(df_client)), max_parallel_read_size(max_parallel_read_size),
-        max_parallel_write_size(max_parallel_write_size)
+        max_parallel_write_size(max_parallel_write_size), benchmark_performance(benchmark_performance), maximize_cache(maximize_cache)
 {}
 
 int lsfs_state::put_fixed_size_blocks_from_buffer_limited_paralelization(const char *buf, size_t size,
@@ -137,11 +137,44 @@ int lsfs_state::put_block(const std::string& path, const char* buf, size_t size)
     return return_value;
 }
 
-int lsfs_state::put_metadata(metadata_attr& met, const std::string& path){
+int lsfs_state::put_metadata(metadata& met, const std::string& path){
     // serialize metadata object
-    std::string metadata_str = metadata_attr::serialize_to_string(met);
-    std::cout << "Metadata size: " << metadata_str.size() << std::endl;
-    return this->put_block(path, metadata_str.data(), metadata_str.size());
+    std::string metadata_str = metadata::serialize_to_string(met);
+     return this->put_block(path, metadata_str.data(), metadata_str.size());
+}
+
+int lsfs_state::put_metadata_stat(metadata& met, const std::string& path){
+    // serialize metadata object
+    std::string metadata_str = metadata_attr::serialize_to_string(met.attr);
+
+    client_reply_handler::Response response = client_reply_handler::Response::Init;
+    std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path, &response);
+    
+    kv_store_key_version version; 
+    if(last_v != nullptr){
+        version = *last_v; 
+        df_client->put_metadata_stat(path, version, metadata_str.data(), metadata_str.size());
+    }else{
+        errno = ENOENT;
+        return -1;
+    }    
+     return 0;
+}
+
+int lsfs_state::put_metadata_child(const std::string& path, const std::string& child_path, bool is_create, bool is_dir){
+
+    client_reply_handler::Response response = client_reply_handler::Response::Init;
+    std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path, &response);
+    
+    kv_store_key_version version; 
+    if(last_v != nullptr){
+        version = *last_v;  
+        df_client->put_child(path, version, child_path, is_create, is_dir);
+    }else{
+        errno = ENOENT;
+        return -1;
+    }    
+    return 0;  
 }
 
 int lsfs_state::put_with_merge_metadata(metadata& met, const std::string& path){
@@ -185,27 +218,56 @@ int lsfs_state::delete_file_or_dir(const std::string& path){
     return return_value;
 }
 
+std::unique_ptr<metadata> lsfs_state::get_metadata(const std::string& path){
+    std::unique_ptr<metadata> res = nullptr;
 
-std::unique_ptr<metadata_attr> lsfs_state::get_metadata(const std::string& path){
-    std::unique_ptr<metadata_attr> res = nullptr;
-
-    //Fazer um get de metadados ao dataflasks
+    //Get size of metadata
+    kv_store_key_version last_version;
     client_reply_handler::Response response = client_reply_handler::Response::Init;
-    std::shared_ptr<std::string> data = df_client->get_latest(path, &response);
-
+    std::shared_ptr<std::string> data  = df_client->get_latest_metadata_size(path, &response, &last_version);
+    
     if(response == client_reply_handler::Response::Deleted || data == nullptr){
         errno = ENOENT;
-    }else{
-        res = std::make_unique<metadata_attr>(metadata_attr::deserialize_from_string(*data));
-        //metadata::print_metadata(*res);
+        return res;
     }
+    size_t metadata_size = stol(*data);
+    
+    res = std::make_unique<metadata>(request_metadata(path, metadata_size, last_version));
+    
+    return res;
+}
+
+std::unique_ptr<metadata> lsfs_state::get_metadata_stat(const std::string& path){
+    std::unique_ptr<metadata> res = nullptr;
+
+    //Get size of metadata
+    kv_store_key_version last_version;
+    client_reply_handler::Response response = client_reply_handler::Response::Init;
+    std::shared_ptr<std::string> data  = df_client->get_latest_metadata_stat(path, &response, &last_version);
+              
+    if(response == client_reply_handler::Response::Deleted || data == nullptr){
+        errno = ENOENT;
+        return res;
+    }
+    metadata met(metadata_attr::deserialize_from_string(*data));
+    res = std::make_unique<metadata>(met);
 
     return res;
 }
 
-void lsfs_state::add_or_refresh_working_directory(const std::string& path, metadata &met) {
+
+void lsfs_state::add_working_directory(const std::string& path, metadata met) {
     std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
 
+    if(this->working_directories.size() == this->max_working_directories_cache){
+        this->working_directories.erase(this->working_directories.begin());
+    }
+    this->working_directories.emplace_back(path, std::make_unique<metadata>(met));
+}
+
+
+void lsfs_state::add_or_refresh_working_directory(const std::string& path, metadata met) {
+    std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
 
     for(auto it = working_directories.begin(); it != working_directories.end(); ++it){
         if(it->first == path){
@@ -219,7 +281,7 @@ void lsfs_state::add_or_refresh_working_directory(const std::string& path, metad
     this->working_directories.emplace_back(path, std::make_unique<metadata>(met));
 }
 
-void lsfs_state::remove_and_refresh_working_directory(const std::string& path) {
+void lsfs_state::remove_working_directory(const std::string& path) {
     std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
 
     for(auto it = working_directories.begin(); it != working_directories.end(); ++it){
@@ -228,19 +290,15 @@ void lsfs_state::remove_and_refresh_working_directory(const std::string& path) {
             break;
         }
     }
-    if(this->working_directories.size() == this->max_working_directories_cache){
-        this->working_directories.erase(this->working_directories.begin());
-    }
 }
 
 
-
-std::unique_ptr<lsfs_state::metadata> lsfs_state::add_child_to_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir){
+std::unique_ptr<metadata> lsfs_state::add_child_to_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir){
     std::unique_ptr<metadata> res(nullptr);
     std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
     for(auto & working_directory : working_directories){
         if(working_directory.first == parent_path){
-            working_directory.second->met_childs.add_child(child_name, is_dir);
+            working_directory.second->childs.add_child(child_name, is_dir);
             res = std::make_unique<metadata>(*working_directory.second);
             this->add_or_refresh_working_directory(parent_path, *res);
         }
@@ -255,67 +313,39 @@ int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
 
     if(parent_path != nullptr){
         //std::cout << "Parent Path: " << *parent_path << std::endl;
+        bool was_not_in_cache = false;
 
         std::unique_ptr<metadata> met(nullptr);
         met = this->add_child_to_working_dir_and_retreive(*parent_path, *child_name, is_dir);
-        if(met == nullptr){
-        //parent folder is not a working directory
-            
-            client_reply_handler::Response response = client_reply_handler::Response::Init;
-            std::unique_ptr<std::string> data = df_client->get_latest(*parent_path, &response);
-            
-            if(response == client_reply_handler::Response::Deleted || data == nullptr){
-                return -errno;
-            }
-            else{
-                // reconstruir a struct stat com o resultado
-                metadata_attr met_attr = metadata_attr::deserialize_from_string(*data);
-                metadata_childs met_childs = reconstruct_childs_met(*parent_path, met_attr.metadata_childs_size);
-                // remove last version added/removed child log
-                met_childs.reset_add_remove_log();
-                // add child path to metadata
-                met_childs.add_child(*child_name, is_dir);
+        
+        // if(!benchmark_performance && maximize_cache && met == nullptr && *parent_path != "/"){
+        //     met = get_metadata(*parent_path);
+        //     add_or_refresh_working_directory(*parent_path, *met);
+        //     was_not_in_cache = true;
+        // }
 
-                metadata tmp_met = {.met_attr = met_attr, .met_childs = met_childs};
-
-                met = std::make_unique<metadata>(tmp_met);
-
-                if(*parent_path != "/"){
-                    add_or_refresh_working_directory(*parent_path, *met);
-                }
-            }
+        int res = put_metadata_child(*parent_path, *child_name, true, is_dir);
+        if(res != 0){
+            return -errno;
         }
 
-        if(is_working_directory(*parent_path)){
-               
-            int res = put_metadata(*met, *parent_path);
-            if(res != 0){
-                return -errno;
-            }
-            //on successful put metadata clear add remove childs log
-            this->reset_working_directory_add_remove_log(*parent_path);
-        }else{
-            std::cout << "Trying to update metadata -- put with merge -- of parent path " << std::endl;
-
-            int res = put_with_merge_metadata(*met, *parent_path);
-            if(res != 0){
-                return -errno;
-            }
-        }
-
-        return 0;
+        // if(was_not_in_cache){
+        //     this->add_child_to_working_dir_and_retreive(*parent_path, *child_name, is_dir);
+        // }
+        //on successful put metadata clear add remove childs log
+        this->reset_working_directory_add_remove_log(*parent_path);
     }
 
     // root directory doesn't have a parent
     return 0;
 }
 
-std::unique_ptr<lsfs_state::metadata> lsfs_state::remove_child_from_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir){
+std::unique_ptr<metadata> lsfs_state::remove_child_from_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir){
     std::unique_ptr<metadata> res(nullptr);
     std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
     for(auto & working_directory : working_directories){
         if(working_directory.first == parent_path){
-            working_directory.second->met_childs.remove_child(child_name, is_dir);
+            working_directory.second->childs.remove_child(child_name, is_dir);
             res = std::make_unique<metadata>(*working_directory.second);
             this->add_or_refresh_working_directory(parent_path, *res);
         }
@@ -328,57 +358,30 @@ int lsfs_state::remove_child_from_parent_dir(const std::string& path, bool is_di
     std::unique_ptr<std::string> child_name = get_child_name(path);
 
     if(parent_path != nullptr){
-        std::cout << "Parent Path: " << *parent_path << std::endl;
+        bool was_not_in_cache = false;
 
         std::unique_ptr<metadata> met(nullptr);
         met = this->remove_child_from_working_dir_and_retreive(*parent_path, *child_name, is_dir);
-        if(met == nullptr){
-            std::cout << "Parent folder is not a working directory " << std::endl;
 
-            client_reply_handler::Response response = client_reply_handler::Response::Init;
-            std::unique_ptr<std::string> data = df_client->get_latest(*parent_path, &response);
-            //TODO check if this error is valid 
-            if(response == client_reply_handler::Response::Deleted || data == nullptr){
-                return -errno;
-            }
-            else{
-                // reconstruir a struct stat com o resultado
-                metadata_attr met_attr = metadata_attr::deserialize_from_string(*data);
-                metadata_childs met_childs = reconstruct_childs_met(*parent_path, met_attr.metadata_childs_size);
-                // remove last version added/removed child log
-                met_childs.reset_add_remove_log();
-                // add child path to metadata
-                met_childs.remove_child(*child_name, is_dir);
+        // if(!benchmark_performance && maximize_cache && met == nullptr && *parent_path != "/"){
+        //     met = get_metadata(*parent_path);
+        //     add_or_refresh_working_directory(*parent_path, *met);
+        //     was_not_in_cache = true;
+        // }
 
-                metadata tmp_met = {.met_attr = met_attr, .met_childs = met_childs};
-
-                met = std::make_unique<metadata>(tmp_met);
-
-                if(*parent_path != "/"){
-                    add_or_refresh_working_directory(*parent_path, *met);
-                }
-            }
-        }
-
-        if(is_working_directory(*parent_path)){
-            std::cout << "Trying to update metadata of parent path " << std::endl;
+        std::cout << "Trying to update metadata of parent path " << std::endl;
                 
-            int res = put_metadata(*met, *parent_path);
-            if(res != 0){
-                return -errno;
-            }
-            //on successful put metadata clear add remove childs log
-            this->reset_working_directory_add_remove_log(*parent_path);
-        }else{
-            std::cout << "Trying to update metadata -- put with merge -- of parent path " << std::endl;
-            
-            int res = put_with_merge_metadata(*met, *parent_path);
-            if(res != 0){
-                return -errno;
-            }
+        int res = put_metadata_child(*parent_path, *child_name, false, is_dir);
+        if(res != 0){
+            return -errno;
         }
 
-        return 0;
+        // if(was_not_in_cache){
+        //     this->remove_child_from_working_dir_and_retreive(*parent_path, *child_name, is_dir);
+        // }
+
+        //on successful put metadata clear add remove childs log
+        this->reset_working_directory_add_remove_log(*parent_path);
     }
 
     // root directory doesn't have a parent
@@ -519,7 +522,7 @@ bool lsfs_state::get_metadata_if_dir_opened(const std::string& path, struct stat
     std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
     for(auto & working_directorie : working_directories){
         if(working_directorie.first == path){
-            memcpy(stbuf, &working_directorie.second->met_attr.stbuf, sizeof(struct stat));
+            memcpy(stbuf, &working_directorie.second->attr.stbuf, sizeof(struct stat));
             return true;
         }
     }
@@ -547,9 +550,7 @@ int lsfs_state::flush_open_file(const std::string& path){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
     if(it != open_files.end()){
-        if(it->second.first == FileAccess::CREATED || it->second.first == FileAccess::MODIFIED){
-            // If the file was modified we must update its metadata
-
+        if(it->second.first == FileAccess::CREATED){
             // create metadata object
             metadata to_send(*(it->second.second));
             // serialize metadata object
@@ -557,17 +558,27 @@ int lsfs_state::flush_open_file(const std::string& path){
             if(res != 0){
                 return res;
             }
-
-            if(it->second.first == FileAccess::CREATED){
-                // If the file was created for the first time, we have to add it to parent folder
-                res = add_child_to_parent_dir(path, false);
-                if(res != 0){
-                    return res;
-                }
+            
+            // If the file was created for the first time, we have to add it to parent folder
+            res = add_child_to_parent_dir(path, false);
+            if(res != 0){
+                return res;
             }
+                       
+        } else if(it->second.first == FileAccess::MODIFIED){
+            // If the file was modified we must update its metadata
 
-            it->second.first = FileAccess::ACCESSED;
+            // create metadata object
+            metadata to_send(*(it->second.second));
+            // serialize metadata object
+            int res = put_metadata_stat(to_send, path);
+            if(res != 0){
+                return res;
+            }
         }
+
+        it->second.first = FileAccess::ACCESSED;
+
         return 0;
     }
 
@@ -597,7 +608,7 @@ void lsfs_state::reset_working_directory_add_remove_log(const std::string& path)
     std::scoped_lock<std::recursive_mutex> lk (working_directories_mutex);
     for(auto & working_directory : working_directories){
         if(working_directory.first == path){
-            working_directory.second->met_childs.added_childs.clear();
+            working_directory.second->childs.reset_add_remove_log();
             break;
         }
     }
@@ -606,11 +617,11 @@ void lsfs_state::reset_working_directory_add_remove_log(const std::string& path)
 
 
 
-metadata_childs lsfs_state::reconstruct_childs_met(std::string &base_path, size_t total_s){
+metadata lsfs_state::request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version){
 
     size_t NR_BLKS = (total_s / BLK_SIZE) + 1;
     
-    std::vector<std::string> keys;
+    std::vector<kv_store_key<std::string>> keys;
     std::vector<std::shared_ptr<std::string>> data_strs;
 
     keys.reserve(NR_BLKS);
@@ -622,70 +633,18 @@ metadata_childs lsfs_state::reconstruct_childs_met(std::string &base_path, size_
         blk_path.reserve(100);
         blk_path.append(base_path).append(":").append(std::to_string(i));
 
-        keys.emplace_back(std::move(blk_path));
+        kv_store_key<std::string> key = {blk_path, last_version, false};
+
+        keys.emplace_back(std::move(key));
         data_strs.emplace_back(nullptr);
     }
+    df_client->get_metadata_batch(keys, data_strs);
     
-    df_client->get_latest_batch(keys, data_strs);
-
     std::string met;
     
     for(const std::shared_ptr<std::string>& data_blk: data_strs){
-        data_blk->erase(std::find(data_blk->begin(), data_blk->end(), '\0'), data_blk->end());
         met += *data_blk;
     }
-
-    return metadata_childs::deserialize_from_string(met);
-}
-
-
-int lsfs_state::fragment_childs_met(std::string &base_path, metadata_childs &met){
-
-    std::string metadata_str = metadata_childs::serialize_to_string(met);
-
-    size_t NR_BLKS = (metadata_str.size() / BLK_SIZE) + 1;
-
-    std::vector<kv_store_key<std::string>> keys;
-    std::vector<const char*> buffers;
-    std::vector<size_t> sizes;
-
-    keys.reserve(NR_BLKS);
-    buffers.reserve(NR_BLKS);
-    sizes.reserve(NR_BLKS);  
-
-    for(int i = 1; i <= NR_BLKS; i++){
-        size_t pos = (i-1)*BLK_SIZE;
-        std::string blk_path;
-        blk_path.reserve(100);
-        blk_path.append(base_path).append(":").append(std::to_string(i));
-
-
-        client_reply_handler::Response response = client_reply_handler::Response::Init;
-        std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(blk_path, &response);
-        
-        kv_store_key_version version;
-        if(last_v != nullptr)
-            version = *last_v;
-
-        kv_store_key<std::string> kv = {blk_path, version, false};
-
-        std::string value;
-
-        //Last block
-        if(i == NR_BLKS){
-            value = metadata_str.substr(pos);  
-        }else{
-            value = metadata_str.substr(pos, BLK_SIZE); 
-        }
-
-        // \0 might be a problem
-        keys.emplace_back(kv);
-        buffers.emplace_back(value.c_str());
-        sizes.emplace_back(value.size());
-        
-    } 
-
-    df_client->put_batch(keys, buffers, sizes);
-
-    return 0;
+    
+    return metadata::deserialize_from_string(met);
 }

@@ -30,9 +30,12 @@ public:
 
 public:
     template<class Archive> void serialize(Archive& ar, const unsigned int version);
+    metadata(metadata_attr attr);
+    metadata(const metadata& met);
     metadata() = default;
     static std::string serialize_to_string(metadata& met);
     static metadata deserialize_from_string(const std::string& string_serial);
+    static std::string merge_metadata(metadata met1, metadata met2);
 };
 
 template<class Archive>

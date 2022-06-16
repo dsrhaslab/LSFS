@@ -48,7 +48,7 @@ public:
     virtual std::unordered_set<kv_store_key<T>> get_keys() = 0;
     virtual bool put(const T& key, kv_store_key_version version, const std::string& bytes, bool is_merge = false) = 0;
     virtual bool put_metadata_child(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir) = 0;
-
+    virtual bool put_metadata_stat(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& bytes) = 0;
     virtual bool put_with_merge(const T& key, kv_store_key_version version, const std::string& bytes) = 0;
     virtual bool anti_entropy_put(const T& key, kv_store_key_version version, const std::string& value, bool is_merge) = 0;
     virtual std::unique_ptr<std::string> get(kv_store_key<T>& key) = 0;

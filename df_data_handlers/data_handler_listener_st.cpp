@@ -43,6 +43,14 @@ void data_handler_listener_st::operator()() {
                     this->process_put_with_merge_message(msg);
                 }else if(msg.has_delete_msg()){
                     this->process_delete_message(msg);
+                }else if(msg.has_put_child_msg()){
+                    this->process_put_child_message(msg);
+                }else if(msg.has_put_met_stat_msg()){
+                    this->process_put_metadata_stat_message(msg);
+                }else if(msg.has_get_latest_met_size_or_stat_msg()){
+                    this->process_get_latest_metadata_size_or_stat_msg(msg);
+                }else if(msg.has_get_met_msg()){
+                    this->process_get_metadata_message(msg);
                 }else if(msg.has_anti_entropy_msg()){
                     this->process_anti_entropy_message(msg);
                 }else if(msg.has_anti_entropy_get_msg()){

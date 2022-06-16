@@ -527,10 +527,24 @@ std::unique_ptr<std::string> client::get_latest(const std::string& key, client_r
 //---------------------------------------------------------------------------------------------------------------------------
 
 
-int client::send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, std::string& child_path, bool is_create, bool is_dir) {
+int client::send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir) {
     proto::kv_message msg;
 
     build_put_child_message(&msg, this->ip, this->kv_port, this->id, key, version, past_version, child_path, is_create, is_dir);
+
+    int nr_send_errors = 0;
+    for(auto& peer: peers){
+        nr_send_errors += send_msg(peer, msg);
+    }
+
+    return (nr_send_errors >= peers.size())? 1 : 0;
+}
+
+
+int client::send_put_metadata_stat(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const char *data, size_t size) {
+    proto::kv_message msg;
+
+    build_put_metadata_stat_message(&msg, this->ip, this->kv_port, this->id, key, version, past_version, data, size);
 
     int nr_send_errors = 0;
     for(auto& peer: peers){
@@ -569,7 +583,7 @@ int client::send_get_metadata(std::vector<peer_data>& peers, const std::string& 
 
 
 
-void client::put_child(const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir, int wait_for) {
+void client::put_child(const std::string& key, const kv_store_key_version& version, const std::string& child_path, bool is_create, bool is_dir, int wait_for) {
     long n_clock = clock.increment_and_get();
     kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), version);
     
@@ -602,6 +616,41 @@ void client::put_child(const std::string& key, const kv_store_key_version& versi
 }
 
 
+void client::put_metadata_stat(const std::string& key, const kv_store_key_version& version, const char *data, size_t size, int wait_for) {
+    long n_clock = clock.increment_and_get();
+    kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), version);
+    
+    kv_store_key<std::string> comp_key = {key, new_version, false};
+    this->handler->register_put(comp_key); // throw const char* (concurrent writes over the same key)
+    
+    bool succeed = false;
+    int curr_timeouts = 0;
+    while(!succeed && curr_timeouts < this->max_timeouts){
+        int status = 0;
+        if (curr_timeouts + 1 <= 2){
+            std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_put_request); //throw exception
+            status = this->send_put_metadata_stat(peers, key, new_version, version, data, size);
+        }else{
+            std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_put_request); //throw exception
+            status = this->send_put_metadata_stat(peers, key, new_version, version, data, size);
+        }
+        if(status == 0){
+            try{         
+                succeed = this->handler->wait_for_put(comp_key, wait_for);
+            }catch(TimeoutException& e){
+                curr_timeouts++;
+            }
+        }
+    }
+
+    if(!succeed){
+        throw TimeoutException();
+    }
+}
+
+
+
+
 std::unique_ptr<std::string> client::get_latest_metadata_size(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version, int wait_for) {
     return get_latest_metadata_size_or_stat(key, response, last_version, true, false, wait_for);
 }
@@ -632,6 +681,7 @@ std::unique_ptr<std::string> client::get_latest_metadata_size_or_stat(const std:
         }
         if (status == 0) {
             try{
+                 std::cout << "Waiting for peer response" << std::endl;
                 res = this->handler->wait_for_get_latest(key, req_id_str, wait_for, response, last_version);
             }catch(TimeoutException& e){
                 curr_timeouts++;
@@ -690,10 +740,10 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
                         this->handler->change_get_reqid(latest_reqid_str, req_ids[i]);
                         if (curr_timeouts + 1 <= 2){
                             std::vector<peer_data> peers = this->lb->get_n_peers(keys[i].key, this->max_nodes_to_send_get_request); //throw exception (empty view)                            
-                            this->send_get_latest_version(peers, keys[i].key, req_ids[i], true);
+                            this->send_get_metadata(peers, keys[i].key, keys[i].key_version, req_ids[i]);
                         }else{
                             std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_get_request); //throw exception (empty view)
-                            this->send_get_latest_version(peers, keys[i].key, req_ids[i], true);
+                            this->send_get_metadata(peers, keys[i].key, keys[i].key_version, req_ids[i]);
                         }
                         timeout[i] = false;
                     }

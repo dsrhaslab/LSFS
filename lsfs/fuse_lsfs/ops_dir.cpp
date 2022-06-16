@@ -18,7 +18,7 @@
 
 #include "util.h"
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
-#include "metadata.h"
+#include "metadata/metadata.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -84,13 +84,22 @@ int lsfs_impl::_readdir(
     }
 
     try{
-
-        std::unique_ptr<metadata> met = state->get_metadata(path);
-
-        if(met == nullptr)
-            return -errno;
+        std::unique_ptr<metadata> met(nullptr);
         
-        for(auto& child: met->childs){
+        if(state->maximize_cache){
+            met = state->get_metadata_if_dir_opened(path);
+        }
+
+        if(met == nullptr){
+            met = state->get_metadata(path);
+            if(met == nullptr){
+                return -errno;
+            }
+
+            state->add_working_directory(path, *met);
+        }
+
+        for(auto& child: met->childs.childs){
             filler(buf, child.c_str(), NULL, 0, fill_flags);
         }
 

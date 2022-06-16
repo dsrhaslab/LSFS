@@ -137,6 +137,15 @@ message put_child_message {
   kv_store_key_version past_key_version = 8;
 }
 
+message put_metadata_stat_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  kv_store_key key = 4;
+  kv_store_key_version past_key_version = 5;
+  bytes data = 6;
+}
+
 message get_latest_metadata_size_or_stat_message {
   string ip = 1;
   int32 port = 2;
@@ -234,7 +243,8 @@ message kv_message {
         recover_data_message                              recover_data_msg = 16;
         recover_termination_message                       recover_termination_msg = 17;
         put_child_message                                 put_child_msg = 18;
-        get_latest_metadata_size_or_stat_message          get_latest_met_size_or_stat_msg = 19;
-        get_metadata_message                              get_met_msg = 20;
+        put_metadata_stat_message                         put_met_stat_msg = 19;
+        get_latest_metadata_size_or_stat_message          get_latest_met_size_or_stat_msg = 20;
+        get_metadata_message                              get_met_msg = 21;
     }
 }

@@ -12,7 +12,7 @@
 
 #include "util.h"
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
-#include "metadata.h"
+#include "metadata/metadata.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -21,7 +21,7 @@ int lsfs_impl::_getattr(
     struct fuse_file_info *fi
     )
 {
-    std::cout << "### SysCall: _getattr" << std::endl;
+    std::cout << "### SysCall: _getattr  ===> Path: " << path << std::endl;
 
     int res = 0;
 
@@ -34,13 +34,14 @@ int lsfs_impl::_getattr(
         }
         if(!got_metadata){
             try{
-                std::unique_ptr<metadata> met = state->get_metadata(path);
+                std::unique_ptr<metadata> met = state->get_metadata_stat(path);
                 if(met == nullptr)
                     return -errno;
 
                 // copy metadata received to struct stat
-                memcpy(stbuf, &met->stbuf, sizeof(struct stat));
-                
+                memcpy(stbuf, &met->attr.stbuf, sizeof(struct stat));
+
+                 
             } catch (EmptyViewException& e) {
                 e.what();
                 errno = EAGAIN; //resource unavailable
@@ -111,7 +112,7 @@ int lsfs_impl::_utimens(
             // serialize metadata object
 
             try{
-                res = state->put_metadata(to_send, path);
+                res = state->put_metadata_stat(to_send, path);
                 if (res == -1) 
                     return -errno;
                 
@@ -173,7 +174,7 @@ int lsfs_impl::_truncate(
             // serialize metadata object
 
             try{
-                res = state->put_metadata(to_send, path);
+                res = state->put_metadata_stat(to_send, path);
                 if(res == -1)
                     return -errno;
                 

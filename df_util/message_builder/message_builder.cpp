@@ -210,7 +210,7 @@ void build_delete_reply_message(proto::kv_message* msg, std::string& ip, int kv_
 }
 
 void build_put_child_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, 
-                                const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, std::string& child_path, bool is_create, bool is_dir){
+                                const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir){
     
     auto* message_content = new proto::put_child_message();
     message_content->set_ip(ip);
@@ -238,6 +238,35 @@ void build_put_child_message(proto::kv_message* msg, std::string& ip, int kv_por
     message_content->set_child_path(child_path);
     
     msg->set_allocated_put_child_msg(message_content);
+}
+
+
+void build_put_metadata_stat_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, 
+                                const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const char *data, size_t size){
+    
+    auto* message_content = new proto::put_metadata_stat_message();
+    message_content->set_ip(ip);
+    message_content->set_port(kv_port);
+    message_content->set_id(id);
+    proto::kv_store_key* kv_key = new proto::kv_store_key();
+    kv_key->set_key(key);
+    for(auto const c: version.vv){
+        proto::kv_store_version *kv_version = kv_key->add_version();
+        kv_version->set_client_id(c.first);
+        kv_version->set_clock(c.second);
+    }
+    message_content->set_allocated_key(kv_key);
+
+    proto::kv_store_key_version* kv_vv = new proto::kv_store_key_version();
+    for(auto const c: past_version.vv){
+        proto::kv_store_version *past_kv_version = kv_vv->add_version();
+        past_kv_version->set_client_id(c.first);
+        past_kv_version->set_clock(c.second);
+    }
+    message_content->set_allocated_past_key_version(kv_vv);
+    message_content->set_data(data, size);
+    
+    msg->set_allocated_put_met_stat_msg(message_content);
 }
 
 void build_get_latest_metadata_size_or_stat_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id,

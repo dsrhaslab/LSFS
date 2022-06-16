@@ -70,7 +70,7 @@ int get_base_path(const std::string& key, std::string* base_path){
 
 int get_blk_num(const std::string& key, std::string* blk_num){
     boost::cmatch match;
-    auto res = boost::regex_search(key.c_str(), match, base_path_pattern);
+    auto res = boost::regex_search(key.c_str(), match, blk_num_pattern);
 
     try{
         if(!match.empty()){

@@ -32,6 +32,18 @@ public:
             }else if(msg.has_delete_msg()){
                 std::cout << "Received delete Message from client " << std::endl;
                 data_handler->process_delete_message(msg);
+            }else if(msg.has_put_child_msg()){
+                std::cout << "Received Put child message from client " << std::endl;
+                data_handler->process_put_child_message(msg);
+            }else if(msg.has_put_met_stat_msg()){
+                std::cout << "Received Put Metadata stat from client " << std::endl;
+                data_handler->process_put_metadata_stat_message(msg);
+            }else if(msg.has_get_latest_met_size_or_stat_msg()){
+                std::cout << "Received get latest Message from client " << std::endl;
+                data_handler->process_get_latest_metadata_size_or_stat_msg(msg);
+            }else if(msg.has_get_met_msg()){
+                std::cout << "Received get Metadata Message from client " << std::endl;
+                data_handler->process_get_metadata_message(msg);
             }else if(msg.has_anti_entropy_msg()){
                 data_handler->process_anti_entropy_message(msg);
             }else if(msg.has_anti_entropy_get_msg()){

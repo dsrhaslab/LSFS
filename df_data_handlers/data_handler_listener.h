@@ -53,6 +53,7 @@ public:
     void process_put_with_merge_message(proto::kv_message &msg);
     void process_delete_message(proto::kv_message &msg);
     void process_put_child_message(proto::kv_message &msg);
+    void process_put_metadata_stat_message(proto::kv_message &msg);
     void process_get_latest_metadata_size_or_stat_msg(proto::kv_message msg);
     void process_get_metadata_message(proto::kv_message &msg);
 

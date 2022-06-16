@@ -45,7 +45,8 @@ main_confs:
   max_smart_view_age: 50
   limit_write_paralelization_to: 32k
   limit_read_paralelization_to: 32k
-
+  benchmark_performance: False
+  maximize_cache: true
   ######################################
 
   lb_interval: 5

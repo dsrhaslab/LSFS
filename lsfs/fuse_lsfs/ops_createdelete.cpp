@@ -10,7 +10,7 @@
 
 #include "util.h"
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
-#include "metadata.h"
+#include "metadata/metadata.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -129,7 +129,8 @@ int lsfs_impl::_mkdir(
     nlink_t n_link = (strcmp(path, "/") == 0) ? 1 : 2;
     metadata_attr::initialize_metadata(&stbuf, S_IFDIR | mode, n_link, ctx->gid, ctx->uid);
     // create metadata object
-    metadata_attr to_send(0, stbuf);
+    metadata_attr met_attr(stbuf);
+    metadata to_send(met_attr);
 
     int res = 0;
 
@@ -177,7 +178,7 @@ int lsfs_impl::_rmdir(
                 return -errno;
         }
 
-        if(!met->is_empty()){
+        if(!met->childs.is_empty()){
             errno = ENOTEMPTY;
             return -errno;
         }
@@ -185,7 +186,7 @@ int lsfs_impl::_rmdir(
         res = state->delete_file_or_dir(path);
         if(res != 0) return -errno;
 
-        state->remove_and_refresh_working_directory(path);
+        state->remove_working_directory(path);
 
         res = state->remove_child_from_parent_dir(path, true);
 

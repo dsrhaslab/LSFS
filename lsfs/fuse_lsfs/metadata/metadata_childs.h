@@ -32,6 +32,7 @@ public:
 public:
     template<class Archive> void serialize(Archive& ar, const unsigned int version);
     metadata_childs() = default;
+    metadata_childs(const metadata_childs& met);
     static std::string serialize_to_string(metadata_childs& met);
     static metadata_childs deserialize_from_string(const std::string& string_serial);
     void add_child(std::string path, bool is_dir);

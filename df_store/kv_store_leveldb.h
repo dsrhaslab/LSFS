@@ -73,6 +73,7 @@ public:
     std::unordered_set<kv_store_key<std::string>> get_keys() override;
     bool put(const std::string& key, kv_store_key_version version, const std::string& bytes, bool is_merge) override;
     bool put_metadata_child(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir) override;
+    bool put_metadata_stat(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& bytes) override;
     bool put_with_merge(const std::string& key, kv_store_key_version version, const std::string& bytes) override;
     bool anti_entropy_put(const std::string& key, kv_store_key_version version, const std::string& value, bool is_merge) override;
     std::unique_ptr<std::string> get(kv_store_key<std::string>& key) override;
@@ -534,6 +535,52 @@ bool kv_store_leveldb::put_metadata_child(const std::string& key, const kv_store
             db->Put(writeOptions, comp_key, bytes);
 
         }
+    }else{
+        //Object received but does not belong to this df_store.
+        return false;
+    }
+
+    return true;
+}
+
+
+bool kv_store_leveldb::put_metadata_stat(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& bytes){
+    kv_store_key<std::string> key_comp = {key, version, false};
+    this->seen_it(key_comp);
+    int k_slice = this->get_slice_for_key(key);
+
+    if(this->slice == k_slice){
+        std::cout << "Step1!" << std::endl;
+        std::string value;
+        std::string past_comp_key = compose_key_toString(key, past_version);
+        std::string new_comp_key = compose_key_toString(key, version);
+
+        metadata_attr met_attr = metadata_attr::deserialize_from_string(bytes);
+        metadata new_met(met_attr);
+        std::cout << "Step2!" << std::endl;
+        
+        leveldb::Status s = db->Get(leveldb::ReadOptions(), past_comp_key, &value);
+
+        if (s.ok()){
+            std::cout << "Step3!" << std::endl;
+        
+            metadata met = metadata::deserialize_from_string(value);         
+            std::cout << "Step4!" << std::endl;
+        
+            std::string data = metadata::merge_metadata(new_met, met);
+            std::cout << "Step5!" << std::endl;
+        
+            leveldb::WriteOptions writeOptions;
+            db->Put(writeOptions, new_comp_key, data);
+            
+        }
+        else{
+            leveldb::WriteOptions writeOptions;
+            db->Put(writeOptions, new_comp_key, metadata::serialize_to_string(new_met));
+        }
+        std::cout << "Step6!" << std::endl;
+        
+        this->record_count++;
     }else{
         //Object received but does not belong to this df_store.
         return false;

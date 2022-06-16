@@ -25,13 +25,13 @@ private:
     friend class boost::serialization::access;
 
 public:
-    size_t metadata_childs_size;
     struct stat stbuf;
 
 public:
     template<class Archive> void serialize(Archive& ar, const unsigned int version);
-    metadata_attr(size_t metadata_child_size, struct stat& stbuf);
+    metadata_attr(struct stat& stbuf);
     metadata_attr() = default;
+    metadata_attr(const metadata_attr& met);
     static std::string serialize_to_string(metadata_attr& met);
     static metadata_attr deserialize_from_string(const std::string& string_serial);
     static void initialize_metadata(struct stat* stbuf, mode_t mode, nlink_t nlink, gid_t gid, uid_t uid);
@@ -39,7 +39,6 @@ public:
 
 template<class Archive>
 void metadata_attr::serialize(Archive &ar, const unsigned int version) {
-    ar&this->metadata_childs_size;
     ar&this->stbuf.st_dev;
     ar&this->stbuf.st_ino;
     ar&this->stbuf.st_nlink;

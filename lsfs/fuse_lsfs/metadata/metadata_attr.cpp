@@ -5,7 +5,9 @@
 #include "metadata_attr.h"
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
 
-metadata_attr::metadata_attr(size_t met_childs_size, struct stat& stbuf): metadata_childs_size(met_childs_size), stbuf(stbuf){};
+metadata_attr::metadata_attr(struct stat& stbuf): stbuf(stbuf){};
+
+metadata_attr::metadata_attr(const metadata_attr& met): stbuf(met.stbuf){};
 
 
 std::string metadata_attr::serialize_to_string(metadata_attr& met){

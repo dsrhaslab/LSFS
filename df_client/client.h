@@ -103,9 +103,14 @@ public:
         return get_latest(key, response, nr_gets_version_required);
     };
 
-    void put_child(const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir, int wait_for);
-    inline void put_child(const std::string& key, const kv_store_key_version& version, std::string& child_path, bool is_create, bool is_dir){
+    void put_child(const std::string& key, const kv_store_key_version& version, const std::string& child_path, bool is_create, bool is_dir, int wait_for);
+    inline void put_child(const std::string& key, const kv_store_key_version& version, const std::string& child_path, bool is_create, bool is_dir){
         return put_child(key, version, child_path, is_create, is_dir, nr_puts_required);
+    }
+
+    void put_metadata_stat(const std::string& key, const kv_store_key_version& version,const char *data, size_t size, int wait_for);
+    inline void put_metadata_stat(const std::string& key, const kv_store_key_version& version, const char *data, size_t size){
+        put_metadata_stat(key, version, data, size, nr_puts_required);
     }
     
     std::unique_ptr<std::string> get_latest_metadata_size(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version, int wait_for);
@@ -132,7 +137,8 @@ private:
     int send_delete(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version);
     int send_put_with_merge(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const char* data, size_t size);
     int send_get_latest_version(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id, bool with_data = false);
-    int send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, std::string& child_path, bool is_create, bool is_dir);
+    int send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir);
+    int send_put_metadata_stat(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const char *data, size_t size);
     int send_get_latest_met_size_or_stat(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id, bool get_size, bool get_stat);
     int send_get_metadata(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const std::string& req_id);
 
