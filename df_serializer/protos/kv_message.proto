@@ -29,6 +29,7 @@ message kv_store {
   kv_store_key key = 1;
   bool is_deleted = 2;
   bool is_merge = 3;
+  int64 data_size = 4;
 }
 
 //-------------------------------------------------------------------
@@ -187,7 +188,28 @@ message anti_entropy_get_message {
   bool is_merge = 8;
 }
 
+message anti_entropy_get_metadata_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string reqid = 4;
+  kv_store_key key = 6;
+  bool is_deleted = 7;
+  bool is_merge = 8;
+}
+
 message anti_entropy_get_reply_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string reqid = 4;
+  kv_store_key key = 5;
+  bytes data = 6;
+  bool is_deleted = 7;            
+  bool is_merge = 8;             
+}
+
+message anti_entropy_get_metadata_reply_message {
   string ip = 1;
   int32 port = 2;
   int64 id = 3;
@@ -235,16 +257,18 @@ message kv_message {
         delete_reply_message                              delete_reply_msg = 8;
         anti_entropy_message                              anti_entropy_msg = 9;
         anti_entropy_get_message                          anti_entropy_get_msg = 10;
-        anti_entropy_get_reply_message                    anti_entropy_get_reply_msg = 11;
-        get_latest_version_message                        get_latest_version_msg = 12;
-        get_latest_version_reply_message                  get_latest_version_reply_msg = 13;
-        recover_request_message                           recover_request_msg = 14;
-        recover_offset_message                            recover_offset_msg = 15;
-        recover_data_message                              recover_data_msg = 16;
-        recover_termination_message                       recover_termination_msg = 17;
-        put_child_message                                 put_child_msg = 18;
-        put_metadata_stat_message                         put_met_stat_msg = 19;
-        get_latest_metadata_size_or_stat_message          get_latest_met_size_or_stat_msg = 20;
-        get_metadata_message                              get_met_msg = 21;
+        anti_entropy_get_metadata_message                 anti_entropy_get_met_msg = 11;
+        anti_entropy_get_reply_message                    anti_entropy_get_reply_msg = 12;
+        anti_entropy_get_metadata_reply_message           anti_entropy_get_met_reply_msg = 13;
+        get_latest_version_message                        get_latest_version_msg = 14;
+        get_latest_version_reply_message                  get_latest_version_reply_msg = 15;
+        recover_request_message                           recover_request_msg = 16;
+        recover_offset_message                            recover_offset_msg = 17;
+        recover_data_message                              recover_data_msg = 18;
+        recover_termination_message                       recover_termination_msg = 19;
+        put_child_message                                 put_child_msg = 20;
+        put_metadata_stat_message                         put_met_stat_msg = 21;
+        get_latest_metadata_size_or_stat_message          get_latest_met_size_or_stat_msg = 22;
+        get_metadata_message                              get_met_msg = 23;
     }
 }

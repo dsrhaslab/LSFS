@@ -16,9 +16,7 @@ peer::peer(long id, std::string ip, std::string boot_ip, int kv_port, int pss_po
     :   id(id), ip(ip), data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
         view_logger_enabled(view_logger_enabled), local_interval(local_interval), reply_chance(reply_chance),
         store(std::make_shared<kv_store_leveldb>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
-//        store(std::make_shared<kv_store_memory<std::string>>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at)),
         group_c(ip, kv_port, pss_port, recover_port, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),
-        clock(),
         cyclon(boot_ip.c_str(), ip, kv_port, pss_port, recover_port, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
         listener(&(this->cyclon)),
         anti_ent(ip, kv_port, recover_port, id, position, &(this->cyclon), &(this->group_c),this->store, anti_entropy_interval, recover_database),
@@ -26,9 +24,9 @@ peer::peer(long id, std::string ip, std::string boot_ip, int kv_port, int pss_po
         
 {
     if(mt_data_handler){
-        this->data_handler = std::make_unique<data_handler_listener_mt>(ip, kv_port, id, reply_chance, &(this->clock), &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, smart);
+        this->data_handler = std::make_unique<data_handler_listener_mt>(ip, kv_port, id, reply_chance, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, smart);
     }else{
-        this->data_handler = std::make_unique<data_handler_listener_st>(ip, kv_port, id, reply_chance, &(this->clock), &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, smart);
+        this->data_handler = std::make_unique<data_handler_listener_st>(ip, kv_port, id, reply_chance, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, smart);
     }
 
     std::string database_folder = database_dir + this->store->db_name() + "/";

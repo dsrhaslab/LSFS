@@ -46,7 +46,6 @@ private:
     std::shared_ptr<kv_store<std::string>> store;
     pss cyclon;
     group_construction group_c;
-    clock_vv clock;
     pss_listener listener;
     view_logger v_logger;
     std::thread pss_th;

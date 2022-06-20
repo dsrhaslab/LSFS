@@ -305,3 +305,111 @@ void build_get_metadata_message(proto::kv_message* msg, std::string& ip, int kv_
     
     msg->set_allocated_get_met_msg(message_content);
 }
+
+
+void build_anti_entropy_get_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id,
+                                const std::string& key, const kv_store_key_version& version, bool is_deleted, bool is_merge){
+
+    auto *message_content = new proto::anti_entropy_get_message();
+    message_content->set_ip(ip);
+    message_content->set_port(kv_port);
+    message_content->set_id(id);
+    message_content->set_reqid(req_id);
+    message_content->set_is_deleted(is_deleted);
+    message_content->set_is_merge(is_merge);
+    
+    proto::kv_store_key* kv_key = new proto::kv_store_key();
+    kv_key->set_key(key);
+    
+    for(auto const c: version.vv){
+        proto::kv_store_version *kv_version = kv_key->add_version();
+        kv_version->set_client_id(c.first);
+        kv_version->set_clock(c.second);
+    }
+    message_content->set_allocated_key(kv_key);
+    
+    msg->set_allocated_anti_entropy_get_msg(message_content);
+
+}
+
+
+void build_anti_entropy_get_reply_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id,
+                                const std::string& key, const kv_store_key_version& version, bool is_deleted, bool is_merge, std::unique_ptr<std::string> data){
+
+    auto* message_content = new proto::anti_entropy_get_reply_message();
+    message_content->set_ip(ip);
+    message_content->set_port(kv_port);
+    message_content->set_id(id);
+    message_content->set_reqid(req_id);
+    
+    message_content->set_data(data->data(), data->size());
+
+    proto::kv_store_key* kv_key = new proto::kv_store_key();
+    kv_key->set_key(key);
+    for(auto const c: version.vv){
+        proto::kv_store_version* kv_version = kv_key->add_version();
+        kv_version->set_client_id(c.first);
+        kv_version->set_clock(c.second);
+    }
+    message_content->set_allocated_key(kv_key);
+
+    message_content->set_is_deleted(is_deleted);
+    message_content->set_is_merge(is_merge);
+    
+    msg->set_allocated_anti_entropy_get_reply_msg(message_content);
+}
+
+
+void build_anti_entropy_get_metadata_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id,
+                                const std::string& key, const kv_store_key_version& version, bool is_deleted, bool is_merge){
+
+    auto *message_content = new proto::anti_entropy_get_metadata_message();
+    message_content->set_ip(ip);
+    message_content->set_port(kv_port);
+    message_content->set_id(id);
+    message_content->set_reqid(req_id);
+    message_content->set_is_deleted(is_deleted);
+    message_content->set_is_merge(is_merge);
+    
+    proto::kv_store_key* kv_key = new proto::kv_store_key();
+    kv_key->set_key(key);
+    
+    for(auto const c: version.vv){
+        proto::kv_store_version *kv_version = kv_key->add_version();
+        kv_version->set_client_id(c.first);
+        kv_version->set_clock(c.second);
+    }
+    message_content->set_allocated_key(kv_key);
+    
+    msg->set_allocated_anti_entropy_get_met_msg(message_content);
+
+}
+
+
+
+
+void build_anti_entropy_get_metadata_reply_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id,
+                                const std::string& key, const kv_store_key_version& version, bool is_deleted, bool is_merge, std::unique_ptr<std::string> data){
+
+    auto* message_content = new proto::anti_entropy_get_metadata_reply_message();
+    message_content->set_ip(ip);
+    message_content->set_port(kv_port);
+    message_content->set_id(id);
+    message_content->set_reqid(req_id);
+    
+    message_content->set_data(data->data(), data->size());
+
+    proto::kv_store_key* kv_key = new proto::kv_store_key();
+    kv_key->set_key(key);
+    for(auto const c: version.vv){
+        proto::kv_store_version* kv_version = kv_key->add_version();
+        kv_version->set_client_id(c.first);
+        kv_version->set_clock(c.second);
+    }
+    message_content->set_allocated_key(kv_key);
+
+    message_content->set_is_deleted(is_deleted);
+    message_content->set_is_merge(is_merge);
+    
+    msg->set_allocated_anti_entropy_get_met_reply_msg(message_content);
+}

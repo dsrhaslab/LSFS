@@ -34,7 +34,6 @@ protected:
     long id;
     std::shared_ptr<kv_store<std::string>> store;
     group_construction* group_c_ptr;
-    clock_vv* clock_ptr;
     pss* pss_ptr;
     anti_entropy* anti_ent_ptr;
     float chance;
@@ -44,7 +43,7 @@ protected:
     std::atomic<long> anti_entropy_req_count = 0;
 
 public:
-    data_handler_listener(std::string ip, int kv_port, long id, float chance, clock_vv* clock, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart);
+    data_handler_listener(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart);
     void reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port);
     void forward_message(const std::vector<peer_data>& view_to_send, proto::kv_message& message);
     void process_get_message(proto::kv_message &msg);
@@ -60,7 +59,9 @@ public:
     long get_anti_entropy_req_count();
     void process_anti_entropy_message(proto::kv_message &msg);
     void process_anti_entropy_get_message(proto::kv_message& msg);
+    void process_anti_entropy_get_metadata_message(proto::kv_message& msg);
     void process_anti_entropy_get_reply_message(proto::kv_message &msg);
+    void process_anti_entropy_get_metadata_reply_message(proto::kv_message &msg);
     void process_recover_request_msg(proto::kv_message& message);
 
     virtual void operator ()() = 0;

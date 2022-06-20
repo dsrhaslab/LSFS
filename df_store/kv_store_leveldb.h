@@ -39,6 +39,7 @@ private:
     leveldb::DB* db;
     leveldb::DB* db_merge_log;
     leveldb::DB* db_deleted;
+    leveldb::DB* db_tmp_anti_entropy;
 
     std::atomic<long> record_count = 0;
     std::atomic<long> record_count_cycle = 0;
@@ -70,7 +71,7 @@ public:
     std::string db_name() const override;
     std::vector<std::string> get_last_keys_limit4() override;
     void update_partition(int p, int np) override;
-    std::unordered_set<kv_store_key<std::string>> get_keys() override;
+    std::unordered_map<kv_store_key<std::string>, size_t> get_keys() override;
     bool put(const std::string& key, kv_store_key_version version, const std::string& bytes, bool is_merge) override;
     bool put_metadata_child(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir) override;
     bool put_metadata_stat(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& bytes) override;
@@ -88,13 +89,21 @@ public:
     std::unique_ptr<std::vector<kv_store_key_version>> get_latest_data_version(const std::string& key, std::vector<std::unique_ptr<std::string>>& last_data) override;
 
     std::unique_ptr<std::string> get_anti_entropy(const kv_store_key<std::string>& key, bool* is_merge) override;
-    void remove_from_set_existent_keys(std::unordered_set<kv_store_key<std::string>>& keys) override;
+    void remove_from_map_existent_keys(std::unordered_map<kv_store_key<std::string>, size_t>& keys) override;
     void remove_from_set_existent_deleted_keys(std::unordered_set<kv_store_key<std::string>>& deleted_keys) override;
     void print_store(long id) override;
     bool check_if_deleted(const std::string& key, kv_store_key_version version) override;
     bool check_if_put_merged(const std::string& key, kv_store_key_version version) override;
     bool check_if_put_merged(const std::string& comp_key) override;
     std::unordered_set<kv_store_key<std::string>> get_deleted_keys() override;
+
+    bool put_tmp_anti_entropy(const std::string& base_path, const std::string& key, kv_store_key_version version, const std::string& bytes, bool is_merge, bool is_delete) override;
+    bool get_tmp_key_entry_size(const std::string& base_path, const std::string& key, kv_store_key_version version, std::string* value) override;
+    bool put_tmp_key_entry_size(const std::string& base_path, kv_store_key_version version, size_t size) override;
+    bool check_if_have_all_blks_and_put_metadata(const std::string& base_path, const std::string& key, kv_store_key_version version, size_t blk_num, bool is_merge, bool is_delete) override;
+    void delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const std::string& key, kv_store_key_version version, size_t blk_num) override;
+    bool get_incomplete_blks(const std::string& key, kv_store_key_version version, std::vector<size_t>& tmp_blks_to_request) override;
+ 
 };
 
 kv_store_leveldb::kv_store_leveldb(std::string (*f)(const std::string&,const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at) {
@@ -106,7 +115,10 @@ kv_store_leveldb::kv_store_leveldb(std::string (*f)(const std::string&,const std
 
 kv_store_leveldb::~kv_store_leveldb() {
     delete db;
+    delete db_merge_log;
     delete db_deleted;
+    delete db_tmp_anti_entropy;
+
 }
 
 void kv_store_leveldb::close() {
@@ -115,6 +127,7 @@ void kv_store_leveldb::close() {
     delete this->db;
     delete this->db_merge_log;
     delete this->db_deleted;
+    delete this->db_tmp_anti_entropy;
 }
 
 std::string kv_store_leveldb::db_name() const {
@@ -138,6 +151,8 @@ int kv_store_leveldb::init(void* path, long id){
     std::string db_name = this->path + std::to_string(id);
     std::string db_merge_log_name = db_name + "_merge";
     std::string db_delete_name = db_name + "_deleted";
+    std::string db_tmp_anti_entropy = db_name + "_tmp_anti_entropy";
+    
 
     int res = 0;
 
@@ -146,6 +161,8 @@ int kv_store_leveldb::init(void* path, long id){
     res = open(options, "DB_MERGE", db_merge_log_name, &db_merge_log);
     if(res == -1) return -1;
     res = open(options, "DB_DELETED", db_delete_name, &db_deleted);
+    if(res == -1) return -1;
+    res = open(options, "TMP_ANTI_ENTROPY", db_delete_name, &db_deleted);
 
     std::cout << "All done" << std::endl;
 
@@ -200,7 +217,7 @@ void kv_store_leveldb::update_partition(int p, int np) {
     }
 }
 
-std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_keys() {
+std::unordered_map<kv_store_key<std::string>, size_t> kv_store_leveldb::get_keys() {
 
     long cycle = record_count_cycle++;
     if(cycle % record_refresh_rate == 0){
@@ -217,7 +234,7 @@ std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_keys() {
     std::uniform_int_distribution<long> distr(0, max_random_key_start);
     long key_start = distr(eng);
 
-    std::unordered_set<kv_store_key<std::string>> keys;
+    std::unordered_map<kv_store_key<std::string>, size_t> keys;
     
     //Itero pela db ate chegar a key random escolhida para começar
     leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
@@ -227,13 +244,16 @@ std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_keys() {
     for(int i = 0; i < anti_entropy_num_keys && it->Valid(); i++, it->Next()){
         std::string comp_key = it->key().ToString();
         
+        size_t v_size = it->value().size();
+
         bool is_merge = check_if_put_merged(comp_key);
 
         std::string key;
         std::map<long, long> vector;
         int res = split_composite_total(comp_key, &key, &vector);
         if(res == 0){
-            keys.insert({key, kv_store_key_version(vector), false, is_merge});
+            kv_store_key<std::string> st_key = {key, kv_store_key_version(vector), false, is_merge};
+            keys.insert(std::make_pair(st_key, v_size));
         }
     }
 
@@ -291,14 +311,14 @@ std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_deleted_keys
 }
 
 
-void kv_store_leveldb::remove_from_set_existent_keys(std::unordered_set<kv_store_key<std::string>>& keys){
+void kv_store_leveldb::remove_from_map_existent_keys(std::unordered_map<kv_store_key<std::string>, size_t>& keys){
     leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
     leveldb::Iterator* it_del = db_deleted->NewIterator(leveldb::ReadOptions());
 
     std::string prefix;
     for (auto it_keys = keys.begin(); it_keys != keys.end();) {
         prefix.clear();
-        prefix = compose_key_toString(it_keys->key, it_keys->key_version);
+        prefix = compose_key_toString(it_keys->first.key, it_keys->first.key_version);
         it->Seek(prefix);
         it_del->Seek(prefix);
         if(it->Valid() && it->key().ToString() == prefix){
@@ -310,7 +330,7 @@ void kv_store_leveldb::remove_from_set_existent_keys(std::unordered_set<kv_store
             if (it_del->Valid() && it_del->key().ToString() == prefix){
                 //if the key was deleted, do not need to request
                 it_keys = keys.erase(it_keys);
-            }else if(this->get_slice_for_key(it_keys->key) != this->slice){
+            }else if(this->get_slice_for_key(it_keys->first.key) != this->slice){
                 // if the key does not belong to this slice
                 it_keys = keys.erase(it_keys);
             }else{
@@ -550,26 +570,20 @@ bool kv_store_leveldb::put_metadata_stat(const std::string& key, const kv_store_
     int k_slice = this->get_slice_for_key(key);
 
     if(this->slice == k_slice){
-        std::cout << "Step1!" << std::endl;
         std::string value;
         std::string past_comp_key = compose_key_toString(key, past_version);
         std::string new_comp_key = compose_key_toString(key, version);
 
         metadata_attr met_attr = metadata_attr::deserialize_from_string(bytes);
         metadata new_met(met_attr);
-        std::cout << "Step2!" << std::endl;
         
         leveldb::Status s = db->Get(leveldb::ReadOptions(), past_comp_key, &value);
 
         if (s.ok()){
-            std::cout << "Step3!" << std::endl;
-        
             metadata met = metadata::deserialize_from_string(value);         
-            std::cout << "Step4!" << std::endl;
-        
+            
             std::string data = metadata::merge_metadata(new_met, met);
-            std::cout << "Step5!" << std::endl;
-        
+            
             leveldb::WriteOptions writeOptions;
             db->Put(writeOptions, new_comp_key, data);
             
@@ -578,7 +592,6 @@ bool kv_store_leveldb::put_metadata_stat(const std::string& key, const kv_store_
             leveldb::WriteOptions writeOptions;
             db->Put(writeOptions, new_comp_key, metadata::serialize_to_string(new_met));
         }
-        std::cout << "Step6!" << std::endl;
         
         this->record_count++;
     }else{
@@ -769,6 +782,172 @@ bool kv_store_leveldb::anti_entropy_put(const std::string& key, kv_store_key_ver
     }
     return false;
     
+}
+
+
+bool kv_store_leveldb::put_tmp_anti_entropy(const std::string& base_path, const std::string& key, kv_store_key_version version, const std::string& bytes, bool is_merge, bool is_delete) {
+    kv_store_key<std::string> key_comp = {key, version, is_delete, is_merge};
+    this->seen_it(key_comp);
+    int k_slice = this->get_slice_for_key(base_path);
+
+    if(this->slice == k_slice){
+        leveldb::WriteOptions writeOptions;
+        std::string comp_key;
+        //comp_key.reserve(100);
+        comp_key = compose_key_toString(key, version);
+        leveldb::Status s = db_tmp_anti_entropy->Put(writeOptions, comp_key, bytes);
+        if(!s.ok()) throw LevelDBException();
+        return true;
+    }else{
+        //Object received but does not belong to this df_store.
+        return false;
+    }
+}
+
+
+bool kv_store_leveldb::put_tmp_key_entry_size(const std::string& base_path, kv_store_key_version version, size_t size) {
+    int k_slice = this->get_slice_for_key(base_path);
+
+    if(this->slice == k_slice){
+        leveldb::WriteOptions writeOptions;
+        std::string comp_key;
+        comp_key = compose_key_toString(base_path, version);
+        comp_key = comp_key + "#size";
+        leveldb::Status s = db_tmp_anti_entropy->Put(writeOptions, comp_key, to_string(size));
+        if(!s.ok()) throw LevelDBException();
+        return true;
+    }else{
+        //Object received but does not belong to this df_store.
+        return false;
+    }
+}
+
+bool kv_store_leveldb::get_tmp_key_entry_size(const std::string& base_path, const std::string& key, kv_store_key_version version, std::string* value) {
+    int k_slice = this->get_slice_for_key(base_path);
+
+    if(this->slice == k_slice){
+        std::string comp_key;
+        comp_key = compose_key_toString(base_path, version);
+        comp_key = comp_key + "#size";
+        leveldb::Status s = db_tmp_anti_entropy->Get(leveldb::ReadOptions(), comp_key, value);
+        if(!s.ok()) throw LevelDBException();
+        return true;
+    }else{
+        //Object received but does not belong to this df_store.
+        return false;
+    }
+}
+
+//If have all blocks and metadata was inserted with success - true
+//If do not have all blocks - false
+bool kv_store_leveldb::check_if_have_all_blks_and_put_metadata(const std::string& base_path, const std::string& key, kv_store_key_version version, size_t blk_num, bool is_merge, bool is_delete) {
+    int k_slice = this->get_slice_for_key(base_path);
+
+    if(this->slice == k_slice){
+
+        std::string met;
+        
+        for(int i = 1; i <= blk_num; i++){
+            std::string blk_path;
+            blk_path.reserve(100);
+            blk_path.append(base_path).append(":").append(std::to_string(i));
+
+            std::string value;
+            std::string comp_key;
+            comp_key = compose_key_toString(blk_path, version);
+            
+            leveldb::Status s = db_tmp_anti_entropy->Get(leveldb::ReadOptions(), comp_key, &value);
+            if(!s.ok()) return false;
+            met += value;
+        }
+
+        //have all blks
+        std::string c_key;
+        c_key = compose_key_toString(base_path, version);
+
+        if(!is_delete){
+            leveldb::Status s = db->Put(leveldb::WriteOptions(), c_key, met);
+            if(!s.ok()) throw LevelDBException();
+            if(is_merge) {
+                s = db_merge_log->Put(leveldb::WriteOptions(), c_key, std::to_string(is_merge));
+                if(!s.ok()) throw LevelDBException();
+            }
+            this->record_count++;
+        }else{
+            leveldb::Status s = db_deleted->Put(leveldb::WriteOptions(), c_key, met);
+            if(!s.ok()) throw LevelDBException();
+            this->deleted_record_count++;
+        }
+        return true;
+    }else{
+        //Object received but does not belong to this df_store.
+        return false;
+    }
+}
+
+bool kv_store_leveldb::get_incomplete_blks(const std::string& key, kv_store_key_version version, std::vector<size_t>& tmp_blks_to_request) {
+    leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+    std::string prefix = compose_key_toString(key, version);
+    bool res = false;
+    int i = 0;
+    size_t size = 0;
+    std::vector<size_t> received_blks;
+
+    for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next(), i++) {
+        std::string comp_key = it->key().ToString();
+        std::string value = it->value().ToString();
+
+        if(comp_key.find("#size") != std::string::npos){
+            size = stol(value);
+        }else{
+            std::string current_key;
+            std::map<long, long> current_vector;
+            int res = split_composite_total(comp_key, &current_key, &current_vector);
+            if(res == 0){
+                std::string blk_num_str;
+                int res_2 = get_blk_num(current_key, &blk_num_str);
+                if(res_2 == 0)
+                    received_blks.push_back(stol(blk_num_str));
+            }
+        }
+    }
+    if(size > 0) res = true;
+    for(size_t j = 1; j <= size; j++){
+        if(std::find(received_blks.begin(), received_blks.end(), j) == received_blks.end()){
+            tmp_blks_to_request.push_back(j);
+        }
+    }
+        
+    if(!it->status().ok()){
+        delete it;
+        throw LevelDBException();
+    }
+    delete it;
+    return res;
+}
+
+
+
+
+void kv_store_leveldb::delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const std::string& key, kv_store_key_version version, size_t blk_num) {
+        
+    std::string comp_key;
+    comp_key = compose_key_toString(base_path, version);
+    comp_key = comp_key + "#size";
+    
+    leveldb::Status s = db_tmp_anti_entropy->Delete(leveldb::WriteOptions(), comp_key);
+    if(!s.ok()) throw LevelDBException();
+
+    for(int i = 1; i <= blk_num; i++){
+        std::string blk_path;
+        blk_path.reserve(100);
+        blk_path.append(base_path).append(":").append(std::to_string(i));
+
+        comp_key = compose_key_toString(blk_path, version);
+        
+        db_tmp_anti_entropy->Delete(leveldb::WriteOptions(), comp_key);
+       
+    }   
 }
 
 

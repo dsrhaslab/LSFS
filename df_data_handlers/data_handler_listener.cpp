@@ -5,8 +5,8 @@
 #include "data_handler_listener.h"
 #include "df_communication/udp_async_server.h"
 
-data_handler_listener::data_handler_listener(std::string ip, int kv_port, long id, float chance, clock_vv* clock, pss* pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
-    : ip(std::move(ip)), kv_port(kv_port), id(id), chance(chance), clock_ptr(clock), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
+data_handler_listener::data_handler_listener(std::string ip, int kv_port, long id, float chance, pss* pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
+    : ip(std::move(ip)), kv_port(kv_port), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
 
 void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port){
     try{
@@ -785,9 +785,11 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
     try {
         
         //Normal keys - which keys do i really need
-        std::unordered_set<kv_store_key<std::string>> keys_to_request;
+        std::unordered_map<kv_store_key<std::string>, size_t> keys_to_request;
         //Deleted keys 
         std::unordered_set<kv_store_key<std::string>> deleted_keys_to_request;
+        //tmp Anti Entropy blocks to request
+        std::vector<size_t> tmp_blks_to_request;
         
         for(auto& sk: message.store_keys()){
             auto& key = sk.key();
@@ -798,44 +800,74 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
 
             if(sk.is_deleted())
                 deleted_keys_to_request.insert({key.key(), version, sk.is_deleted()});
-            else
-                keys_to_request.insert({key.key(), version, sk.is_deleted(), sk.is_merge()});
+            else{
+                kv_store_key<std::string> st_key ={key.key(), version, sk.is_deleted(), sk.is_merge()};
+                keys_to_request.insert(std::make_pair(st_key, sk.data_size()));
+            }
         }
-        this->store->remove_from_set_existent_keys(keys_to_request);
+        this->store->remove_from_map_existent_keys(keys_to_request);
         std::cout << "################### Only need " << keys_to_request.size() << " normal keys." << std::endl;
 
         this->store->remove_from_set_existent_deleted_keys(deleted_keys_to_request);
         std::cout << "################### Only need " << deleted_keys_to_request.size() << " deleted keys." << std::endl;
 
-        
-        for (auto &key: keys_to_request) {
-            proto::kv_message get_msg;
+        for (auto &key_size: keys_to_request) {
+            
+            if(key_size.second > BLK_SIZE){
 
-            std::string req_id;
-            req_id.reserve(50);
-            req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
-            
-            auto *message_content = new proto::anti_entropy_get_message();
-            message_content->set_ip(this->ip);
-            message_content->set_port(this->kv_port);
-            message_content->set_id(this->id);
-            message_content->set_reqid(req_id);
-            message_content->set_is_deleted(false);
-            message_content->set_is_merge(key.is_merge);
-            
-            proto::kv_store_key* kv_key = new proto::kv_store_key();
-            kv_key->set_key(key.key);
-            
-            for(auto const c: key.key_version.vv){
-                proto::kv_store_version *kv_version = kv_key->add_version();
-                kv_version->set_client_id(c.first);
-                kv_version->set_clock(c.second);
-            }
-            message_content->set_allocated_key(kv_key);
-            
-            get_msg.set_allocated_anti_entropy_get_msg(message_content);
+                if(this->store->get_incomplete_blks(key_size.first.key, key_size.first.key_version, tmp_blks_to_request)){
+                    
+                    for(auto blk_num: tmp_blks_to_request){
+                        
+                        std::string blk_path;
+                        blk_path.reserve(100);
+                        blk_path.append(key_size.first.key).append(":").append(std::to_string(blk_num));
 
-            this->reply_client(get_msg, message.ip(), message.port());
+                        proto::kv_message get_msg;
+
+                        std::string req_id;
+                        req_id.reserve(50);
+                        req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
+
+                        build_anti_entropy_get_metadata_message(&get_msg, this->ip, this->kv_port, this->id, req_id, blk_path, key_size.first.key_version, false, key_size.first.is_merge);
+
+                        this->reply_client(get_msg, message.ip(), message.port());
+                    }
+
+                }else{
+                    this->store->put_tmp_key_entry_size(key_size.first.key, key_size.first.key_version, key_size.second);
+
+                    size_t NR_BLKS = (key_size.second / BLK_SIZE) + 1;    
+
+                    for(int i = 1; i <= NR_BLKS; i++){
+
+                        std::string blk_path;
+                        blk_path.reserve(100);
+                        blk_path.append(key_size.first.key).append(":").append(std::to_string(i));
+
+                        proto::kv_message get_msg;
+
+                        std::string req_id;
+                        req_id.reserve(50);
+                        req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
+
+                        build_anti_entropy_get_metadata_message(&get_msg, this->ip, this->kv_port, this->id, req_id, blk_path, key_size.first.key_version, false, key_size.first.is_merge);
+
+                        this->reply_client(get_msg, message.ip(), message.port());
+                    }
+                }
+            }else{
+
+                proto::kv_message get_msg;
+
+                std::string req_id;
+                req_id.reserve(50);
+                req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
+
+                build_anti_entropy_get_message(&get_msg, this->ip, this->kv_port, this->id, req_id, key_size.first.key, key_size.first.key_version, false, key_size.first.is_merge);
+
+                this->reply_client(get_msg, message.ip(), message.port());
+            }            
         }
 
         for (auto &deleted_key: deleted_keys_to_request) {
@@ -844,27 +876,10 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
             std::string req_id;
             req_id.reserve(50);
             req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
-            
-            auto *message_content = new proto::anti_entropy_get_message();
-            message_content->set_ip(this->ip);
-            message_content->set_port(this->kv_port);
-            message_content->set_id(this->id);
-            message_content->set_reqid(req_id);
-            message_content->set_is_deleted(true);
-            message_content->set_is_merge(false);
-            
-            proto::kv_store_key* kv_key = new proto::kv_store_key();
-            kv_key->set_key(deleted_key.key);
-            
-            for(auto const c: deleted_key.key_version.vv){
-                proto::kv_store_version *kv_version = kv_key->add_version();
-                kv_version->set_client_id(c.first);
-                kv_version->set_clock(c.second);
-            }
-            message_content->set_allocated_key(kv_key);
-            
-            get_msg.set_allocated_anti_entropy_get_msg(message_content);
 
+            //merge = false because this is deleted key, merge is irrelevant
+            build_anti_entropy_get_message(&get_msg, this->ip, this->kv_port, this->id, req_id, deleted_key.key, deleted_key.key_version, true, false);
+            
             this->reply_client(get_msg, message.ip(), message.port());
         }
     }catch (std::exception& e){
@@ -904,27 +919,79 @@ void data_handler_listener::process_anti_entropy_get_message(proto::kv_message& 
             if(data != nullptr){
                 proto::kv_message reply_message;
 
-                auto* message_content = new proto::anti_entropy_get_reply_message();
-                message_content->set_ip(this->ip);
-                message_content->set_port(this->kv_port);
-                message_content->set_id(this->id);
-                message_content->set_reqid(req_id);
-                
-                message_content->set_data(data->data(), data->size());
+                build_anti_entropy_get_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, version, is_deleted, is_merge, std::move(data));
 
-                proto::kv_store_key* kv_key = new proto::kv_store_key();
-                kv_key->set_key(key);
-                for(auto const c: version.vv){
-                    proto::kv_store_version* kv_version = kv_key->add_version();
-                    kv_version->set_client_id(c.first);
-                    kv_version->set_clock(c.second);
+                std::cout << "################### Sending Get Reply Anti-entropy Message" << std::endl;
+
+                this->reply_client(reply_message, sender_ip, sender_port);
+            }else{
+                // if i don't have the content of the message -> forward it
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
+        }
+    }
+}
+
+
+void data_handler_listener::process_anti_entropy_get_metadata_message(proto::kv_message& msg) {
+    const proto::anti_entropy_get_metadata_message& message = msg.anti_entropy_get_met_msg();
+    const std::string& sender_ip = message.ip();
+    const int sender_port = message.port();
+    const std::string& key = message.key().key();
+    const std::string& req_id = message.reqid();
+    std::unique_ptr<std::string> data(nullptr); //*data = undefined
+    bool request_already_replied = msg.forwarded_within_group();
+
+    if(req_id.rfind("intern", 0) == 0){
+        if(!this->store->in_anti_entropy_log(req_id)){
+
+            this->store->log_anti_entropy_req(req_id);
+            
+            kv_store_key_version version;
+            for (auto c : message.key().version())
+                version.vv.emplace(c.client_id(), c.clock());
+
+            bool is_deleted = message.is_deleted();
+            bool is_merge = true; //merge is for metadata so true
+
+            std::string base_path;
+            std::string blk_num_str;
+            
+            int res_1 = get_base_path(key, &base_path);
+            int res_2 = get_blk_num(key, &blk_num_str);
+
+            std::cout << "Split key: Base_Path: " << base_path << " res: " << res_1  << " Block num: " << blk_num_str << " res: "  << res_2 << std::endl;
+            
+            if(res_1 == 0 && res_2 == 0){
+
+                int blk_num = std::stoi(blk_num_str);  
+
+                kv_store_key<std::string> get_key = {base_path, version, is_deleted};
+                
+                data = this->store->get_anti_entropy(get_key, &is_merge);
+                if(data != nullptr){
+                    size_t NR_BLKS = (data->size() / BLK_SIZE) + 1;
+
+                    size_t pos = (blk_num-1)*BLK_SIZE;
+
+                    std::string value;
+
+                    //Last block
+                    if(blk_num == NR_BLKS){
+                        value = data->substr(pos);  
+                    }else{
+                        value = data->substr(pos, BLK_SIZE); 
+                    }
+
+                    data = std::make_unique<std::string>(value);
                 }
-                message_content->set_allocated_key(kv_key);
+            }
+            
+            if(data != nullptr){
+                proto::kv_message reply_message;
 
-                message_content->set_is_deleted(is_deleted);
-                message_content->set_is_merge(is_merge);
-                
-                reply_message.set_allocated_anti_entropy_get_reply_msg(message_content);
+                build_anti_entropy_get_metadata_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, version, is_deleted, is_merge, std::move(data));
 
                 std::cout << "################### Sending Get Reply Anti-entropy Message" << std::endl;
 
@@ -972,6 +1039,52 @@ void data_handler_listener::process_anti_entropy_get_reply_message(proto::kv_mes
         std::cout << "################### Entered deleted key zone" << std::endl;
         try {
             bool stored = this->store->anti_entropy_remove(key, version, data);
+        } catch(std::exception& e){}
+    }
+}
+
+
+void data_handler_listener::process_anti_entropy_get_metadata_reply_message(proto::kv_message &msg) {
+    const proto::anti_entropy_get_metadata_reply_message& message = msg.anti_entropy_get_met_reply_msg();
+    const std::string& key = message.key().key();
+    
+    std::cout << "################### Got Reply Message for key: " << key << std::endl;
+
+    kv_store_key_version version;
+    for (auto c : message.key().version())
+        version.vv.emplace(c.client_id(), c.clock());
+
+    const std::string& data = message.data();
+
+    bool is_deleted = message.is_deleted();
+    bool is_merge = message.is_merge();
+
+    std::cout << "################### Is key deleted:  "<< is_deleted << std::endl;
+    
+    kv_store_key<std::string> key_comp = {key, version, is_deleted, is_merge};
+    
+    if(!this->store->have_seen(key_comp) || !this->store->have_seen_deleted(key_comp)) {
+        std::cout << "################### Entered normal key zone" << std::endl;
+        try {
+            std::string base_path;
+            int res_1 = get_base_path(key, &base_path);
+
+            bool completed = this->store->put_tmp_anti_entropy(base_path, key, version, data, is_merge, is_deleted);
+            if(!completed) return;
+            
+            std::string value;
+            size_t size;
+            bool have_size = this->store->get_tmp_key_entry_size(base_path, key, version, &value);
+            if(have_size){
+                size = stol(value);
+                size_t blk_num = (size / BLK_SIZE) + 1;
+                bool have_all = this->store->check_if_have_all_blks_and_put_metadata(base_path, key, version, blk_num, is_merge, is_deleted);
+                if(have_all){
+                    this->store->delete_metadata_from_tmp_anti_entropy(base_path, key, version, blk_num);
+                }
+            }
+            
+
         } catch(std::exception& e){}
     }
 }

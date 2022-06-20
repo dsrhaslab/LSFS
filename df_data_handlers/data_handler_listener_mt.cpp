@@ -62,8 +62,8 @@ public:
     }
 };
 
-data_handler_listener_mt::data_handler_listener_mt(std::string ip, int kv_port, long id, float chance, clock_vv* clock, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
-        : data_handler_listener(std::move(ip), kv_port, id, chance, clock, pss, group_c, anti_ent, std::move(store), smart){}
+data_handler_listener_mt::data_handler_listener_mt(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
+        : data_handler_listener(std::move(ip), kv_port, id, chance, pss, group_c, anti_ent, std::move(store), smart){}
 
 void data_handler_listener_mt::operator()() {
 

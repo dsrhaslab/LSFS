@@ -215,18 +215,18 @@ void anti_entropy::phase_operating(){
         message_content->set_port(this->kv_port);
         message_content->set_id(this->id);
         //Add random keys to propagate
-        for (auto &key : this->store->get_keys()) {
+        for (auto &key_size : this->store->get_keys()) {
 
             std::cout << "##### SENDING NORMAL KEY #####" << std::endl;
 
             proto::kv_store* store = message_content->add_store_keys();
             proto::kv_store_key* kv_key = new proto::kv_store_key();
-            kv_key->set_key(key.key);
+            kv_key->set_key(key_size.first.key);
 
-            std::cout << "Key: " << key.key << std::endl;
+            std::cout << "Key: " << key_size.first.key << std::endl;
             std::cout << "Version: ";
 
-            for(auto pair : key.key_version.vv){
+            for(auto pair : key_size.first.key_version.vv){
 
                 std::cout <<  pair.first << "@" << pair.second << ",";
 
@@ -236,7 +236,8 @@ void anti_entropy::phase_operating(){
             }
             store->set_allocated_key(kv_key);
             store->set_is_deleted(false);
-            store->set_is_merge(key.is_merge);
+            store->set_data_size(key_size.second);
+            store->set_is_merge(key_size.first.is_merge);
 
             std::cout << "--------------------------" << std::endl;
         }
