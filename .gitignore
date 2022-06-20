@@ -53,9 +53,11 @@ udp_client_server/*
 results*
 technical_stuff/*
 scripts/log*
+test_filesystem
 
 #Deploy virtualenv
-*.virtualenvs/*
+Deploy/*
+Deploy/.virtualenvs/*
 
 # Capnp auto-generated files
 *.capnp.*
@@ -69,3 +71,4 @@ db_2
 deleted_db_*
 
 mkdirf.sh
+leveldbKeys.py
