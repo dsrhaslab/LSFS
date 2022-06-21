@@ -814,8 +814,12 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
         for (auto &key_size: keys_to_request) {
             
             if(key_size.second > BLK_SIZE){
-
+                
+                std::cout << "Key is too big for one transfer, chop it in blks" << std::endl;
+                    
                 if(this->store->get_incomplete_blks(key_size.first.key, key_size.first.key_version, tmp_blks_to_request)){
+                    
+                    std::cout << "Some keys were incomplete and stored in the tmp anti_entropy database" << std::endl;
                     
                     for(auto blk_num: tmp_blks_to_request){
                         
@@ -854,6 +858,9 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
                         build_anti_entropy_get_metadata_message(&get_msg, this->ip, this->kv_port, this->id, req_id, blk_path, key_size.first.key_version, false, key_size.first.is_merge);
 
                         this->reply_client(get_msg, message.ip(), message.port());
+
+                        std::cout << "Sending request for metadata blk " << i << std::endl;
+                
                     }
                 }
             }else{
@@ -1048,7 +1055,7 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
     const proto::anti_entropy_get_metadata_reply_message& message = msg.anti_entropy_get_met_reply_msg();
     const std::string& key = message.key().key();
     
-    std::cout << "################### Got Reply Message for key: " << key << std::endl;
+    std::cout << "################### Got Reply Message for Metadata key: " << key << std::endl;
 
     kv_store_key_version version;
     for (auto c : message.key().version())
@@ -1059,12 +1066,10 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
     bool is_deleted = message.is_deleted();
     bool is_merge = message.is_merge();
 
-    std::cout << "################### Is key deleted:  "<< is_deleted << std::endl;
-    
     kv_store_key<std::string> key_comp = {key, version, is_deleted, is_merge};
     
     if(!this->store->have_seen(key_comp) || !this->store->have_seen_deleted(key_comp)) {
-        std::cout << "################### Entered normal key zone" << std::endl;
+        std::cout << "################### Trying to incorporate blk" << std::endl;
         try {
             std::string base_path;
             int res_1 = get_base_path(key, &base_path);
@@ -1080,6 +1085,7 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
                 size_t blk_num = (size / BLK_SIZE) + 1;
                 bool have_all = this->store->check_if_have_all_blks_and_put_metadata(base_path, key, version, blk_num, is_merge, is_deleted);
                 if(have_all){
+                    std::cout << "################### Have all the blks, incorporate in normal db" << std::endl;
                     this->store->delete_metadata_from_tmp_anti_entropy(base_path, key, version, blk_num);
                 }
             }

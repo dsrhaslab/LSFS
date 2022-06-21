@@ -6,6 +6,7 @@
 #define P2PFS_KV_STORE_LEVELDB_H
 
 #include <leveldb/db.h>
+#include "leveldb/write_batch.h"
 #include "exceptions/custom_exceptions.h"
 #include "df_util/util.h"
 #include <unordered_map>
@@ -151,7 +152,7 @@ int kv_store_leveldb::init(void* path, long id){
     std::string db_name = this->path + std::to_string(id);
     std::string db_merge_log_name = db_name + "_merge";
     std::string db_delete_name = db_name + "_deleted";
-    std::string db_tmp_anti_entropy = db_name + "_tmp_anti_entropy";
+    std::string db_tmp_anti_entropy_name = db_name + "_tmp_anti_entropy";
     
 
     int res = 0;
@@ -162,7 +163,7 @@ int kv_store_leveldb::init(void* path, long id){
     if(res == -1) return -1;
     res = open(options, "DB_DELETED", db_delete_name, &db_deleted);
     if(res == -1) return -1;
-    res = open(options, "TMP_ANTI_ENTROPY", db_delete_name, &db_deleted);
+    res = open(options, "TMP_ANTI_ENTROPY", db_tmp_anti_entropy_name, &db_tmp_anti_entropy);
 
     std::cout << "All done" << std::endl;
 
@@ -538,10 +539,10 @@ bool kv_store_leveldb::put_metadata_child(const std::string& key, const kv_store
     if(this->slice == k_slice){
 
         std::string value;
-        std::string comp_key;
-        comp_key = compose_key_toString(key, past_version);
+        std::string past_comp_key = compose_key_toString(key, past_version);
+        std::string new_comp_key = compose_key_toString(key, version);
         
-        leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
+        leveldb::Status s = db->Get(leveldb::ReadOptions(), past_comp_key, &value);
 
         if (s.ok()){
             metadata met = metadata::deserialize_from_string(value);
@@ -550,10 +551,12 @@ bool kv_store_leveldb::put_metadata_child(const std::string& key, const kv_store
             else met.childs.remove_child(child_path, is_dir);
 
             std::string bytes = metadata::serialize_to_string(met);
-
-            leveldb::WriteOptions writeOptions;
-            db->Put(writeOptions, comp_key, bytes);
-
+          
+            leveldb::WriteBatch batch;
+            batch.Delete(past_comp_key);
+            batch.Put(new_comp_key, bytes);
+            db->Write(leveldb::WriteOptions(), &batch);
+            
         }
     }else{
         //Object received but does not belong to this df_store.
@@ -584,16 +587,18 @@ bool kv_store_leveldb::put_metadata_stat(const std::string& key, const kv_store_
             
             std::string data = metadata::merge_metadata(new_met, met);
             
-            leveldb::WriteOptions writeOptions;
-            db->Put(writeOptions, new_comp_key, data);
+            leveldb::WriteBatch batch;
+            batch.Delete(past_comp_key);
+            batch.Put(new_comp_key, data);
+            db->Write(leveldb::WriteOptions(), &batch);
             
         }
         else{
             leveldb::WriteOptions writeOptions;
-            db->Put(writeOptions, new_comp_key, metadata::serialize_to_string(new_met));
+            s = db->Put(writeOptions, new_comp_key, metadata::serialize_to_string(new_met));
+            if(s.ok()) this->record_count++;
         }
         
-        this->record_count++;
     }else{
         //Object received but does not belong to this df_store.
         return false;
@@ -639,6 +644,10 @@ void kv_store_leveldb::print_store(long id){
     std::cout << "\nPrinting DB_DELETED" << std::endl;
     
     print_db(db_deleted, id, "deleted_db_");
+
+    std::cout << "\nPrinting DB_TMP_ANTI_ENTROPY" << std::endl;
+    
+    print_db(db_tmp_anti_entropy, id, "tmp_anti_entropy_");
     
     std::cout << std::endl;
 }

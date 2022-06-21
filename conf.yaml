@@ -8,8 +8,8 @@ main_confs:
   peer_instantiation_interval_sec: 0.01
   view_logger_enabled: true
   log_interval_sec: 5
-  logging_dir: /home/branco/Mestrado/5ano/LSFS//logging/
-  results_dir: /home/branco/Mestrado/5ano/LSFS//results/
+  logging_dir: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS//logging/
+  results_dir: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS//results/
   database_base_path: /home/branco/
   rep_max: 2
   rep_min: 1
@@ -33,7 +33,7 @@ main_confs:
   #               Client               #
   ######################################
 
-  nr_puts_required: 2
+  nr_puts_required: 1
   nr_gets_required: 1
   nr_gets_version_required: 1
   client_wait_timeout: 10

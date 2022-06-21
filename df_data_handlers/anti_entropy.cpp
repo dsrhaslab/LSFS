@@ -274,7 +274,7 @@ void anti_entropy::phase_operating(){
 
         std::cout << "################### Sending Anti-Entropy.... "<< std::endl;
 
-        //this->send_peer_keys(slice_view, message);
+        this->send_peer_keys(slice_view, message);
     }catch (std::exception& e){
         // Unable to get Keys -> Do nothing
     }

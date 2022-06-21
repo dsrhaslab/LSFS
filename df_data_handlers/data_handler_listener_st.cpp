@@ -55,8 +55,12 @@ void data_handler_listener_st::operator()() {
                     this->process_anti_entropy_message(msg);
                 }else if(msg.has_anti_entropy_get_msg()){
                     this->process_anti_entropy_get_message(msg);
+                }else if(msg.has_anti_entropy_get_met_msg()){
+                    this->process_anti_entropy_get_metadata_message(msg);
                 }else if(msg.has_anti_entropy_get_reply_msg()){
                     this->process_anti_entropy_get_reply_message(msg);
+                }else if(msg.has_anti_entropy_get_met_reply_msg()){
+                    this->process_anti_entropy_get_metadata_reply_message(msg);
                 }else if(msg.has_recover_request_msg()){
                     this->process_recover_request_msg(msg);
                 }
