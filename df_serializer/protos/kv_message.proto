@@ -185,7 +185,6 @@ message anti_entropy_get_message {
   string reqid = 4;
   kv_store_key key = 6;
   bool is_deleted = 7;
-  bool is_merge = 8;
 }
 
 message anti_entropy_get_metadata_message {
@@ -195,7 +194,6 @@ message anti_entropy_get_metadata_message {
   string reqid = 4;
   kv_store_key key = 6;
   bool is_deleted = 7;
-  bool is_merge = 8;
 }
 
 message anti_entropy_get_reply_message {

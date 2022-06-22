@@ -46,7 +46,7 @@ main_confs:
   limit_write_paralelization_to: 32k
   limit_read_paralelization_to: 32k
   benchmark_performance: False
-  maximize_cache: true
+  maximize_cache: False
   ######################################
 
   lb_interval: 5

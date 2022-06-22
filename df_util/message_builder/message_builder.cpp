@@ -308,7 +308,7 @@ void build_get_metadata_message(proto::kv_message* msg, std::string& ip, int kv_
 
 
 void build_anti_entropy_get_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id,
-                                const std::string& key, const kv_store_key_version& version, bool is_deleted, bool is_merge){
+                                const std::string& key, const kv_store_key_version& version, bool is_deleted){
 
     auto *message_content = new proto::anti_entropy_get_message();
     message_content->set_ip(ip);
@@ -316,7 +316,6 @@ void build_anti_entropy_get_message(proto::kv_message* msg, std::string& ip, int
     message_content->set_id(id);
     message_content->set_reqid(req_id);
     message_content->set_is_deleted(is_deleted);
-    message_content->set_is_merge(is_merge);
     
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
@@ -361,7 +360,7 @@ void build_anti_entropy_get_reply_message(proto::kv_message* msg, std::string& i
 
 
 void build_anti_entropy_get_metadata_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id,
-                                const std::string& key, const kv_store_key_version& version, bool is_deleted, bool is_merge){
+                                const std::string& key, const kv_store_key_version& version, bool is_deleted){
 
     auto *message_content = new proto::anti_entropy_get_metadata_message();
     message_content->set_ip(ip);
@@ -369,7 +368,6 @@ void build_anti_entropy_get_metadata_message(proto::kv_message* msg, std::string
     message_content->set_id(id);
     message_content->set_reqid(req_id);
     message_content->set_is_deleted(is_deleted);
-    message_content->set_is_merge(is_merge);
     
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);

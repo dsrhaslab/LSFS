@@ -247,13 +247,11 @@ std::unordered_map<kv_store_key<std::string>, size_t> kv_store_leveldb::get_keys
         
         size_t v_size = it->value().size();
 
-        bool is_merge = check_if_put_merged(comp_key);
-
         std::string key;
         std::map<long, long> vector;
         int res = split_composite_total(comp_key, &key, &vector);
         if(res == 0){
-            kv_store_key<std::string> st_key = {key, kv_store_key_version(vector), false, is_merge};
+            kv_store_key<std::string> st_key = {key, kv_store_key_version(vector), false};
             keys.insert(std::make_pair(st_key, v_size));
         }
     }
@@ -520,7 +518,8 @@ bool kv_store_leveldb::put(const std::string& key, kv_store_key_version version,
         comp_key = compose_key_toString(key, version);
         db->Put(writeOptions, comp_key, bytes);
         if(is_merge) {
-            db_merge_log->Put(writeOptions, comp_key, std::to_string(is_merge));
+            std::string k_c = key + "#";
+            db_merge_log->Put(writeOptions, k_c, std::to_string(is_merge));
         }
         this->record_count++;
         return true;
@@ -585,7 +584,7 @@ bool kv_store_leveldb::put_metadata_stat(const std::string& key, const kv_store_
         if (s.ok()){
             metadata met = metadata::deserialize_from_string(value);         
             
-            std::string data = metadata::merge_metadata(new_met, met);
+            std::string data = metadata::merge_attr(new_met, met);
             
             leveldb::WriteBatch batch;
             batch.Delete(past_comp_key);
@@ -645,6 +644,10 @@ void kv_store_leveldb::print_store(long id){
     
     print_db(db_deleted, id, "deleted_db_");
 
+    std::cout << "\nPrinting DB_MERGE_LOG" << std::endl;
+    
+    print_db(db_merge_log, id, "merge_db_");
+
     std::cout << "\nPrinting DB_TMP_ANTI_ENTROPY" << std::endl;
     
     print_db(db_tmp_anti_entropy, id, "tmp_anti_entropy_");
@@ -668,19 +671,21 @@ void kv_store_leveldb::print_db(leveldb::DB* database, long id, std::string file
     {
         std::string comp_key = it->key().ToString();
         db_file << " Complete Key " << comp_key << "\n";
-    
-        std::string key;
-        std::map<long, long> vector;
-        int res = split_composite_total(comp_key, &key, &vector);
+        
+        if(filename.compare("db_") == 0 || filename.compare("deleted_db_") == 0){
+            std::string key;
+            std::map<long, long> vector;
+            int res = split_composite_total(comp_key, &key, &vector);
 
-        if(res == 0){
-            db_file << "  Key: " << key << "#" << "\n";
-            
-            kv_store_key<std::string> get_key = {key, kv_store_key_version(vector)};
-            std::unique_ptr<std::string> data = get_db(get_key, database);
+            if(res == 0){
+                db_file << "  Key: " << key << "#" << "\n";
+                
+                kv_store_key<std::string> get_key = {key, kv_store_key_version(vector)};
+                std::unique_ptr<std::string> data = get_db(get_key, database);
 
-            if(data != nullptr) db_file << "  Size: " << data->size() << "\n";
-            else db_file << "  Data: **NULLPTR**"<< "\n";
+                if(data != nullptr) db_file << "  Size: " << data->size() << "\n";
+                else db_file << "  Data: **NULLPTR**"<< "\n";
+            }
         }
         
     }
@@ -729,9 +734,8 @@ std::unique_ptr<std::string> kv_store_leveldb::get_anti_entropy(const kv_store_k
         return this->get_deleted(const_cast<kv_store_key<std::string> &>(key));
     }else{
         std::string value;
-        std::string comp_key;
-        comp_key = compose_key_toString(key.key, key.key_version);
-        leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value);
+        std::string k_c = key.key + "#";
+        leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), k_c, &value);
         *is_merge = s.ok();
 
         return this->get(const_cast<kv_store_key<std::string> &>(key));
@@ -766,7 +770,7 @@ bool kv_store_leveldb::anti_entropy_remove(const std::string& key, kv_store_key_
     return true;
 }
 
-
+//Not used
 bool kv_store_leveldb::anti_entropy_put(const std::string& key, kv_store_key_version version, const std::string& value, bool is_merge){
     kv_store_key<std::string> key_comp = {key, version, false, is_merge};
     this->seen_it(key_comp);
@@ -783,7 +787,8 @@ bool kv_store_leveldb::anti_entropy_put(const std::string& key, kv_store_key_ver
             comp_key = compose_key_toString(key, version);
             db->Put(leveldb::WriteOptions(), comp_key, value);
             if(is_merge) {
-                db_merge_log->Put(leveldb::WriteOptions(), comp_key, std::to_string(is_merge));
+                std::string k_c = key + "#";
+                db_merge_log->Put(leveldb::WriteOptions(), k_c, std::to_string(is_merge));
             }
             this->record_count++;
             return true;
@@ -875,13 +880,7 @@ bool kv_store_leveldb::check_if_have_all_blks_and_put_metadata(const std::string
         c_key = compose_key_toString(base_path, version);
 
         if(!is_delete){
-            leveldb::Status s = db->Put(leveldb::WriteOptions(), c_key, met);
-            if(!s.ok()) throw LevelDBException();
-            if(is_merge) {
-                s = db_merge_log->Put(leveldb::WriteOptions(), c_key, std::to_string(is_merge));
-                if(!s.ok()) throw LevelDBException();
-            }
-            this->record_count++;
+                put_with_merge(base_path, version, met);
         }else{
             leveldb::Status s = db_deleted->Put(leveldb::WriteOptions(), c_key, met);
             if(!s.ok()) throw LevelDBException();
@@ -969,20 +968,20 @@ bool kv_store_leveldb::remove(const std::string& key, kv_store_key_version versi
         std::string value;
         std::string comp_key;
         comp_key = compose_key_toString(key, version);
-        std::cout << "A chave é: " << comp_key << std::endl;
+        
         leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
 
         if (s.ok()){
-            std::cout << "Tenho a chave" << std::endl;
-
+            
             s = db->Delete(leveldb::WriteOptions(), comp_key);
             if(!s.ok())throw LevelDBException();
             this->record_count--; //removed record from database
             
             std::string value2;
-            s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value2);
+            std::string k_c = key + "#";
+            s = db_merge_log->Get(leveldb::ReadOptions(), k_c, &value2);
             if(s.ok()){
-                s = db_merge_log->Delete(leveldb::WriteOptions(), comp_key);
+                s = db_merge_log->Delete(leveldb::WriteOptions(), k_c);
                 if(!s.ok()) throw LevelDBException();
             }
 
@@ -1020,9 +1019,10 @@ bool kv_store_leveldb::check_if_put_merged(const std::string& key, kv_store_key_
     return is_merge;
 }
 
-bool kv_store_leveldb::check_if_put_merged(const std::string& comp_key){
+bool kv_store_leveldb::check_if_put_merged(const std::string& key){
     std::string value;
-    leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value);
+    std::string k_c = key + "#";
+    leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), k_c, &value);
     bool is_merge = s.ok();
     return is_merge;
 }
@@ -1031,11 +1031,14 @@ bool kv_store_leveldb::check_if_put_merged(const std::string& comp_key){
 bool kv_store_leveldb::put_with_merge(const std::string& key, kv_store_key_version version, const std::string& bytes) {
     try{
 
-        //This vector should only have one kv_store_key_version
-        //if it has more, something was wrong 
-
+    
         std::unique_ptr<std::vector<kv_store_key_version>> last_vkv = get_latest_version(key);
         std::vector<std::unique_ptr<std::string>> last_vdata;
+        
+        //if no key was found in the system, just insert it with merge = true
+        if( last_vkv == nullptr || last_vkv->size() <= 0){
+            return put(key, version, bytes, true);
+        }
 
         for(auto &kv: *last_vkv){
             kv_store_key<std::string> key_v = {key, kv};
@@ -1044,14 +1047,11 @@ bool kv_store_leveldb::put_with_merge(const std::string& key, kv_store_key_versi
 
         kv_store_key_version last_kv;
         std::unique_ptr<std::string> last_data;
-        
-        //if no key was found in the system, just insert it with merge = true
-        if( last_vkv == nullptr || last_vkv->size() <= 0){
-            return put(key, version, bytes, true);
-        }
+
+
         // if the vector has more than one version, just merge everything in the vector
         // 
-        else if(last_vkv->size() > 1){
+        if(last_vkv->size() > 1){
             last_kv = merge_vkv(*last_vkv);
             last_data = std::move(last_vdata.front());
             int i = 0;
@@ -1064,6 +1064,7 @@ bool kv_store_leveldb::put_with_merge(const std::string& key, kv_store_key_versi
         //retrieve first and unique elem
         else {
             last_kv = last_vkv->front();
+            last_data = std::move(last_vdata.front());
         }
 
         std::cout << "Checking if version and last version are concurrent" << std::endl;

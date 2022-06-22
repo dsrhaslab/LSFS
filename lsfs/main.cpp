@@ -81,8 +81,8 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    int pss_port = 12355;
-    int kv_port = 12356;
+    int pss_port = 12357;
+    int kv_port = 12358;
 
     lsfs_impl fs(boot_ip, "127.0.0.1", kv_port, pss_port, client_id, config_filename);
     int status = fs.run(argc - 4, argv + 4, NULL);

@@ -120,7 +120,7 @@ size_t lsfs_state::read_fixed_size_blocks_to_buffer(char *buf, size_t size, size
     return read_off;
 }
 
-int lsfs_state::put_block(const std::string& path, const char* buf, size_t size) {
+int lsfs_state::put_block(const std::string& path, const char* buf, size_t size, bool is_merge) {
     int return_value;
 
     client_reply_handler::Response response = client_reply_handler::Response::Init;
@@ -130,12 +130,20 @@ int lsfs_state::put_block(const std::string& path, const char* buf, size_t size)
     if(last_v != nullptr)
         version = *last_v;        
     
-    df_client->put(path, version, buf, size);
+    if(!is_merge) df_client->put(path, version, buf, size);
+    else df_client->put_with_merge(path, version, buf, size);
     
     return_value = 0;
 
     return return_value;
 }
+
+int lsfs_state::put_metadata_as_dir(metadata& met, const std::string& path){
+    // serialize metadata object
+    std::string metadata_str = metadata::serialize_to_string(met);
+     return this->put_block(path, metadata_str.data(), metadata_str.size(), true);
+}
+
 
 int lsfs_state::put_metadata(metadata& met, const std::string& path){
     // serialize metadata object

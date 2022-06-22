@@ -35,7 +35,7 @@ public:
     metadata() = default;
     static std::string serialize_to_string(metadata& met);
     static metadata deserialize_from_string(const std::string& string_serial);
-    static std::string merge_metadata(metadata met1, metadata met2);
+    static std::string merge_attr(metadata met1, metadata met2);
 };
 
 template<class Archive>

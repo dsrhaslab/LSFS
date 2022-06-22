@@ -44,8 +44,9 @@ public:
     int add_child_to_parent_dir(const std::string& path, bool is_dir);
     std::unique_ptr<metadata> add_child_to_working_dir_and_retreive(const std::string& parent_path, const std::string& child_name, bool is_dir);
     void remove_working_directory(const std::string& path);
-    int put_block(const std::string& path, const char* buf, size_t size);
+    int put_block(const std::string& path, const char* buf, size_t size, bool is_merge = false);
     int put_metadata(metadata& met, const std::string& path);
+    int put_metadata_as_dir(metadata& met, const std::string& path);
     int put_metadata_stat(metadata& met, const std::string& path);
     int put_metadata_child(const std::string& path, const std::string& child_path, bool is_create, bool is_dir);
     int put_with_merge_metadata(metadata& met, const std::string& path);

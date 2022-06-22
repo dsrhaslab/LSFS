@@ -136,8 +136,7 @@ int lsfs_impl::_mkdir(
 
     try{
 
-        
-        res = state->put_metadata(to_send, path);
+        res = state->put_metadata_as_dir(to_send, path);
 
         res = state->add_child_to_parent_dir(path, true);
 

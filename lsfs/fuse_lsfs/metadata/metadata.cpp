@@ -32,7 +32,7 @@ metadata metadata::deserialize_from_string(const std::string& serial_str) {
     return std::move(res);
 }
 
-std::string metadata::merge_metadata(metadata met1, metadata met2){
+std::string metadata::merge_attr(metadata met1, metadata met2){
     if(met1.attr.stbuf.st_atim < met2.attr.stbuf.st_atim){
         met1.attr.stbuf.st_atim = met2.attr.stbuf.st_atim;
     }
