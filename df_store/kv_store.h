@@ -35,6 +35,7 @@ protected:
     long seen_log_garbage_at;
     long request_log_garbage_at;
     long anti_entropy_log_garbage_at;
+    bool anti_entropy_disseminate_latest_keys;
 
 public:
     virtual int init(void*, long id) = 0;
