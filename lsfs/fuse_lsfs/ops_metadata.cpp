@@ -30,7 +30,7 @@ int lsfs_impl::_getattr(
         bool got_metadata = false;
         got_metadata = state->get_metadata_if_file_opened(path, stbuf);
         if(!got_metadata){
-            got_metadata = state->get_metadata_if_dir_opened(path, stbuf);
+            got_metadata = state->get_metadata_if_dir_cached(path, stbuf);
         }
         if(!got_metadata){
             try{

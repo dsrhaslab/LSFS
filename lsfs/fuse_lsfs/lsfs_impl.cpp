@@ -20,12 +20,16 @@ lsfs_impl::lsfs_impl(const std::string& boot_ip, const std::string& ip, int kv_p
     auto max_parallel_read_size = main_confs["limit_read_paralelization_to"].as<std::string>();
     bool benchmark_performance = main_confs["benchmark_performance"].as<bool>();
     bool maximize_cache = main_confs["maximize_cache"].as<bool>();
+    int refresh_cache_time = main_confs["refresh_cache_time"].as<int>();
+    int max_directories_in_cache = main_confs["max_directories_in_cache"].as<int>();
+    int percentage_of_entries_to_remove_if_cache_full = main_confs["percentage_of_entries_to_remove_if_cache_full"].as<int>();
 
     try
     {
         size_t max_parallel_write_size_bytes = convert_string_size_to_num_bytes(max_parallel_write_size);
         size_t max_parallel_read_size_bytes = convert_string_size_to_num_bytes(max_parallel_read_size);
-        state = std::make_unique<lsfs_state>(df_client, max_parallel_read_size_bytes, max_parallel_write_size_bytes, benchmark_performance, maximize_cache);
+        state = std::make_unique<lsfs_state>(df_client, max_parallel_read_size_bytes, max_parallel_write_size_bytes, benchmark_performance, maximize_cache, 
+            refresh_cache_time, max_directories_in_cache, percentage_of_entries_to_remove_if_cache_full);
     }catch (const char* msg){
         std::cerr << msg << std::endl;
         exit(1);

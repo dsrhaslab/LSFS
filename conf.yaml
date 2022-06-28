@@ -47,6 +47,9 @@ main_confs:
   limit_read_paralelization_to: 32k
   benchmark_performance: False
   maximize_cache: False
+  refresh_cache_time: 1000 
+  max_directories_in_cache: 1000
+  percentage_of_entries_to_remove_if_cache_full: 10
   ######################################
 
   lb_interval: 5

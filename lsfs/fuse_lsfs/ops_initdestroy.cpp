@@ -56,8 +56,17 @@ void*  lsfs_impl::_init(
     fuse_pt_log("conn->max_background = %u\n", conn->max_background);
     fuse_pt_log("conn->congestion_threshold = %u\n", conn->congestion_threshold);
 
-    // ensure root directory exists
 
+    std::thread cache_maintainer_thr([](){
+        while(true){
+            state->refresh_dir_cache();
+            std::this_thread::sleep_for(std::chrono::milliseconds(state->refresh_cache_time));
+            bool cache_full = state->check_if_cache_full();
+            if(cache_full) state->remove_old_dirs();
+        }
+    });
+
+    // ensure root directory exists
     const char* root_path = "/";
     try{
 
@@ -80,7 +89,8 @@ void*  lsfs_impl::_init(
         exit(1);
     }
 
-    state->clear_working_directories_cache();
+    state->clear_all_dir_cache();
+
 
     return NULL;
 }

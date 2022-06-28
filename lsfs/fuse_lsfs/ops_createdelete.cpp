@@ -140,7 +140,7 @@ int lsfs_impl::_mkdir(
 
         res = state->add_child_to_parent_dir(path, true);
 
-        state->add_or_refresh_working_directory(path, to_send);
+        state->add_to_dir_cache(path, to_send);
 
     }catch(EmptyViewException& e){
         e.what();
@@ -170,7 +170,7 @@ int lsfs_impl::_rmdir(
     int res = 0;
 
     try{
-        std::unique_ptr<metadata> met = state->get_metadata_if_dir_opened(path);
+        std::unique_ptr<metadata> met = state->get_metadata_if_dir_cached(path);
 
         if(met == nullptr){
             met = state->get_metadata(path);
@@ -186,7 +186,7 @@ int lsfs_impl::_rmdir(
         res = state->delete_file_or_dir(path);
         if(res != 0) return -errno;
 
-        state->remove_working_directory(path);
+        state->remove_from_dir_cache(path);
 
         res = state->remove_child_from_parent_dir(path, true);
 

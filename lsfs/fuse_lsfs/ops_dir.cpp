@@ -87,7 +87,7 @@ int lsfs_impl::_readdir(
         std::unique_ptr<metadata> met(nullptr);
         
         if(state->maximize_cache){
-            met = state->get_metadata_if_dir_opened(path);
+            met = state->get_metadata_if_dir_cached(path);
         }
 
         if(met == nullptr){
@@ -96,7 +96,7 @@ int lsfs_impl::_readdir(
                 return -errno;
             }
 
-            state->add_working_directory(path, *met);
+            state->add_to_dir_cache(path, *met);
         }
 
         for(auto& child: met->childs.childs){
