@@ -613,7 +613,6 @@ std::unique_ptr<std::vector<kv_store_key_version>> kv_store_leveldb::get_metadat
 
     for(int i = 0; i < data_v.size(); i++){
         size_t size = data_v[i]->size();
-        std::cout << "Request metadata_size = " << size << std::endl;
         data_v[i] = std::make_unique<std::string>(to_string(size));
     }
 

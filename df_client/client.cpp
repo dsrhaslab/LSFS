@@ -681,7 +681,6 @@ std::unique_ptr<std::string> client::get_latest_metadata_size_or_stat(const std:
         }
         if (status == 0) {
             try{
-                 std::cout << "Waiting for peer response" << std::endl;
                 res = this->handler->wait_for_get_latest(key, req_id_str, wait_for, response, last_version);
             }catch(TimeoutException& e){
                 curr_timeouts++;

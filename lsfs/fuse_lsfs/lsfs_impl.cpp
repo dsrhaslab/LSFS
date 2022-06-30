@@ -30,6 +30,14 @@ lsfs_impl::lsfs_impl(const std::string& boot_ip, const std::string& ip, int kv_p
         size_t max_parallel_read_size_bytes = convert_string_size_to_num_bytes(max_parallel_read_size);
         state = std::make_unique<lsfs_state>(df_client, max_parallel_read_size_bytes, max_parallel_write_size_bytes, benchmark_performance, maximize_cache, 
             refresh_cache_time, max_directories_in_cache, percentage_of_entries_to_remove_if_cache_full);
+
+        cache_maintainer_thr = std::thread([](){
+                while(true){
+                    state->refresh_dir_cache();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(state->refresh_cache_time));
+                }
+            });
+
     }catch (const char* msg){
         std::cerr << msg << std::endl;
         exit(1);

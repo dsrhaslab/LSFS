@@ -74,7 +74,7 @@ int lsfs_impl::_readdir(
 {
     (void)path;
 
-    std::cout << "### SysCall: _readdir" << std::endl;
+    std::cout << "### SysCall: _readdir  ==> Path: " << path << std::endl;
 
     enum fuse_fill_dir_flags fill_flags = static_cast<fuse_fill_dir_flags>(0);
 

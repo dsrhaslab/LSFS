@@ -57,15 +57,6 @@ void*  lsfs_impl::_init(
     fuse_pt_log("conn->congestion_threshold = %u\n", conn->congestion_threshold);
 
 
-    std::thread cache_maintainer_thr([](){
-        while(true){
-            state->refresh_dir_cache();
-            std::this_thread::sleep_for(std::chrono::milliseconds(state->refresh_cache_time));
-            bool cache_full = state->check_if_cache_full();
-            if(cache_full) state->remove_old_dirs();
-        }
-    });
-
     // ensure root directory exists
     const char* root_path = "/";
     try{
@@ -77,6 +68,7 @@ void*  lsfs_impl::_init(
             //filesystem not initialize
             int res = _mkdir(root_path, 0777);
             if(res != 0){
+                std::cout << "Error creating root" << std::endl;
                 exit(1);
             }
         }
@@ -90,7 +82,6 @@ void*  lsfs_impl::_init(
     }
 
     state->clear_all_dir_cache();
-
 
     return NULL;
 }

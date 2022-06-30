@@ -13,6 +13,7 @@
 #include <time.h>
 #include <sys/statvfs.h>
 #include <spdlog/logger.h>
+#include <list>
 #include "df_client/client.h"
 #include "df_client/client_reply_handler.h"
 #include "metadata/metadata.h"
@@ -28,8 +29,9 @@ namespace FileAccess{
 class lsfs_state {
 
 struct directory {
+    std::string path;
     std::unique_ptr<metadata> metadata_p;
-    struct timespec last_update;
+    struct timespec last_update; //last update to storage
 };
 
 public:
@@ -37,7 +39,10 @@ public:
     std::unordered_map<std::string, std::pair<FileAccess::FileAccess ,std::shared_ptr<struct stat>>> open_files;
     
     std::recursive_mutex dir_cache_mutex;
-    std::unordered_map<std::string, directory> dir_cache;
+    //LRU
+    std::list<directory> dir_cache_list;
+    std::unordered_map<std::string, std::list<directory>::iterator> dir_cache_map;
+    std::unordered_map<std::string, std::mutex> dir_cache_map_mutex;
     
     std::shared_ptr<client> df_client;
     
@@ -69,7 +74,6 @@ public:
     std::unique_ptr<metadata> get_metadata_stat(const std::string& path);
 
     void add_to_dir_cache(const std::string& path, metadata met);
-    void remove_old_dirs();
     bool check_if_cache_full();
     void refresh_dir_cache();
     void remove_from_dir_cache(const std::string& path);
@@ -93,6 +97,7 @@ public:
     void reset_dir_cache_add_remove_log(const std::string& path);
 
     metadata request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version);
+
 };
 
 #endif //P2PFS_LSFS_STATE_H

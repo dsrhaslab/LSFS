@@ -163,11 +163,11 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
     const bool get_data = message.get_data();
     bool request_already_replied = msg.forwarded_within_group();
 
-    std::cout << "Get latest ##### Key: " << key << std::endl;
-
     // if request has not yet been processed
     if(!this->store->in_log(req_id)){
         this->store->log_req(req_id);
+
+        std::cout << "Get latest ##### Key: " << key << std::endl;
 
         std::unique_ptr<std::vector<kv_store_key_version>> version(nullptr);
         std::unique_ptr<std::vector<kv_store_key_version>> del_v(nullptr);
@@ -666,9 +666,6 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
         int res_1 = get_base_path(key, &base_path);
         int res_2 = get_blk_num(key, &blk_num_str);
 
-        std::cout << "Split key: Base_Path: " << base_path << " res: " << res_1  << " Block num: " << blk_num_str << " res: "  << res_2 << std::endl;
-        
-
         if(res_1 == 0 && res_2 == 0){
 
             int blk_num = std::stoi(blk_num_str);  
@@ -717,8 +714,6 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
             if(!request_already_replied || achance <= this->chance){
                 proto::kv_message reply_message;
 
-                std::cout << "Answering to client <Get Metadata>" << std::endl;
-   
                 build_get_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, std::move(data), key, version, is_deleted);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
