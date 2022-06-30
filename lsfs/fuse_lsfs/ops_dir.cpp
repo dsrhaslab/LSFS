@@ -84,7 +84,7 @@ int lsfs_impl::_readdir(
     }
 
     try{
-        std::unique_ptr<metadata> met(nullptr);
+        std::shared_ptr<metadata> met(nullptr);
         
         if(state->maximize_cache){
             met = state->get_metadata_if_dir_cached(path);

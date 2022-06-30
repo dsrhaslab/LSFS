@@ -170,7 +170,7 @@ int lsfs_impl::_rmdir(
     int res = 0;
 
     try{
-        std::unique_ptr<metadata> met = state->get_metadata_if_dir_cached(path);
+        std::shared_ptr<metadata> met = state->get_metadata_if_dir_cached(path);
 
         if(met == nullptr){
             met = state->get_metadata(path);

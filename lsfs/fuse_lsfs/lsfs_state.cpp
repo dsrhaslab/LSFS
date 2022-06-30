@@ -12,7 +12,7 @@ lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_re
 
         df_client(std::move(df_client)), max_parallel_read_size(max_parallel_read_size),
         max_parallel_write_size(max_parallel_write_size), benchmark_performance(benchmark_performance), maximize_cache(maximize_cache),
-        refresh_cache_time(refresh_cache_time), max_directories_in_cache(max_directories_in_cache), percentage_of_entries_to_remove_if_cache_full(percentage_of_entries_to_remove_if_cache_full) 
+        refresh_cache_time(refresh_cache_time), max_directories_in_cache(max_directories_in_cache), percentage_of_entries_to_remove_if_cache_full(percentage_of_entries_to_remove_if_cache_full)
 {}
 
 int lsfs_state::put_fixed_size_blocks_from_buffer_limited_paralelization(const char *buf, size_t size,
@@ -267,48 +267,63 @@ std::unique_ptr<metadata> lsfs_state::get_metadata_stat(const std::string& path)
 }
 
 void lsfs_state::add_to_dir_cache(const std::string& path, metadata met) {
-    std::scoped_lock<std::recursive_mutex> lk (dir_cache_mutex);
+    std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
 
-    //struct directory dir = {.metadata_p = std::make_unique<metadata>(met), .last_update = now};
-
     auto it = dir_cache_map.find(path);
     if(it != dir_cache_map.end()){
-        dir_cache_list.erase(it->second);
-        dir_cache_list.push_front({.path = path, .metadata_p = std::make_unique<metadata>(met), .last_update = now});
+        std::unique_lock<std::mutex> lk_dir(*it->second.second);
 
-        it->second = dir_cache_list.begin();
+        std::unique_ptr<directory> dir_p = std::move((*it->second.first));
+        dir_cache_list.erase(it->second.first);
+        dir_cache_list.push_front(std::move(dir_p));
+        
+        it->second.first = dir_cache_list.begin();
+        
+        lk.unlock();
+        lk_dir.unlock();
+
     }else{
-        dir_cache_list.push_front({.path = path, .metadata_p = std::make_unique<metadata>(met), .last_update = now});
-        dir_cache_map.insert(std::make_pair(path, dir_cache_list.begin()));
-        dir_cache_map_mutex[path];
+        struct directory dir = {.path = path, .metadata_p = std::make_unique<metadata>(met), .last_update = now};
+
+        dir_cache_list.push_front(std::make_unique<directory>(std::move(dir)));
+        dir_cache_map.insert(std::make_pair(path, std::make_pair(dir_cache_list.begin(), std::make_unique<std::mutex>())));
+        
+        lk.unlock();
     }
 
     if(dir_cache_map.size() >= max_directories_in_cache){
+        lk.lock();
         auto last = dir_cache_list.end();
         last--;
-        std::unique_lock<std::mutex> local_cache_mutex(dir_cache_map_mutex.find(last->path)->second);
+
+        std::unique_lock<std::mutex> lk_dir(*dir_cache_map.find((*last)->path)->second.second);
+
+        std::string path_to_del = (*last)->path;
         
-        dir_cache_map.erase(last->path);
-        dir_cache_map_mutex.erase(last->path);
-        dir_cache_list.pop_back();
-        
-        local_cache_mutex.unlock();
+        dir_cache_list.erase(last);
+        dir_cache_map.erase(path_to_del);
+
+        lk.unlock();
+        lk_dir.unlock();
     }
 }
 
 
 void lsfs_state::remove_from_dir_cache(const std::string& path) {
-    std::scoped_lock<std::recursive_mutex> lk (dir_cache_mutex);
+    std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
+    
     auto it = dir_cache_map.find(path);
     if( it != dir_cache_map.end()){
-            std::unique_lock<std::mutex> local_cache_mutex(dir_cache_map_mutex.find(it->first)->second);
-        
-            dir_cache_list.erase(it->second);
-            dir_cache_map.erase(it);
-            dir_cache_map_mutex.erase(it->first);
+        std::unique_lock<std::mutex> lk_dir(*it->second.second);
+
+        dir_cache_list.erase(it->second.first);
+        dir_cache_map.erase(it);
+
+        lk.unlock();
+        lk_dir.unlock();
     }
 
 }
@@ -324,27 +339,27 @@ bool lsfs_state::check_if_cache_full(){
 void lsfs_state::refresh_dir_cache() {
     struct timespec now;
     for(auto it = dir_cache_map.begin(); it != dir_cache_map.end(); it++){
-        std::unique_lock<std::recursive_mutex> cache_mutex(dir_cache_mutex);
+        std::unique_lock<std::recursive_mutex> lk(dir_cache_mutex);
         
-        std::unique_lock<std::mutex> local_cache_mutex(dir_cache_map_mutex.find(it->first)->second);
+        std::unique_lock<std::mutex> lk_dir(*it->second.second);
         
-        cache_mutex.unlock();
+        lk.unlock();
         clock_gettime(CLOCK_MONOTONIC, &now);
         
-        float t_dir = it->second->last_update.tv_sec + (refresh_cache_time / 1000.0) + (it->second->last_update.tv_nsec / 1000000000.0);
+        float t_dir = (*it->second.first)->last_update.tv_sec + (refresh_cache_time / 1000.0) + ((*it->second.first)->last_update.tv_nsec / 1000000000.0);
         float t_now = now.tv_sec + (now.tv_nsec / 1000000000.0);
         
         if(t_now >= t_dir){
             try{
-                it->second->metadata_p = std::move(get_metadata(it->first));
-                it->second->last_update = now;
+                (*it->second.first)->metadata_p = std::move(get_metadata(it->first));
+                (*it->second.first)->last_update = now;
             }catch(TimeoutException& e){
                 e.what();
             }catch(EmptyViewException& e){
                 e.what();
             }
         }
-        local_cache_mutex.unlock();
+        lk_dir.unlock();
     }
     
 }
@@ -352,10 +367,16 @@ void lsfs_state::refresh_dir_cache() {
 
 
 void lsfs_state::add_child_to_dir_cache(const std::string& parent_path, const std::string& child_name, bool is_dir){
-    std::scoped_lock<std::recursive_mutex> lk (dir_cache_mutex);
+    std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
+
     auto it = dir_cache_map.find(parent_path);
     if( it != dir_cache_map.end()){
-        it->second->metadata_p->childs.add_child(child_name, is_dir);
+        std::unique_lock<std::mutex> lk_dir(*it->second.second);
+        lk.unlock();
+
+        (*it->second.first)->metadata_p->childs.add_child(child_name, is_dir);
+
+        lk_dir.unlock();
     }
 }
 
@@ -393,10 +414,16 @@ int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
 }
 
 void lsfs_state::remove_child_from_dir_cache(const std::string& parent_path, const std::string& child_name, bool is_dir){
-    std::scoped_lock<std::recursive_mutex> lk (dir_cache_mutex);
+    std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
+
     auto it = dir_cache_map.find(parent_path);
     if( it != dir_cache_map.end()){
-        it->second->metadata_p->childs.remove_child(child_name, is_dir);
+        std::unique_lock<std::mutex> lk_dir(*it->second.second);
+        lk.unlock();
+
+        (*it->second.first)->metadata_p->childs.remove_child(child_name, is_dir);
+
+        lk_dir.unlock();
     }
 }
 
@@ -564,37 +591,58 @@ bool lsfs_state::get_metadata_if_file_opened(const std::string& path, struct sta
 }
 
 bool lsfs_state::get_metadata_if_dir_cached(const std::string& path, struct stat* stbuf){
-    std::scoped_lock<std::recursive_mutex> lk (dir_cache_mutex);
+    std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
+    
     auto it = dir_cache_map.find(path);
     if(it != dir_cache_map.end()){
-        metadata met = metadata(*(it->second->metadata_p));
-        timespec cl = it->second->last_update;
+        std::cout << "Print 1" << std::endl;
+        
+        std::unique_lock<std::mutex> lk_dir(*it->second.second);
+        lk.unlock();
+        
+        std::unique_ptr<directory> dir_p = std::move((*it->second.first));
 
-        dir_cache_list.erase(it->second);
-        dir_cache_list.push_front({.path = path, .metadata_p = std::make_unique<metadata>(met), .last_update = cl});
+        *stbuf = dir_p->metadata_p->attr.stbuf;
+ 
+        dir_cache_list.erase(it->second.first);
+        
+        dir_cache_list.push_front(std::move(dir_p)); //move necessario porque é local variavel dir_p
+        
+        it->second.first = dir_cache_list.begin();
 
-        it->second = dir_cache_list.begin();
-        memcpy(stbuf, &(met.attr.stbuf), sizeof(struct stat));
+        std::cout << "Print stat" << std::endl;
+        std::cout << "From list path " << (*dir_cache_list.begin())->path << std::endl;
+        std::cout << "From list met " << (*dir_cache_list.begin())->metadata_p->attr.stbuf.st_gid << std::endl;
+        std::cout << "Pritn end" << std::endl;
+        
+        //memcpy(stbuf, &(met_p->attr.stbuf), sizeof(struct stat));
+
+        lk_dir.unlock();
+        
         return true;
     }
     return false;
 }
 
 
-std::unique_ptr<metadata> lsfs_state::get_metadata_if_dir_cached(const std::string& path){
-    std::unique_ptr<metadata> res(nullptr);
-    std::scoped_lock<std::recursive_mutex> lk (dir_cache_mutex);
+std::shared_ptr<metadata> lsfs_state::get_metadata_if_dir_cached(const std::string& path){
+    std::shared_ptr<metadata> res(nullptr);
+    std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
     auto it = dir_cache_map.find(path);
     if(it != dir_cache_map.end()){
-        metadata met = *(it->second->metadata_p);
-        timespec cl = it->second->last_update;
+        std::unique_lock<std::mutex> lk_dir(*it->second.second);
+        lk.unlock();
 
-        dir_cache_list.erase(it->second);
-        dir_cache_list.push_front({.path = path, .metadata_p = std::make_unique<metadata>(met), .last_update = cl});
+        std::unique_ptr<directory> dir_p = std::move((*it->second.first));
 
-        it->second = dir_cache_list.begin();
+        dir_cache_list.erase(it->second.first);
+        dir_cache_list.push_front(std::move(dir_p));
 
-        res = std::make_unique<metadata>(met);
+        it->second.first = dir_cache_list.begin();
+
+        res = std::move(dir_p->metadata_p);
+
+        lk_dir.unlock();
     }
     return res;
 }
@@ -661,10 +709,15 @@ void lsfs_state::clear_all_dir_cache() {
 }
 
 void lsfs_state::reset_dir_cache_add_remove_log(const std::string& path){
-    std::scoped_lock<std::recursive_mutex> lk (dir_cache_mutex);
+    std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
     auto it = dir_cache_map.find(path);
-    if(it != dir_cache_map.end()) {
-        it->second->metadata_p->childs.reset_add_remove_log();
+    if(it != dir_cache_map.end()){
+        std::unique_lock<std::mutex> lk_dir(*it->second.second);
+        lk.unlock();
+
+        (*it->second.first)->metadata_p->childs.reset_add_remove_log();
+
+        lk_dir.unlock();
     }
     
 }

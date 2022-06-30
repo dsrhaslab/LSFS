@@ -48,7 +48,7 @@ main_confs:
   benchmark_performance: False
   maximize_cache: False
   refresh_cache_time: 1000 #milliseconds
-  max_directories_in_cache: 1000
+  max_directories_in_cache: 500
   percentage_of_entries_to_remove_if_cache_full: 20
   ######################################
 

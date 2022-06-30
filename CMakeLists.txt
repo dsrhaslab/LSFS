@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(CMAKE_PREFIX_PATH "/usr/local/lib64/cmake")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build")
+set(CMAKE_BUILD_TYPE Debug)
 
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(Protobuf REQUIRED)

@@ -40,9 +40,8 @@ public:
     
     std::recursive_mutex dir_cache_mutex;
     //LRU
-    std::list<directory> dir_cache_list;
-    std::unordered_map<std::string, std::list<directory>::iterator> dir_cache_map;
-    std::unordered_map<std::string, std::mutex> dir_cache_map_mutex;
+    std::list<std::unique_ptr<directory>> dir_cache_list;
+    std::unordered_map<std::string, std::pair<std::list<std::unique_ptr<directory>>::iterator, std::unique_ptr<std::mutex>>> dir_cache_map;
     
     std::shared_ptr<client> df_client;
     
@@ -82,7 +81,7 @@ public:
     void remove_child_from_dir_cache(const std::string& parent_path, const std::string& child_name, bool is_dir);
     int remove_child_from_parent_dir(const std::string& path, bool is_dir);
     bool get_metadata_if_dir_cached(const std::string& path, struct stat* stbuf);
-    std::unique_ptr<metadata> get_metadata_if_dir_cached(const std::string& path);
+    std::shared_ptr<metadata> get_metadata_if_dir_cached(const std::string& path);
     void clear_all_dir_cache();
 
     void add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access);
