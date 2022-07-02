@@ -170,15 +170,21 @@ int lsfs_impl::_rmdir(
     int res = 0;
 
     try{
-        std::shared_ptr<metadata> met = state->get_metadata_if_dir_cached(path);
+        bool is_cached;
+        bool is_empty = state->is_dir_childs_empty(path, &is_cached);
 
-        if(met == nullptr){
-            met = state->get_metadata(path);
+        if(!is_cached){
+            auto met = state->get_metadata(path);
             if(met == nullptr)
                 return -errno;
+            
+            if(!met->childs.is_empty()){
+                errno = ENOTEMPTY;
+                return -errno;
+            }
         }
 
-        if(!met->childs.is_empty()){
+        if(!is_empty){
             errno = ENOTEMPTY;
             return -errno;
         }

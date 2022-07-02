@@ -110,6 +110,7 @@ namespace fuse_wrapper
             add_fuse_arg(&args, mount_point);
             add_fuse_arg(&args, "-oallow_other");
             add_fuse_arg(&args, "-odefault_permissions");
+            //add_fuse_arg(&args, "-s");
 
         #ifdef FUSE_PASSTHROUGH_DEBUG
             add_fuse_arg(&args, "-f");

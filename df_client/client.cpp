@@ -754,7 +754,7 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
                         res_count++;
 
                 }catch(TimeoutException& e){
-                    std::cout << "Timeout key: " << keys[i].key << std::endl;
+                    std::cout << "Timeout key: " << keys[i].key << " at " << curr_timeouts << std::endl;
                     timeout[i] = true;
                     happend_timeout = true;
                 }

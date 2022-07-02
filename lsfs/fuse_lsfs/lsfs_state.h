@@ -28,20 +28,22 @@ namespace FileAccess{
 
 class lsfs_state {
 
-struct directory {
-    std::string path;
-    std::unique_ptr<metadata> metadata_p;
-    struct timespec last_update; //last update to storage
-};
-
 public:
+    
+    struct directory {
+        std::string path;
+        std::unique_ptr<metadata> metadata_p;
+        struct timespec last_update; //last update to storage
+    };
+
     std::recursive_mutex open_files_mutex;
     std::unordered_map<std::string, std::pair<FileAccess::FileAccess ,std::shared_ptr<struct stat>>> open_files;
     
     std::recursive_mutex dir_cache_mutex;
     //LRU
-    std::list<std::unique_ptr<directory>> dir_cache_list;
-    std::unordered_map<std::string, std::pair<std::list<std::unique_ptr<directory>>::iterator, std::unique_ptr<std::mutex>>> dir_cache_map;
+    std::list<std::shared_ptr<directory>> dir_cache_list;
+    std::unordered_map<std::string, std::list<std::shared_ptr<directory>>::iterator> dir_cache_map;
+    std::unordered_map<std::string, std::unique_ptr<std::mutex>> dir_cache_map_mutex;
     
     std::shared_ptr<client> df_client;
     
@@ -51,11 +53,11 @@ public:
     bool maximize_cache;
     int refresh_cache_time;
     int max_directories_in_cache;
-    int percentage_of_entries_to_remove_if_cache_full;
+
     
 
 public:
-    lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool benchmark_performance, bool maximize_cache, int refresh_cache_time, int max_directories_in_cache, int percentage_of_entries_to_remove_if_cache_full);
+    lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool benchmark_performance, bool maximize_cache, int refresh_cache_time, int max_directories_in_cache);
     
     int put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk);
     int put_fixed_size_blocks_from_buffer_limited_paralelization(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk);
@@ -81,8 +83,10 @@ public:
     void remove_child_from_dir_cache(const std::string& parent_path, const std::string& child_name, bool is_dir);
     int remove_child_from_parent_dir(const std::string& path, bool is_dir);
     bool get_metadata_if_dir_cached(const std::string& path, struct stat* stbuf);
-    std::shared_ptr<metadata> get_metadata_if_dir_cached(const std::string& path);
+    std::shared_ptr<directory> get_metadata_if_dir_cached(const std::string& path);
+    bool is_dir_childs_empty(const std::string& path, bool* dir_cached);
     void clear_all_dir_cache();
+    std::string print_cache();
 
     void add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access);
     bool is_file_opened(const std::string& path);
