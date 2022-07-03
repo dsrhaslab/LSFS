@@ -4,15 +4,17 @@
 
 #include "util.h"
 
-int split_composite_total(std::string comp_key, std::string* key, std::map<long, long>* version){
+int split_composite_total(std::string comp_key, std::string* key, std::map<long, long>* version, long* client_id){
     boost::cmatch match;
     auto res = boost::regex_search(comp_key.c_str(), match, composite_key);
 
     try{
-        if(match.size() > 2){
+        if(match.size() > 3){
             *key = std::string(match[1].str());
             
             std::string vers = match[2].str();
+
+            *client_id = stol(match[3].str());
 
             std::vector<std::string> cli;
             boost::split(cli, vers, boost::is_any_of(","));
@@ -85,8 +87,6 @@ int get_blk_num(const std::string& key, std::string* blk_num){
 
 
 
-
-
 // Version Vector to string
 std::string vv2str(std::map<long, long> vv){
     std::string mapStr;
@@ -99,10 +99,10 @@ std::string vv2str(std::map<long, long> vv){
     return mapStr; 
 }
 
-std::string compose_key_toString(std::string key, kv_store_key_version version){
+std::string compose_key_toString(std::string key, kv_store_key_version version, long client_id){
     std::string toStr;
     std::string mapStr = vv2str(version.vv);
-    toStr.append(key).append("#").append(mapStr);
+    toStr.append(key).append("#").append(mapStr).append(std::to_string(client_id));
 
     return toStr; 
 }
@@ -130,7 +130,7 @@ void print_kv(const kv_store_key<std::string>& kv){
     for(auto pair: kv.key_version.vv)
         std::cout << "(" <<  pair.first << "@" << pair.second << "),";
     
-    std::cout << ">" << std::endl;
+    std::cout << ">" << " Client: " << kv.client_id << std::endl;
 }
 
 

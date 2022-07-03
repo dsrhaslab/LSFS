@@ -10,7 +10,7 @@
 #include "df_store/kv_store_key.h"
 #include <iostream>
 
-static boost::regex composite_key("(.+)#(.+)$");
+static boost::regex composite_key("(.+)#(.+)#(.+)$");
 static boost::regex base_path_pattern("(.*):[^:]+$");
 static boost::regex blk_num_pattern(":([^:]+)$");
 
@@ -19,11 +19,11 @@ enum kVersionComp
     Lower, Bigger, Equal, Concurrent
 };
 
-int split_composite_total(std::string comp_key, std::string* key, std::map<long, long>* version);
+int split_composite_total(std::string comp_key, std::string* key, std::map<long, long>* version, long* client_id);
 
 int split_composite_key(std::string comp_key, std::string* key);
 
-std::string compose_key_toString(std::string key, kv_store_key_version version);
+std::string compose_key_toString(std::string key, kv_store_key_version version, long client_id);
 
 int get_base_path(const std::string& key, std::string* base_path);
 

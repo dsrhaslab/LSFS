@@ -215,6 +215,7 @@ void kv_store_leveldb::update_partition(int p, int np) {
         this->slice = p;
         //clear memory to allow new keys to be stored
         this->clear_seen_log();
+        this->clear_seen_deleted_log();
     }
 }
 
