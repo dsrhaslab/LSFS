@@ -28,6 +28,7 @@ main_confs:
   anti_entropy_log_garbage_at: 500
   warmup_interval: 60
   restart_database_after_warmup: true
+  anti_entropy_disseminate_latest: true
 
   client:
     nr_puts_required: 2

@@ -86,7 +86,6 @@ int get_blk_num(const std::string& key, std::string* blk_num){
 }
 
 
-
 // Version Vector to string
 std::string vv2str(std::map<long, long> vv){
     std::string mapStr;
@@ -151,7 +150,7 @@ void print_kv(const kv_store_key_version& kv){
          //<y@3, z@1, u@3, x@0> =/= <x@1, y@2, z@1>
          //<y@3, z@1, u@3, x@2> > <x@1, y@2, z@1>
 
-
+//k1 compared to k2
 kVersionComp comp_version(const kv_store_key_version& k1, const kv_store_key_version k2){
     bool is_equal = true;
     bool is_lower = true;

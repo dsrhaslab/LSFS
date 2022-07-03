@@ -62,11 +62,11 @@ private:
 
 
 public:
+    kv_store_leveldb(std::string(*f)(const std::string&, const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool anti_entropy_disseminate_latest_keys);
     ~kv_store_leveldb();
     int restart_database() override;
     void send_keys_gt(std::vector<std::string> &off_keys, std::vector<std::string> &off_deleted_keys, tcp_client_server_connection::tcp_client_connection &connection,
                       void (*action)(tcp_client_server_connection::tcp_client_connection &, const std::string &, std::map<long, long>& , bool, bool, const char*, size_t)) override;
-    kv_store_leveldb(std::string(*f)(const std::string&, const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at);
     int init(void*, long id) override ;
     void close() override ;
     std::string db_name() const override;
@@ -107,7 +107,7 @@ public:
  
 };
 
-kv_store_leveldb::kv_store_leveldb(std::string (*f)(const std::string&,const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at) {
+kv_store_leveldb::kv_store_leveldb(std::string (*f)(const std::string&,const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool anti_entropy_disseminate_latest_keys) {
     this->merge_function = f;
     this->seen_log_garbage_at = seen_log_garbage_at;
     this->request_log_garbage_at = request_log_garbage_at;
@@ -219,6 +219,31 @@ void kv_store_leveldb::update_partition(int p, int np) {
     }
 }
 
+//Return size difference of map 
+int add_latest_version_to_map(std::unordered_map<kv_store_key<std::string>, size_t>& keys, kv_store_key<std::string> key_2_add, size_t key_2_add_size){
+    std::vector<kv_store_key<std::string>> to_remove;
+    int i = 0;
+    bool to_add = false;
+    for(auto& it: keys){
+        if(comp_version(key_2_add.key_version, it.first.key_version) == kVersionComp::Bigger){
+            to_remove.push_back(it.first);
+            to_add = true;
+        }else if(comp_version(key_2_add.key_version, it.first.key_version) == kVersionComp::Concurrent){
+            to_add = true;
+        }
+    }
+
+    for(auto& key: to_remove){
+        keys.erase(key);
+        i--;
+    }
+    if(to_add){
+        keys.insert(std::make_pair(key_2_add, key_2_add_size));
+        i++;
+    } 
+    return i;
+}
+
 std::unordered_map<kv_store_key<std::string>, size_t> kv_store_leveldb::get_keys() {
 
     long cycle = record_count_cycle++;
@@ -243,7 +268,7 @@ std::unordered_map<kv_store_key<std::string>, size_t> kv_store_leveldb::get_keys
     for (it->SeekToFirst(); it->Valid() && key_start > 0; it->Next(), --key_start) {}
     
     //A partir dessa iterator(key), guardar anti_entropy_max_keys para enviar
-    for(int i = 0; i < anti_entropy_num_keys && it->Valid(); i++, it->Next()){
+    for(int i = 0; i < anti_entropy_num_keys && it->Valid(); it->Next()){
         std::string comp_key = it->key().ToString();
         
         size_t v_size = it->value().size();
@@ -252,9 +277,17 @@ std::unordered_map<kv_store_key<std::string>, size_t> kv_store_leveldb::get_keys
         std::map<long, long> vector;
         int res = split_composite_total(comp_key, &key, &vector);
         if(res == 0){
+            
             kv_store_key<std::string> st_key = {key, kv_store_key_version(vector), false};
-            keys.insert(std::make_pair(st_key, v_size));
+            if(anti_entropy_disseminate_latest_keys){
+                int size_dif = add_latest_version_to_map(keys, st_key, v_size);
+                i = i + size_dif;
+                i--; //Para contrariar o i++
+            }else{
+                keys.insert(std::make_pair(st_key, v_size));
+            }
         }
+        i++;
     }
 
     if(!it->status().ok()){
@@ -266,6 +299,30 @@ std::unordered_map<kv_store_key<std::string>, size_t> kv_store_leveldb::get_keys
     return std::move(keys);
 }
 
+//Return size difference of map 
+int add_latest_deleted_version_to_set(std::unordered_set<kv_store_key<std::string>>& deleted_keys, kv_store_key<std::string> key_2_add){
+    std::vector<kv_store_key<std::string>> to_remove;
+    int i = 0;
+    bool to_add = false;
+    for(auto& it: deleted_keys){
+        if(comp_version(key_2_add.key_version, it.key_version) == kVersionComp::Bigger){
+            to_remove.push_back(it);
+            to_add = true;
+        }else if(comp_version(key_2_add.key_version, it.key_version) == kVersionComp::Concurrent){
+            to_add = true;
+        }
+    }
+
+    for(auto& key: to_remove){
+        deleted_keys.erase(key);
+        i--;
+    }
+    if(to_add){
+        deleted_keys.insert(key_2_add);
+        i++;
+    }
+    return i;
+}
 
 std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_deleted_keys() {
 
@@ -291,14 +348,24 @@ std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_deleted_keys
     for (it->SeekToFirst(); it->Valid() && key_start > 0; it->Next(), --key_start) {}
     
     //A partir dessa iterator(key), guardar anti_entropy_max_keys para enviar
-    for(int i = 0; i < anti_entropy_num_deleted_keys && it->Valid(); i++, it->Next()){
+    for(int i = 0; i < anti_entropy_num_deleted_keys && it->Valid(); it->Next()){
         std::string comp_key = it->key().ToString();
         std::string key;
         std::map<long, long> vector;
         int res = split_composite_total(comp_key, &key, &vector);
         if(res == 0){
-            deleted_keys.insert({key, kv_store_key_version(vector), true});
+            kv_store_key<std::string> st_key = {key, kv_store_key_version(vector), true};
+            
+            if(anti_entropy_disseminate_latest_keys){
+                int size_dif = add_latest_deleted_version_to_set(deleted_keys, st_key);
+                i = i + size_dif;
+                i--; //Para contrariar o i++
+            }else{
+                deleted_keys.insert(st_key);
+            }
+
         }
+        i++;
     }
 
     if(!it->status().ok()){
