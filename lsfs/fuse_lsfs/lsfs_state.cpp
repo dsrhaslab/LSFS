@@ -7,11 +7,11 @@
 #include <utility>
 #include <spdlog/spdlog.h>
 
-lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool benchmark_performance, bool maximize_cache,
+lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool use_cache,
      int refresh_cache_time, int max_directories_in_cache):
 
         df_client(std::move(df_client)), max_parallel_read_size(max_parallel_read_size),
-        max_parallel_write_size(max_parallel_write_size), benchmark_performance(benchmark_performance), maximize_cache(maximize_cache),
+        max_parallel_write_size(max_parallel_write_size), use_cache(use_cache),
         refresh_cache_time(refresh_cache_time), max_directories_in_cache(max_directories_in_cache)
 {
     dir_cache_map.reserve(max_directories_in_cache);

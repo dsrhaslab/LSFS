@@ -10,16 +10,17 @@ client::client(std::string boot_ip, std::string ip, int kv_port, int pss_port, l
 {
     YAML::Node config = YAML::LoadFile(conf_filename);
     auto main_confs = config["main_confs"];
-    this->nr_puts_required = main_confs["nr_puts_required"].as<int>();
-    this->nr_gets_required = main_confs["nr_gets_required"].as<int>();
-    this->nr_gets_version_required = main_confs["nr_gets_version_required"].as<int>();
+    auto client = main_confs["client"];
+    this->nr_puts_required = client["nr_puts_required"].as<int>();
+    this->nr_gets_required = client["nr_gets_required"].as<int>();
+    this->nr_gets_version_required = client["nr_gets_version_required"].as<int>();
     this->max_nodes_to_send_get_request = main_confs["max_nodes_to_send_get_request"].as<int>();
     this->max_nodes_to_send_put_request = main_confs["max_nodes_to_send_put_request"].as<int>();
-    this->max_timeouts = main_confs["max_nr_requests_timeouts"].as<int>();
-    bool mt_client_handler = main_confs["mt_client_handler"].as<bool>();
-    this->wait_timeout = main_confs["client_wait_timeout"].as<long>();
+    this->max_timeouts = client["max_nr_requests_timeouts"].as<int>();
+    bool mt_client_handler = client["mt_client_handler"].as<bool>();
+    this->wait_timeout = client["client_wait_timeout"].as<long>();
     long lb_interval = main_confs["lb_interval"].as<long>();
-    auto load_balancer_type = main_confs["load_balancer"].as<std::string>();
+    auto load_balancer_type = client["load_balancer"].as<std::string>();
 
     if(load_balancer_type == "dynamic"){
         this->lb = std::make_shared<dynamic_load_balancer>(boot_ip, ip, pss_port, lb_interval);
@@ -32,7 +33,7 @@ client::client(std::string boot_ip, std::string ip, int kv_port, int pss_port, l
     this->lb_listener_th = std::thread (std::ref(*this->lb_listener));
 
     if(mt_client_handler){
-        int nr_workers = main_confs["nr_client_handler_ths"].as<int>();
+        int nr_workers = client["nr_client_handler_ths"].as<int>();
         this->handler = std::make_shared<client_reply_handler_mt>(ip, kv_port, pss_port, this->wait_timeout, nr_workers);
     }else{
         this->handler = std::make_shared<client_reply_handler_st>(ip, kv_port, pss_port, this->wait_timeout);

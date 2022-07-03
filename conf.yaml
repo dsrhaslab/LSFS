@@ -29,26 +29,24 @@ main_confs:
   warmup_interval: 60
   restart_database_after_warmup: true
 
-  ######################################
-  #               Client               #
-  ######################################
-
-  nr_puts_required: 2
-  nr_gets_required: 1
-  nr_gets_version_required: 1
-  client_wait_timeout: 1
-  mt_client_handler: true
-  nr_client_handler_ths: 3
-  max_nr_requests_timeouts: 10
-  load_balancer: dynamic
-  smart_load_balancer_group_knowledge: 3
-  max_smart_view_age: 50
-  limit_write_paralelization_to: 32k
-  limit_read_paralelization_to: 32k
-  benchmark_performance: False
-  maximize_cache: False
-  refresh_cache_time: 1053 #milliseconds
-  max_directories_in_cache: 1000
+  client:
+    nr_puts_required: 2
+    nr_gets_required: 1
+    nr_gets_version_required: 1
+    client_wait_timeout: 1
+    mt_client_handler: true
+    nr_client_handler_ths: 3
+    max_nr_requests_timeouts: 10
+    load_balancer: dynamic
+    smart_load_balancer_group_knowledge: 3
+    max_smart_view_age: 50
+    limit_write_paralelization_to: 32k
+    limit_read_paralelization_to: 32k
+    cache:
+      use_cache: False
+      refresh_cache_time: 1053 #milliseconds
+      max_directories_in_cache: 1000
+ 
   ######################################
 
   lb_interval: 5
