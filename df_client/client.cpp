@@ -55,6 +55,10 @@ long client::inc_and_get_request_count() {
     return this->request_count++;
 }
 
+long client::get_id(){
+    return this->id;
+}
+
 int client::send_msg(peer_data& target_peer, proto::kv_message& msg){
     try {
 
@@ -184,6 +188,7 @@ void client::put(const std::string& key, const kv_store_key_version& version, co
         throw TimeoutException();
     }
 }
+
 //TODO - otimizacao keys sem ser const e alterar a versao para a nova versao por endereco
 void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
                        const std::vector<const char *> &datas, const std::vector<size_t> &sizes, int wait_for) {
@@ -587,7 +592,8 @@ int client::send_get_metadata(std::vector<peer_data>& peers, const std::string& 
 void client::put_child(const std::string& key, const kv_store_key_version& version, const std::string& child_path, bool is_create, bool is_dir, int wait_for) {
     long n_clock = clock.increment_and_get();
     kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), version);
-    
+    new_version.client_id = this->id;
+
     kv_store_key<std::string> comp_key = {key, new_version, false};
     this->handler->register_put(comp_key); // throw const char* (concurrent writes over the same key)
     
@@ -620,6 +626,7 @@ void client::put_child(const std::string& key, const kv_store_key_version& versi
 void client::put_metadata_stat(const std::string& key, const kv_store_key_version& version, const char *data, size_t size, int wait_for) {
     long n_clock = clock.increment_and_get();
     kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), version);
+    new_version.client_id = this->id;
     
     kv_store_key<std::string> comp_key = {key, new_version, false};
     this->handler->register_put(comp_key); // throw const char* (concurrent writes over the same key)

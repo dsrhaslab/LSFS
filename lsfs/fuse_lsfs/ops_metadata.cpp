@@ -29,9 +29,11 @@ int lsfs_impl::_getattr(
 
         bool got_metadata = false;
         got_metadata = state->get_metadata_if_file_opened(path, stbuf);
-        if(!got_metadata){
+        
+        if(!got_metadata && state->use_cache){
             got_metadata = state->get_metadata_if_dir_cached(path, stbuf);
         }
+        
         if(!got_metadata){
             try{
                 std::unique_ptr<metadata> met = state->get_metadata_stat(path);

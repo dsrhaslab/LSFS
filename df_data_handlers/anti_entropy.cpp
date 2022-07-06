@@ -143,13 +143,15 @@ bool anti_entropy::recover_state(tcp_client_server_connection::tcp_server_connec
                 const proto::kv_store_key& key = store.key();
 
                 kv_store_key_version version;
-                for (auto c : key.version())
+                for (auto c : key.key_version().version())
                     version.vv.emplace(c.client_id(), c.clock());
+                version.client_id = key.key_version().client_id();
                     
+                kv_store_key<std::string> key_comp = {key.key(), version, store.is_deleted(), store.is_merge()};
                 if(store.is_deleted()){
-                    this->store->anti_entropy_remove(key.key(), version, message.data());
+                    this->store->anti_entropy_remove(key_comp, message.data());
                 }else{
-                    this->store->anti_entropy_put(key.key(), version, message.data(), store.is_merge());
+                    this->store->anti_entropy_put(key_comp, message.data());
                 }
             }
         }catch(const char* e) {
@@ -223,6 +225,8 @@ void anti_entropy::phase_operating(){
             proto::kv_store_key* kv_key = new proto::kv_store_key();
             kv_key->set_key(key_size.first.key);
 
+            proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
+
             std::cout << "Key: " << key_size.first.key << std::endl;
             std::cout << "Version: ";
 
@@ -230,10 +234,16 @@ void anti_entropy::phase_operating(){
 
                 std::cout <<  pair.first << "@" << pair.second << ",";
 
-                proto::kv_store_version *kv_version = kv_key->add_version();
+                proto::kv_store_version *kv_version = kv_key_version->add_version();
                 kv_version->set_client_id(pair.first);
                 kv_version->set_clock(pair.second);
             }
+            std::cout << std::endl;
+            std::cout << "Client: " << key_size.first.key_version.client_id << std::endl;
+
+            kv_key_version->set_client_id(key_size.first.key_version.client_id);
+
+            kv_key->set_allocated_key_version(kv_key_version);
             store->set_allocated_key(kv_key);
             store->set_is_deleted(false);
             store->set_data_size(key_size.second);
@@ -248,6 +258,8 @@ void anti_entropy::phase_operating(){
             proto::kv_store_key *deleted_kv_key = new proto::kv_store_key();
             deleted_kv_key->set_key(deleted_key.key);
 
+            proto::kv_store_key_version* deleted_kv_key_version = new proto::kv_store_key_version();
+
             std::cout << "Key: " << deleted_key.key << std::endl;
             std::cout << "Version: ";
 
@@ -255,10 +267,16 @@ void anti_entropy::phase_operating(){
 
                 std::cout <<  pair.first << "@" << pair.second << ",";
 
-                proto::kv_store_version *deleted_kv_version = deleted_kv_key->add_version();
+                proto::kv_store_version *deleted_kv_version = deleted_kv_key_version->add_version();
                 deleted_kv_version->set_client_id(pair.first);
                 deleted_kv_version->set_clock(pair.second);
             }
+            std::cout << std::endl;
+            std::cout << "Client: " << deleted_key.key_version.client_id << std::endl;
+
+            deleted_kv_key_version->set_client_id(deleted_key.key_version.client_id);
+
+            deleted_kv_key->set_allocated_key_version(deleted_kv_key_version);
             store_del->set_allocated_key(deleted_kv_key);
             store_del->set_is_deleted(true);
 

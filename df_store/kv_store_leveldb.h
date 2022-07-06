@@ -47,7 +47,7 @@ private:
     std::atomic<long> deleted_record_count = 0;
     std::atomic<long> deleted_record_count_cycle = 0;
     inline const static long record_refresh_rate = 10;
-    inline const static int anti_entropy_max_keys = 20;
+    inline const static int anti_entropy_max_keys_to_send_percentage = 20;
     inline const static int anti_entropy_num_keys_percentage = 80;
     inline const static int anti_entropy_num_deleted_keys_percentage = 20;
 
@@ -57,7 +57,7 @@ private:
     void refresh_nr_deleted_keys_count();
     int open(leveldb::Options& options, std::string db_name, std::string& db_name_path, leveldb::DB** db);
     void print_db(leveldb::DB* database, long id, std::string filename);
-    std::unique_ptr<std::string> get_db(kv_store_key<std::string>& key, leveldb::DB* database);
+    std::unique_ptr<std::string> get_db(const kv_store_key<std::string>& key, leveldb::DB* database);
     std::unique_ptr<std::vector<kv_store_key_version>> get_latest_version_db(const std::string& key, leveldb::DB* database);
 
 
@@ -66,25 +66,25 @@ public:
     ~kv_store_leveldb();
     int restart_database() override;
     void send_keys_gt(std::vector<std::string> &off_keys, std::vector<std::string> &off_deleted_keys, tcp_client_server_connection::tcp_client_connection &connection,
-                      void (*action)(tcp_client_server_connection::tcp_client_connection &, const std::string &, std::map<long, long>& , bool, bool, const char*, size_t)) override;
+                      void (*action)(tcp_client_server_connection::tcp_client_connection &, const std::string &, std::map<long, long>&, long , bool, bool, const char*, size_t)) override;
     int init(void*, long id) override ;
     void close() override ;
     std::string db_name() const override;
     std::vector<std::string> get_last_keys_limit4() override;
     void update_partition(int p, int np) override;
     std::unordered_map<kv_store_key<std::string>, size_t> get_keys() override;
-    bool put(const std::string& key, kv_store_key_version version, const std::string& bytes, bool is_merge) override;
+    bool put(const kv_store_key<std::string>& key, const std::string& bytes) override;
     bool put_metadata_child(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir) override;
     bool put_metadata_stat(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& bytes) override;
-    bool put_with_merge(const std::string& key, kv_store_key_version version, const std::string& bytes) override;
-    bool anti_entropy_put(const std::string& key, kv_store_key_version version, const std::string& value, bool is_merge) override;
-    std::unique_ptr<std::string> get(kv_store_key<std::string>& key) override;
-    std::unique_ptr<std::string> get_deleted(kv_store_key<std::string>& key) override;
+    bool put_with_merge(const kv_store_key<std::string>& key, const std::string& bytes) override;
+    bool anti_entropy_put(const kv_store_key<std::string>& key, const std::string& value) override;
+    std::unique_ptr<std::string> get(const kv_store_key<std::string>& key) override;
+    std::unique_ptr<std::string> get_deleted(const kv_store_key<std::string>& key) override;
     std::unique_ptr<std::vector<kv_store_key_version>> get_metadata_size(const std::string& key, std::vector<std::unique_ptr<std::string>>& last_data) override;
     std::unique_ptr<std::vector<kv_store_key_version>> get_metadata_stat(const std::string& key, std::vector<std::unique_ptr<std::string>>& data_v) override;
-    bool put_deleted(const std::string& key, kv_store_key_version version, const std::string& value) override;
-    bool anti_entropy_remove(const std::string& key, kv_store_key_version version, const std::string& value) override;
-    bool remove(const std::string& key, kv_store_key_version version) override;
+    bool put_deleted(const kv_store_key<std::string>& key, const std::string& value) override;
+    bool anti_entropy_remove(const kv_store_key<std::string>& key, const std::string& value) override;
+    bool remove(const kv_store_key<std::string>& key) override;
     std::unique_ptr<std::vector<kv_store_key_version>> get_latest_version(const std::string& key) override;
     std::unique_ptr<std::vector<kv_store_key_version>> get_latest_deleted_version(const std::string& key) override;
     std::unique_ptr<std::vector<kv_store_key_version>> get_latest_data_version(const std::string& key, std::vector<std::unique_ptr<std::string>>& last_data) override;
@@ -93,17 +93,16 @@ public:
     void remove_from_map_existent_keys(std::unordered_map<kv_store_key<std::string>, size_t>& keys) override;
     void remove_from_set_existent_deleted_keys(std::unordered_set<kv_store_key<std::string>>& deleted_keys) override;
     void print_store(long id) override;
-    bool check_if_deleted(const std::string& key, kv_store_key_version version) override;
-    bool check_if_put_merged(const std::string& key, kv_store_key_version version) override;
+    bool check_if_deleted(const kv_store_key<std::string>& key) override;
     bool check_if_put_merged(const std::string& comp_key) override;
     std::unordered_set<kv_store_key<std::string>> get_deleted_keys() override;
 
-    bool put_tmp_anti_entropy(const std::string& base_path, const std::string& key, kv_store_key_version version, const std::string& bytes, bool is_merge, bool is_delete) override;
-    bool get_tmp_key_entry_size(const std::string& base_path, const std::string& key, kv_store_key_version version, std::string* value) override;
-    bool put_tmp_key_entry_size(const std::string& base_path, kv_store_key_version version, size_t size) override;
-    bool check_if_have_all_blks_and_put_metadata(const std::string& base_path, const std::string& key, kv_store_key_version version, size_t blk_num, bool is_merge, bool is_delete) override;
-    void delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const std::string& key, kv_store_key_version version, size_t blk_num) override;
-    bool get_incomplete_blks(const std::string& key, kv_store_key_version version, std::vector<size_t>& tmp_blks_to_request) override;
+    bool put_tmp_anti_entropy(const std::string& base_path, const kv_store_key<std::string>& key, const std::string& bytes) override;
+    bool get_tmp_key_entry_size(const std::string& base_path, const kv_store_key<std::string>& key, std::string* value) override;
+    bool put_tmp_key_entry_size(const kv_store_key<std::string>& key, size_t size) override;
+    bool check_if_have_all_blks_and_put_metadata(const std::string& base_path, const kv_store_key<std::string>& key, size_t blk_num) override;
+    void delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const kv_store_key<std::string>& key, size_t blk_num) override;
+    bool get_incomplete_blks(const kv_store_key<std::string>& key, std::vector<size_t>& tmp_blks_to_request) override;
  
 };
 
@@ -252,7 +251,7 @@ std::unordered_map<kv_store_key<std::string>, size_t> kv_store_leveldb::get_keys
         this->refresh_nr_keys_count();
     }
     //Calculate percentage of keys to send
-    long anti_entropy_num_keys = (anti_entropy_max_keys * anti_entropy_num_keys_percentage);
+    long anti_entropy_num_keys = this->record_count * ((anti_entropy_max_keys_to_send_percentage * anti_entropy_num_keys_percentage) / 100);
 
     long max_random_key_start = this->record_count - anti_entropy_num_keys;
 
@@ -275,10 +274,11 @@ std::unordered_map<kv_store_key<std::string>, size_t> kv_store_leveldb::get_keys
 
         std::string key;
         std::map<long, long> vector;
-        int res = split_composite_total(comp_key, &key, &vector);
+        long cli_id;
+        int res = split_composite_total(comp_key, &key, &vector, &cli_id);
         if(res == 0){
             
-            kv_store_key<std::string> st_key = {key, kv_store_key_version(vector), false};
+            kv_store_key<std::string> st_key = {key, kv_store_key_version(vector, cli_id), false};
             if(anti_entropy_disseminate_latest_keys){
                 int size_dif = add_latest_version_to_map(keys, st_key, v_size);
                 i = i + size_dif;
@@ -332,7 +332,7 @@ std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_deleted_keys
         this->refresh_nr_deleted_keys_count();
     }
     //Calculate percentage of keys to send
-    long anti_entropy_num_deleted_keys = (anti_entropy_max_keys * anti_entropy_num_deleted_keys_percentage);
+    long anti_entropy_num_deleted_keys = this->deleted_record_count * ((anti_entropy_max_keys_to_send_percentage * anti_entropy_num_deleted_keys_percentage) / 100);
 
     long max_random_key_start = this->deleted_record_count - anti_entropy_num_deleted_keys;
 
@@ -352,9 +352,10 @@ std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_deleted_keys
         std::string comp_key = it->key().ToString();
         std::string key;
         std::map<long, long> vector;
-        int res = split_composite_total(comp_key, &key, &vector);
+        long cli_id;
+        int res = split_composite_total(comp_key, &key, &vector, &cli_id);
         if(res == 0){
-            kv_store_key<std::string> st_key = {key, kv_store_key_version(vector), true};
+            kv_store_key<std::string> st_key = {key, kv_store_key_version(vector, cli_id), true};
             
             if(anti_entropy_disseminate_latest_keys){
                 int size_dif = add_latest_deleted_version_to_set(deleted_keys, st_key);
@@ -490,13 +491,14 @@ std::unique_ptr<std::vector<kv_store_key_version>> kv_store_leveldb::get_latest_
         std::string comp_key = it->key().ToString();
         std::string current_key;
         std::map<long, long> current_vector;
-        int res = split_composite_total(comp_key, &current_key, &current_vector);
+        long cli_id;
+        int res = split_composite_total(comp_key, &current_key, &current_vector, &cli_id);
         if(res == 0){
             if(i == 0){
-                current_max_versions.emplace_back(kv_store_key_version(current_vector));
+                current_max_versions.emplace_back(kv_store_key_version(current_vector, cli_id));
                 exists = true;
             } else {
-                auto temp_version = kv_store_key_version(current_vector);
+                kv_store_key_version temp_version = kv_store_key_version(current_vector, cli_id);
                 int cout_concurrent = 0;
                 for(int j = 0; j < current_max_versions.size(); j++){
                     kVersionComp vcomp = comp_version(temp_version, current_max_versions.at(j));
@@ -536,14 +538,15 @@ std::unique_ptr<std::vector<kv_store_key_version>> kv_store_leveldb::get_latest_
         std::string value = it->value().ToString();
         std::string current_key;
         std::map<long, long> current_vector;
-        int res = split_composite_total(comp_key, &current_key, &current_vector);
+        long cli_id;
+        int res = split_composite_total(comp_key, &current_key, &current_vector, &cli_id);
         if(res == 0){
             if(i == 0){
-                current_max_versions.emplace_back(kv_store_key_version(current_vector));
+                current_max_versions.emplace_back(kv_store_key_version(current_vector, cli_id));
                 last_data.emplace_back(std::make_unique<std::string>(std::move(value)));
                 exists = true;
             } else {
-                auto temp_version = kv_store_key_version(current_vector);
+                kv_store_key_version temp_version = kv_store_key_version(current_vector, cli_id);
                 int cout_concurrent = 0;
                 for(int j = 0; j < current_max_versions.size(); j++){
                     kVersionComp vcomp = comp_version(temp_version, current_max_versions.at(j));
@@ -556,7 +559,7 @@ std::unique_ptr<std::vector<kv_store_key_version>> kv_store_leveldb::get_latest_
                         cout_concurrent++;
                 }
                 if(cout_concurrent == current_max_versions.size()){
-                    current_max_versions.emplace_back(temp_version);
+                    current_max_versions.push_back(temp_version);
                     last_data.emplace_back(std::make_unique<std::string>(std::move(value)));
                 }
             }
@@ -574,20 +577,19 @@ std::unique_ptr<std::vector<kv_store_key_version>> kv_store_leveldb::get_latest_
     return nullptr;
 }
 
-bool kv_store_leveldb::put(const std::string& key, kv_store_key_version version, const std::string& bytes, bool is_merge) {
-    kv_store_key<std::string> key_comp = {key, version, false, is_merge};
-    this->seen_it(key_comp);
-    int k_slice = this->get_slice_for_key(key);
+bool kv_store_leveldb::put(const kv_store_key<std::string>& key, const std::string& bytes) {
+    this->seen_it(key);
+    int k_slice = this->get_slice_for_key(key.key);
 
     if(this->slice == k_slice){
         leveldb::WriteOptions writeOptions;
         std::string comp_key;
         //comp_key.reserve(100);
-        comp_key = compose_key_toString(key, version);
+        comp_key = compose_key_toString(key.key, key.key_version);
         db->Put(writeOptions, comp_key, bytes);
-        if(is_merge) {
-            std::string k_c = key + "#";
-            db_merge_log->Put(writeOptions, k_c, std::to_string(is_merge));
+        if(key.is_merge) {
+            std::string k_c = key.key + "#";
+            db_merge_log->Put(writeOptions, k_c, std::to_string(key.is_merge));
         }
         this->record_count++;
         return true;
@@ -697,6 +699,7 @@ std::unique_ptr<std::vector<kv_store_key_version>> kv_store_leveldb::get_metadat
         data_v[i] = std::make_unique<std::string>(to_string(value_stat));
     }
 
+    
     return std::move(version);
 }
 
@@ -742,12 +745,13 @@ void kv_store_leveldb::print_db(leveldb::DB* database, long id, std::string file
         if(filename.compare("db_") == 0 || filename.compare("deleted_db_") == 0){
             std::string key;
             std::map<long, long> vector;
-            int res = split_composite_total(comp_key, &key, &vector);
+            long cli_id;
+            int res = split_composite_total(comp_key, &key, &vector, &cli_id);
 
             if(res == 0){
-                db_file << "  Key: " << key << "#" << "\n";
-                
-                kv_store_key<std::string> get_key = {key, kv_store_key_version(vector)};
+                db_file << "  Key: " << key << "\n";
+                db_file << "  Client_id: " << cli_id << "\n";
+                kv_store_key<std::string> get_key = {key, kv_store_key_version(vector, cli_id)};
                 std::unique_ptr<std::string> data = get_db(get_key, database);
 
                 if(data != nullptr) db_file << "  Size: " << data->size() << "\n";
@@ -765,7 +769,7 @@ void kv_store_leveldb::print_db(leveldb::DB* database, long id, std::string file
     }
 }
 
-std::unique_ptr<std::string> kv_store_leveldb::get_db(kv_store_key<std::string>& key, leveldb::DB* database) {
+std::unique_ptr<std::string> kv_store_leveldb::get_db(const kv_store_key<std::string>& key, leveldb::DB* database) {
     
     //It shoud never happen this if, only safeguard 
     if(key.key_version.vv.empty())
@@ -785,11 +789,11 @@ std::unique_ptr<std::string> kv_store_leveldb::get_db(kv_store_key<std::string>&
 }
 
 
-std::unique_ptr<std::string> kv_store_leveldb::get(kv_store_key<std::string>& key) {
+std::unique_ptr<std::string> kv_store_leveldb::get(const kv_store_key<std::string>& key) {
     return get_db(key, db);
 }
 
-std::unique_ptr<std::string> kv_store_leveldb::get_deleted(kv_store_key<std::string>& key) {
+std::unique_ptr<std::string> kv_store_leveldb::get_deleted(const kv_store_key<std::string>& key) {
     return get_db(key, db_deleted);
 }
 
@@ -810,14 +814,14 @@ std::unique_ptr<std::string> kv_store_leveldb::get_anti_entropy(const kv_store_k
 }
 
 
-bool kv_store_leveldb::put_deleted(const std::string& key, kv_store_key_version version, const std::string& value){
+bool kv_store_leveldb::put_deleted(const kv_store_key<std::string>& key, const std::string& value){
     
-    int k_slice = this->get_slice_for_key(key);
+    int k_slice = this->get_slice_for_key(key.key);
 
     if(this->slice == k_slice){
         
         std::string comp_key;
-        comp_key = compose_key_toString(key, version);
+        comp_key = compose_key_toString(key.key, key.key_version);
         leveldb::Status s = db_deleted->Put(leveldb::WriteOptions(), comp_key, value);
         if(!s.ok()) throw LevelDBException();
         this->deleted_record_count++;
@@ -829,33 +833,30 @@ bool kv_store_leveldb::put_deleted(const std::string& key, kv_store_key_version 
 
 
 
-bool kv_store_leveldb::anti_entropy_remove(const std::string& key, kv_store_key_version version, const std::string& value){
+bool kv_store_leveldb::anti_entropy_remove(const kv_store_key<std::string>& key, const std::string& value){
         
-    if(!remove(key, version))
-        return put_deleted(key, version, value);
+    if(!remove(key))
+        return put_deleted(key, value);
 
     return true;
 }
 
 //Not used
-bool kv_store_leveldb::anti_entropy_put(const std::string& key, kv_store_key_version version, const std::string& value, bool is_merge){
-    kv_store_key<std::string> key_comp = {key, version, false, is_merge};
-    this->seen_it(key_comp);
-    int k_slice = this->get_slice_for_key(key);   
+bool kv_store_leveldb::anti_entropy_put(const kv_store_key<std::string>& key, const std::string& value){
+    this->seen_it(key);
+    int k_slice = this->get_slice_for_key(key.key);   
 
     if(this->slice == k_slice){
         std::string value;
         std::string comp_key;
-        comp_key = compose_key_toString(key, version);
+        comp_key = compose_key_toString(key.key, key.key_version);
         leveldb::Status s = db_deleted->Get(leveldb::ReadOptions(), comp_key, &value);
         //if it is not found in the deleted records
         if (!s.ok()){
-            std::string comp_key;
-            comp_key = compose_key_toString(key, version);
             db->Put(leveldb::WriteOptions(), comp_key, value);
-            if(is_merge) {
-                std::string k_c = key + "#";
-                db_merge_log->Put(leveldb::WriteOptions(), k_c, std::to_string(is_merge));
+            if(key.is_merge) {
+                std::string k_c = key.key + "#";
+                db_merge_log->Put(leveldb::WriteOptions(), k_c, std::to_string(key.is_merge));
             }
             this->record_count++;
             return true;
@@ -865,17 +866,17 @@ bool kv_store_leveldb::anti_entropy_put(const std::string& key, kv_store_key_ver
     
 }
 
-
-bool kv_store_leveldb::put_tmp_anti_entropy(const std::string& base_path, const std::string& key, kv_store_key_version version, const std::string& bytes, bool is_merge, bool is_delete) {
-    kv_store_key<std::string> key_comp = {key, version, is_delete, is_merge};
-    this->seen_it(key_comp);
+//Kv_store_key is_deleted and is_merge need to be specified
+//Key is base path
+bool kv_store_leveldb::put_tmp_anti_entropy(const std::string& base_path, const kv_store_key<std::string>& key, const std::string& bytes) {
+    this->seen_it(key);
     int k_slice = this->get_slice_for_key(base_path);
 
     if(this->slice == k_slice){
         leveldb::WriteOptions writeOptions;
         std::string comp_key;
         //comp_key.reserve(100);
-        comp_key = compose_key_toString(key, version);
+        comp_key = compose_key_toString(key.key, key.key_version);
         leveldb::Status s = db_tmp_anti_entropy->Put(writeOptions, comp_key, bytes);
         if(!s.ok()) throw LevelDBException();
         return true;
@@ -885,14 +886,14 @@ bool kv_store_leveldb::put_tmp_anti_entropy(const std::string& base_path, const 
     }
 }
 
-
-bool kv_store_leveldb::put_tmp_key_entry_size(const std::string& base_path, kv_store_key_version version, size_t size) {
-    int k_slice = this->get_slice_for_key(base_path);
+//key is base path
+bool kv_store_leveldb::put_tmp_key_entry_size(const kv_store_key<std::string>& key, size_t size) {
+    int k_slice = this->get_slice_for_key(key.key);
 
     if(this->slice == k_slice){
         leveldb::WriteOptions writeOptions;
         std::string comp_key;
-        comp_key = compose_key_toString(base_path, version);
+        comp_key = compose_key_toString(key.key, key.key_version);
         comp_key = comp_key + "#size";
         leveldb::Status s = db_tmp_anti_entropy->Put(writeOptions, comp_key, to_string(size));
         if(!s.ok()) throw LevelDBException();
@@ -903,12 +904,12 @@ bool kv_store_leveldb::put_tmp_key_entry_size(const std::string& base_path, kv_s
     }
 }
 
-bool kv_store_leveldb::get_tmp_key_entry_size(const std::string& base_path, const std::string& key, kv_store_key_version version, std::string* value) {
+bool kv_store_leveldb::get_tmp_key_entry_size(const std::string& base_path, const kv_store_key<std::string>& key, std::string* value) {
     int k_slice = this->get_slice_for_key(base_path);
 
     if(this->slice == k_slice){
         std::string comp_key;
-        comp_key = compose_key_toString(base_path, version);
+        comp_key = compose_key_toString(base_path, key.key_version);
         comp_key = comp_key + "#size";
         leveldb::Status s = db_tmp_anti_entropy->Get(leveldb::ReadOptions(), comp_key, value);
         if(!s.ok()) throw LevelDBException();
@@ -921,7 +922,10 @@ bool kv_store_leveldb::get_tmp_key_entry_size(const std::string& base_path, cons
 
 //If have all blocks and metadata was inserted with success - true
 //If do not have all blocks - false
-bool kv_store_leveldb::check_if_have_all_blks_and_put_metadata(const std::string& base_path, const std::string& key, kv_store_key_version version, size_t blk_num, bool is_merge, bool is_delete) {
+//Kv_store_key is_deleted and is_merge need to be specified
+//Key is base path
+//merge = true
+bool kv_store_leveldb::check_if_have_all_blks_and_put_metadata(const std::string& base_path, const kv_store_key<std::string>& key, size_t blk_num) {
     int k_slice = this->get_slice_for_key(base_path);
 
     if(this->slice == k_slice){
@@ -935,7 +939,7 @@ bool kv_store_leveldb::check_if_have_all_blks_and_put_metadata(const std::string
 
             std::string value;
             std::string comp_key;
-            comp_key = compose_key_toString(blk_path, version);
+            comp_key = compose_key_toString(blk_path, key.key_version);
             
             leveldb::Status s = db_tmp_anti_entropy->Get(leveldb::ReadOptions(), comp_key, &value);
             if(!s.ok()) return false;
@@ -944,10 +948,11 @@ bool kv_store_leveldb::check_if_have_all_blks_and_put_metadata(const std::string
 
         //have all blks
         std::string c_key;
-        c_key = compose_key_toString(base_path, version);
+        c_key = compose_key_toString(base_path, key.key_version);
 
-        if(!is_delete){
-                put_with_merge(base_path, version, met);
+        if(!key.is_deleted){
+                kv_store_key<std::string> k_merge = {base_path, key.key_version, key.is_deleted, true};
+                put_with_merge(k_merge, met);
         }else{
             leveldb::Status s = db_deleted->Put(leveldb::WriteOptions(), c_key, met);
             if(!s.ok()) throw LevelDBException();
@@ -960,9 +965,9 @@ bool kv_store_leveldb::check_if_have_all_blks_and_put_metadata(const std::string
     }
 }
 
-bool kv_store_leveldb::get_incomplete_blks(const std::string& key, kv_store_key_version version, std::vector<size_t>& tmp_blks_to_request) {
-    leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
-    std::string prefix = compose_key_toString(key, version);
+bool kv_store_leveldb::get_incomplete_blks(const kv_store_key<std::string>& key, std::vector<size_t>& tmp_blks_to_request) {
+    leveldb::Iterator* it = db_tmp_anti_entropy->NewIterator(leveldb::ReadOptions());
+    std::string prefix = compose_key_toString(key.key, key.key_version);
     bool res = false;
     int i = 0;
     size_t size = 0;
@@ -977,8 +982,9 @@ bool kv_store_leveldb::get_incomplete_blks(const std::string& key, kv_store_key_
         }else{
             std::string current_key;
             std::map<long, long> current_vector;
-            int res = split_composite_total(comp_key, &current_key, &current_vector);
-            if(res == 0){
+            long cli_id;
+            int res1 = split_composite_total(comp_key, &current_key, &current_vector, &cli_id);
+            if(res1 == 0){
                 std::string blk_num_str;
                 int res_2 = get_blk_num(current_key, &blk_num_str);
                 if(res_2 == 0)
@@ -1004,10 +1010,10 @@ bool kv_store_leveldb::get_incomplete_blks(const std::string& key, kv_store_key_
 
 
 
-void kv_store_leveldb::delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const std::string& key, kv_store_key_version version, size_t blk_num) {
+void kv_store_leveldb::delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const kv_store_key<std::string>& key, size_t blk_num) {
         
     std::string comp_key;
-    comp_key = compose_key_toString(base_path, version);
+    comp_key = compose_key_toString(base_path, key.key_version);
     comp_key = comp_key + "#size";
     
     leveldb::Status s = db_tmp_anti_entropy->Delete(leveldb::WriteOptions(), comp_key);
@@ -1018,23 +1024,23 @@ void kv_store_leveldb::delete_metadata_from_tmp_anti_entropy(const std::string& 
         blk_path.reserve(100);
         blk_path.append(base_path).append(":").append(std::to_string(i));
 
-        comp_key = compose_key_toString(blk_path, version);
+        comp_key = compose_key_toString(blk_path, key.key_version);
         
         db_tmp_anti_entropy->Delete(leveldb::WriteOptions(), comp_key);
        
     }   
 }
 
-
-bool kv_store_leveldb::remove(const std::string& key, kv_store_key_version version) {
-    kv_store_key<std::string> key_comp = {key, version, true};
+//Delete must be true
+bool kv_store_leveldb::remove(const kv_store_key<std::string>& key) {
+    kv_store_key<std::string> key_comp = {key.key, key.key_version, true};
     this->seen_it_deleted(key_comp);
-    int k_slice = this->get_slice_for_key(key);
+    int k_slice = this->get_slice_for_key(key.key);
 
     if(this->slice == k_slice){
         std::string value;
         std::string comp_key;
-        comp_key = compose_key_toString(key, version);
+        comp_key = compose_key_toString(key.key, key.key_version);
         
         leveldb::Status s = db->Get(leveldb::ReadOptions(), comp_key, &value);
 
@@ -1045,7 +1051,7 @@ bool kv_store_leveldb::remove(const std::string& key, kv_store_key_version versi
             this->record_count--; //removed record from database
             
             std::string value2;
-            std::string k_c = key + "#";
+            std::string k_c = key.key + "#";
             s = db_merge_log->Get(leveldb::ReadOptions(), k_c, &value2);
             if(s.ok()){
                 s = db_merge_log->Delete(leveldb::WriteOptions(), k_c);
@@ -1063,13 +1069,13 @@ bool kv_store_leveldb::remove(const std::string& key, kv_store_key_version versi
 }
 
 
-bool kv_store_leveldb::check_if_deleted(const std::string& key, kv_store_key_version version){
+bool kv_store_leveldb::check_if_deleted(const kv_store_key<std::string>& key){
     leveldb::Iterator *it = db_deleted->NewIterator(leveldb::ReadOptions());
-    std::string prefix = key + "#";
+    std::string prefix = key.key + "#";
     bool exists = false;
 
     for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
-        std::string comp_key = compose_key_toString(key, version);
+        std::string comp_key = compose_key_toString(key.key, key.key_version);
         if(comp_key == it->key().ToString()){
             return true;
         }
@@ -1077,14 +1083,6 @@ bool kv_store_leveldb::check_if_deleted(const std::string& key, kv_store_key_ver
     return false;
 }
 
-
-bool kv_store_leveldb::check_if_put_merged(const std::string& key, kv_store_key_version version){
-    std::string comp_key = compose_key_toString(key, version);
-    std::string value;
-    leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value);
-    bool is_merge = s.ok();
-    return is_merge;
-}
 
 bool kv_store_leveldb::check_if_put_merged(const std::string& key){
     std::string value;
@@ -1095,21 +1093,20 @@ bool kv_store_leveldb::check_if_put_merged(const std::string& key){
 }
 
 
-bool kv_store_leveldb::put_with_merge(const std::string& key, kv_store_key_version version, const std::string& bytes) {
+bool kv_store_leveldb::put_with_merge(const kv_store_key<std::string>& key, const std::string& bytes) {
     try{
 
-    
-        std::unique_ptr<std::vector<kv_store_key_version>> last_vkv = get_latest_version(key);
+        std::unique_ptr<std::vector<kv_store_key_version>> last_vkv = get_latest_version(key.key);
         std::vector<std::unique_ptr<std::string>> last_vdata;
         
         //if no key was found in the system, just insert it with merge = true
         if( last_vkv == nullptr || last_vkv->size() <= 0){
-            return put(key, version, bytes, true);
+            return put(key, bytes);
         }
 
         for(auto &kv: *last_vkv){
-            kv_store_key<std::string> key_v = {key, kv};
-            last_vdata.emplace_back(get(key_v));
+            kv_store_key<std::string> kv_m = {key.key, kv};
+            last_vdata.emplace_back(get(kv_m));
         }
 
         kv_store_key_version last_kv;
@@ -1137,12 +1134,13 @@ bool kv_store_leveldb::put_with_merge(const std::string& key, kv_store_key_versi
         std::cout << "Checking if version and last version are concurrent" << std::endl;
                 
         // They should always be concurrent
-        if(comp_version(last_kv, version) == kVersionComp::Concurrent){
+        if(comp_version(last_kv, key.key_version) == kVersionComp::Concurrent){
             this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
-            int res = put(key, merge_kv(last_kv, version), this->merge_function(*last_data, bytes), true);
+            kv_store_key<std::string> k_to_add = {key.key, merge_kv(last_kv, key.key_version), false, true};
+            int res = put(k_to_add, this->merge_function(*last_data, bytes));
             if(res){
                 //Ensure received version stays logged in the database. (for anti-entropy reasons)
-                return put(key, version, bytes, true);
+                return put(key, bytes);
             }
             else {
                 return false;
@@ -1151,7 +1149,7 @@ bool kv_store_leveldb::put_with_merge(const std::string& key, kv_store_key_versi
         // if not just insert with merge = true
         else {
             std::cout << "Just inserting the key with updated metadata" << std::endl;
-            return put(key, version, bytes, true);
+            return put(key, bytes);
         }
 
     }
@@ -1161,7 +1159,7 @@ bool kv_store_leveldb::put_with_merge(const std::string& key, kv_store_key_versi
 }
 
 void kv_store_leveldb::send_keys_gt(std::vector<std::string> &off_keys, std::vector<std::string> &off_deleted_keys, tcp_client_server_connection::tcp_client_connection &connection,
-                                    void (*send)(tcp_client_server_connection::tcp_client_connection &, const std::string &, std::map<long, long>&, bool, bool, const char*, size_t)) {
+                                    void (*send)(tcp_client_server_connection::tcp_client_connection &, const std::string &, std::map<long, long>&, long, bool, bool, const char*, size_t)) {
 
     leveldb::Iterator *it = db->NewIterator(leveldb::ReadOptions());
     bool found_offset_key = false;
@@ -1185,11 +1183,12 @@ void kv_store_leveldb::send_keys_gt(std::vector<std::string> &off_keys, std::vec
         std::string current_key;
         std::string value;
         std::map<long, long> current_vector;
-        split_composite_total(comp_key, &current_key, &current_vector);
+        long cli_id;
+        split_composite_total(comp_key, &current_key, &current_vector, &cli_id);
         leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value);
         bool is_merge = s.ok();
         try {
-            send(connection, current_key, current_vector, false, is_merge, it->value().data(), it->value().size());
+            send(connection, current_key, current_vector, cli_id, false, is_merge, it->value().data(), it->value().size());
         }catch(std::exception& e){
             std::cerr << "Exception: " << e.what()  << " " << strerror(errno) << std::endl;
         }
@@ -1225,9 +1224,10 @@ void kv_store_leveldb::send_keys_gt(std::vector<std::string> &off_keys, std::vec
         std::string current_key;
         std::string value;
         std::map<long, long> current_vector;
-        split_composite_total(comp_key, &current_key, &current_vector);
+        long cli_id;
+        split_composite_total(comp_key, &current_key, &current_vector, &cli_id);
         try {
-            send(connection, current_key, current_vector, true, false, it->value().data(), it->value().size());
+            send(connection, current_key, current_vector, cli_id, true, false, it->value().data(), it->value().size());
         }catch(std::exception& e){
             std::cerr << "Exception: " << e.what()  << " " << strerror(errno) << std::endl;
         }

@@ -81,7 +81,7 @@ void*  lsfs_impl::_init(
         exit(1);
     }
 
-    state->clear_all_dir_cache();
+    //state->clear_all_dir_cache();
 
     return NULL;
 }

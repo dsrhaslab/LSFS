@@ -79,8 +79,9 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
         std::unique_ptr<std::vector<kv_store_key_version>> del_v(nullptr);
         bool is_deleted = false;
         kv_store_key_version version;
+        version.client_id = message.key().key_version().client_id();
 
-        for (auto c : message.key().version())
+        for (auto c : message.key().key_version().version())
             version.vv.emplace(c.client_id(), c.clock());
 
         if(this->store->get_slice_for_key(key) == this->store->get_slice())
@@ -93,7 +94,7 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
                 if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
                     is_deleted = true;
                     break;
-                }     
+                }
             }
         }
 
@@ -167,7 +168,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
     if(!this->store->in_log(req_id)){
         this->store->log_req(req_id);
 
-        std::cout << "Get latest ##### Key: " << key << std::endl;
+        //std::cout << "Get latest ##### Key: " << key << std::endl;
 
         std::unique_ptr<std::vector<kv_store_key_version>> version(nullptr);
         std::unique_ptr<std::vector<kv_store_key_version>> del_v(nullptr);
@@ -177,7 +178,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
         // to peers that belong to the same slice of the key
         if(this->store->get_slice_for_key(key) == this->store->get_slice()){
             try {
-                
+                 
                 if(get_data)
                     version = this->store->get_latest_data_version(key, data_v);
                 else
@@ -249,16 +250,19 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
     bool request_already_replied = msg.forwarded_within_group();
     
     kv_store_key_version version;
-    for (auto c : message.key().version())
+    for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
+
+    version.client_id = message.key().key_version().client_id();
     
     kv_store_key<std::string> key_comp = {key, version, false, false};
 
     if (!this->store->have_seen(key_comp)) {
         bool stored;
         try {
-            stored = this->store->put(key, version, data);
-
+        
+            stored = this->store->put(key_comp, data);
+            
             if(key.find("/print_db") != std::string::npos) this->store->print_store(this->id);
 
         }catch(std::exception& e){
@@ -309,16 +313,19 @@ void data_handler_listener::process_put_with_merge_message(proto::kv_message &ms
     bool request_already_replied = msg.forwarded_within_group();
 
     kv_store_key_version version;
-    for (auto c : message.key().version())
+    for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
+    version.client_id = message.key().key_version().client_id();
 
     kv_store_key<std::string> key_comp = {key, version, false, true};
-    
+
     if (!this->store->have_seen(key_comp)) {
+    
         bool stored;
 
         try {
-            stored = this->store->put_with_merge(key, version, data);
+            stored = this->store->put_with_merge(key_comp, data);
+    
         }catch(std::exception& e){
             stored = false;
         }
@@ -330,7 +337,7 @@ void data_handler_listener::process_put_with_merge_message(proto::kv_message &ms
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
             if (!request_already_replied || achance <= this->chance) {
                 proto::kv_message reply_message;
-
+    
                 build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, true);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
@@ -366,15 +373,16 @@ void data_handler_listener::process_delete_message(proto::kv_message &msg) {
     bool request_already_replied = msg.forwarded_within_group();
     
     kv_store_key_version version;
-    for (auto c : message.key().version())
+    for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
+    version.client_id = message.key().key_version().client_id();
     
     kv_store_key<std::string> key_comp = {key, version, true};
     
     if (!this->store->have_seen_deleted(key_comp)) {
         bool deleted;
         try {
-            deleted = this->store->remove(key, version);
+            deleted = this->store->remove(key_comp);
         }catch(std::exception& e){
             deleted = false;
         }
@@ -433,14 +441,16 @@ void data_handler_listener::process_put_child_message(proto::kv_message &msg) {
     bool request_already_replied = msg.forwarded_within_group();
     
     kv_store_key_version version;
-    for (auto c : message.key().version())
+    for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
+    version.client_id = message.key().key_version().client_id();
     
     kv_store_key<std::string> key_comp = {key, version, false, false};
 
     kv_store_key_version past_v;
     for (auto c : message.past_key_version().version())
         past_v.vv.emplace(c.client_id(), c.clock());
+    past_v.client_id = message.past_key_version().client_id();
 
     const bool is_create = message.is_create();
     const bool is_dir = message.is_dir();
@@ -450,7 +460,7 @@ void data_handler_listener::process_put_child_message(proto::kv_message &msg) {
         bool stored;
         try {
             stored = this->store->put_metadata_child(key, version, past_v, child_path, is_create, is_dir);
-
+            
         }catch(std::exception& e){
             stored = false;
         }
@@ -501,14 +511,16 @@ void data_handler_listener::process_put_metadata_stat_message(proto::kv_message 
     bool request_already_replied = msg.forwarded_within_group();
     
     kv_store_key_version version;
-    for (auto c : message.key().version())
+    for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
+    version.client_id = message.key().key_version().client_id();
     
     kv_store_key<std::string> key_comp = {key, version, false, false};
 
     kv_store_key_version past_v;
     for (auto c : message.past_key_version().version())
         past_v.vv.emplace(c.client_id(), c.clock());
+    past_v.client_id = message.past_key_version().client_id();
 
     if (!this->store->have_seen(key_comp)) {
         bool stored;
@@ -578,11 +590,11 @@ void data_handler_listener::process_get_latest_metadata_size_or_stat_msg(proto::
         if(this->store->get_slice_for_key(key) == this->store->get_slice()){
             try {
                 
-                if(get_size)
+                if(get_size){
                     version = this->store->get_metadata_size(key, data_v);
-                else
+                }else{
                     version = this->store->get_metadata_stat(key, data_v);
-
+                }
                 del_v = this->store->get_latest_deleted_version(key);
                 
                 // when the peer was supposed to have a key but it doesn't, replies with key version -1
@@ -605,7 +617,7 @@ void data_handler_listener::process_get_latest_metadata_size_or_stat_msg(proto::
 
             if(!request_already_replied || achance <= this->chance){
                 proto::kv_message reply_message;
-
+    
                 build_get_latest_version_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, *version, true, data_v, *del_v);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
@@ -655,10 +667,11 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
         std::unique_ptr<std::string> data(nullptr); 
         std::unique_ptr<std::vector<kv_store_key_version>> del_v(nullptr);
         bool is_deleted = false;
-        kv_store_key_version version;
 
-        for (auto c : message.key().version())
+        kv_store_key_version version;
+        for (auto c : message.key().key_version().version())
             version.vv.emplace(c.client_id(), c.clock());
+        version.client_id = message.key().key_version().client_id();
 
         std::string base_path;
         std::string blk_num_str;
@@ -759,15 +772,7 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
 }
 
 
-
-
-
-
-
 //---------------------------------------------------------------------------------------------------------------------------
-
-
-
 
 
 long data_handler_listener::get_anti_entropy_req_count(){
@@ -789,9 +794,10 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
         for(auto& sk: message.store_keys()){
             auto& key = sk.key();
             kv_store_key_version version;
-            for(auto& vector: key.version()){
+            for(auto& vector: key.key_version().version()){
                 version.vv.emplace(vector.client_id(), vector.clock());
             }
+            version.client_id = key.key_version().client_id();
 
             if(sk.is_deleted())
                 deleted_keys_to_request.insert({key.key(), version, sk.is_deleted()});
@@ -810,7 +816,7 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
             
             if(key_size.second > BLK_SIZE){
                     
-                if(this->store->get_incomplete_blks(key_size.first.key, key_size.first.key_version, tmp_blks_to_request)){
+                if(this->store->get_incomplete_blks(key_size.first, tmp_blks_to_request)){
                      
                     for(auto blk_num: tmp_blks_to_request){
                         
@@ -830,7 +836,7 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
                     }
 
                 }else{
-                    this->store->put_tmp_key_entry_size(key_size.first.key, key_size.first.key_version, key_size.second);
+                    this->store->put_tmp_key_entry_size(key_size.first, key_size.second);
 
                     size_t NR_BLKS = (key_size.second / BLK_SIZE) + 1;    
 
@@ -895,10 +901,11 @@ void data_handler_listener::process_anti_entropy_get_message(proto::kv_message& 
 
     if(req_id.rfind("intern", 0) == 0){
         if(!this->store->in_anti_entropy_log(req_id)){
+            
             kv_store_key_version version;
-
-            for (auto c : message.key().version())
+            for (auto c : message.key().key_version().version())
                 version.vv.emplace(c.client_id(), c.clock());
+            version.client_id = message.key().key_version().client_id();
 
             bool is_deleted = message.is_deleted();
 
@@ -942,8 +949,9 @@ void data_handler_listener::process_anti_entropy_get_metadata_message(proto::kv_
             this->store->log_anti_entropy_req(req_id);
             
             kv_store_key_version version;
-            for (auto c : message.key().version())
+            for (auto c : message.key().key_version().version())
                 version.vv.emplace(c.client_id(), c.clock());
+            version.client_id = message.key().key_version().client_id();
 
             bool is_deleted = message.is_deleted();
             bool is_merge = true; //merge is for metadata so true
@@ -1004,8 +1012,9 @@ void data_handler_listener::process_anti_entropy_get_reply_message(proto::kv_mes
     std::cout << "################### Got Reply Message for key: " << key << std::endl;
 
     kv_store_key_version version;
-    for (auto c : message.key().version())
+    for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
+    version.client_id = message.key().key_version().client_id();
 
     const std::string& data = message.data();
 
@@ -1020,16 +1029,16 @@ void data_handler_listener::process_anti_entropy_get_reply_message(proto::kv_mes
         std::cout << "################### Entered normal key zone" << std::endl;
         try {
             if(is_merge){
-                bool stored = this->store->put_with_merge(key, version, data);
+                bool stored = this->store->put_with_merge(key_comp, data);
             }else{
-                bool stored = this->store->put(key, version, data);
+                bool stored = this->store->put(key_comp, data);
             }
         } catch(std::exception& e){}
     }
     else if(is_deleted && !this->store->have_seen_deleted(key_comp)) {
         std::cout << "################### Entered deleted key zone" << std::endl;
         try {
-            bool stored = this->store->anti_entropy_remove(key, version, data);
+            bool stored = this->store->anti_entropy_remove(key_comp, data);
         } catch(std::exception& e){}
     }
 }
@@ -1042,8 +1051,9 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
     std::cout << "################### Got Reply Message for Metadata key: " << key << std::endl;
 
     kv_store_key_version version;
-    for (auto c : message.key().version())
+    for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
+    version.client_id = message.key().key_version().client_id();
 
     const std::string& data = message.data();
 
@@ -1058,19 +1068,19 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
             std::string base_path;
             int res_1 = get_base_path(key, &base_path);
 
-            bool completed = this->store->put_tmp_anti_entropy(base_path, key, version, data, is_merge, is_deleted);
+            bool completed = this->store->put_tmp_anti_entropy(base_path, key_comp, data);
             if(!completed) return;
             
             std::string value;
             size_t size;
-            bool have_size = this->store->get_tmp_key_entry_size(base_path, key, version, &value);
+            bool have_size = this->store->get_tmp_key_entry_size(base_path, key_comp, &value);
             if(have_size){
                 size = stol(value);
                 size_t blk_num = (size / BLK_SIZE) + 1;
-                bool have_all = this->store->check_if_have_all_blks_and_put_metadata(base_path, key, version, blk_num, is_merge, is_deleted);
+                bool have_all = this->store->check_if_have_all_blks_and_put_metadata(base_path, key_comp, blk_num);
                 if(have_all){
                     std::cout << "################### Have all the blks, incorporate in normal db" << std::endl;
-                    this->store->delete_metadata_from_tmp_anti_entropy(base_path, key, version, blk_num);
+                    this->store->delete_metadata_from_tmp_anti_entropy(base_path, key_comp, blk_num);
                 }
             }
             
@@ -1120,7 +1130,7 @@ void data_handler_listener::process_recover_request_msg(proto::kv_message& msg) 
             // For Each Key greater than offset send to peer
             this->store->send_keys_gt(off_keys, off_deleted_keys, connection,
                                       [](tcp_client_server_connection::tcp_client_connection& connection, const std::string& key,
-                                         std::map<long, long>& version, bool is_deleted, bool is_merge, const char* data, size_t data_size){
+                                         std::map<long, long>& version, long client_id, bool is_deleted, bool is_merge, const char* data, size_t data_size){
                                           proto::kv_message kv_message;
                                           kv_message.set_forwarded_within_group(false);
                                           auto* message_content = new proto::recover_data_message();
@@ -1128,12 +1138,18 @@ void data_handler_listener::process_recover_request_msg(proto::kv_message& msg) 
                                           proto::kv_store* store = new proto::kv_store();
                                           proto::kv_store_key* kv_key = new proto::kv_store_key();
                                           kv_key->set_key(key);
+                                          proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
 
-                                           for(auto const c: version){
-                                                proto::kv_store_version *kv_version = kv_key->add_version();
+                                            for(auto const c: version){
+                                                proto::kv_store_version *kv_version = kv_key_version->add_version();
                                                 kv_version->set_client_id(c.first);
                                                 kv_version->set_clock(c.second);
                                             }
+
+                                          kv_key_version->set_client_id(client_id);
+
+                                          kv_key->set_allocated_key_version(kv_key_version);
+
                                           store->set_is_deleted(is_deleted);
                                           store->set_is_merge(is_merge);
                                           store->set_allocated_key(kv_key);

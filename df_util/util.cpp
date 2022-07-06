@@ -98,10 +98,10 @@ std::string vv2str(std::map<long, long> vv){
     return mapStr; 
 }
 
-std::string compose_key_toString(std::string key, kv_store_key_version version, long client_id){
+std::string compose_key_toString(std::string key, kv_store_key_version version){
     std::string toStr;
     std::string mapStr = vv2str(version.vv);
-    toStr.append(key).append("#").append(mapStr).append(std::to_string(client_id));
+    toStr.append(key).append("#").append(mapStr).append("#").append(std::to_string(version.client_id));
 
     return toStr; 
 }
@@ -129,7 +129,7 @@ void print_kv(const kv_store_key<std::string>& kv){
     for(auto pair: kv.key_version.vv)
         std::cout << "(" <<  pair.first << "@" << pair.second << "),";
     
-    std::cout << ">" << " Client: " << kv.client_id << std::endl;
+    std::cout << ">" << " Client: " << kv.key_version.client_id << std::endl;
 }
 
 
@@ -204,9 +204,10 @@ kv_store_key_version merge_vkv(const std::vector<kv_store_key_version>& vkv){
             else {
                 if(it->second < p.second)
                     it->second = p.second;
-            }
-                
+            }   
         }
+        if(kv.client_id < res.client_id)
+            res.client_id = kv.client_id;
     }
     return res;
 }
@@ -221,9 +222,11 @@ kv_store_key_version merge_kv(const kv_store_key_version& k1, const kv_store_key
         else {
             if(it->second < p.second)
                 it->second = p.second;
-        }
-            
+        } 
     }
+    if(k2.client_id < res.client_id)
+        res.client_id = k2.client_id;
+
     return res;
 }
 
@@ -242,7 +245,7 @@ int sum_vv_clock(kv_store_key_version& v){
     return sum;
 }
 
-// PODEM ACONTECER INCONSISTENCIA NA ESCOLHA
+//Considera-se que o id do cliente é único
 kv_store_key_version choose_latest_version(std::vector<kv_store_key_version>& kvv_v){
 
     kv_store_key_version max_v;
@@ -254,10 +257,8 @@ kv_store_key_version choose_latest_version(std::vector<kv_store_key_version>& kv
             max_v_size = temp_s;
             max_v.vv = kvv.vv;
         }else if(temp_s == max_v_size){
-            int sum_tmp = sum_vv_clock(kvv);
-            if(sum_tmp > sum_vv_clock(max_v)){
-                max_v_size = temp_s;
-                max_v.vv = kvv.vv;
+            if(kvv.client_id < max_v.client_id){
+                max_v = kvv;
             }
         }
     }

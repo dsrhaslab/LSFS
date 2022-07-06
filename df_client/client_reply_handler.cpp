@@ -792,8 +792,9 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
         }
 
         kv_store_key_version version;
-        for (auto c : msg.key().version())
+        for (auto c : msg.key().key_version().version())
             version.vv.emplace(c.client_id(), c.clock());
+        version.client_id = msg.key().key_version().client_id();
 
         kv_store_key<std::string> st_key = {msg.key().key(), version, is_deleted};
 
@@ -832,6 +833,7 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
             for (auto c : k.version()){
                 kv.vv.emplace(c.client_id(), c.clock());
             }
+            kv.client_id = k.client_id();
             
             kv_store_key<std::string> st_key = {msg.key(), kv, false};
             
@@ -847,6 +849,8 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
             for (auto c : k.version()){
                 kv_del.vv.emplace(c.client_id(), c.clock());
             }
+            kv_del.client_id = k.client_id();
+
             kv_store_key<std::string> st_del_key = {msg.key(), kv_del, true};
             it->second.deleted_keys.insert(std::make_pair(st_del_key, nullptr));
         }
@@ -863,8 +867,9 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
 void client_reply_handler::process_put_reply_msg(const proto::put_reply_message &msg) {
     const std::string& key = msg.key().key();
     kv_store_key_version version;
-    for (auto c : msg.key().version())
+    for (auto c : msg.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
+    version.client_id = msg.key().key_version().client_id();
 
     bool is_merge = msg.is_merge();
 
@@ -893,8 +898,9 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
 void client_reply_handler::process_delete_reply_msg(const proto::delete_reply_message &msg) {
     const std::string& key = msg.key().key();
     kv_store_key_version version;
-    for (auto c : msg.key().version())
+    for (auto c : msg.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
+    version.client_id = msg.key().key_version().client_id();
 
     kv_store_key<std::string> comp_key = {key, version, true};
     long replier_id = msg.id();

@@ -14,11 +14,15 @@ void build_get_message(proto::kv_message* msg, std::string& ip, int kv_port, lon
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
     
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
     for(auto const c: version.vv){
-        proto::kv_store_version *kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+    kv_key_version->set_client_id(version.client_id);
+    
+    kv_key->set_allocated_key_version(kv_key_version);
     
     message_content->set_allocated_key(kv_key);
 
@@ -41,11 +45,16 @@ void build_get_reply_message(proto::kv_message* msg, std::string& ip, int kv_por
 
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
+
+    proto::kv_store_key_version* kv_version = new proto::kv_store_key_version();
     for(auto const c: version.vv){
-        proto::kv_store_version* kv_version = kv_key->add_version();
-        kv_version->set_client_id(c.first);
-        kv_version->set_clock(c.second);
+        proto::kv_store_version* vm = kv_version->add_version();
+        vm->set_client_id(c.first);
+        vm->set_clock(c.second);
     }
+    kv_version->set_client_id(version.client_id);
+    
+    kv_key->set_allocated_key_version(kv_version);
 
     message_content->set_allocated_key(kv_key);
 
@@ -84,12 +93,13 @@ void build_get_latest_version_reply_message(proto::kv_message* msg, std::string&
         
         if(bring_data && vdata[i] != nullptr) 
             kv_key_version->set_data(vdata[i]->data(), vdata[i]->size());
-        
+
         for(auto const c: vversion[i].vv){
             proto::kv_store_version *kv_version = kv_key_version->add_version();
             kv_version->set_client_id(c.first);
             kv_version->set_clock(c.second);
         }
+        kv_key_version->set_client_id(vversion[i].client_id);
     }
 
     for(auto const v: vdel_version){
@@ -99,6 +109,7 @@ void build_get_latest_version_reply_message(proto::kv_message* msg, std::string&
             kv_del_v->set_client_id(c.first);
             kv_del_v->set_clock(c.second);
         }
+        kv_del_version->set_client_id(v.client_id);
     }
     msg->set_allocated_get_latest_version_reply_msg(message_content);
 }
@@ -113,11 +124,16 @@ void build_put_message(proto::kv_message* msg, std::string& ip, int kv_port, lon
     message_content->set_id(id);
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
+
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
     for(auto const c: version.vv){
-        proto::kv_store_version *kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+    kv_key_version->set_client_id(version.client_id);
+    
+    kv_key->set_allocated_key_version(kv_key_version);
     message_content->set_allocated_key(kv_key);
     message_content->set_data(data, size);
     msg->set_allocated_put_msg(message_content);
@@ -132,11 +148,15 @@ void build_put_with_merge_message(proto::kv_message* msg, std::string& ip, int k
     message_content->set_id(id);
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
     for(auto const c: version.vv){
-        proto::kv_store_version *kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+    kv_key_version->set_client_id(version.client_id);
+    
+    kv_key->set_allocated_key_version(kv_key_version);
     message_content->set_allocated_key(kv_key);
     message_content->set_data(data, size);
     msg->set_allocated_put_with_merge_msg(message_content);
@@ -154,12 +174,18 @@ void build_put_reply_message(proto::kv_message* msg, std::string& ip, int kv_por
     
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
+
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
     
     for(auto const c: version.vv){
-        proto::kv_store_version *kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+    kv_key_version->set_client_id(version.client_id);
+
+    kv_key->set_allocated_key_version(kv_key_version);
+
     message_content->set_allocated_key(kv_key);
     
     msg->set_allocated_put_reply_msg(message_content);
@@ -175,11 +201,15 @@ void build_delete_message(proto::kv_message* msg, std::string& ip, int kv_port, 
     message_content->set_id(id);
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
     for(auto const c: version.vv){
-        proto::kv_store_version *kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+    kv_key_version->set_client_id(version.client_id);
+    
+    kv_key->set_allocated_key_version(kv_key_version);
     message_content->set_allocated_key(kv_key);
     msg->set_allocated_delete_msg(message_content);            
 }
@@ -198,11 +228,18 @@ void build_delete_reply_message(proto::kv_message* msg, std::string& ip, int kv_
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
 
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
+
     for(auto const c: version.vv){
-        proto::kv_store_version *kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+
+    kv_key_version->set_client_id(version.client_id);
+
+    kv_key->set_allocated_key_version(kv_key_version);
+
     message_content->set_allocated_key(kv_key);
 
     msg->set_allocated_delete_reply_msg(message_content);
@@ -218,11 +255,16 @@ void build_put_child_message(proto::kv_message* msg, std::string& ip, int kv_por
     message_content->set_id(id);
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
     for(auto const c: version.vv){
-        proto::kv_store_version *kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+    kv_key_version->set_client_id(version.client_id);
+    
+    kv_key->set_allocated_key_version(kv_key_version);
+    
     message_content->set_allocated_key(kv_key);
 
     proto::kv_store_key_version* kv_vv = new proto::kv_store_key_version();
@@ -231,6 +273,8 @@ void build_put_child_message(proto::kv_message* msg, std::string& ip, int kv_por
         past_kv_version->set_client_id(c.first);
         past_kv_version->set_clock(c.second);
     }
+    kv_vv->set_client_id(past_version.client_id);
+
     message_content->set_allocated_past_key_version(kv_vv);
 
     message_content->set_is_create(is_create);
@@ -250,11 +294,16 @@ void build_put_metadata_stat_message(proto::kv_message* msg, std::string& ip, in
     message_content->set_id(id);
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
     for(auto const c: version.vv){
-        proto::kv_store_version *kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+    kv_key_version->set_client_id(version.client_id);
+    
+    kv_key->set_allocated_key_version(kv_key_version);
+
     message_content->set_allocated_key(kv_key);
 
     proto::kv_store_key_version* kv_vv = new proto::kv_store_key_version();
@@ -263,6 +312,8 @@ void build_put_metadata_stat_message(proto::kv_message* msg, std::string& ip, in
         past_kv_version->set_client_id(c.first);
         past_kv_version->set_clock(c.second);
     }
+    kv_vv->set_client_id(past_version.client_id);
+    
     message_content->set_allocated_past_key_version(kv_vv);
     message_content->set_data(data, size);
     
@@ -296,11 +347,16 @@ void build_get_metadata_message(proto::kv_message* msg, std::string& ip, int kv_
 
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
     for(auto const c: version.vv){
-        proto::kv_store_version *kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+    kv_key_version->set_client_id(version.client_id);
+    
+    kv_key->set_allocated_key_version(kv_key_version);
+
     message_content->set_allocated_key(kv_key);
     
     msg->set_allocated_get_met_msg(message_content);
@@ -320,11 +376,18 @@ void build_anti_entropy_get_message(proto::kv_message* msg, std::string& ip, int
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
     
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
+
     for(auto const c: version.vv){
-        proto::kv_store_version *kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+
+    kv_key_version->set_client_id(version.client_id);
+
+    kv_key->set_allocated_key_version(kv_key_version);
+
     message_content->set_allocated_key(kv_key);
     
     msg->set_allocated_anti_entropy_get_msg(message_content);
@@ -345,11 +408,19 @@ void build_anti_entropy_get_reply_message(proto::kv_message* msg, std::string& i
 
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
+
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
+
     for(auto const c: version.vv){
-        proto::kv_store_version* kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+
+    kv_key_version->set_client_id(version.client_id);
+
+    kv_key->set_allocated_key_version(kv_key_version);
+
     message_content->set_allocated_key(kv_key);
 
     message_content->set_is_deleted(is_deleted);
@@ -372,11 +443,18 @@ void build_anti_entropy_get_metadata_message(proto::kv_message* msg, std::string
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
     
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
+
     for(auto const c: version.vv){
-        proto::kv_store_version *kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+
+    kv_key_version->set_client_id(version.client_id);
+
+    kv_key->set_allocated_key_version(kv_key_version);
+
     message_content->set_allocated_key(kv_key);
     
     msg->set_allocated_anti_entropy_get_met_msg(message_content);
@@ -399,11 +477,19 @@ void build_anti_entropy_get_metadata_reply_message(proto::kv_message* msg, std::
 
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);
+
+    proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
+
     for(auto const c: version.vv){
-        proto::kv_store_version* kv_version = kv_key->add_version();
+        proto::kv_store_version *kv_version = kv_key_version->add_version();
         kv_version->set_client_id(c.first);
         kv_version->set_clock(c.second);
     }
+
+    kv_key_version->set_client_id(version.client_id);
+
+    kv_key->set_allocated_key_version(kv_key_version);
+
     message_content->set_allocated_key(kv_key);
 
     message_content->set_is_deleted(is_deleted);

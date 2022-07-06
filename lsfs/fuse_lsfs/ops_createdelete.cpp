@@ -136,11 +136,12 @@ int lsfs_impl::_mkdir(
 
     try{
 
+        //if(((std::string)path).find("/testF/") == std::string::npos)
         res = state->put_metadata_as_dir(to_send, path);
 
         res = state->add_child_to_parent_dir(path, true);
 
-        state->add_to_dir_cache(path, to_send);
+        if(state->use_cache) state->add_to_dir_cache(path, to_send);
 
     }catch(EmptyViewException& e){
         e.what();
@@ -170,8 +171,16 @@ int lsfs_impl::_rmdir(
     int res = 0;
 
     try{
-        bool is_cached;
-        bool is_empty = state->is_dir_childs_empty(path, &is_cached);
+
+        bool is_cached = false;
+
+        if(state->use_cache){
+            bool is_empty = state->is_dir_childs_empty(path, &is_cached);
+            if(!is_empty){
+                errno = ENOTEMPTY;
+                return -errno;
+            }
+        }
 
         if(!is_cached){
             auto met = state->get_metadata(path);
@@ -184,15 +193,10 @@ int lsfs_impl::_rmdir(
             }
         }
 
-        if(!is_empty){
-            errno = ENOTEMPTY;
-            return -errno;
-        }
-        
         res = state->delete_file_or_dir(path);
         if(res != 0) return -errno;
 
-        state->remove_from_dir_cache(path);
+        if(state->use_cache) state->remove_from_dir_cache(path);
 
         res = state->remove_child_from_parent_dir(path, true);
 

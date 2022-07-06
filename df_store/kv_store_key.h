@@ -11,13 +11,12 @@ template <typename T>
 struct kv_store_key {
     T key;
     kv_store_key_version key_version;
-    long client_id;
     bool is_deleted = false;
     bool is_merge = false;
     
     inline bool operator==(const kv_store_key& other) const
     {
-        return this->key == other.key && this->key_version == other.key_version && this->client_id == other.client_id
+        return this->key == other.key && this->key_version == other.key_version
                 && this->is_deleted == other.is_deleted && this->is_merge == other.is_merge;
     }
 };

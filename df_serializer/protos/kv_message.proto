@@ -13,16 +13,18 @@ message kv_store_version {
 
 message kv_store_key_version {
   repeated kv_store_version version = 1;
+  int64 client_id = 2;
 }
 
 message kv_store_key_version_w_data {
   repeated kv_store_version version = 1;
-  bytes data = 2;
+  int64 client_id = 2;
+  bytes data = 3;
 }
 
 message kv_store_key {
   string key = 1;
-  repeated kv_store_version version = 2;
+  kv_store_key_version key_version = 2;
 }
 
 message kv_store {

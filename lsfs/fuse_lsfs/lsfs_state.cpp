@@ -14,8 +14,10 @@ lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_re
         max_parallel_write_size(max_parallel_write_size), use_cache(use_cache),
         refresh_cache_time(refresh_cache_time), max_directories_in_cache(max_directories_in_cache)
 {
-    dir_cache_map.reserve(max_directories_in_cache);
-    dir_cache_map_mutex.reserve(max_directories_in_cache);
+    if(use_cache){
+        dir_cache_map.reserve(max_directories_in_cache);
+        dir_cache_map_mutex.reserve(max_directories_in_cache);
+    }
 }
 
 int lsfs_state::put_fixed_size_blocks_from_buffer_limited_paralelization(const char *buf, size_t size,
@@ -64,8 +66,11 @@ int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, 
         std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(blk_path, &response);
         
         kv_store_key_version version;
-        if(last_v != nullptr)
+        if(last_v != nullptr){
             version = *last_v;
+        }else{
+            version.client_id = df_client->get_id();
+        }
 
         kv_store_key<std::string> kv = {blk_path, version, false};
         keys.emplace_back(kv);
@@ -133,9 +138,12 @@ int lsfs_state::put_block(const std::string& path, const char* buf, size_t size,
     std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path, &response);
     
     kv_store_key_version version; 
-    if(last_v != nullptr)
-        version = *last_v;        
-    
+    if(last_v != nullptr){
+        version = *last_v; 
+    }else{
+        version.client_id = df_client->get_id();
+    }       
+
     if(!is_merge) df_client->put(path, version, buf, size);
     else df_client->put_with_merge(path, version, buf, size);
     
@@ -200,8 +208,11 @@ int lsfs_state::put_with_merge_metadata(metadata& met, const std::string& path){
     std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path, &response);
     
     kv_store_key_version version; 
-    if(last_v != nullptr)
-        version = *last_v; 
+    if(last_v != nullptr){
+        version = *last_v;
+    }else{
+        version.client_id = df_client->get_id();
+    }      
 
     df_client->put_with_merge(path, version, metadata_str.data(), metadata_str.size());
     
@@ -451,7 +462,7 @@ int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
         //std::cout << "Parent Path: " << *parent_path << std::endl;
         bool was_not_in_cache = false;
 
-        this->add_child_to_dir_cache(*parent_path, *child_name, is_dir);
+        if(use_cache) this->add_child_to_dir_cache(*parent_path, *child_name, is_dir);
         
         // if(!benchmark_performance && maximize_cache && met == nullptr && *parent_path != "/"){
         //     met = get_metadata(*parent_path);
@@ -498,7 +509,7 @@ int lsfs_state::remove_child_from_parent_dir(const std::string& path, bool is_di
     if(parent_path != nullptr){
         bool was_not_in_cache = false;
 
-        this->remove_child_from_dir_cache(*parent_path, *child_name, is_dir);
+        if(use_cache) this->remove_child_from_dir_cache(*parent_path, *child_name, is_dir);
 
         // if(!benchmark_performance && maximize_cache && met == nullptr && *parent_path != "/"){
         //     met = get_metadata(*parent_path);

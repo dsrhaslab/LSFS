@@ -84,23 +84,27 @@ int lsfs_impl::_readdir(
     }
 
     try{
+        std::shared_ptr<lsfs_state::directory> dir (nullptr);
         
-        
-        auto dir = state->get_metadata_if_dir_cached(path);
+        if(state->use_cache){
+            dir = state->get_metadata_if_dir_cached(path);
+            
+            if(dir != nullptr){
+                for(auto& child: dir->metadata_p->childs.childs){
+                    filler(buf, child.c_str(), NULL, 0, fill_flags);
+                }
+            }
+        }
+
         if(dir == nullptr){
             auto met = state->get_metadata(path);
             if(met == nullptr){
                 return -errno;
             }
 
-            state->add_to_dir_cache(path, *met);
+            if(state->use_cache) state->add_to_dir_cache(path, *met);
 
             for(auto& child: met->childs.childs){
-                filler(buf, child.c_str(), NULL, 0, fill_flags);
-            }
-        }else{
-            
-            for(auto& child: dir->metadata_p->childs.childs){
                 filler(buf, child.c_str(), NULL, 0, fill_flags);
             }
         }

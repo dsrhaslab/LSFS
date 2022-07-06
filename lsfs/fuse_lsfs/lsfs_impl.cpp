@@ -49,13 +49,14 @@ lsfs_impl::lsfs_impl(const std::string& boot_ip, const std::string& ip, int kv_p
         //     }
         //     db_file.close();
         // });
-
-        cache_maintainer_thr = std::thread([](){
-            while(true){
-                state->refresh_dir_cache();
-                std::this_thread::sleep_for(std::chrono::milliseconds(state->refresh_cache_time)); 
-            }
-        });
+        if(use_cache){
+            cache_maintainer_thr = std::thread([](){
+                while(true){
+                    state->refresh_dir_cache();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(state->refresh_cache_time)); 
+                }
+            });
+        }
 
     }catch (const char* msg){
         std::cerr << msg << std::endl;
