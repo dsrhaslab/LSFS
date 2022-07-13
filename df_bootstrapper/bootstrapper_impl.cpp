@@ -276,7 +276,8 @@ int main(int argc, char *argv[]) {
 
     YAML::Node config = YAML::LoadFile(conf_filename);
     auto main_confs = config["main_confs"];
-    int view_size = main_confs["view_size"].as<int>();
+    auto pss = main_confs["pss"];
+    int view_size = pss["view_size"].as<int>();
 /*
     std::string ip;
     try{

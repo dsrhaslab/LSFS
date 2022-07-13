@@ -54,7 +54,8 @@ int main(int argc, char *argv[])
     { // Setting Log Level
         YAML::Node config = YAML::LoadFile(config_filename);
         auto main_confs = config["main_confs"];
-        std::string log_level = main_confs["log_level"].as<std::string>();
+        auto client = main_confs["client"];
+        std::string log_level = client["log_level"].as<std::string>();
 
         static std::unordered_map<std::string, spdlog::level::level_enum> const levels = {
                 {"trace",    spdlog::level::trace},

@@ -47,7 +47,6 @@ private:
     std::atomic<long> deleted_record_count = 0;
     std::atomic<long> deleted_record_count_cycle = 0;
     inline const static long record_refresh_rate = 10;
-    inline const static int anti_entropy_max_keys_to_send_percentage = 20;
     inline const static int anti_entropy_num_keys_percentage = 80;
     inline const static int anti_entropy_num_deleted_keys_percentage = 20;
 
@@ -62,7 +61,7 @@ private:
 
 
 public:
-    kv_store_leveldb(std::string(*f)(const std::string&, const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool anti_entropy_disseminate_latest_keys);
+    kv_store_leveldb(std::string(*f)(const std::string&, const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool anti_entropy_disseminate_latest_keys, int anti_entropy_max_keys_to_send_percentage);
     ~kv_store_leveldb();
     int restart_database() override;
     void send_keys_gt(std::vector<std::string> &off_keys, std::vector<std::string> &off_deleted_keys, tcp_client_server_connection::tcp_client_connection &connection,
@@ -106,11 +105,13 @@ public:
  
 };
 
-kv_store_leveldb::kv_store_leveldb(std::string (*f)(const std::string&,const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool anti_entropy_disseminate_latest_keys) {
+kv_store_leveldb::kv_store_leveldb(std::string (*f)(const std::string&,const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool anti_entropy_disseminate_latest_keys, int anti_entropy_max_keys_to_send_percentage) {
     this->merge_function = f;
     this->seen_log_garbage_at = seen_log_garbage_at;
     this->request_log_garbage_at = request_log_garbage_at;
     this->anti_entropy_log_garbage_at = anti_entropy_log_garbage_at;
+    this->anti_entropy_max_keys_to_send_percentage = anti_entropy_max_keys_to_send_percentage;
+
 }
 
 kv_store_leveldb::~kv_store_leveldb() {

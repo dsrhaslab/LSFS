@@ -4,7 +4,6 @@
 
 #include "peer.h"
 
-
 // definition
 extern std::string merge_metadata(const std::string&, const std::string&);
 
@@ -12,10 +11,11 @@ std::shared_ptr<peer> g_peer_impl;
 
 peer::peer(long id, std::string ip, std::string boot_ip, int kv_port, int pss_port, int recover_port, double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
         int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval,
-        float reply_chance, bool smart, bool mt_data_handler, std::shared_ptr<spdlog::logger> logger, long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool recover_database, bool anti_entropy_disseminate_latest_keys)
+        float reply_chance, bool smart, bool mt_data_handler, std::shared_ptr<spdlog::logger> logger, long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool recover_database, 
+        bool anti_entropy_disseminate_latest_keys, int anti_entropy_max_keys_to_send_percentage)
     :   id(id), ip(ip), data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
         view_logger_enabled(view_logger_enabled), local_interval(local_interval), reply_chance(reply_chance),
-        store(std::make_shared<kv_store_leveldb>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at, anti_entropy_disseminate_latest_keys)),
+        store(std::make_shared<kv_store_leveldb>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at, anti_entropy_disseminate_latest_keys, anti_entropy_max_keys_to_send_percentage)),
         group_c(ip, kv_port, pss_port, recover_port, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),
         cyclon(boot_ip.c_str(), ip, kv_port, pss_port, recover_port, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
         listener(&(this->cyclon)),
@@ -229,29 +229,43 @@ int main(int argc, char* argv []){
 
     YAML::Node config = YAML::LoadFile(conf_filename);
     auto main_confs = config["main_confs"];
-    int view_size = main_confs["view_size"].as<int>();
-    int gossip_size = main_confs["gossip_size"].as<int>();
-    int sleep_interval = main_confs["message_passing_interval_sec"].as<int>();
-    bool view_logger_enabled = main_confs["view_logger_enabled"].as<bool>();
-    int logging_interval = main_confs["log_interval_sec"].as<int>();
-    std::string logging_dir = main_confs["logging_dir"].as<std::string>();
-    std::string database_dir = main_confs["database_base_path"].as<std::string>();
-    int rep_max = main_confs["rep_max"].as<int>();
-    int rep_min = main_confs["rep_min"].as<int>();
-    int max_age = main_confs["max_age"].as<int>();
-    int local_message = main_confs["local_message"].as<bool>();
-    int local_interval = main_confs["local_interval_sec"].as<int>();
-    int anti_entropy_interval = main_confs["anti_entropy_interval_sec"].as<int>();
-    float reply_chance = main_confs["reply_chance"].as<float>();
-    bool smart = main_confs["smart"].as<bool>();
-    std::string log_level = main_confs["log_level"].as<std::string>();
-    long seen_log_garbage_at = main_confs["seen_log_garbage_at"].as<long>();
-    long request_log_garbage_at = main_confs["request_log_garbage_at"].as<long>();
-    long anti_entropy_log_garbage_at = main_confs["anti_entropy_log_garbage_at"].as<long>();
-    bool mt_data_handler = main_confs["mt_data_handler"].as<bool>();
-    int warmup_interval = main_confs["warmup_interval"].as<int>();
-    bool restart_database_after_warmup = main_confs["restart_database_after_warmup"].as<bool>();
-    bool anti_entropy_disseminate_latest_keys = main_confs["anti_entropy_disseminate_latest"].as<bool>();
+    auto peer_c = main_confs["peer"];
+    auto group_cons = main_confs["group_construction"];
+    auto pss = main_confs["pss"];
+    auto log = main_confs["log"];
+
+    auto database = peer_c["database"];
+    auto anti_entropy = peer_c["anti_entropy"];
+    
+    int view_size = pss["view_size"].as<int>();
+    int gossip_size = pss["gossip_size"].as<int>();
+    int sleep_interval = pss["message_passing_interval_sec"].as<int>();
+    int local_message = pss["local_message"].as<bool>();
+    int local_interval = pss["local_interval_sec"].as<int>();
+    
+    bool view_logger_enabled = log["view_logger_enabled"].as<bool>();
+    int logging_interval = log["log_interval_sec"].as<int>();
+    std::string logging_dir = log["logging_dir"].as<std::string>();
+
+    std::string database_dir = database["base_path"].as<std::string>();
+    
+    int rep_max = group_cons["rep_max"].as<int>();
+    int rep_min = group_cons["rep_min"].as<int>();
+    int max_age = group_cons["max_age"].as<int>();
+
+    float reply_chance = peer_c["reply_chance"].as<float>();
+    bool smart = peer_c["smart_message_forward"].as<bool>();
+    std::string log_level = peer_c["log_level"].as<std::string>();
+    long seen_log_garbage_at = peer_c["seen_log_garbage_at"].as<long>();
+    long request_log_garbage_at = peer_c["request_log_garbage_at"].as<long>();
+    long anti_entropy_log_garbage_at = peer_c["anti_entropy_log_garbage_at"].as<long>();
+    bool mt_data_handler = peer_c["mt_data_handler"].as<bool>();
+    int warmup_interval = peer_c["warmup_interval"].as<int>();
+    bool restart_database_after_warmup = peer_c["restart_database_after_warmup"].as<bool>();
+
+    int anti_entropy_interval = anti_entropy["interval_sec"].as<int>();
+    bool anti_entropy_disseminate_latest_keys = anti_entropy["disseminate_latest"].as<bool>();
+    int anti_entropy_max_keys_to_send_percentage = anti_entropy["max_keys_to_send_percentage"].as<int>();
 
     std::shared_ptr<spdlog::logger> logger;
     try
@@ -287,7 +301,7 @@ int main(int argc, char* argv []){
 
     g_peer_impl = std::make_shared<peer>(id,"127.0.0.1",boot_ip, kv_port, pss_port, recover_port, pos, boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
             database_dir, rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, mt_data_handler, logger, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at, recover_database,
-            anti_entropy_disseminate_latest_keys);
+            anti_entropy_disseminate_latest_keys, anti_entropy_max_keys_to_send_percentage);
     g_peer_impl->start(warmup_interval, restart_database_after_warmup);
     g_peer_impl->join();
 }

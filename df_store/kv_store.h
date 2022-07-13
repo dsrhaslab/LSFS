@@ -36,6 +36,7 @@ protected:
     long request_log_garbage_at;
     long anti_entropy_log_garbage_at;
     bool anti_entropy_disseminate_latest_keys;
+    int anti_entropy_max_keys_to_send_percentage;
 
 public:
     virtual int init(void*, long id) = 0;
