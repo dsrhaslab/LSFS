@@ -81,6 +81,7 @@ public:
     std::unique_ptr<std::string> wait_for_get_latest_until(const std::string &key, const std::string &req_id, int wait_for,
                                                                       std::chrono::system_clock::time_point &wait_until, Response* get_res);
     std::unique_ptr<std::string> wait_for_get_latest(const std::string &key, const std::string& req_id, int wait_for, Response* get_res, kv_store_key_version* last_version);
+    std::vector<std::unique_ptr<std::string>> wait_for_get_latest_concurrent(const std::string &key, const std::string& req_id, int wait_for, Response* get_res);
     void process_get_reply_msg(const proto::get_reply_message &message);
     void process_put_reply_msg(const proto::put_reply_message &message);
     void process_delete_reply_msg(const proto::delete_reply_message &msg);

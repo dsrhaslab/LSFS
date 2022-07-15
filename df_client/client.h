@@ -104,6 +104,11 @@ public:
         return get_latest(key, response, nr_gets_version_required);
     };
 
+    std::vector<std::unique_ptr<std::string>> get_latest_concurrent(const std::string& key, client_reply_handler::Response* response, int wait_for);
+    inline std::vector<std::unique_ptr<std::string>> get_latest_concurrent(const std::string& key, client_reply_handler::Response* response){
+        return get_latest_concurrent(key, response, nr_gets_version_required);
+    }
+
     void put_child(const std::string& key, const kv_store_key_version& version, const std::string& child_path, bool is_create, bool is_dir, int wait_for);
     inline void put_child(const std::string& key, const kv_store_key_version& version, const std::string& child_path, bool is_create, bool is_dir){
         return put_child(key, version, child_path, is_create, is_dir, nr_puts_required);

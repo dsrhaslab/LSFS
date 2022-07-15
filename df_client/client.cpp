@@ -529,6 +529,45 @@ std::unique_ptr<std::string> client::get_latest(const std::string& key, client_r
     return res;
 }
 
+std::vector<std::unique_ptr<std::string>> client::get_latest_concurrent(const std::string& key, client_reply_handler::Response* response, int wait_for) {
+    long req_id = this->inc_and_get_request_count();
+    std::string req_id_str;
+    req_id_str.reserve(100);
+    req_id_str.append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+    this->handler->register_get_latest_version(req_id_str);
+    std::vector<std::unique_ptr<std::string>> res;
+
+    int curr_timeouts = 0;
+    while((*response) == client_reply_handler::Response::Init && curr_timeouts < this->max_timeouts){
+        int status = 0;
+        if (curr_timeouts + 1 <= 2){
+            std::vector<peer_data> peers = this->lb->get_n_peers(key, this->max_nodes_to_send_get_request); //throw exception
+            status = this->send_get_latest_version(peers, key, req_id_str, true);
+        }else{
+            std::vector<peer_data> peers = this->lb->get_n_random_peers(this->max_nodes_to_send_get_request); //throw exception
+            status = this->send_get_latest_version(peers, key, req_id_str, true);
+        }
+        if (status == 0) {
+            try{
+                kv_store_key_version last_version;
+                res = this->handler->wait_for_get_latest_concurrent(key, req_id_str, wait_for, response);
+            }catch(TimeoutException& e){
+                curr_timeouts++;
+                req_id = this->inc_and_get_request_count();
+                std::string latest_reqid_str = req_id_str;
+                req_id_str.clear();
+                req_id_str.append(std::to_string(this->id)).append(":").append(this->ip).append(":").append(std::to_string(req_id));
+                this->handler->change_get_reqid(latest_reqid_str, req_id_str);
+            }
+        }
+    }
+
+    if(curr_timeouts >= this->max_timeouts){
+        throw TimeoutException();
+    }
+
+    return res;
+}
 
 
 //---------------------------------------------------------------------------------------------------------------------------

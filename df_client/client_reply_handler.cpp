@@ -767,6 +767,107 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest(const std
 }
 
 
+std::vector<std::unique_ptr<std::string>> client_reply_handler::wait_for_get_latest_concurrent(const std::string &key, const std::string& req_id, int wait_for, Response* get_res) {
+    std::vector<std::unique_ptr<std::string>> res;
+
+    std::unique_lock<std::mutex> lock(this->get_global_mutex);
+
+    bool timeout_happened = false;
+    bool waited = false;
+
+    auto it = this->get_replies.find(req_id);
+    if(it != this->get_replies.end()) {
+        //if key exists, lock key
+        auto &sync_pair = this->get_mutexes.find(req_id)->second;
+        std::unique_lock<std::mutex> lock_key(sync_pair->first);
+
+        if (it->second.count < wait_for) {
+            // if we still don't have the number of needed replies
+
+            // unlock global get lock
+            lock.unlock();
+            // wait for key notify -> it performs automatic lock of the key
+            std::cv_status status = sync_pair->second.wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
+            waited = true;
+            if(status == std::cv_status::timeout) timeout_happened = true;
+            // unlock key mutex because we have to get locks in order
+            lock_key.unlock();
+            lock.lock();
+            lock_key.lock();
+        }
+
+        // verify if we already have all replies
+        if(waited){
+            it = this->get_replies.find(req_id);
+        }
+        if(it->second.count >= wait_for){
+            //std::cout << "Recebi todas as respostas que queria" << std::endl;
+            // if we already have the majority of replies, as we still hold the locks
+            // we can remove the entries for the key
+            
+            auto& map_keys = it->second.keys;
+            auto& map_del_keys = it->second.deleted_keys;
+
+            std::vector<kv_store_key_version> max_vv;
+
+            for(auto& kv : map_keys){
+                bool deleted = false;
+                for(auto& kv_del : map_del_keys){
+                    kVersionComp comp_del = comp_version(kv.first.key_version, kv_del.first.key_version);
+                    
+                    if(comp_del == kVersionComp::Lower || comp_del == kVersionComp::Equal){
+                        deleted = true;
+                        break;
+                    }
+                }
+                if(!deleted){
+                    int cout_concurrent = 0;
+                    for(int i = 0; i < max_vv.size(); i++){
+                        kVersionComp comp_max = comp_version(kv.first.key_version, max_vv.at(i));
+                        if(comp_max == kVersionComp::Bigger){
+                            max_vv.at(i) = kv.first.key_version;
+                            res.at(i) = std::move(kv.second);
+                            break;
+                        } else if(comp_max == kVersionComp::Concurrent)
+                            cout_concurrent++;
+                    }
+                    if(cout_concurrent == max_vv.size())
+                        max_vv.push_back(kv.first.key_version);
+                        res.push_back(std::move(kv.second));
+                }
+            }
+
+            bool maxEmpty = max_vv.empty();
+
+            if(maxEmpty && !it->second.deleted_keys.empty()){
+                *get_res = Response::Deleted;
+            }else if(maxEmpty){
+                *get_res = Response::NoData;
+            }else{
+                *get_res = Response::Ok;
+            }
+
+            this->get_replies.erase(it);
+
+            // We don't need to awake threads that can be strapped on cond variable
+            // since it's certain that a single thread is able to wait for a same key
+            auto it_req_id = this->get_mutexes.find(req_id);
+            // It's strictly needes to free key lock as if we don't, when leaving scope it will
+            // try to perform a release on a non-existent mutex (SIGSEV)
+            lock_key.unlock();
+            this->get_mutexes.erase(it_req_id);
+        }
+    }
+
+    lock.unlock();
+
+    if(*get_res == Response::Init && timeout_happened)
+        throw TimeoutException();
+
+    return std::move(res);
+}
+
+
 
 void client_reply_handler::process_get_reply_msg(const proto::get_reply_message &msg) {
     const std::string& req_id = msg.reqid();

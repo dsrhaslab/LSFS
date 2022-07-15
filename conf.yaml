@@ -2,7 +2,7 @@ main_confs:
   peer:
     log_level: off
     mt_data_handler: true
-    warmup_interval: 60
+    warmup_interval: 20
     restart_database_after_warmup: true
     reply_chance: 1
     smart_message_forward: true
