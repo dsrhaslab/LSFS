@@ -249,19 +249,12 @@ int sum_vv_clock(kv_store_key_version& v){
 kv_store_key_version choose_latest_version(std::vector<kv_store_key_version>& kvv_v){
 
     kv_store_key_version max_v;
-    int max_v_size = 0;
 
     for(auto &kvv: kvv_v){
-        int temp_s = kvv.vv.size();
-        if(temp_s > max_v_size){
-            max_v_size = temp_s;
-            max_v.vv = kvv.vv;
-        }else if(temp_s == max_v_size){
-            if(kvv.client_id < max_v.client_id){
-                max_v = kvv;
-            }
-        }
+        if(kvv.client_id < max_v.client_id)
+            max_v = kvv;
     }
     return max_v;
 }
+
 

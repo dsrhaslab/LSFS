@@ -1121,8 +1121,13 @@ bool kv_store_leveldb::put_with_merge(const kv_store_key<std::string>& key, cons
             last_data = std::move(last_vdata.front());
             int i = 0;
             for(auto const & ptr_d : last_vdata){
-                if(i > 0)
-                    last_data = std::make_unique<std::string>(this->merge_function(*last_data, *ptr_d));
+                if(i > 0){
+                    if(last_vkv->at(i).client_id == last_kv.client_id){
+                        last_data = std::make_unique<std::string>(this->merge_function(*ptr_d, *last_data));
+                    }else{
+                        last_data = std::make_unique<std::string>(this->merge_function(*last_data, *ptr_d));
+                    }
+                }
                 i++;
             }
         }
@@ -1138,7 +1143,13 @@ bool kv_store_leveldb::put_with_merge(const kv_store_key<std::string>& key, cons
         if(comp_version(last_kv, key.key_version) == kVersionComp::Concurrent){
             this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
             kv_store_key<std::string> k_to_add = {key.key, merge_kv(last_kv, key.key_version), false, true};
-            int res = put(k_to_add, this->merge_function(*last_data, bytes));
+            std::string merged_data;
+            if(key.key_version.client_id  == k_to_add.key_version.client_id){
+                merged_data = this->merge_function(bytes, *last_data);
+            }else{
+                merged_data = this->merge_function(*last_data, bytes);
+            }
+            int res = put(k_to_add, merged_data);
             if(res){
                 //Ensure received version stays logged in the database. (for anti-entropy reasons)
                 return put(key, bytes);
