@@ -1,7 +1,0 @@
----
-tmpdir_path: "/tmp"
-python3_tmpdir: "{{ tmpdir_path }}/python3"
-python3_command: python3
-python3_bashrc: "/home/{{ ansible_user}}/.bash_profile"
-python3_local: "/home/{{ ansible_user}}/.local/bin"
-python3_pyenv: null

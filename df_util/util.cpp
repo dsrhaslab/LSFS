@@ -248,13 +248,13 @@ int sum_vv_clock(kv_store_key_version& v){
 //Considera-se que o id do cliente é único
 kv_store_key_version choose_latest_version(std::vector<kv_store_key_version>& kvv_v){
 
-    kv_store_key_version max_v;
+    kv_store_key_version choosed_v;
 
     for(auto &kvv: kvv_v){
-        if(kvv.client_id < max_v.client_id)
-            max_v = kvv;
+        if(kvv.client_id < choosed_v.client_id)
+            choosed_v = kvv;
     }
-    return max_v;
+    return choosed_v;
 }
 
 

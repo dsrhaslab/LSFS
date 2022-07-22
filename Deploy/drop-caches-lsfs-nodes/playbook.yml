@@ -1,7 +1,0 @@
----
-
-- name: Start monitoring on client node
-  hosts: [bootstrapper, peer, client]
-  tasks:
-    - name: Drop Caches
-      shell: sudo sync && echo 3 > sudo /proc/sys/vm/drop_caches
