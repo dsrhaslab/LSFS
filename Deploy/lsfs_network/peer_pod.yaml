@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Pod
-metadata:
-  name: peer-pod
-spec:
-  containers:
-  - name: peer-container
-    image: localhost:5000/peer:0.1.0

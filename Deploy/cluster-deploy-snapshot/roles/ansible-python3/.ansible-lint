@@ -1,2 +1,0 @@
-skip_list:
-  - 305  # TODO: `noqa 305` has no effect with `molecule lint` for some reason
