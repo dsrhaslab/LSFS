@@ -3,7 +3,6 @@
 
 /* -------------------------------------------------------------------------- */
 
-#include "lsfs/fuse_common/fuse35.h"
 #include <boost/regex.hpp>
 #include "lsfs/fuse_common/macros.h"
 

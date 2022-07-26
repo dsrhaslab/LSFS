@@ -16,8 +16,11 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
-#include "lsfs/fuse_common/fuse35.h"
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include "serialize.h"
+#include "lsfs/fuse_common/macros.h"   
 
 
 class metadata_attr {

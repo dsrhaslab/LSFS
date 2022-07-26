@@ -1,15 +1,17 @@
+syntax = "proto3";
+
 package proto;
 
 message peer_data {
-  required string ip = 1;
-  required int32 kv_port = 2;
-  required int32 pss_port = 3;
-  required int32 recover_port = 4;
-  required int32 age = 5;
-  required int64 id = 6;
-  required int32 nr_slices = 7;
-  required double pos = 8;
-  required int32 slice = 9;
+  string ip = 1;
+  int32 kv_port = 2;
+  int32 pss_port = 3;
+  int32 recover_port = 4;
+  int32 age = 5;
+  int64 id = 6;
+  int32 nr_slices = 7;
+  double pos = 8;
+  int32 slice = 9;
 }
 
 message pss_message {
@@ -25,9 +27,9 @@ message pss_message {
     TERMINATION = 8;
   }
 
-  required Type type = 1;
-  required string sender_ip = 2;
-  required int32 sender_pss_port = 3;
-  required double sender_pos = 4;
+  Type type = 1;
+  string sender_ip = 2;
+  int32 sender_pss_port = 3;
+  double sender_pos = 4;
   repeated peer_data view = 5;
 }
