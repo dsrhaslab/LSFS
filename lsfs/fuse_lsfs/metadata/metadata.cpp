@@ -3,8 +3,7 @@
 //
 
 #include "metadata.h"
-#include "lsfs/fuse_lsfs/lsfs_impl.h"
-
+#include "lsfs/fuse_lsfs/util.h"
 
 metadata::metadata(metadata_attr attr): attr(attr){};
 

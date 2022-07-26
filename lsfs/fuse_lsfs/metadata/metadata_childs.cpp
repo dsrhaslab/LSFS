@@ -3,7 +3,7 @@
 //
 
 #include "metadata_childs.h"
-#include "lsfs/fuse_lsfs/lsfs_impl.h"
+//#include "lsfs/fuse_lsfs/lsfs_impl.h"
 
 
 metadata_childs::metadata_childs(const metadata_childs& met): childs(met.childs), added_childs(met.added_childs), removed_childs(met.removed_childs){};
