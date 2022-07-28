@@ -51,9 +51,12 @@ int main(int argc, char *argv[])
     long client_id = atol(argv[2]);
     const char* config_filename = argv[3];
 
+    YAML::Node config = YAML::LoadFile(config_filename);
+    auto main_confs = config["main_confs"];
+    bool use_localhost = main_confs["use_localhost"].as<bool>();
+
     { // Setting Log Level
-        YAML::Node config = YAML::LoadFile(config_filename);
-        auto main_confs = config["main_confs"];
+        
         auto client = main_confs["client"];
         std::string log_level = client["log_level"].as<std::string>();
 
@@ -75,17 +78,22 @@ int main(int argc, char *argv[])
     }
 
     std::string ip;
-    try{
-        ip = get_local_ip_address();
-    }catch(const char* e){
-        std::cerr << "Error Obtaining IP Address: " << e << std::endl;
-        exit(1);
+
+    if(use_localhost){
+        ip = "127.0.0.1";
+    }else{
+        try{
+            ip = get_local_ip_address();
+        }catch(const char* e){
+            std::cerr << "Error Obtaining IP Address: " << e << std::endl;
+            exit(1);
+        }
     }
 
     int pss_port = 12357;
     int kv_port = 12358;
 
-    lsfs_impl fs(boot_ip, "127.0.0.1", kv_port, pss_port, client_id, config_filename);
+    lsfs_impl fs(boot_ip, ip, kv_port, pss_port, client_id, config_filename);
     int status = fs.run(argc - 4, argv + 4, NULL);
 
     return status;
