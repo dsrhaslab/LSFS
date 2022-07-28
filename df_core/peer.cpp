@@ -217,18 +217,9 @@ int main(int argc, char* argv []){
     bool recover_database = !arguments.no_recover;
     std::cout << "Is db to recover? " << recover_database << std::endl; 
 
-    std::string ip;
-    try{
-        ip = get_local_ip_address();
-    }catch(const char* e){
-        std::cerr << "Error Obtaining IP Address: " << e << std::endl;
-        exit(1);
-    }
-
-    std::cout << ip << std::endl;
-
     YAML::Node config = YAML::LoadFile(conf_filename);
     auto main_confs = config["main_confs"];
+    bool use_localhost = main_confs["use_localhost"].as<bool>();
     auto peer_c = main_confs["peer"];
     auto group_cons = main_confs["group_construction"];
     auto pss = main_confs["pss"];
@@ -267,6 +258,22 @@ int main(int argc, char* argv []){
     bool anti_entropy_disseminate_latest_keys = anti_entropy["disseminate_latest"].as<bool>();
     int anti_entropy_max_keys_to_send_percentage = anti_entropy["max_keys_to_send_percentage"].as<int>();
 
+    std::string ip;
+
+    if(use_localhost){
+        ip = "127.0.0.1";
+    }else{
+        try{
+            ip = get_local_ip_address();
+        }catch(const char* e){
+            std::cerr << "Error Obtaining IP Address: " << e << std::endl;
+            exit(1);
+        }
+    }
+
+    std::cout << ip << std::endl;
+
+
     std::shared_ptr<spdlog::logger> logger;
     try
     {
@@ -299,7 +306,7 @@ int main(int argc, char* argv []){
     srand (time(NULL));
     int boot_time = rand() % 10 + 2;
 
-    g_peer_impl = std::make_shared<peer>(id,"127.0.0.1",boot_ip, kv_port, pss_port, recover_port, pos, boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
+    g_peer_impl = std::make_shared<peer>(id, ip, boot_ip, kv_port, pss_port, recover_port, pos, boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
             database_dir, rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, mt_data_handler, logger, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at, recover_database,
             anti_entropy_disseminate_latest_keys, anti_entropy_max_keys_to_send_percentage);
     g_peer_impl->start(warmup_interval, restart_database_after_warmup);

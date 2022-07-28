@@ -1,4 +1,5 @@
 main_confs:
+  use_localhost: False
   peer:
     log_level: off
     mt_data_handler: true

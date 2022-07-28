@@ -276,20 +276,25 @@ int main(int argc, char *argv[]) {
 
     YAML::Node config = YAML::LoadFile(conf_filename);
     auto main_confs = config["main_confs"];
+    bool use_localhost = main_confs["use_localhost"].as<bool>();
     auto pss = main_confs["pss"];
     int view_size = pss["view_size"].as<int>();
-/*
-    std::string ip;
-    try{
-        ip = get_local_ip_address();
-    }catch(const char* e){
-        std::cerr << "Error Obtaining IP Address: " << e << std::endl;
-        exit(1);
-    }
-    std::cout << ip << std::endl;
- */   
-    const char* ip = "127.0.0.1";
 
-    std::unique_ptr<Bootstrapper> bootstrapper(new BootstrapperImpl(view_size, ip));
+    std::string ip;
+    
+    if(use_localhost){
+        ip = "127.0.0.1";
+    }else{
+        try{
+            ip = get_local_ip_address();
+        }catch(const char* e){
+            std::cerr << "Error Obtaining IP Address: " << e << std::endl;
+            exit(1);
+        }
+    }
+
+    std::cout << ip << std::endl;
+
+    std::unique_ptr<Bootstrapper> bootstrapper(new BootstrapperImpl(view_size, ip.c_str()));
     bootstrapper->run();
 };
