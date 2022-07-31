@@ -11,7 +11,7 @@ main_confs:
     request_log_garbage_at: 500
     anti_entropy_log_garbage_at: 500
     database:
-      base_path: /home/branco/
+      base_path: /
     anti_entropy:
       interval_sec: 20
       max_keys_to_send_percentage: 20
