@@ -6,7 +6,7 @@
 
 client::client(std::string boot_ip, std::string ip, int kv_port, int pss_port, long id, std::string conf_filename):
     ip(ip), kv_port(kv_port), pss_port(pss_port), id(id), sender_socket(socket(PF_INET, SOCK_DGRAM, 0)), 
-    request_count(0), clock()
+    request_count(0)
 {
     YAML::Node config = YAML::LoadFile(conf_filename);
     auto main_confs = config["main_confs"];
@@ -42,6 +42,11 @@ client::client(std::string boot_ip, std::string ip, int kv_port, int pss_port, l
         this->handler = std::make_shared<client_reply_handler_st>(ip, kv_port, pss_port, this->wait_timeout);
     }
     this->handler_th = std::thread (std::ref(*this->handler));
+
+    this->clock = std::make_shared<clock_vv>();
+    this->clock_cond = std::make_shared<std::condition_variable>();
+    this->clock_update = std::make_shared<clock_vv_th>(id, clock, clock_cond);
+    this->clock_update_th = std::thread (std::ref(*clock_update));
 }
 
 void client::stop(){
@@ -161,8 +166,10 @@ int client::send_put_with_merge(std::vector<peer_data>& peers, const std::string
 
 
 void client::put(const std::string& key, const kv_store_key_version& version, const char *data, size_t size, int wait_for) {
-    long n_clock = clock.increment_and_get();
+    long n_clock = clock->increment_and_get();
     kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), version);
+
+    clock_cond->notify_one();
     
     kv_store_key<std::string> comp_key = {key, new_version, false};
     this->handler->register_put(comp_key); // throw const char* (concurrent writes over the same key)
@@ -204,7 +211,8 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
     //register all the keys and send first put
     for(size_t i = 0; i < keys.size(); i++){
         
-        long n_clock = clock.increment_and_get();
+        long n_clock = clock->increment_and_get();
+        clock_cond->notify_one();
         kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), keys[i].key_version);
         kv_store_key<std::string> comp_key = {keys[i].key, new_version, false};
 
@@ -261,8 +269,10 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
 }
 
 void client::put_with_merge(const std::string& key, const kv_store_key_version& version, const char *data, size_t size, int wait_for) {
-    long n_clock = clock.increment_and_get();
+    long n_clock = clock->increment_and_get();
     kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), version);
+
+    clock_cond->notify_one();
 
     kv_store_key<std::string> comp_key = {key, new_version, false, true};
     this->handler->register_put(comp_key); // throw const char* (concurrent writes over the same key)
@@ -293,7 +303,9 @@ void client::put_with_merge(const std::string& key, const kv_store_key_version& 
 }
 
 void client::del(const std::string& key, const kv_store_key_version& version, int wait_for) {
-    clock.increment();
+    clock->increment();
+    
+    clock_cond->notify_one();
 
     kv_store_key<std::string> comp_key = {key, version, true};
     this->handler->register_delete(comp_key); // throw const char* (concurrent writes over the same key)
@@ -632,7 +644,10 @@ int client::send_get_metadata(std::vector<peer_data>& peers, const std::string& 
 
 
 void client::put_child(const std::string& key, const kv_store_key_version& version, const std::string& child_path, bool is_create, bool is_dir, int wait_for) {
-    long n_clock = clock.increment_and_get();
+    long n_clock = clock->increment_and_get();
+
+    clock_cond->notify_one();
+
     kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), version);
     new_version.client_id = this->id;
 
@@ -666,7 +681,10 @@ void client::put_child(const std::string& key, const kv_store_key_version& versi
 
 
 void client::put_metadata_stat(const std::string& key, const kv_store_key_version& version, const char *data, size_t size, int wait_for) {
-    long n_clock = clock.increment_and_get();
+    long n_clock = clock->increment_and_get();
+
+    clock_cond->notify_one();
+    
     kv_store_key_version new_version = add_vv(std::make_pair(this->id, n_clock), version);
     new_version.client_id = this->id;
     

@@ -142,7 +142,9 @@ add_executable( client_exe
         df_util/message_builder/message_builder.h
         df_util/util.cpp
         df_util/util.h
-        df_client/clock_vv.h 
+        df_client/clock_vv.h
+        df_client/clock_vv_th.cpp
+        df_client/clock_vv_th.h 
         df_client/client.cpp
         df_client/client.h
         df_client/client_reply_handler_st.cpp
@@ -208,7 +210,9 @@ add_executable( lsfs_exe
         df_util/message_builder/message_builder.h
         df_util/util.cpp
         df_util/util.h
-        df_client/clock_vv.h 
+        df_client/clock_vv.h
+        df_client/clock_vv_th.cpp
+        df_client/clock_vv_th.h  
         df_client/client.cpp
         df_client/client.h
         df_client/client_reply_handler_st.cpp
