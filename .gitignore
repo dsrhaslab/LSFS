@@ -69,3 +69,4 @@ Deploy/.virtualenvs/*
 
 mkdirf.sh
 leveldbKeys.py
+clock_u*
