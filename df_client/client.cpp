@@ -189,11 +189,21 @@ void client::put(const std::string& key, const kv_store_key_version& version, co
             try{         
                 succeed = this->handler->wait_for_put(comp_key, wait_for);
             }catch(TimeoutException& e){
+                std::cout << "Timeout key Put: " << key << std::endl;
                 curr_timeouts++;
             }
         }
     }
 
+    //If put was completed but client did not receive the reply - last check before error
+    if(!succeed){
+        client_reply_handler::Response response = client_reply_handler::Response::Init;
+        get(key, new_version, &response, wait_for);
+        if(response == client_reply_handler::Response::Ok){
+            succeed = true;
+        }
+    }
+    
     if(!succeed){
         throw TimeoutException();
     }
@@ -219,10 +229,13 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
         keys_w_new_versions.push_back(comp_key);
     
         this->handler->register_put(comp_key); // throw const char* (concurrent writes over the same key)
-        
-        std::vector<peer_data> peers = this->lb->get_n_peers(keys[i].key, this->max_nodes_to_send_put_request); //throw exception
-        this->send_put(peers, keys[i].key, new_version, datas[i], sizes[i]);
     }
+
+    for(size_t i = 0; i < keys_w_new_versions.size(); i++){
+        std::vector<peer_data> peers = this->lb->get_n_peers(keys[i].key, this->max_nodes_to_send_put_request); //throw exception
+        this->send_put(peers, keys_w_new_versions[i].key, keys_w_new_versions[i].key_version, datas[i], sizes[i]);
+    }
+
 
     long curr_timeouts = 0;
     bool all_completed = false;
@@ -237,6 +250,7 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
                 try{
                     completed[i] = this->handler->wait_for_put_until(keys_w_new_versions[i], wait_for, wait_until);
                 }catch(TimeoutException& e){
+                    std::cout << "Timeout key Put_batch: " << key << std::endl;
                     loop_timeout = true;
                     if (curr_timeouts + 1 <= 2){
                         std::vector<peer_data> peers = this->lb->get_n_peers(keys_w_new_versions[i].key, this->max_nodes_to_send_put_request); //throw exception
@@ -262,6 +276,22 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
         }
     }
     this->handler->clear_put_keys_entries(erasing_keys);
+
+    //If put was completed but client did not receive the reply - last check before error
+    if(!all_completed){
+        for(size_t i = 0; i < completed.size(); i++){
+            if(!completed[i]){
+                std::string key = keys_w_new_versions[i].key;
+                kv_store_key_version k_version = keys_w_new_versions[i].key_version;
+                client_reply_handler::Response response = client_reply_handler::Response::Init;
+                get(key, k_version, &response, wait_for);
+                if(response == client_reply_handler::Response::Ok){
+                    completed[i] = true;
+                }
+            }
+        }
+        all_completed = std::find(completed.begin(), completed.end(), false) == completed.end();
+    }  
 
     if(!all_completed){
         throw TimeoutException();
@@ -292,8 +322,18 @@ void client::put_with_merge(const std::string& key, const kv_store_key_version& 
             try{
                 succeed = this->handler->wait_for_put(comp_key, wait_for);
             }catch(TimeoutException& e){
+                std::cout << "Timeout key Put_w_merge: " << key << std::endl;
                 curr_timeouts++;
             }
+        }
+    }
+    
+    //If put was completed but client did not receive the reply - last check before error
+    if(!succeed){
+        client_reply_handler::Response response = client_reply_handler::Response::Init;
+        get(key, new_version, &response, wait_for);
+        if(response == client_reply_handler::Response::Ok){
+            succeed = true;
         }
     }
 
@@ -327,6 +367,15 @@ void client::del(const std::string& key, const kv_store_key_version& version, in
             }catch(TimeoutException& e){
                 curr_timeouts++;
             }
+        }
+    }
+
+    //If put was completed but client did not receive the reply - last check before error
+    if(!succeed){
+        client_reply_handler::Response response = client_reply_handler::Response::Init;
+        get(key, version, &response, wait_for);
+        if(response == client_reply_handler::Response::Deleted){
+            succeed = true;
         }
     }
 
@@ -483,6 +532,7 @@ std::unique_ptr<kv_store_key_version> client::get_latest_version(const std::stri
             try{
                 res = this->handler->wait_for_get_latest_version(req_id_str, wait_for, response);
             }catch(TimeoutException& e){
+                std::cout << "Timeout key Get_latest_version: " << key << std::endl;
                 curr_timeouts++;
                 req_id = this->inc_and_get_request_count();
                 std::string latest_reqid_str = req_id_str;
@@ -524,6 +574,7 @@ std::unique_ptr<std::string> client::get_latest(const std::string& key, client_r
                 kv_store_key_version last_version;
                 res = this->handler->wait_for_get_latest(key, req_id_str, wait_for, response, &last_version);
             }catch(TimeoutException& e){
+                std::cout << "Timeout key Get_latest: " << key << std::endl;
                 curr_timeouts++;
                 req_id = this->inc_and_get_request_count();
                 std::string latest_reqid_str = req_id_str;
@@ -669,8 +720,18 @@ void client::put_child(const std::string& key, const kv_store_key_version& versi
             try{         
                 succeed = this->handler->wait_for_put(comp_key, wait_for);
             }catch(TimeoutException& e){
+                std::cout << "Timeout key Put_child: " << key << std::endl;
                 curr_timeouts++;
             }
+        }
+    }
+
+    //If put was completed but client did not receive the reply - last check before error
+    if(!succeed){
+        client_reply_handler::Response response = client_reply_handler::Response::Init;
+        get(key, new_version, &response, wait_for);
+        if(response == client_reply_handler::Response::Ok){
+            succeed = true;
         }
     }
 
@@ -706,8 +767,18 @@ void client::put_metadata_stat(const std::string& key, const kv_store_key_versio
             try{         
                 succeed = this->handler->wait_for_put(comp_key, wait_for);
             }catch(TimeoutException& e){
+                std::cout << "Timeout key Put_metadata_stat: " << key << std::endl;
                 curr_timeouts++;
             }
+        }
+    }
+
+    //If put was completed but client did not receive the reply - last check before error
+    if(!succeed){
+        client_reply_handler::Response response = client_reply_handler::Response::Init;
+        get(key, new_version, &response, wait_for);
+        if(response == client_reply_handler::Response::Ok){
+            succeed = true;
         }
     }
 
@@ -751,6 +822,7 @@ std::unique_ptr<std::string> client::get_latest_metadata_size_or_stat(const std:
             try{
                 res = this->handler->wait_for_get_latest(key, req_id_str, wait_for, response, last_version);
             }catch(TimeoutException& e){
+                std::cout << "Timeout key Get latest metadata size or stat: " << key << std::endl;
                 curr_timeouts++;
                 req_id = this->inc_and_get_request_count();
                 std::string latest_reqid_str = req_id_str;
