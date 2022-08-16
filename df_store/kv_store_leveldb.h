@@ -1136,9 +1136,7 @@ bool kv_store_leveldb::put_with_merge(const kv_store_key<std::string>& key, cons
             last_kv = last_vkv->front();
             last_data = std::move(last_vdata.front());
         }
-
-        std::cout << "Checking if version and last version are concurrent" << std::endl;
-                
+        
         // They should always be concurrent
         if(comp_version(last_kv, key.key_version) == kVersionComp::Concurrent){
             this->record_count--; //put of merge_version shoudnt increment record count, its just an overwrite
@@ -1160,7 +1158,6 @@ bool kv_store_leveldb::put_with_merge(const kv_store_key<std::string>& key, cons
         }
         // if not just insert with merge = true
         else {
-            std::cout << "Just inserting the key with updated metadata" << std::endl;
             return put(key, bytes);
         }
 

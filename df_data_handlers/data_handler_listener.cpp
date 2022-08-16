@@ -276,7 +276,7 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
             if (!request_already_replied|| achance <= this->chance) {
                 proto::kv_message reply_message;
-
+                
                 build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
 
                 this->reply_client(reply_message, sender_ip, sender_port);

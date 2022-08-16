@@ -92,9 +92,9 @@ bool client_reply_handler::wait_for_put_until(const kv_store_key<std::string>& k
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
 
     bool timeout_happened = false;
-
     auto it = this->put_replies.find(key);
     if(it != this->put_replies.end()) {
+
         // if key exists, lock key
         auto it_key = this->put_mutexes.find(key);
 
@@ -977,7 +977,6 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
     kv_store_key<std::string> comp_key = {key, version, false, is_merge};
 
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
-
     auto it = this->put_replies.find(comp_key);
     if(it != this->put_replies.end()){
         
