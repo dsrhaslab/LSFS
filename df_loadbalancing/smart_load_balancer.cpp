@@ -15,14 +15,20 @@ smart_load_balancer::smart_load_balancer(std::string boot_ip, std::string ip, in
 
     YAML::Node config = YAML::LoadFile(config_filename);
     auto main_confs = config["main_confs"];
-    this->replication_factor_max = main_confs["rep_max"].as<int>();
-    this->replication_factor_min = main_confs["rep_min"].as<int>();
-    this->max_age = main_confs["max_age"].as<int>();
-    this->max_smart_view_age = main_confs["max_smart_view_age"].as<int>(); 
+    auto group_con = main_confs["group_construction"];
+    auto client = main_confs["client"];
+    auto pss_y = main_confs["pss"];
+    auto load_b = client["load_balancer"];
+
+    this->replication_factor_max = group_con["rep_max"].as<int>();
+    this->replication_factor_min = group_con["rep_min"].as<int>();
+    this->max_age = group_con["max_age"].as<int>();
+
+    this->max_smart_view_age = load_b["smart_max_view_age"].as<int>(); 
+    this->nr_saved_peers_by_group = load_b["smart_load_balancer_group_knowledge"].as<int>();
     this->recovering_local_view = true;
-    this->local = main_confs["local_message"].as<bool>();
-    this->local_interval = main_confs["local_interval_sec"].as<int>();
-    this->nr_saved_peers_by_group = main_confs["smart_load_balancer_group_knowledge"].as<int>();
+    this->local = pss_y["local_message"].as<bool>();
+    this->local_interval = pss_y["local_interval_sec"].as<int>();
 
     this->position = random_double(0.0, 1.0);
     this->nr_groups = 1;
