@@ -1,31 +1,29 @@
-# ---------------------------------------------------------------------------- #
 
-# 1 thread in a single process creates a total of 4 million 4 KiB files.
+set $WORKLOAD_PATH="test_filesystem/InnerFolder"
+set $NR_THREADS=1
 
-# ---------------------------------------------------------------------------- #
+set $NR_FILES=10000
+set $MEAN_DIR_WIDTH=1000
+set $IO_SIZE=4k
 
-set $num_threads=1
-set $file_size=4k
-set $num_files=4000000
-set $dir_width=1000
-set $num_iters_per_thread=4000000
+# ------------------------------------------------------ #
 
-define flowop name=createandclose
+define flowop name=createwriteclose
 {
-    flowop createfile name="create1", filesetname="fileset1", fd=1
-    flowop write name="write1", fd=1, iosize=$file_size
-    flowop closefile name="close1", fd=1
+    flowop createfile name="createfile-1", filesetname="fileset-1", fd=1
+    flowop write name="write-1", fd=1, iosize=$IO_SIZE
+    flowop closefile name="closefile-1", fd=1
 }
 
-define fileset name="fileset1", path="<INSERT_DIR_HERE>", entries=$num_files, dirwidth=$dir_width, dirgamma=0, filesize=$file_size
+define fileset name="fileset1", path=$WORKLOAD_PATH, entries=$NR_FILES, dirwidth=$MEAN_DIR_WIDTH, dirgamma=0, filesize=$IO_SIZE
 
-define process name="process1", instances=1
+define process name="process-1", instances=1
 {
-    thread name="thread1", memsize=$file_size, instances=$num_threads
+    thread name="thread-1", memsize=$IO_SIZE, instances=$NR_THREADS
     {
-        flowop createandclose name="createandclose1", iters=$num_iters_per_thread
+        flowop createwriteclose name="createwriteclose-1", iters=$NR_FILES
 
-        flowop finishoncount name="finish1", value=1
+        flowop finishoncount name="finishoncount-1", value=1
     }
 }
 
@@ -36,6 +34,6 @@ create files
 system "sync"
 system "echo 3 > /proc/sys/vm/drop_caches"
 
-run 900
+run 600
 
 # ---------------------------------------------------------------------------- #
