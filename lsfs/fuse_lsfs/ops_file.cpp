@@ -348,14 +348,17 @@ int lsfs_impl::_write(
                     if (bytes_read < 0) return -errno;
                     else {
                         //fill the rest of the block (from off_blk)
-                        size_t first_block_size = (size > BLK_SIZE)? BLK_SIZE : size;
-                        memcpy(&put_buf[off_blk], &buf[read_off], (first_block_size - off_blk) * sizeof(char));
-                        read_off += (first_block_size - off_blk);
+                        size_t first_block_size = ((off_blk + size) > BLK_SIZE)? BLK_SIZE : size;
+                        size_t write_s;
+                        if((off_blk + size) > BLK_SIZE) write_s = first_block_size - off_blk;
+                        else write_s = size;
+                        memcpy(&put_buf[off_blk], &buf[read_off], write_s * sizeof(char));
+                        read_off += write_s;
                         current_blk++;
                         std::string blk_path;
                         blk_path.reserve(100);
                         blk_path.append(path).append(":").append(std::to_string(current_blk)); 
-                        int res = state->put_block(blk_path, put_buf, first_block_size); 
+                        int res = state->put_block(blk_path, put_buf, write_s + off_blk); 
                         if(res == -1){
                             return -errno;
                         }
