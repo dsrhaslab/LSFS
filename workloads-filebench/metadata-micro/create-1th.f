@@ -3,7 +3,7 @@ set $WORKLOAD_PATH="test_filesystem/InnerFolder"
 set $NR_THREADS=1
 
 set $NR_FILES=10000
-set $MEAN_DIR_WIDTH=1000
+set $MEAN_DIR_WIDTH=500
 set $IO_SIZE=4k
 
 # ------------------------------------------------------ #
@@ -15,7 +15,7 @@ define flowop name=createwriteclose
     flowop closefile name="closefile-1", fd=1
 }
 
-define fileset name="fileset1", path=$WORKLOAD_PATH, entries=$NR_FILES, dirwidth=$MEAN_DIR_WIDTH, dirgamma=0, filesize=$IO_SIZE
+define fileset name="fileset-1", path=$WORKLOAD_PATH, entries=$NR_FILES, dirwidth=$MEAN_DIR_WIDTH, dirgamma=0, filesize=$IO_SIZE
 
 define process name="process-1", instances=1
 {
