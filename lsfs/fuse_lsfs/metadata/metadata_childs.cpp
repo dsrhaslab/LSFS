@@ -6,17 +6,19 @@
 //#include "lsfs/fuse_lsfs/lsfs_impl.h"
 
 
-metadata_childs::metadata_childs(const metadata_childs& met): childs(met.childs), added_childs(met.added_childs), removed_childs(met.removed_childs){};
+metadata_childs::metadata_childs(const metadata_childs& met): childs(met.childs){};
 
 
 void metadata_childs::add_child(std::string path, bool is_dir) {
-    this->childs.insert(path);
-    this->added_childs.emplace(is_dir? FileType::DIRECTORY : FileType::FILE, path);
+    std::pair<FileType::FileType, Status::Status> obj = std::make_pair(is_dir? FileType::DIRECTORY : FileType::FILE, Status::ADDED);
+    this->childs.insert({path, obj});
 }
 
 void metadata_childs::remove_child(std::string path, bool is_dir) {
-    this->childs.erase(path);
-    this->added_childs.emplace(is_dir? FileType::DIRECTORY : FileType::FILE, path);
+    auto it = this->childs.find(path);
+    if (it != this->childs.end()){
+        it->second.second = Status::REMOVED;
+    }
 }
 
 
@@ -42,19 +44,36 @@ metadata_childs metadata_childs::deserialize_from_string(const std::string& seri
 }
 
 void metadata_childs::reset_add_remove_log(){
-    this->added_childs.clear();
-    this->removed_childs.clear();
+    std::vector<std::string> to_erase;
+    for(auto & [key, val]: this->childs){
+        //if is_removed == true
+        if(val.second == Status::REMOVED){
+            to_erase.push_back(key);
+        }
+        else if(val.second == Status::ADDED){
+            val.second = Status::NONE;
+        }
+    }
+
+    for(auto path: to_erase){
+        this->childs.erase(path);
+    }
+}
+
+void metadata_childs::reset_status(){
+    for(auto & [key, val]: this->childs){
+        val.second = Status::NONE;
+    }
 }
 
 bool metadata_childs::is_empty() {
-    return this->childs.empty();
-}
-
-void metadata_childs::print_metadata(metadata_childs& met){
-    std::cout << "Printing Metadata: <";
-    for(auto& child: met.childs)
-        std::cout << child << ", ";
-    
-    std::cout << ">" << std::endl;
-
+    bool is_empty = true;
+    for(auto const& [key, val]: this->childs){
+        //if is_removed == False
+        if(val.second == Status::ADDED || val.second == Status::NONE){
+            is_empty = false;
+            break;
+        }
+    }
+    return is_empty;
 }

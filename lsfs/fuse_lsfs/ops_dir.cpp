@@ -90,8 +90,9 @@ int lsfs_impl::_readdir(
             dir = state->get_metadata_if_dir_cached(path);
             
             if(dir != nullptr){
-                for(auto& child: dir->metadata_p->childs.childs){
-                    filler(buf, child.c_str(), NULL, 0, fill_flags);
+                for(auto const& [path, val]: dir->metadata_p->childs.childs){
+                    if(val.second != Status::REMOVED)
+                        filler(buf, path.c_str(), NULL, 0, fill_flags);
                 }
             }
         }
@@ -104,8 +105,9 @@ int lsfs_impl::_readdir(
 
             if(state->use_cache) state->add_to_dir_cache(path, *met);
 
-            for(auto& child: met->childs.childs){
-                filler(buf, child.c_str(), NULL, 0, fill_flags);
+            for(auto const& [path, val]: met->childs.childs){
+                if(val.second != Status::REMOVED)
+                    filler(buf, path.c_str(), NULL, 0, fill_flags);
             }
         }
 

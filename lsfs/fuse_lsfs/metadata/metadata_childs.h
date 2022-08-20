@@ -6,7 +6,7 @@
 #define P2PFS_METADATA_CHILDS_H
 
 #include <boost/serialization/access.hpp>
-#include <boost/serialization/set.hpp>
+#include <boost/serialization/map.hpp>
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/utility.hpp>
 
@@ -16,6 +16,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
+#include <map>
 #include <iostream>
 
 #include "serialize.h"
@@ -26,9 +27,7 @@ private:
     friend class boost::serialization::access;
 
 public:
-    std::set<std::string> childs;
-    std::set<std::pair<FileType::FileType , std::string>> added_childs;
-    std::set<std::pair<FileType::FileType , std::string>> removed_childs;
+    std::map<std::string, std::pair<FileType::FileType, Status::Status>> childs;
 
 public:
     template<class Archive> void serialize(Archive& ar, const unsigned int version);
@@ -39,15 +38,13 @@ public:
     void add_child(std::string path, bool is_dir);
     void remove_child(std::string path, bool is_dir);
     void reset_add_remove_log();
+    void reset_status();
     bool is_empty();
-    static void print_metadata(metadata_childs& met);
 };
 
 template<class Archive>
 void metadata_childs::serialize(Archive &ar, const unsigned int version) {
     ar&this->childs;
-    ar&this->added_childs;
-    ar&this->removed_childs;
 }
 
 #endif //P2PFS_METADATA_CHILDS_H
