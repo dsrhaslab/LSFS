@@ -92,9 +92,9 @@ public:
     inline void del(const std::string& key, const kv_store_key_version& version){
         del(key, version, nr_puts_required);
     };
-    std::unique_ptr<std::string> get(const std::string& key, const kv_store_key_version& version, client_reply_handler::Response* response, int wait_for);
+    std::unique_ptr<std::string> get(const std::string& key, const kv_store_key_version& version, client_reply_handler::Response* response, int wait_for, bool no_data = false);
     inline std::unique_ptr<std::string> get(const std::string& key, const kv_store_key_version& version, client_reply_handler::Response* response){
-        return get(key, version, response, nr_gets_required);
+        return get(key, version, response, nr_gets_required, false);
     };
     void get_latest_batch(const std::vector<std::string> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for);
     inline void get_latest_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs){
@@ -143,7 +143,7 @@ public:
 private:
     long inc_and_get_request_count();
     int send_msg(peer_data& target_peer, proto::kv_message& msg);
-    int send_get(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const std::string& req_id);
+    int send_get(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const std::string& req_id, bool no_data);
     int send_put(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const char* data, size_t size);
     int send_delete(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version);
     int send_put_with_merge(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const char* data, size_t size);

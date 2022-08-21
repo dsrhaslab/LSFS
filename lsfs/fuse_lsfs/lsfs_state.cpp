@@ -795,7 +795,9 @@ void lsfs_state::reset_dir_cache_add_remove_log(const std::string& path){
 
 metadata lsfs_state::request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version){
 
-    size_t NR_BLKS = (total_s / BLK_SIZE) + 1;
+    size_t NR_BLKS = (total_s / BLK_SIZE);
+
+    if(total_s % BLK_SIZE > 0) NR_BLKS = NR_BLKS + 1;
     
     std::vector<kv_store_key<std::string>> keys;
     std::vector<std::shared_ptr<std::string>> data_strs;

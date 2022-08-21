@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
     //int lb_port = 50009;
     //int kv_port = 50010;
     std::string ip = "127.0.0.1";
-    long id = 2;
+    long id = 1;
 
     //int lb_port2 = 50007;
     //int kv_port2 = 50008;
@@ -38,13 +38,12 @@ int main(int argc, char **argv) {
     client cli = client(ip, "127.0.0.1", kv_port, pss_port, id2, "conf.yaml");
     // cli2 = client(ip2,"127.0.0.1", id2/*, kv_port2, lb_port2*/, "../scripts/conf.yaml");
 
-    std::map<long, long> version ({{id2, 1000},{id, 1}});
-    std::map<long, long> version2 ({{id2, 1000},{id, 1},{3,1}});
-    std::map<long, long> version3 ({{id2, 1001}});
-    std::map<long, long> version4 ({{5, 2}});
+    // std::map<long, long> version ({{id2, 2}});
+    // kv_store_key_version vv;
+    // vv.vv = version;
+    // vv.client_id = id2;
     
-    
-    //   cli.put("/LSFS", &version, "vv1", 3);
+    //    cli.put_with_merge("/ola", vv, "vv1", 3);
     //   cli.put("/LSFS", &version2, "vv2v7", 5);
     //   cli.put("/LSFS", &version3, "vv3v7", 5);
     //   cli.put("/LSFS", &version4, "vv4v7", 5);

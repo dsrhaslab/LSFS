@@ -360,7 +360,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::strin
 
     lock.unlock();
 
-    if(res == nullptr && timeout_happened){
+    if(*get_res == Response::Init && timeout_happened){
         throw TimeoutException();
     }
 
@@ -436,7 +436,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_until(const std:
         }
     }
 
-    if(res == nullptr && timeout_happened){
+    if(*get_res == Response::Init && timeout_happened){
         throw TimeoutException();
     }
     return res;
