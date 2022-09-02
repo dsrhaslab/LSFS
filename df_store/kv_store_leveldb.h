@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <random>
+#include <filesystem>
 #include "lsfs/fuse_lsfs/metadata/metadata.h"
 
 namespace fs = std::filesystem;
@@ -102,6 +103,8 @@ public:
     bool check_if_have_all_blks_and_put_metadata(const std::string& base_path, const kv_store_key<std::string>& key, size_t blk_num) override;
     void delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const kv_store_key<std::string>& key, size_t blk_num) override;
     bool get_incomplete_blks(const kv_store_key<std::string>& key, std::vector<size_t>& tmp_blks_to_request) override;
+
+    bool clean_db_and_logs() override;
  
 };
 
@@ -1249,6 +1252,37 @@ void kv_store_leveldb::send_keys_gt(std::vector<std::string> &off_keys, std::vec
         delete it;
     }
 }
+
+
+bool kv_store_leveldb::clean_db_and_logs(){
+    bool res = true;
+    leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        leveldb::Status s = db->Delete(leveldb::WriteOptions(), it->key());
+        if(!s.ok())
+            res = false;
+    }
+    it = db_deleted->NewIterator(leveldb::ReadOptions());
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        leveldb::Status s = db_deleted->Delete(leveldb::WriteOptions(), it->key());
+        if(!s.ok())
+            res = false;
+    }
+    it = db_merge_log->NewIterator(leveldb::ReadOptions());
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        leveldb::Status s = db_merge_log->Delete(leveldb::WriteOptions(), it->key());
+        if(!s.ok())
+            res = false;
+    }
+    it = db_tmp_anti_entropy->NewIterator(leveldb::ReadOptions());
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        leveldb::Status s = db_tmp_anti_entropy->Delete(leveldb::WriteOptions(), it->key());
+        if(!s.ok())
+            res = false;
+    }
+    return res;
+}
+
 
 #endif //P2PFS_KV_STORE_LEVELDB_H
 

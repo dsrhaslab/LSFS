@@ -412,7 +412,9 @@ void data_handler_listener::process_delete_message(proto::kv_message &msg) {
     if (!this->store->have_seen_deleted(key_comp)) {
         bool deleted;
         try {
-            deleted = this->store->remove(key_comp);
+            
+            if(key.find("delete_all_db") != std::string::npos) deleted = this->store->clean_db_and_logs();
+            else deleted = this->store->remove(key_comp);
         }catch(std::exception& e){
             deleted = false;
         }

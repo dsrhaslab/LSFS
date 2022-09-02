@@ -1,0 +1,26 @@
+
+- name: Create Bootstrapper Pod
+  k8s:
+    kubeconfig: "~/.kube/config"
+    state: present
+    definition: "{{ lookup('file', '{{ role_path }}/files/bootstrapper_pod.yml') | from_yaml }}"
+    validate:
+      fail_on_error: yes
+  register: bootstrapper_container
+
+- name: Wait until bootstapper pod is created
+  k8s_info:
+    kubeconfig: "~/.kube/config"
+    namespace: lsfs
+    api_version: v1
+    name: bootstrapper
+    kind: Pod
+  register: bootstrapper_pod
+  retries: 20
+  until: bootstrapper_pod.resources[0].status.podIPs is defined
+
+- name: Setting Bootstrapper Ip fact
+  set_fact:
+    bootstrapper_ip: "{{ bootstrapper_pod.resources[0].status.podIPs[0].ip }}"
+  delegate_to: localhost
+  delegate_facts: true

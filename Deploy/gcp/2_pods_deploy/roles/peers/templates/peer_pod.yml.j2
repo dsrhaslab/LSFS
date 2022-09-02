@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "peer{{ item.0 }}"
+  namespace: lsfs
+  labels:
+    lsfs: peer
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: lsfs
+            operator: In
+            values:
+            - peer
+        topologyKey: "kubernetes.io/hostname"
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: lsfs
+            operator: In
+            values:
+            - peer
+  containers:
+  - name: peer-container
+    image: brancc0cdocker/lsfs-peer
+    command: ["./build/peer_exe"]
+    args: ["{{ item.0 }}", "{{ item.1 }}", "/shared_dir/conf.yaml", "{{ bootstrapper_ip }}", "12355", "12356", "12357", "-n"]
+    lifecycle:
+      preStop:
+        exec:
+          command: ["/bin/bash", "-c","/bin/kill -SIGTERM $(pgrep peer_exe) && tail --pid=$(pgrep peer_exe) -f /dev/null"]
+    volumeMounts:
+    - mountPath: /shared_dir
+      name: mount-volume
+    ports: 
+    - containerPort: 12355
+    - containerPort: 12356
+    - containerPort: 12357
+  volumes:
+  - hostPath:
+      path: {{ mount_dir }}
+    name: mount-volume
+

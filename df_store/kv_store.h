@@ -76,6 +76,7 @@ public:
     virtual bool check_if_have_all_blks_and_put_metadata(const std::string& base_path, const kv_store_key<T>& key, size_t blk_num) = 0;
     virtual void delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const kv_store_key<T>& key, size_t blk_num) = 0;
     virtual bool get_incomplete_blks(const kv_store_key<std::string>& key, std::vector<size_t>& tmp_blks_to_request) = 0;
+    virtual bool clean_db_and_logs() = 0;
 
 
 

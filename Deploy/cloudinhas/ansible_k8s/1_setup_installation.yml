@@ -1,0 +1,161 @@
+ # Play1 - Docker setup installation
+- name: Docker setup
+  hosts: all
+  become: yes
+
+  tasks:
+    #- name: System update
+    #  apt: 
+    #    upgrade: yes
+    #    update_cache: yes
+
+    - name: Installing pre-requirements
+      apt: 
+        pkg: 
+          - ca-certificates 
+          - curl 
+          - gnupg 
+          - lsb-release
+        state: latest
+
+    - name: Add docker signing key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install docker
+      apt:
+        name: 
+          - docker
+          - docker.io
+          - docker-compose
+          - docker-registry
+        state: latest
+        update_cache: true
+
+    - name: Change docker cgroup
+      become_method: sudo
+      become_flags: 'su -c'
+      shell: |
+              echo '{"exec-opts": ["native.cgroupdriver=systemd"]}' > /etc/docker/daemon.json
+
+    - name: Restart docker daemon
+      systemd:
+        name: docker
+        state: restarted
+
+
+
+ # Play2 - Kubernets setup installation
+- name: Kubernetes setup
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Add apt_key
+      apt_key: 
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg 
+
+    - name: Add k8s repository
+      apt_repository:
+        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+
+    - name: k8s lists
+      shell: | 
+              ####### ALT:
+              cat << EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
+              deb https://apt.kubernetes.io/ kubernetes-xenial main
+              EOF
+
+    - name: Install k8s
+      shell: | 
+              sudo apt-get update
+              sudo apt-get install -y kubeadm kubelet kubectl
+              sudo apt-mark hold kubeadm kubelet kubectl
+
+    - name: Disable swap
+      shell: |
+               sudo swapoff -a
+               sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+
+
+ # Play3 - Install ansible k8s pre-requirements
+- name: Installing pre-requirements
+  hosts: masters
+  become: yes
+
+  tasks:
+
+    - name: Install Python
+      shell: |
+              sudo apt install python3-pip
+
+    - name: Install required Python modules
+      shell: |
+              sudo pip install openshift pyyaml kubernetes kubernetes-validate
+
+
+ # Play4 - Kubernets master initialization
+- name: Kubernetes init master
+  hosts: masters
+
+  tasks:
+
+    - name: Init master kubeadm
+      shell: |
+              sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+      register: workers_join_cluster
+      
+    - name: Debug init master node
+      debug:
+        var: workers_join_cluster
+        verbosity: 2
+
+    - name: Create a directory for the cluster
+      shell: |
+              mkdir -p .kube
+              sudo cp -i /etc/kubernetes/admin.conf .kube/config
+              sudo chown $(id -u):$(id -g) .kube/config
+
+    - name: Check Nodes
+      shell: | 
+              kubectl get nodes
+      register: nodes_result
+
+    - name: Debug kubectl Nodes
+      debug:
+        var: nodes_result
+        verbosity: 2 
+
+    - name: Deploy Pod Network to Cluster
+      shell: | 
+              kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+              kubectl get pods --all-namespaces
+
+    - name: Check if Schedulerand Controller-panel if Healthy
+      shell: | 
+              kubectl get cs
+      register: cs_result
+
+    - name: Debug kubectl cs
+      debug:
+        var: cs_result
+        verbosity: 2 
+    
+ # Play5 - Install necessary packages
+- name: Installing packages
+  hosts: all
+  become: yes
+
+  tasks:
+
+    - name: Install bc 
+      shell: |
+              sudo apt install bc
+
+    

@@ -1,0 +1,14 @@
+# Play1 - Setup kubernets
+- name: Setting up kubernets
+  hosts: masters
+  become: yes
+
+  tasks:
+  
+    - name: Create lsfs namespace
+      k8s:
+        kubeconfig: "/home/{{ hosts_user }}/.kube/config"
+        name: lsfs
+        api_version: v1
+        kind: Namespace
+        state: present

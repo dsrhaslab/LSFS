@@ -139,6 +139,8 @@ public:
         return get_metadata_batch(keys, data_strs, nr_gets_required);
     }
 
+    void del_db(const std::string& key, const kv_store_key_version& version, std::vector<std::string> peers);
+
 
 private:
     long inc_and_get_request_count();

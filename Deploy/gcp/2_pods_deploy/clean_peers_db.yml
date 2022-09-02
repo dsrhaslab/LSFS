@@ -1,0 +1,13 @@
+
+  # Play1 - Cleaning dbs
+  - name: Cleaning db from every peers
+    hosts: peers
+    become: yes
+
+    tasks:
+
+      - name: Remove db files
+        file:
+          path: /home/{{ hosts_user }}/shared_dir/levelDB
+          state: absent
+
