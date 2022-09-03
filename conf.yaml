@@ -1,5 +1,5 @@
 main_confs:
-  use_localhost: False
+  use_localhost: true
   peer:
     log_level: off
     mt_data_handler: true
@@ -13,13 +13,13 @@ main_confs:
     database:
       base_path: /shared_dir/
     anti_entropy:
-      interval_sec: 20
+      interval_sec: 30
       max_keys_to_send_percentage: 20
       disseminate_latest: False
 
   group_construction:
-    rep_max: 3
-    rep_min: 2 
+    rep_max: 2
+    rep_min: 1 
     max_age: 30
 
   pss:

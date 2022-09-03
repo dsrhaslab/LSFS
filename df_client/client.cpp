@@ -932,7 +932,7 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
 
 
 void client::del_db(const std::string& key, const kv_store_key_version& version, std::vector<std::string> peers_all) {
-
+    
     kv_store_key<std::string> comp_key = {key, version, true};
     this->handler->register_delete(comp_key); // throw const char* (concurrent writes over the same key)
     
@@ -961,6 +961,7 @@ void client::del_db(const std::string& key, const kv_store_key_version& version,
                 curr_timeouts++;
             }
         }
+        std::cout << "Sended" << std::endl;
     }
 
     if(!succeed){
