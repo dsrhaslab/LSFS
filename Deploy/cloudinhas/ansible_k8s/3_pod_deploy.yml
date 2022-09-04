@@ -22,7 +22,7 @@
   - name: Creation of Peer and client Pods
     hosts: masters
     roles:
-      - { role: peers, nr_peers: 8, bootstrapper_ip: "{{ boot_ip }}", mount_dir: "/home/{{ hosts_user }}/shared_dir" }
+      - { role: peers, nr_peers: 4, bootstrapper_ip: "{{ boot_ip }}", mount_dir: "/home/{{ hosts_user }}/shared_dir"}
       - { role: clients, nr_clients: 1, bootstrapper_ip: "{{ boot_ip }}", mount_dir: "/home/{{ hosts_user }}/shared_dir" }
     vars:
       boot_ip: "{{ hostvars['localhost']['bootstrapper_ip'] }}"
