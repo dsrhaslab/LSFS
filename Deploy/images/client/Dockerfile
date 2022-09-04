@@ -20,7 +20,7 @@ RUN git clone https://github.com/dsrhaslab/LSFS.git
 WORKDIR /LSFS
 
 RUN mkdir build/ && cd build/ && \
-	cmake .. && cmake --build . --target lsfs_exe
+	cmake .. && cmake --build . --target lsfs_exe client_exe
 
 RUN cd / && mkdir test_filesystem/ && mkdir test_filesystem/InnerFolder/ && mkdir test_filesystem/InnerFolder2/
 

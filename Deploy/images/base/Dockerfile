@@ -66,9 +66,9 @@ RUN git clone --recurse-submodules https://github.com/google/leveldb.git && \
 	make -j $(nproc) . && make -j $(nproc) install && \
 	cd ../.. && rm -r leveldb
 
-#RUN git clone https://github.com/wiredtiger/wiredtiger.git && \
-#	cd wiredtiger && bash autogen.sh && ./configure --prefix=/usr && \
-#	make -j $(nproc) && make -j $(nproc) install && \
-#	cd .. && rm -r wiredtiger
+RUN  apt-get install -y dstat && apt install -y screen 
+
+RUN sed -i '547s/.*/            if isinstance(self.val[name], (tuple, list)):/' /usr/bin/dstat && \
+	sed -i '552s/.*/            elif isinstance(self.val[name], str):/' /usr/bin/dstat
 
 
