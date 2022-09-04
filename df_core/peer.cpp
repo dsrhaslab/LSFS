@@ -211,9 +211,9 @@ int main(int argc, char* argv []){
     double pos = atof(arguments.args[1]);
     const char* conf_filename = arguments.args[2];
     const char* boot_ip = arguments.args[3];
-    int pss_port = atoi(arguments.args[4]); //12365;
-    int kv_port = atoi(arguments.args[5]); //12366;
-    int recover_port = atoi(arguments.args[6]); //12367;
+    int pss_port = atoi(arguments.args[4]); 
+    int kv_port = atoi(arguments.args[5]); 
+    int recover_port = atoi(arguments.args[6]); 
     bool recover_database = !arguments.no_recover;
     std::cout << "Is db to recover? " << recover_database << std::endl; 
 

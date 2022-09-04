@@ -13,13 +13,13 @@ main_confs:
     database:
       base_path: /shared_dir/
     anti_entropy:
-      interval_sec: 20
+      interval_sec: 60
       max_keys_to_send_percentage: 20
       disseminate_latest: False
 
   group_construction:
-    rep_max: 3
-    rep_min: 2 
+    rep_max: 6
+    rep_min: 3
     max_age: 30
 
   pss:
@@ -38,11 +38,11 @@ main_confs:
     log_level: off
     max_nodes_to_send_get_request: 3
     max_nodes_to_send_put_request: 3
-    nr_puts_required: 2
-    nr_gets_required: 2
-    nr_gets_version_required: 2
-    client_wait_timeout: 2
-    max_nr_requests_timeouts: 10
+    nr_puts_required: 3
+    nr_gets_required: 3
+    nr_gets_version_required: 3
+    client_wait_timeout: 1
+    max_nr_requests_timeouts: 5
     limit_write_paralelization_to: 32k
     limit_read_paralelization_to: 32k
     mt_client_handler: true

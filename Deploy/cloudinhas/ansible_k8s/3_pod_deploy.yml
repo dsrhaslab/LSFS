@@ -1,0 +1,29 @@
+
+  - name: Send configuration file to node
+    hosts: masters, workers
+    tasks:
+
+      - name: Creates shared dir
+        file:
+          path: /home/{{ ansible_user }}/shared_dir
+          state: directory
+
+      - name: Put Config File in Shared (Volume) directory
+        copy:
+          src: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS/conf.yaml
+          dest: "/home/{{ ansible_user }}/shared_dir/conf.yaml"
+
+
+  - name: Creation of bootstrapper Pod
+    hosts: masters
+    roles:
+      - bootstrapper
+  
+  - name: Creation of Peer and client Pods
+    hosts: masters
+    roles:
+      - { role: peers, nr_peers: 4, bootstrapper_ip: "{{ boot_ip }}", mount_dir: "/home/{{ hosts_user }}/shared_dir"}
+      - { role: clients, nr_clients: 1, bootstrapper_ip: "{{ boot_ip }}", mount_dir: "/home/{{ hosts_user }}/shared_dir" }
+    vars:
+      boot_ip: "{{ hostvars['localhost']['bootstrapper_ip'] }}"
+

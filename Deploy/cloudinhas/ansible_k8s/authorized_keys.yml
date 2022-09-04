@@ -1,0 +1,11 @@
+- hosts: all
+  become: yes
+
+  tasks:
+    - name: Set up authorized keys for ssh
+      authorized_key: 
+        user: "{{ hosts_user }}" 
+        # item comes from with_file
+        key: "{{item}}" 
+      with_file:
+        - ~/.ssh/id_rsa.pub

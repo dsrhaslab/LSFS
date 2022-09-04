@@ -57,14 +57,19 @@ test_filesystem
 build/*
 
 #Deploy virtualenv
-Deploy/*
 Deploy/.virtualenvs/*
+Deploy/gcp/*
 
 # Capnp auto-generated files
 *.capnp.*
 
 # Protobuf auto-generated files
 *.pb.*
+
+.terraform*
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfvars
 
 
 leveldbKeys.py

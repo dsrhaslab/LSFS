@@ -1,0 +1,12 @@
+[{{ client_host_group_name }}]
+{% for obj in client_nodes %}
+{{ obj.ip }}
+{% endfor %}
+
+[{{ peer_host_group_name }}]
+{% for obj in peer_nodes %}
+{{ obj.ip }}
+{% endfor %}
+
+[all:vars]
+ansible_user="{{ hosts_user }}"

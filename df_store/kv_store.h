@@ -76,6 +76,7 @@ public:
     virtual bool check_if_have_all_blks_and_put_metadata(const std::string& base_path, const kv_store_key<T>& key, size_t blk_num) = 0;
     virtual void delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const kv_store_key<T>& key, size_t blk_num) = 0;
     virtual bool get_incomplete_blks(const kv_store_key<std::string>& key, std::vector<size_t>& tmp_blks_to_request) = 0;
+    virtual bool clean_db() = 0;
 
 
 
@@ -132,6 +133,7 @@ template <typename T>
 void kv_store<T>::clear_seen_log() {
     std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
     this->seen.clear();
+    seen_count = 0;
 }
 
 template <typename T>
@@ -153,7 +155,6 @@ void kv_store<T>::seen_it(const kv_store_key<T>& key) {
     std::scoped_lock<std::recursive_mutex> lk(this->seen_mutex);
     if(seen_count % seen_log_garbage_at == 0){
         this->clear_seen_log();
-        seen_count = 0;
     }
     this->seen.insert_or_assign(std::move(key_to_insert), true);
 }
@@ -162,6 +163,7 @@ template <typename T>
 void kv_store<T>::clear_seen_deleted_log() {
     std::scoped_lock<std::recursive_mutex> lk(this->seen_deleted_mutex);
     this->seen_deleted.clear();
+    seen_deleted_count = 0;
 }
 
 template <typename T>
@@ -183,7 +185,6 @@ void kv_store<T>::seen_it_deleted(const kv_store_key<T>& key) {
     std::scoped_lock<std::recursive_mutex> lk(this->seen_deleted_mutex);
     if(seen_deleted_count % seen_log_garbage_at == 0){
         this->clear_seen_deleted_log();
-        seen_deleted_count = 0;
     }
     this->seen_deleted.insert_or_assign(std::move(key_to_insert), true);
 }
@@ -219,6 +220,7 @@ template <typename T>
 void kv_store<T>::clear_request_log() {
     std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
     this->request_log.clear();
+    req_count = 0;
 }
 
 template <typename T>
@@ -233,7 +235,6 @@ void kv_store<T>::log_req(const std::string& req_id) {
     std::scoped_lock<std::recursive_mutex> lk(this->req_log_mutex);
     if(req_count % request_log_garbage_at == 0){
         this->clear_request_log();
-        req_count = 0;
     }
     this->request_log.insert_or_assign(req_id, true);
 }
@@ -250,7 +251,6 @@ void kv_store<T>::log_anti_entropy_req(const std::string& req_id) {
     std::scoped_lock<std::recursive_mutex> lk(this->anti_entropy_log_mutex);
     if(anti_entropy_count % request_log_garbage_at == 0){
         this->clear_anti_entropy_log();
-        anti_entropy_count = 0;
     }
     this->anti_entropy_log.insert_or_assign(req_id, true);
 }
@@ -259,6 +259,7 @@ template <typename T>
 void kv_store<T>::clear_anti_entropy_log() {
     std::scoped_lock<std::recursive_mutex> lk(this->anti_entropy_log_mutex);
     this->anti_entropy_log.clear();
+    anti_entropy_count = 0;
 }
 
 #endif //P2PFS_KV_STORE_H

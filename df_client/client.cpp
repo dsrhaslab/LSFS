@@ -924,3 +924,47 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
         throw TimeoutException();
     }
 }
+
+
+
+//-----------------------------------------------------------------------------------------------------
+
+
+
+void client::del_db(const std::string& key, const kv_store_key_version& version, std::vector<std::string> peers_all) {
+    
+    kv_store_key<std::string> comp_key = {key, version, true};
+    this->handler->register_delete(comp_key); // throw const char* (concurrent writes over the same key)
+    
+    std::vector<peer_data> peers;
+
+    for(auto ip: peers_all){
+        peer_data data;
+        data.ip = ip;
+        data.kv_port = 12366;
+        peers.push_back(data);
+    }
+
+    bool succeed = false;
+    int curr_timeouts = 0;
+    while(!succeed && curr_timeouts < this->max_timeouts){
+        int status = 0;
+        if (curr_timeouts + 1 <= 2){
+            status = this->send_delete(peers, key, version);
+        }else{
+            status = this->send_delete(peers, key, version);
+        }
+        if(status == 0){
+            try{
+                succeed = this->handler->wait_for_delete(comp_key, peers.size());
+            }catch(TimeoutException& e){
+                curr_timeouts++;
+            }
+        }
+        std::cout << "Sended" << std::endl;
+    }
+
+    if(!succeed){
+        throw TimeoutException();
+    }
+}
