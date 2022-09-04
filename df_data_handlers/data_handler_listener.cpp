@@ -8,7 +8,34 @@
 data_handler_listener::data_handler_listener(std::string ip, int kv_port, long id, float chance, pss* pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
     : ip(std::move(ip)), kv_port(kv_port), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
 
-void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port){
+void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port, std::string str){
+    std::string message_type;
+    if (message.has_get_reply_msg()) {
+        message_type = "GET REPLY";
+        std::string buf;
+        message.SerializeToString(&buf);
+        if(buf.size() > 4500 )
+            std::cout <<"\n\n\n\n Error, size: " << buf.size() << " , called: " << str  << "\n\n\n\n"<< std::endl;
+
+    }else if (message.has_put_reply_msg()) {
+        message_type = "PUT REPLY";
+    }else if(message.has_get_latest_version_reply_msg()){
+        message_type = "GET LATEST VERSION REPLY";
+    }else if (message.has_delete_reply_msg()) {
+        message_type = "DELETE REPLY";
+    }else if(message.has_anti_entropy_msg()){
+        message_type = "anti entropy";
+    }else if(message.has_anti_entropy_get_msg()){
+        message_type = "anti entropy get";
+    }else if(message.has_anti_entropy_get_met_msg()){
+        message_type = "anti entropy get met";
+    }else if(message.has_anti_entropy_get_reply_msg()){
+        message_type = "anti entropy get reply";
+    }else if(message.has_anti_entropy_get_met_reply_msg()){
+        message_type = "anti entropy get met reply";
+    }
+
+
     try{
         struct sockaddr_in serverAddr;
         memset(&serverAddr, '\0', sizeof(serverAddr));
@@ -27,7 +54,7 @@ void data_handler_listener::reply_client(proto::kv_message& message, const std::
         lock.unlock();
 
         if(res == -1){
-            printf("Something went wrong with send()! %s\n", strerror(errno));
+            printf("Something went wrong with send()! %s, %zu, %s, %s\n", strerror(errno), buf.size(), buf.c_str(), message_type.c_str());
         }
     }catch(...){
         std::cout <<"===== Unable to send =====" << std::endl;
@@ -69,6 +96,7 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
     const int sender_port = message.port();
     const std::string& key = message.key().key();
     const std::string& req_id = message.reqid();
+    bool no_data = message.no_data();
     bool request_already_replied = msg.forwarded_within_group();
 
     // if the request hasn't yet been processed
@@ -109,6 +137,8 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
 
             if(!request_already_replied || achance <= this->chance){
                 proto::kv_message reply_message;
+
+                if(no_data) data = nullptr;
 
                 build_get_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, std::move(data), key, version, is_deleted);
 
@@ -703,6 +733,7 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
                 data = this->store->get(get_key);
                 if(data != nullptr){
                     size_t NR_BLKS = (data->size() / BLK_SIZE) + 1;
+                    if(data->size() % BLK_SIZE > 0) NR_BLKS = NR_BLKS + 1;
 
                     size_t pos = (blk_num-1)*BLK_SIZE;
 

@@ -9,17 +9,43 @@ std::string merge_metadata(const std::string& bytes, const std::string& new_byte
     metadata met1 = metadata::deserialize_from_string(bytes);
     metadata met2 = metadata::deserialize_from_string(new_bytes);
 
-    for(auto& child_pair: met2.childs.added_childs){
-        auto res_pair = met1.childs.childs.emplace(child_pair.second);
-        met1.childs.added_childs.emplace(child_pair);
-    }
-    for(auto& child_pair: met2.childs.removed_childs){
-        auto it = met1.childs.childs.find(child_pair.second);
-        if(it != met1.childs.childs.end()){
-            met1.childs.childs.erase(it);
-            met1.childs.removed_childs.emplace(child_pair);
+    std::map<std::string, std::pair<FileType::FileType, Status::Status>> temp;
+
+    std::set<std::string> priority_remove;
+
+    for(auto const& [path, val]: met1.childs.childs){
+        if(val.second == Status::NONE || val.second == Status::ADDED){
+            temp.insert({path, val});
+        }
+        else if(val.second == Status::REMOVED){
+            priority_remove.insert(path);
         }
     }
+
+    for(auto const& [path, val]: met2.childs.childs){
+        if(val.second == Status::NONE){
+            temp.insert({path, val});
+        }
+        else if(val.second == Status::ADDED){
+            auto it = priority_remove.find(path);
+            if(it == priority_remove.end()){
+                temp.insert({path, val});
+            }
+        }
+        else if(val.second == Status::REMOVED){
+            auto it = temp.find(path);
+            if(it != temp.end()){
+                if(it->second.second == Status::NONE){
+                    temp.erase(path);
+                }
+            }
+        }
+    }
+
+    met1.childs.childs = temp;
+
+    met1.childs.reset_add_remove_log();
+
 
     if(met1.attr.stbuf.st_atim < met2.attr.stbuf.st_atim){
         met1.attr.stbuf.st_atim = met2.attr.stbuf.st_atim;

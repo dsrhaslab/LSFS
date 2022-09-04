@@ -62,7 +62,8 @@ message get_message {
   int32 port = 2;
   int64 id = 3;
   string reqid = 4;
-  kv_store_key key = 6;
+  kv_store_key key = 5;
+  bool no_data = 6;
 }
 
 message get_reply_message {

@@ -3,13 +3,14 @@
 
 
 void build_get_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id,
-                                const std::string& key, const kv_store_key_version& version){
+                                const std::string& key, const kv_store_key_version& version, bool no_data){
 
     auto *message_content = new proto::get_message();
     message_content->set_ip(ip);
     message_content->set_port(kv_port);
     message_content->set_id(id);
     message_content->set_reqid(req_id);
+    message_content->set_no_data(no_data);
     
     proto::kv_store_key* kv_key = new proto::kv_store_key();
     kv_key->set_key(key);

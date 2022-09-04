@@ -19,7 +19,7 @@
 
 #include "df_store/kv_store.h"
 
-void build_get_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id, const std::string& key, const kv_store_key_version& version);
+void build_get_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id, const std::string& key, const kv_store_key_version& version, bool no_data);
 void build_get_reply_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id, std::unique_ptr<std::string> data, const std::string& key, const kv_store_key_version& version, bool is_deleted = false);
 
 void build_get_latest_version_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id, const std::string& key, bool get_data = false);

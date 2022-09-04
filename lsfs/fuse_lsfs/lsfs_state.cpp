@@ -435,7 +435,6 @@ void lsfs_state::refresh_dir_cache() {
 }
 
 
-
 void lsfs_state::add_child_to_dir_cache(const std::string& parent_path, const std::string& child_name, bool is_dir){
     std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
 
@@ -464,22 +463,11 @@ int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
 
         if(use_cache) this->add_child_to_dir_cache(*parent_path, *child_name, is_dir);
         
-        // if(!benchmark_performance && maximize_cache && met == nullptr && *parent_path != "/"){
-        //     met = get_metadata(*parent_path);
-        //     add_or_refresh_working_directory(*parent_path, *met);
-        //     was_not_in_cache = true;
-        // }
 
         int res = put_metadata_child(*parent_path, *child_name, true, is_dir);
         if(res != 0){
             return -errno;
         }
-
-        // if(was_not_in_cache){
-        //     this->add_child_to_working_dir_and_retreive(*parent_path, *child_name, is_dir);
-        // }
-        //on successful put metadata clear add remove childs log
-        this->reset_dir_cache_add_remove_log(*parent_path);
     }
 
     // root directory doesn't have a parent
@@ -510,26 +498,12 @@ int lsfs_state::remove_child_from_parent_dir(const std::string& path, bool is_di
         bool was_not_in_cache = false;
 
         if(use_cache) this->remove_child_from_dir_cache(*parent_path, *child_name, is_dir);
-
-        // if(!benchmark_performance && maximize_cache && met == nullptr && *parent_path != "/"){
-        //     met = get_metadata(*parent_path);
-        //     add_or_refresh_working_directory(*parent_path, *met);
-        //     was_not_in_cache = true;
-        // }
-
-        std::cout << "Trying to update metadata of parent path " << std::endl;
-                
+        
         int res = put_metadata_child(*parent_path, *child_name, false, is_dir);
         if(res != 0){
             return -errno;
         }
 
-        // if(was_not_in_cache){
-        //     this->remove_child_from_working_dir_and_retreive(*parent_path, *child_name, is_dir);
-        // }
-
-        //on successful put metadata clear add remove childs log
-        this->reset_dir_cache_add_remove_log(*parent_path);
     }
 
     // root directory doesn't have a parent
@@ -821,7 +795,9 @@ void lsfs_state::reset_dir_cache_add_remove_log(const std::string& path){
 
 metadata lsfs_state::request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version){
 
-    size_t NR_BLKS = (total_s / BLK_SIZE) + 1;
+    size_t NR_BLKS = (total_s / BLK_SIZE);
+
+    if(total_s % BLK_SIZE > 0) NR_BLKS = NR_BLKS + 1;
     
     std::vector<kv_store_key<std::string>> keys;
     std::vector<std::shared_ptr<std::string>> data_strs;
