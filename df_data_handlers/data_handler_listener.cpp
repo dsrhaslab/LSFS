@@ -46,6 +46,8 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
             struct sockaddr_in serverAddr;
             memset(&serverAddr, '\0', sizeof(serverAddr));
 
+            std::cout << "Peer ip: " << peer.ip << ", port: " << peer.kv_port << std::endl;  
+
             serverAddr.sin_family = AF_INET;
             serverAddr.sin_port = htons(peer.kv_port);
             serverAddr.sin_addr.s_addr = inet_addr(peer.ip.c_str());
