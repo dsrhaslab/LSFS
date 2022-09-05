@@ -941,7 +941,7 @@ void client::del_db(const std::string& key, const kv_store_key_version& version,
     for(auto ip: peers_all){
         peer_data data;
         data.ip = ip;
-        data.kv_port = 12366;
+        data.kv_port = 12356;
         peers.push_back(data);
     }
 

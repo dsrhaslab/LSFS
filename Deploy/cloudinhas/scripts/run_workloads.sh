@@ -24,7 +24,7 @@ METRICS_PATH=$COM_DIRECTORY/metrics
 CONFIG_FILE=$COM_DIRECTORY/conf.yaml
 PEERS_IPS_FILE=$COM_DIRECTORY/peer_ips
 NR_PEERS_IN_CLUSTER=100
-BOOTSTRAPPER_IP=127.0.0.1
+BOOTSTRAPPER_IP
 
 
 #------------------------------------------
@@ -52,6 +52,12 @@ read_peer_hosts_file() {
     done < "$1"
 }
 
+get_bootstrapper_ip() {
+    
+    BOOTSTRAPPER_IP=$(kubectl get pods -n lsfs -o wide --no-headers | grep bootstrapper | awk '{ print $6}')
+
+}
+
 
 
 ########################################################################
@@ -61,6 +67,8 @@ read_peer_hosts_file() {
 mkdir -p $OUTPUT_PATH
 
 #read_peer_hosts_file $PEERS_IPS_FILE
+
+get_bootstrapper_ip
 
 i=0
 
@@ -80,9 +88,7 @@ for WL_PATH in $(find $WORKLOADS_PATH -maxdepth 4 -type f -printf "%p\n"); do
 
             dstat_log_name=run-$wl_name-lsfs-fb.dstat.csv
 
-            kubectl exec -it -n lsfs "peer$PEER_NR" -- /bin/bash -c "mkdir -p /$METRICS_PATH/peer$PEER_NR"
-
-            kubectl exec -it -n lsfs "peer$PEER_NR" -- /bin/bash -c "screen -S dstat1 -d -m dstat -tcdmg --noheaders --output /$METRICS_PATH/peer$PEER_NR/$dstat_log_name"
+            kubectl exec -n lsfs peer$PEER_NR -- bash /$COM_DIRECTORY/scripts/init_dstat.sh $METRICS_PATH $PEER_NR $dstat_log_name
         
         done
     
@@ -92,13 +98,13 @@ for WL_PATH in $(find $WORKLOADS_PATH -maxdepth 4 -type f -printf "%p\n"); do
 
             dstat_log_name=run-$wl_name-lsfs-fb.dstat.csv
 
-            kubectl exec -it -n lsfs "peer$PEER_NR" -- /bin/bash -c "screen -S dstat1 -X stuff '^C' && screen -wipe"
+            kubectl exec -n lsfs peer$PEER_NR -- bash /$COM_DIRECTORY/scripts/stop_dstat.sh
         
         done
 
         kubectl exec -it -n lsfs client1 -- /bin/bash -c "./build/client_exe $BOOTSTRAPPER_IP ${i+RUN_ITER} $CONFIG_FILE $PEERS_IPS_FILE"
 
-        sleep 30
+        sleep 60
     
     done
     
