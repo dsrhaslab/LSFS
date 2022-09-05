@@ -71,6 +71,7 @@ public:
     int put_with_merge_metadata(metadata& met, const std::string& path);
     int delete_file_or_dir(const std::string& path);
     std::unique_ptr<metadata> get_metadata(const std::string& path);
+    std::unique_ptr<metadata> get_metadata(const std::string& path, client_reply_handler::Response* response);
     std::unique_ptr<metadata> get_metadata_stat(const std::string& path);
 
     void add_to_dir_cache(const std::string& path, metadata met);

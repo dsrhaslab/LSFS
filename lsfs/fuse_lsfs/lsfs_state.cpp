@@ -243,6 +243,25 @@ int lsfs_state::delete_file_or_dir(const std::string& path){
     return return_value;
 }
 
+std::unique_ptr<metadata> lsfs_state::get_metadata(const std::string& path, client_reply_handler::Response* response){
+    std::unique_ptr<metadata> res = nullptr;
+
+    //Get size of metadata
+    kv_store_key_version last_version;
+    std::shared_ptr<std::string> data  = df_client->get_latest_metadata_size(path, response, &last_version);
+    
+    if(*response == client_reply_handler::Response::Deleted || data == nullptr){
+        errno = ENOENT;
+        return res;
+    }
+    size_t metadata_size = stol(*data);
+    
+    res = std::make_unique<metadata>(request_metadata(path, metadata_size, last_version));
+    
+    return res;
+}
+
+
 std::unique_ptr<metadata> lsfs_state::get_metadata(const std::string& path){
     std::unique_ptr<metadata> res = nullptr;
 
@@ -420,15 +439,40 @@ void lsfs_state::refresh_dir_cache() {
             
             if(t_now >= t_dir){
                 try{
-                    (*it->second)->metadata_p = std::move(get_metadata(it->first));
+                    client_reply_handler::Response response = client_reply_handler::Response::Init;
+                    (*it->second)->metadata_p = std::move(get_metadata(it->first, &response));
                     (*it->second)->last_update = now;
+                    if(response == client_reply_handler::Response::Deleted  || response == client_reply_handler::Response::NoData){
+                        lk.lock();
+                        
+                        dir_cache_list.erase(it->second);
+                        dir_cache_map.erase(it);
+                        
+                        lk_dir.unlock();
+                        
+                        dir_cache_map_mutex.erase(it_mutex);
+                        lk.unlock();
+                    }else {
+                        lk_dir.unlock();
+                    }
+                        
                 }catch(TimeoutException& e){
-                    e.what();
+                    lk.lock();
+                        
+                    dir_cache_list.erase(it->second);
+                    dir_cache_map.erase(it);
+                    
+                    lk_dir.unlock();
+                    
+                    dir_cache_map_mutex.erase(it_mutex);
+                    lk.unlock();
+                    
                 }catch(EmptyViewException& e){
                     e.what();
                 }
+            }else{
+                lk_dir.unlock();
             }
-            lk_dir.unlock();
         }
     }
     

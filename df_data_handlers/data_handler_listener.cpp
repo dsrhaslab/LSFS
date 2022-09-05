@@ -8,7 +8,7 @@
 data_handler_listener::data_handler_listener(std::string ip, int kv_port, long id, float chance, pss* pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
     : ip(std::move(ip)), kv_port(kv_port), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
 
-void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port, std::string str){
+void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port){
     try{
         struct sockaddr_in serverAddr;
         memset(&serverAddr, '\0', sizeof(serverAddr));
@@ -55,7 +55,7 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
             lock.unlock();
 
             if(res == -1){
-                printf("Something went wrong with send()! %s\n", strerror(errno));
+                printf("Something went wrong with send() forward! %s\n", strerror(errno));
             }
         }catch(...){
             std::cout <<"===== Unable to send =====" << std::endl;

@@ -6,7 +6,7 @@ set $NR_FILES=1
 set $MEAN_DIR_WIDTH=1
 set $IO_SIZE=4k
 set $FILE_SIZE=500000k
-set $NR_ITERATIONS=20000000
+set $NR_ITERATIONS=125000
 
 # ------------------------------------------------------#
 
@@ -35,6 +35,6 @@ create files
 system "sync"
 system "echo 3 > /proc/sys/vm/drop_caches"
 
-run 600
+run 300
 
 # ---------------------------------------------------------------------------- #

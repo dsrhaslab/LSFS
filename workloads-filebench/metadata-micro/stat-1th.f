@@ -27,6 +27,6 @@ create files
 system "sync"
 system "echo 3 > /proc/sys/vm/drop_caches"
 
-run 600
+run 300
 
 # ---------------------------------------------------------------------------- #
