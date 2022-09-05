@@ -24,8 +24,8 @@ METRICS_PATH=$COM_DIRECTORY/metrics
 CONFIG_FILE=$COM_DIRECTORY/conf.yaml
 PEERS_IPS_FILE=$COM_DIRECTORY/peer_ips
 NR_PEERS_IN_CLUSTER=100
-BOOTSTRAPPER_IP
-
+BOOTSTRAPPER_IP=""
+CLIENT_NAME=""
 
 #------------------------------------------
 
@@ -58,7 +58,11 @@ get_bootstrapper_ip() {
 
 }
 
+get_client_pod_name() {
+    
+    CLIENT_NAME=$(kubectl get pods -n lsfs -o wide --no-headers | grep client1 | awk '{ print $1}')
 
+}
 
 ########################################################################
 #                     Run all filebench workloads                      #
@@ -80,29 +84,39 @@ for WL_PATH in $(find $WORKLOADS_PATH -maxdepth 4 -type f -printf "%p\n"); do
     output_results_file="$OUTPUT_PATH/run-$wl_name-lsfs-fb.output"
     touch $output_results_file
 
-    for RUN_ITER in {1..$NR_OF_ITERATIONS_PER_WORKLOAD}; do
+    for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
+    #for RUN_ITER in {1..$NR_OF_ITERATIONS_PER_WORKLOAD}; do
+
+        get_client_pod_name
 
         echo -e "\nrun: #$RUN_ITER,wl_name:$wl_name,wl_path:$WL_PATH,fs:lsfs\n\n" >> $output_results_file
 
-        for PEER_NR in {1..$NR_PEERS_IN_CLUSTER}; do
+        for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
+        #for PEER_NR in {1..$NR_PEERS_IN_CLUSTER}; do
+
+            echo "Starting dstat in $PEER_NR"
 
             dstat_log_name=run-$wl_name-lsfs-fb.dstat.csv
 
             kubectl exec -n lsfs peer$PEER_NR -- bash /$COM_DIRECTORY/scripts/init_dstat.sh $METRICS_PATH $PEER_NR $dstat_log_name
         
         done
-    
-        kubectl exec -it -n lsfs client1 -- /bin/bash -c "filebench -f $WL_PATH" &>> $output_results_file
 
-        for PEER_NR in {1..$NR_PEERS_IN_CLUSTER}; do
+        kubectl exec -it -n lsfs $CLIENT_NAME -- /bin/bash -c "filebench -f /$WL_PATH" &>> $output_results_file
+
+        for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
 
             dstat_log_name=run-$wl_name-lsfs-fb.dstat.csv
 
-            kubectl exec -n lsfs peer$PEER_NR -- bash /$COM_DIRECTORY/scripts/stop_dstat.sh
+            kubectl exec -n lsfs peer$PEER_NR -- bash /$COM_DIRECTORY/scripts/stop_dstat.sh &> /dev/null
         
         done
 
-        kubectl exec -it -n lsfs client1 -- /bin/bash -c "./build/client_exe $BOOTSTRAPPER_IP ${i+RUN_ITER} $CONFIG_FILE $PEERS_IPS_FILE"
+        kubectl exec -it -n lsfs $CLIENT_NAME -- /bin/bash -c "./build/client_exe $BOOTSTRAPPER_IP $((i+RUN_ITER)) /$CONFIG_FILE /$PEERS_IPS_FILE"
+
+        sleep 60
+
+        kubectl delete pod -n lsfs $CLIENT_NAME
 
         sleep 60
     
