@@ -1,19 +1,19 @@
 
-set $WORKLOAD_PATH="/test_filesystem/InnerFolder"
+set $WORKLOAD_PATH="test_filesystem/InnerFolder"
 set $NR_THREADS=1
 
 set $NR_FILES=1
 set $MEAN_DIR_WIDTH=1
 set $IO_SIZE=4k
-set $FILE_SIZE=500000k
-set $NR_ITERATIONS=67108864
+set $FILE_SIZE=100000k
+set $NR_ITERATIONS=312500000
 
 # ------------------------------------------------------#
 
 set mode quit firstdone
 
 define fileset name="fileset-1", path=$WORKLOAD_PATH, entries=$NR_FILES, dirwidth=$MEAN_DIR_WIDTH, dirgamma=0,
-               filesize=$FILE_SIZE, prealloc
+               filesize=$FILE_SIZE, prealloc, reuse, paralloc
 
 define process name="process-1", instances=1
 {
