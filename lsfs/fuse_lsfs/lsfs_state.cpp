@@ -442,37 +442,16 @@ void lsfs_state::refresh_dir_cache() {
                     client_reply_handler::Response response = client_reply_handler::Response::Init;
                     (*it->second)->metadata_p = std::move(get_metadata(it->first, &response));
                     (*it->second)->last_update = now;
-                    if(response == client_reply_handler::Response::Deleted  || response == client_reply_handler::Response::NoData){
-                        lk.lock();
-                        
-                        dir_cache_list.erase(it->second);
-                        dir_cache_map.erase(it);
-                        
-                        lk_dir.unlock();
-                        
-                        dir_cache_map_mutex.erase(it_mutex);
-                        lk.unlock();
-                    }else {
-                        lk_dir.unlock();
-                    }
-                        
+                                            
                 }catch(TimeoutException& e){
-                    lk.lock();
-                        
-                    dir_cache_list.erase(it->second);
-                    dir_cache_map.erase(it);
-                    
-                    lk_dir.unlock();
-                    
-                    dir_cache_map_mutex.erase(it_mutex);
-                    lk.unlock();
-                    
+                    e.what();
                 }catch(EmptyViewException& e){
                     e.what();
                 }
-            }else{
-                lk_dir.unlock();
             }
+            
+            lk_dir.unlock();
+            
         }
     }
     
