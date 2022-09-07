@@ -1,0 +1,13 @@
+ # Play3 - Shutdown pods
+  - name: Shutdown running pods
+    hosts: masters
+
+    tasks:
+
+      - name: Delete client deployment
+        shell: | 
+                kubectl delete deployment -n lsfs client1
+
+      - name: Delete peer and bootstrapper pods
+        shell: | 
+                kubectl delete pods -n lsfs --all

@@ -1,9 +1,10 @@
 
-set $WORKLOAD_PATH="test_filesystem/InnerFolder"
+set $WORKLOAD_PATH="/test_filesystem/InnerFolder"
 set $NR_THREADS=1
+set $WORKLOAD_RUNTIME=300
 
-set $NR_FILES=10000
-set $MEAN_DIR_WIDTH=1000
+set $NR_FILES=1000
+set $MEAN_DIR_WIDTH=10
 set $IO_SIZE=4k
 
 # ------------------------------------------------------ #
@@ -19,7 +20,7 @@ define fileset name="fileset1", path=$WORKLOAD_PATH, entries=$NR_FILES, dirwidth
 
 define process name="process1", instances=1
 {
-    thread name="thread1", memsize=$file_size, instances=$NR_THREADS
+    thread name="thread1", memsize=$IO_SIZE, instances=$NR_THREADS
     {
         flowop openreadandclose name="openreadandclose1", iters=$NR_FILES
 
@@ -34,6 +35,6 @@ create files
 system "sync"
 system "echo 3 > /proc/sys/vm/drop_caches"
 
-run 300
+run $WORKLOAD_RUNTIME
 
 # ---------------------------------------------------------------------------- #

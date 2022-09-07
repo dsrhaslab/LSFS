@@ -1,6 +1,7 @@
 
-set $WORKLOAD_PATH="test_filesystem/InnerFolder"
+set $WORKLOAD_PATH="/test_filesystem/InnerFolder"
 set $NR_THREADS=1
+set $WORKLOAD_RUNTIME=300
 
 set $NR_FILES=1
 set $MEAN_DIR_WIDTH=1
@@ -35,6 +36,6 @@ create files
 system "sync"
 system "echo 3 > /proc/sys/vm/drop_caches"
 
-run 300
+run $WORKLOAD_RUNTIME
 
 # ---------------------------------------------------------------------------- #

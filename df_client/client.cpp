@@ -12,7 +12,8 @@ client::client(std::string boot_ip, std::string ip, int kv_port, int pss_port, l
     auto main_confs = config["main_confs"];
     auto client = main_confs["client"];
     auto load_balancer = client["load_balancer"];
-    
+
+    std::string base_path = client["base_path"].as<std::string>();
     this->nr_puts_required = client["nr_puts_required"].as<int>();
     this->nr_gets_required = client["nr_gets_required"].as<int>();
     this->nr_gets_version_required = client["nr_gets_version_required"].as<int>();
@@ -45,7 +46,7 @@ client::client(std::string boot_ip, std::string ip, int kv_port, int pss_port, l
 
     this->clock = std::make_shared<clock_vv>();
     this->clock_cond = std::make_shared<std::condition_variable>();
-    this->clock_update = std::make_shared<clock_vv_th>(id, clock, clock_cond);
+    this->clock_update = std::make_shared<clock_vv_th>(id, clock, clock_cond, base_path);
     this->clock_update_th = std::thread (std::ref(*clock_update));
 }
 
