@@ -1,0 +1,58 @@
+
+  - name: Creation of bootstrapper Pod
+    hosts: masters
+    roles:
+      - bootstrapper
+  
+  - name: Creation of Peer Pods
+    hosts: masters
+    roles:
+      - { role: peers, nr_peers: 50, bootstrapper_ip: "{{ boot_ip }}", mount_dir: "/home/{{ hosts_user }}/shared_dir"}
+    vars:
+      boot_ip: "{{ hostvars['localhost']['bootstrapper_ip'] }}"
+
+
+  - name: Wait until peers creation
+    hosts: masters
+    tasks:
+      - name: Pause for 2 minutes until all peers are created
+        pause:
+          minutes: 2
+
+
+  - name: Creation of client Pods
+    hosts: masters
+    roles:
+      - { role: clients, nr_clients: 1, bootstrapper_ip: "{{ boot_ip }}", mount_dir: "/home/{{ hosts_user }}/shared_dir" }
+    vars:
+      boot_ip: "{{ hostvars['localhost']['bootstrapper_ip'] }}"
+
+
+   # Play3 - Collecting pods info (Node name and Ips)
+  - name: Collenting pods info
+    hosts: masters
+
+    vars: 
+      peer_host_group_name: peers
+
+    tasks:
+
+      - name: Collect peer pods IP addresses
+        shell: | 
+                kubectl get pods -n lsfs -o wide --no-headers | grep peer | awk '{ print $1 ,$6}'
+        register: peerPodsIPs
+
+      - set_fact:
+          peer_nodes: []
+
+      - set_fact:
+          peer_nodes: "{{ peer_nodes + [{ 'name': name , 'ip' : ip }] }}"
+        vars: 
+          name: "{{ item.split(' ').0 }}"
+          ip: "{{ item.split(' ').1 }}"
+        with_items: "{{ peerPodsIPs.stdout_lines }}"
+
+      - name: Write hosts to file
+        template:
+          src: "hosts_template.j2"
+          dest: "shared_dir/peer_ips"

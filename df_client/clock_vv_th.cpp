@@ -3,8 +3,8 @@
 #include "clock_vv_th.h"
 
 
-clock_vv_th::clock_vv_th(long id, std::shared_ptr<clock_vv> clock, std::shared_ptr<std::condition_variable> cond_m): 
-id(id), clock_v(clock), cond_m(cond_m) {}
+clock_vv_th::clock_vv_th(long id, std::shared_ptr<clock_vv> clock, std::shared_ptr<std::condition_variable> cond_m, std::string base_path): 
+id(id), clock_v(clock), cond_m(cond_m), base_path(base_path) {}
 
 
 clock_vv_th::~clock_vv_th()
@@ -13,7 +13,7 @@ clock_vv_th::~clock_vv_th()
 }
 
 void clock_vv_th::operator()() {
-    std::string file_name = FILE_NAME_PREFIX + std::to_string(id); 
+    std::string file_name = base_path + FILE_NAME_PREFIX + std::to_string(id); 
     load(file_name);
     while(true){
         save();

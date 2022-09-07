@@ -1,0 +1,28 @@
+ # Play1 -Clean shared directory
+  - name: Clean shared directory previous deploy files
+    hosts: masters, workers
+    tasks:
+
+      - name: Clean peers database
+        become: yes
+        file:
+          path: /home/{{ ansible_user }}/shared_dir/levelDB/
+          state: absent
+        
+      - name: Clean peer ips file
+        become: yes
+        file:
+          path: /home/{{ ansible_user }}/shared_dir/peer_ips
+          state: absent
+
+      - name: Clean metrics files
+        become: yes
+        file:
+          path: /home/{{ ansible_user }}/shared_dir/metrics
+          state: absent
+
+      - name: Clean workloads files
+        become: yes
+        file:
+          path: /home/{{ ansible_user }}/shared_dir/workloads-filebench
+          state: absent

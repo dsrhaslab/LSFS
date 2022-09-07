@@ -26,8 +26,9 @@ public:
     std::mutex mutex;
     int fd;
     long id;
+    std::string base_path;
 
-    clock_vv_th(long id, std::shared_ptr<clock_vv> clock, std::shared_ptr<std::condition_variable> cond_m);
+    clock_vv_th(long id, std::shared_ptr<clock_vv> clock, std::shared_ptr<std::condition_variable> cond_m, std::string base_path);
     ~clock_vv_th();
     void operator ()();
     void save();

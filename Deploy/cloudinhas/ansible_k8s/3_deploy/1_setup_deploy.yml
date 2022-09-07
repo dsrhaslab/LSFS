@@ -1,0 +1,44 @@
+ # Play1 -Setup shared directory and workloads
+  - name: Setup config and workload files
+    hosts: masters, workers
+    tasks:
+
+      - name: Creates shared dir
+        file:
+          path: /home/{{ ansible_user }}/shared_dir
+          state: directory
+      
+      - name: Creates database dir
+        file:
+          path: /home/{{ ansible_user }}/shared_dir/levelDB
+          state: directory
+
+      - name: Put Config File in Shared (Volume) directory
+        copy:
+          src: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS/conf.yaml
+          dest: "/home/{{ ansible_user }}/shared_dir/conf.yaml"
+
+      - name: Creates workloads dir
+        file:
+          path: /home/{{ ansible_user }}/shared_dir/workloads-filebench
+          state: directory
+
+      - name: Put workloads in Shared (Volume) directory
+        copy:
+          src: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS/workloads-filebench/
+          dest: "/home/{{ ansible_user }}/shared_dir/workloads-filebench/"
+
+      - name: Put dstat scripts in Shared (Volume) directory
+        copy:
+          src: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS/Deploy/cloudinhas/scripts/dstat/
+          dest: "/home/{{ ansible_user }}/shared_dir/scripts/"
+
+
+  - name: Send workloads run script to master
+    hosts: masters
+    tasks:
+      - name: Copy workload run script
+        copy:
+          src: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS/Deploy/cloudinhas/scripts/run_workloads.sh
+          dest: "/home/{{ ansible_user }}/run_workloads.sh"
+

@@ -36,11 +36,12 @@ main_confs:
 
   client:
     log_level: off
+    base_path: /shared_dir/
     max_nodes_to_send_get_request: 3
     max_nodes_to_send_put_request: 3
-    nr_puts_required: 3
+    nr_puts_required: 1
     nr_gets_required: 1
-    nr_gets_version_required: 3
+    nr_gets_version_required: 1
     client_wait_timeout: 1
     max_nr_requests_timeouts: 5
     limit_write_paralelization_to: 32k
