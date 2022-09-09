@@ -36,8 +36,14 @@ public:
         struct timespec last_update; //last update to storage
     };
 
+    struct file {
+        FileAccess::FileAccess access_t;
+        std::shared_ptr<struct stat> stat;
+        kv_store_key_version version;
+    };
+
     std::recursive_mutex open_files_mutex;
-    std::unordered_map<std::string, std::pair<FileAccess::FileAccess ,std::shared_ptr<struct stat>>> open_files;
+    std::unordered_map<std::string, file> open_files;
     
     std::recursive_mutex dir_cache_mutex;
     //LRU
@@ -58,21 +64,23 @@ public:
 public:
     lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool use_cache, int refresh_cache_time, int max_directories_in_cache);
     
-    int put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk);
-    int put_fixed_size_blocks_from_buffer_limited_paralelization(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk);
+    int put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_key_version& version);
+    int put_fixed_size_blocks_from_buffer_limited_paralelization(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_key_version& version);
     size_t read_fixed_size_blocks_to_buffer(char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk);
     size_t read_fixed_size_blocks_to_buffer_limited_paralelization(char *buf, size_t size, size_t block_size, const char *base_path, size_t current_blk);
 
-    int put_block(const std::string& path, const char* buf, size_t size, bool is_merge = false);
-    int put_metadata_as_dir(metadata& met, const std::string& path);
-    int put_metadata(metadata& met, const std::string& path);
-    int put_metadata_stat(metadata& met, const std::string& path);
-    int put_metadata_child(const std::string& path, const std::string& child_path, bool is_create, bool is_dir);
+    int put_block(const std::string& path, const char* buf, size_t size, const kv_store_key_version& version, bool is_merge = false);
+    int put_dir_metadata(metadata& met, const std::string& path);
+    int put_file_metadata(metadata& met, const std::string& path);
+    int put_file_metadata(metadata& met, const std::string& path, const kv_store_key_version& version);
+    int put_dir_metadata_stat(metadata& met, const std::string& path);
+    int put_dir_metadata_child(const std::string& path, const std::string& child_path, bool is_create, bool is_dir);
     int put_with_merge_metadata(metadata& met, const std::string& path);
     int delete_file_or_dir(const std::string& path);
-    std::unique_ptr<metadata> get_metadata(const std::string& path);
-    std::unique_ptr<metadata> get_metadata(const std::string& path, client_reply_handler::Response* response);
+    std::unique_ptr<metadata> get_dir_metadata(const std::string& path);
+    std::unique_ptr<metadata> get_dir_metadata(const std::string& path, client_reply_handler::Response* response);
     std::unique_ptr<metadata> get_metadata_stat(const std::string& path);
+    std::unique_ptr<metadata> get_metadata_stat(const std::string& path, kv_store_key_version* last_version);
 
     void add_to_dir_cache(const std::string& path, metadata met);
     bool check_if_cache_full();
@@ -89,12 +97,14 @@ public:
     std::string print_cache();
 
     void add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access);
+    void add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access, kv_store_key_version n_version);
     bool is_file_opened(const std::string& path);
     bool is_dir_cached(const std::string& path);
     bool update_open_file_metadata(const std::string& path, struct stat& stbuf);
     bool update_file_size_if_opened(const std::string& path, size_t size);
     bool update_file_time_if_opened(const std::string& path, const struct timespec ts[2]);
     bool get_metadata_if_file_opened(const std::string& path, struct stat* stbuf);
+    bool get_version_if_file_opened(const std::string& path, kv_store_key_version* version);
     int flush_open_file(const std::string& path);
     int flush_and_release_open_file(const std::string& path);
     void reset_dir_cache_add_remove_log(const std::string& path);

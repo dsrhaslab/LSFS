@@ -99,12 +99,13 @@ int lsfs_impl::_open(
 
 
             if(!state->is_file_opened(path)){
-                std::shared_ptr<metadata> met = state->get_metadata_stat(path);
+                kv_store_key_version last_version;
+                std::shared_ptr<metadata> met = state->get_metadata_stat(path, &last_version);
                 
                 if(met == nullptr)
                     return -errno;
                 else
-                    state->add_open_file(path, met->attr.stbuf, FileAccess::ACCESSED);
+                    state->add_open_file(path, met->attr.stbuf, FileAccess::ACCESSED, last_version);
             }
 
         }catch(TimeoutException& e){
@@ -232,7 +233,7 @@ int lsfs_impl::_read(
         struct fuse_file_info *fi
 )
 {
-    std::cout << "### SysCall: _read" << std::endl;
+    std::cout << "### SysCall: _read"  << (std::string) path << std::endl;
 
     (void)path;
 
@@ -246,6 +247,7 @@ int lsfs_impl::_read(
         if(res != 0){
             return -errno; 
         }
+        
         size_t file_size = stbuf.st_size;
 
         // Verify in which block the offset is placed
@@ -325,6 +327,12 @@ int lsfs_impl::_write(
             return -errno;
         }
 
+        kv_store_key_version version;
+        if(!state->get_version_if_file_opened(path, &version)){
+            errno = EAGAIN; //resource unavailable
+            return -errno;
+        }
+
         size_t current_size = stbuf.st_size;
         size_t next_size = current_size > (offset + size)? current_size : (offset + size);
 
@@ -358,7 +366,7 @@ int lsfs_impl::_write(
                         std::string blk_path;
                         blk_path.reserve(100);
                         blk_path.append(path).append(":").append(std::to_string(current_blk)); 
-                        int res = state->put_block(blk_path, put_buf, write_s + off_blk); 
+                        int res = state->put_block(blk_path, put_buf, write_s + off_blk, version); 
                         if(res == -1){
                             return -errno;
                         }
@@ -369,11 +377,11 @@ int lsfs_impl::_write(
                 }
             }
 
-            res = state->put_fixed_size_blocks_from_buffer_limited_paralelization(&buf[read_off], size-read_off, BLK_SIZE, path, current_blk);
+            res = state->put_fixed_size_blocks_from_buffer_limited_paralelization(&buf[read_off], size-read_off, BLK_SIZE, path, current_blk, version);
             if(res == -1){
                 return -errno;
             }else{
-                current_blk += (size / BLK_SIZE) + (size % BLK_SIZE == 0 ? 0 : 1);
+                current_blk += (next_size / BLK_SIZE) + (next_size % BLK_SIZE == 0 ? 0 : 1);
             }
 
             stbuf.st_size = next_size;

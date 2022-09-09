@@ -98,7 +98,7 @@ int lsfs_impl::_readdir(
         }
 
         if(dir == nullptr){
-            auto met = state->get_metadata(path);
+            auto met = state->get_dir_metadata(path);
             if(met == nullptr){
                 return -errno;
             }

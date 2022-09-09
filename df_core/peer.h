@@ -51,6 +51,8 @@ private:
     std::thread pss_th;
     std::thread pss_listener_th;
     std::thread v_logger_th;
+    long msg_count;
+    long fwd_count;
 
     //GROUP CONSTRUCTION
     int rep_max;

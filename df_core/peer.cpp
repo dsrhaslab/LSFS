@@ -23,10 +23,12 @@ peer::peer(long id, std::string ip, std::string boot_ip, int kv_port, int pss_po
         v_logger(id, &(this->cyclon), &(this->anti_ent), logging_interval, logging_dir)
         
 {
+    this->msg_count = 0;
+    this->fwd_count = 0;
     if(mt_data_handler){
-        this->data_handler = std::make_unique<data_handler_listener_mt>(ip, kv_port, id, reply_chance, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, smart);
+        this->data_handler = std::make_unique<data_handler_listener_mt>(ip, kv_port, id, reply_chance, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, smart, &(this->msg_count), &(this->fwd_count));
     }else{
-        this->data_handler = std::make_unique<data_handler_listener_st>(ip, kv_port, id, reply_chance, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, smart);
+        this->data_handler = std::make_unique<data_handler_listener_st>(ip, kv_port, id, reply_chance, &(this->cyclon), &(this->group_c), &(this->anti_ent),this->store, smart, &(this->msg_count), &(this->fwd_count));
     }
 
     std::string database_folder = database_dir + this->store->db_name() + "/";

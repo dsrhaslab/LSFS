@@ -33,13 +33,13 @@ int lsfs_impl::_getattr(
         if(!got_metadata && state->use_cache){
             got_metadata = state->get_metadata_if_dir_cached(path, stbuf);
         }
-        
+
         if(!got_metadata){
             try{
                 std::unique_ptr<metadata> met = state->get_metadata_stat(path);
                 if(met == nullptr)
                     return -errno;
-
+                    
                 // copy metadata received to struct stat
                 memcpy(stbuf, &met->attr.stbuf, sizeof(struct stat));
 
@@ -114,7 +114,7 @@ int lsfs_impl::_utimens(
             // serialize metadata object
 
             try{
-                res = state->put_metadata_stat(to_send, path);
+                res = state->put_file_metadata(to_send, path);
                 if (res == -1) 
                     return -errno;
                 
@@ -176,7 +176,7 @@ int lsfs_impl::_truncate(
             // serialize metadata object
 
             try{
-                res = state->put_metadata_stat(to_send, path);
+                res = state->put_file_metadata(to_send, path);
                 if(res == -1)
                     return -errno;
                 
