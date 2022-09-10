@@ -47,7 +47,7 @@ void*  lsfs_impl::_init(
     cfg->entry_timeout    = 0;
     cfg->attr_timeout     = 0;
     cfg->negative_timeout = 0;
-    cfg->direct_io = 1;
+    //cfg->direct_io = 1;
 
     // log stuff
 

@@ -41,9 +41,11 @@ protected:
     std::mutex socket_send_mutex;
     bool smart_forward;
     std::atomic<long> anti_entropy_req_count = 0;
+    long* msg_count;
+    long* fwd_count;
 
 public:
-    data_handler_listener(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart);
+    data_handler_listener(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart, long* msg_count, long* fwd_count);
     void reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port);
     void forward_message(const std::vector<peer_data>& view_to_send, proto::kv_message& message);
     void process_get_message(proto::kv_message &msg);

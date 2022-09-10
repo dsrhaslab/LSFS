@@ -5,8 +5,8 @@
 #include "data_handler_listener.h"
 #include "df_communication/udp_async_server.h"
 
-data_handler_listener::data_handler_listener(std::string ip, int kv_port, long id, float chance, pss* pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
-    : ip(std::move(ip)), kv_port(kv_port), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
+data_handler_listener::data_handler_listener(std::string ip, int kv_port, long id, float chance, pss* pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart, long* msg_count, long* fwd_count)
+    : ip(std::move(ip)), kv_port(kv_port), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)), msg_count(msg_count), fwd_count(fwd_count) {}
 
 void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port){
     try{
@@ -42,6 +42,7 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
     size_t data_size = buf.size();
 
     for(const peer_data& peer: view_to_send){
+        (*this->fwd_count)++;
         try {
             struct sockaddr_in serverAddr;
             memset(&serverAddr, '\0', sizeof(serverAddr));
@@ -64,6 +65,7 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
 }
 
 void data_handler_listener::process_get_message(proto::kv_message &msg) {
+    (*this->msg_count)++;
     const proto::get_message& message = msg.get_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
@@ -159,6 +161,7 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
 
 
 void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg) {
+     (*this->msg_count)++;
     const proto::get_latest_version_message& message = msg.get_latest_version_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
@@ -245,6 +248,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 
 
 void data_handler_listener::process_put_message(proto::kv_message &msg) {
+    (*this->msg_count)++;
     const auto& message = msg.put_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
@@ -266,7 +270,13 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
         
             stored = this->store->put(key_comp, data);
             
-            if(key.find("/print_db") != std::string::npos) this->store->print_store(this->id);
+            if(key.find("/print_nr") != std::string::npos){
+                std::cout << "Number of messages: " << *msg_count << std::endl;
+                std::cout << "Number of messages fwrd: " << *fwd_count << std::endl;
+                
+            }else if(key.find("/print_db") != std::string::npos){
+                this->store->print_store(this->id);
+            }
 
         }catch(std::exception& e){
             stored = false;
@@ -308,6 +318,7 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
 }
 
 void data_handler_listener::process_put_with_merge_message(proto::kv_message &msg) {
+    (*this->msg_count)++;
     const auto& message = msg.put_with_merge_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
@@ -369,6 +380,7 @@ void data_handler_listener::process_put_with_merge_message(proto::kv_message &ms
 
 
 void data_handler_listener::process_delete_message(proto::kv_message &msg) {
+    (*this->msg_count)++;
     const auto& message = msg.delete_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
@@ -393,7 +405,9 @@ void data_handler_listener::process_delete_message(proto::kv_message &msg) {
                 this->store->clear_request_log();
                 this->store->clear_anti_entropy_log();
                 this->store->seen_it_deleted(key_comp);
-            }else deleted = this->store->remove(key_comp);
+            }else{
+                deleted = this->store->remove(key_comp);
+            }
         }catch(std::exception& e){
             deleted = false;
         }
@@ -514,6 +528,7 @@ void data_handler_listener::process_put_child_message(proto::kv_message &msg) {
 
 
 void data_handler_listener::process_put_metadata_stat_message(proto::kv_message &msg) {
+    (*this->msg_count)++;
     const auto& message = msg.put_met_stat_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
@@ -579,6 +594,7 @@ void data_handler_listener::process_put_metadata_stat_message(proto::kv_message 
 
 
 void data_handler_listener::process_get_latest_metadata_size_or_stat_msg(proto::kv_message msg) {
+    (*this->msg_count)++;
     const auto& message = msg.get_latest_met_size_or_stat_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
@@ -664,6 +680,7 @@ void data_handler_listener::process_get_latest_metadata_size_or_stat_msg(proto::
 
 
 void data_handler_listener::process_get_metadata_message(proto::kv_message &msg) {
+    (*this->msg_count)++;
     const proto::get_metadata_message& message = msg.get_met_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();

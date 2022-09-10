@@ -14,9 +14,9 @@ WORKLOADS_METADATA_PATH=$WORKLOADS_PATH/metadata-micro
 RUNTIME_PER_WORKLOAD=300 #seconds
 NR_OF_ITERATIONS_PER_WORKLOAD=1
 
-WORKLOAD_VAR_IO_SIZE=("4k","32k")
-WORKLOAD_VAR_PARALELIZATION_LIMIT=("4k","8k","16k","32k","64k","96k","128k")
-WORKLOAD_VAR_LB_TYPE=("smart","dynamic")
+WORKLOAD_VAR_IO_SIZE=("4k" "32k")
+WORKLOAD_VAR_PARALELIZATION_LIMIT=("4k" "8k" "16k" "32k" "64k" "96k" "128k")
+WORKLOAD_VAR_LB_TYPE=("smart" "dynamic")
 
 #------------------------------------------
 
@@ -175,7 +175,7 @@ get_bootstrapper_ip
     
 #     done
     
-#     i+=$RUN_ITER
+#     i=$((i+NR_OF_ITERATIONS_PER_WORKLOAD))
 
 # done
 
@@ -183,136 +183,136 @@ get_bootstrapper_ip
 
 # Run read workloads
 
-i=0
+# i=0
 
-WORKLOAD_TYPE=read
+# WORKLOAD_TYPE=read
 
-mkdir -p $OUTPUT_PATH/$WORKLOAD_TYPE
+# mkdir -p $OUTPUT_PATH/$WORKLOAD_TYPE
 
-for WL_PATH in $(find $WORKLOADS_READ_PATH -maxdepth 2 -type f -printf "%p\n"); do
+# for WL_PATH in $(find $WORKLOADS_READ_PATH -maxdepth 2 -type f -printf "%p\n"); do
 
-    wl_file=$(basename $WL_PATH)
-    wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
-    wl_type=$(echo $wl_file | cut -f 1 -d '-') #removes .f
+#     wl_file=$(basename $WL_PATH)
+#     wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
+#     wl_type=$(echo $wl_file | cut -f 1 -d '-') 
 
-    if [ "$RUN_ITER" = "rand" ]; then
-        NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT=("4k","16k","32k")
-    else
-        NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT=$WORKLOAD_VAR_PARALELIZATION_LIMIT
-    fi
+#     if [ "$wl_type" = "rand" ]; then
+#         NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT=("4k" "16k" "32k")
+#     else
+#         NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT=( ${WORKLOAD_VAR_PARALELIZATION_LIMIT[@]} )
+#     fi
 
-    for WL_CONF_PARAL_LIMIT in $NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT
+#     for WL_CONF_PARAL_LIMIT in ${NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT[@]}; do
 
-        sed -i "/limit_write_paralelization_to.*/c\    limit_write_paralelization_to: $WL_CONF_PARAL_LIMIT" $CONFIG_FILE
-        sed -i "/limit_read_paralelization_to.*/c\    limit_read_paralelization_to: $WL_CONF_PARAL_LIMIT" $CONFIG_FILE
+#         sed -i "/limit_write_paralelization_to.*/c\    limit_write_paralelization_to: $WL_CONF_PARAL_LIMIT" $CONFIG_FILE
+#         sed -i "/limit_read_paralelization_to.*/c\    limit_read_paralelization_to: $WL_CONF_PARAL_LIMIT" $CONFIG_FILE
 
-        reset_client
+#         reset_client
 
-        if [ "$RUN_ITER" = "rand" && "$WL_CONF_PARAL_LIMIT" = "4k" ]; then
-            NEW_WORKLOAD_VAR_IO_SIZE=("4k")
-        elif [ "$RUN_ITER" = "rand" && "$WL_CONF_PARAL_LIMIT" = "16k" ]; then
-            NEW_WORKLOAD_VAR_IO_SIZE=("32k")
-        elif [ "$RUN_ITER" = "rand" && "$WL_CONF_PARAL_LIMIT" = "32k" ]; then
-            NEW_WORKLOAD_VAR_IO_SIZE=("32k")
-        else 
-            NEW_WORKLOAD_VAR_IO_SIZE=$WORKLOAD_VAR_IO_SIZE
-        fi
+#         if [[ "$wl_type" = "rand" && "$WL_CONF_PARAL_LIMIT" = "4k" ]]; then
+#             NEW_WORKLOAD_VAR_IO_SIZE=("4k")
+#         elif [[ "$wl_type" = "rand" && "$WL_CONF_PARAL_LIMIT" = "16k" ]]; then
+#             NEW_WORKLOAD_VAR_IO_SIZE=("32k")
+#         elif [[ "$wl_type" = "rand" && "$WL_CONF_PARAL_LIMIT" = "32k" ]]; then
+#             NEW_WORKLOAD_VAR_IO_SIZE=("32k")
+#         else 
+#             NEW_WORKLOAD_VAR_IO_SIZE=( ${WORKLOAD_VAR_IO_SIZE[@]} )
+#         fi
 
-        for WL_CONF_IO in $NEW_WORKLOAD_VAR_IO_SIZE
+#         for WL_CONF_IO in ${NEW_WORKLOAD_VAR_IO_SIZE[@]}; do
         
-            sed -i "/set \$IO_SIZE.*/c\set \$IO_SIZE=$WL_CONF_IO" $WL_PATH
+#             sed -i "/set \$IO_SIZE.*/c\set \$IO_SIZE=$WL_CONF_IO" $WL_PATH
 
-            output_results_file="$OUTPUT_PATH/$WORKLOAD_TYPE/run-$wl_name-$WL_CONF_IO-$WL_CONF_PARAL_LIMIT-lsfs-fb.output"
-            touch $output_results_file
+#             output_results_file="$OUTPUT_PATH/$WORKLOAD_TYPE/run-$wl_name-$WL_CONF_IO-$WL_CONF_PARAL_LIMIT-lsfs-fb.output"
+#             touch $output_results_file
 
-            for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
+#             for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
 
-                get_client_pod_name
+#                 get_client_pod_name
 
-                echo -e "\nRun: #$RUN_ITER,wl_name:$wl_name-$WL_CONF_IO-$WL_CONF_PARAL_LIMIT,wl_path:$WL_PATH,fs:lsfs\n\n" >> $output_results_file
+#                 echo -e "\nRun: #$RUN_ITER,wl_name:$wl_name-$WL_CONF_IO-$WL_CONF_PARAL_LIMIT,wl_path:$WL_PATH,fs:lsfs\n\n" >> $output_results_file
 
-                echo "Starting dstat in all $NR_PEERS_IN_CLUSTER peers - $i x."
+#                 echo "Starting dstat in all $NR_PEERS_IN_CLUSTER peers - $i x."
 
-                for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
+#                 for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
 
-                    start_dstat "$wl_name-$WL_CONF_IO-$WL_CONF_PARAL_LIMIT" $PEER_NR
+#                     start_dstat "$wl_name-$WL_CONF_IO-$WL_CONF_PARAL_LIMIT" $PEER_NR
                 
-                done
+#                 done
 
-                run_fb_workload $WL_PATH $output_results_file
+#                 run_fb_workload $WL_PATH $output_results_file
 
-                echo "Stopping dstat - $i x."
+#                 echo "Stopping dstat - $i x."
 
-                for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
+#                 for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
 
-                    stop_dstat $PEER_NR
+#                     stop_dstat $PEER_NR
                 
-                done
+#                 done
             
-            done
+#             done
         
-            i+=$RUN_ITER
+#             i=$((i+NR_OF_ITERATIONS_PER_WORKLOAD))
 
-        done
+#         done
 
-    done
+#     done
 
-done
+# done
 
 #------------------------------------------
 
 # Run metadata workloads
 
-# sed -i "/nr_puts_required.*/c\    nr_puts_required: 3" $CONFIG_FILE
-# sed -i "/nr_gets_required.*/c\    nr_gets_required: 3" $CONFIG_FILE
-# sed -i "/nr_gets_version_required.*/c\    nr_gets_version_required: 3" $CONFIG_FILE
+sed -i "/nr_puts_required.*/c\    nr_puts_required: 3" $CONFIG_FILE
+sed -i "/nr_gets_required.*/c\    nr_gets_required: 3" $CONFIG_FILE
+sed -i "/nr_gets_version_required.*/c\    nr_gets_version_required: 3" $CONFIG_FILE
 
-# i=0
+i=0
 
-# WORKLOAD_TYPE=metadata
+WORKLOAD_TYPE=metadata
 
-# mkdir -p $OUTPUT_PATH/$WORKLOAD_TYPE
+mkdir -p $OUTPUT_PATH/$WORKLOAD_TYPE
 
-# reset_db 99
+reset_db 99
 
-# for WL_PATH in $(find $WORKLOADS_METADATA_PATH -maxdepth 2 -type f -printf "%p\n"); do
+for WL_PATH in $(find $WORKLOADS_METADATA_PATH -maxdepth 2 -type f -printf "%p\n"); do
 
-#     wl_file=$(basename $WL_PATH)
-#     wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
+    wl_file=$(basename $WL_PATH)
+    wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
 
-#     output_results_file="$OUTPUT_PATH/$WORKLOAD_TYPE/run-$wl_name-lsfs-fb.output"
-#     touch $output_results_file
+    output_results_file="$OUTPUT_PATH/$WORKLOAD_TYPE/run-$wl_name-lsfs-fb.output"
+    touch $output_results_file
 
-#     for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
+    for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
 
-#         get_client_pod_name
+        get_client_pod_name
 
-#         echo -e "\nRun: #$RUN_ITER,wl_name:$wl_name,wl_path:$WL_PATH,fs:lsfs\n\n" >> $output_results_file
+        echo -e "\nRun: #$RUN_ITER,wl_name:$wl_name,wl_path:$WL_PATH,fs:lsfs\n\n" >> $output_results_file
 
-#         echo "Starting dstat in all $NR_PEERS_IN_CLUSTER peers - $i x."
+        echo "Starting dstat in all $NR_PEERS_IN_CLUSTER peers - $i x."
 
-#         for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
+        for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
 
-#             start_dstat $wl_name $PEER_NR
+            start_dstat $wl_name $PEER_NR
         
-#         done
+        done
 
-#         run_fb_workload $WL_PATH $output_results_file
+        run_fb_workload $WL_PATH $output_results_file
 
-#         echo "Stopping dstat - $i x."
+        echo "Stopping dstat - $i x."
 
-#         for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
+        for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
 
-#             stop_dstat $PEER_NR
+            stop_dstat $PEER_NR
         
-#         done
+        done
 
-#         echo "Clean peers database and reset client."
+        echo "Clean peers database and reset client."
 
-#         reset_db $((100+i+RUN_ITER))
+        reset_db $((100+i+RUN_ITER))
         
-#     done
+    done
     
-#     i+=$RUN_ITER
+    i=$((i+NR_OF_ITERATIONS_PER_WORKLOAD))
 
-# done
+done

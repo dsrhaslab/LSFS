@@ -75,7 +75,6 @@ private:
 public:
     client(std::string boot_ip, std::string ip, int kv_port, int pss_port, long id, std::string conf_filename);
     void stop();
-    long get_id();
     void put_batch(const std::vector<kv_store_key<std::string>> &keys, const std::vector<const char*>& datas, const std::vector<size_t>& sizes, int wait_for);
     inline void put_batch(const std::vector<kv_store_key<std::string>> &keys, const std::vector<const char*>& datas, const std::vector<size_t>& sizes) {
         put_batch(keys, datas, sizes, nr_puts_required);
