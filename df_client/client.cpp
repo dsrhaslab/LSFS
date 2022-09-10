@@ -45,9 +45,6 @@ client::client(std::string boot_ip, std::string ip, int kv_port, int pss_port, l
     this->handler_th = std::thread (std::ref(*this->handler));
 
     this->clock = std::make_shared<clock_vv>();
-    this->clock_cond = std::make_shared<std::condition_variable>();
-    this->clock_update = std::make_shared<clock_vv_th>(id, clock, clock_cond, base_path);
-    this->clock_update_th = std::thread (std::ref(*clock_update));
 }
 
 void client::stop(){
