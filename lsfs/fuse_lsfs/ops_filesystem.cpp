@@ -12,7 +12,7 @@ int lsfs_impl::_statfs(
     const char *path, struct statvfs *stbuf
     )
 {
-    std::cout << "### SysCall: _statfs" << std::endl;
+    //std::cout << "### SysCall: _statfs" << std::endl;
 
     return (statvfs(path, stbuf) == 0) ? 0 : -errno;
 }
