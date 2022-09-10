@@ -33,7 +33,6 @@
 #include "df_util/message_builder/message_builder.h"
 #include "clock_vv.h"
 #include "df_util/util.h"
-#include "clock_vv_th.h"
 
 
 
@@ -58,10 +57,6 @@ private:
     int wait_timeout;
 
     std::shared_ptr<clock_vv> clock;
-    std::shared_ptr<std::condition_variable> clock_cond;
-
-    std::shared_ptr<clock_vv_th> clock_update;
-    std::thread clock_update_th;
 
     std::shared_ptr<load_balancer> lb;
     std::thread lb_th;
