@@ -43,17 +43,33 @@ std::string get_local_ip_address(){
 int main(int argc, char *argv[])
 {
 
-    if(argc < 7){
+    if(argc < 6){
         exit(1);
     }
 
     const char* boot_ip = argv[1];
-    long client_id = atol(argv[2]);
-    const char* config_filename = argv[3];
+    const char* config_filename = argv[2];
+
+
 
     YAML::Node config = YAML::LoadFile(config_filename);
     auto main_confs = config["main_confs"];
     bool use_localhost = main_confs["use_localhost"].as<bool>();
+    
+    //###########
+    auto client = main_confs["client"];
+    std::string base_path = client["base_path"].as<std::string>();
+
+    long client_id = 2;
+    std::string path_to_client_id = base_path + "client_id";
+    std::ifstream infile(path_to_client_id);
+    std::string cli_id_str;
+
+    while (infile >> cli_id_str)
+    {
+        client_id = atol(cli_id_str.c_str());
+    }
+    //###########
 
     { // Setting Log Level
         
@@ -94,7 +110,7 @@ int main(int argc, char *argv[])
     int kv_port = 12358;
 
     lsfs_impl fs(boot_ip, ip, kv_port, pss_port, client_id, config_filename);
-    int status = fs.run(argc - 4, argv + 4, NULL);
+    int status = fs.run(argc - 3, argv + 3, NULL);
 
     return status;
 }
