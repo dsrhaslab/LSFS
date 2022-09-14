@@ -1,9 +1,9 @@
 main_confs:
-  use_localhost: true
+  use_localhost: False
   peer:
     log_level: off
     mt_data_handler: true
-    warmup_interval: 20
+    warmup_interval: 120
     restart_database_after_warmup: true
     reply_chance: 1
     smart_message_forward: true
@@ -13,13 +13,13 @@ main_confs:
     database:
       base_path: /shared_dir/
     anti_entropy:
-      interval_sec: 3600
+      interval_sec: 60
       max_keys_to_send_percentage: 20
       disseminate_latest: False
 
   group_construction:
-    rep_max: 2
-    rep_min: 1
+    rep_max: 5
+    rep_min: 3
     max_age: 30
 
   pss:
@@ -49,7 +49,7 @@ main_confs:
     mt_client_handler: true
     nr_client_handler_ths: 3
     load_balancer:
-      type: smart
+      type: dynamic
       lb_interval: 5
       smart_load_balancer_group_knowledge: 3
       smart_max_view_age: 50

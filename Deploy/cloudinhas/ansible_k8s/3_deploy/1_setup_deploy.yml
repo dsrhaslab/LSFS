@@ -18,6 +18,11 @@
           src: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS/conf.yaml
           dest: "/home/{{ ansible_user }}/shared_dir/conf.yaml"
 
+      - name: Create client id file
+        shell: | 
+                touch /home/{{ ansible_user }}/shared_dir/client_id
+                echo "1" > /home/{{ ansible_user }}/shared_dir/client_id
+
       - name: Creates workloads dir
         file:
           path: /home/{{ ansible_user }}/shared_dir/workloads-filebench

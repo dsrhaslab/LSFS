@@ -15,11 +15,11 @@
           path: /home/{{ ansible_user }}/shared_dir/peer_ips
           state: absent
 
-      - name: Clean metrics files
-        become: yes
-        file:
-          path: /home/{{ ansible_user }}/shared_dir/metrics
-          state: absent
+      # - name: Clean metrics files
+      #   become: yes
+      #   file:
+      #     path: /home/{{ ansible_user }}/shared_dir/metrics
+      #     state: absent
 
       - name: Clean workloads files
         become: yes
