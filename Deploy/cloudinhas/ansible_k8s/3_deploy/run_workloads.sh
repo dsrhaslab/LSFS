@@ -2,31 +2,23 @@
 
 #This script runs all the workloads in the WORKLOADS_PATH directory with multiple configurations
 
-#$1 Peer configuration string (nr_peers-nr_grupos)
-#$2 Number of peers in the cluster
 
 COM_DIRECTORY=shared_dir
 MOUNT_POINT=/test_filesystem/InnerFolder
+
 #------------------------------------------
 
-# Workloads variables
+# Workloads MASTER variables
 
-WORKLOADS_PATH=$COM_DIRECTORY/workloads-filebench
-WORKLOADS_READ_PATH=$WORKLOADS_PATH/read-data-micro
-WORKLOADS_WRITE_PATH=$WORKLOADS_PATH/write-data-micro
-WORKLOADS_METADATA_PATH=$WORKLOADS_PATH/metadata-micro
+REMOTE_WORKLOADS_PATH=$COM_DIRECTORY/workloads-filebench
+REMOTE_WORKLOADS_READ_PATH=$REMOTE_WORKLOADS_PATH/read-data-micro
+REMOTE_WORKLOADS_WRITE_PATH=$REMOTE_WORKLOADS_PATH/write-data-micro
+REMOTE_WORKLOADS_METADATA_PATH=$REMOTE_WORKLOADS_PATH/metadata-micro
 
-RUNTIME_PER_WORKLOAD=900 #seconds
-NR_OF_ITERATIONS_PER_WORKLOAD=2
-
-
-#WORKLOAD_VAR_IO_SIZE=("4k" "32k")
-WORKLOAD_VAR_IO_SIZE=("4k" "32k")
-#WORKLOAD_VAR_PARALELIZATION_LIMIT=("4k" "8k" "16k" "32k" "64k" "96k" "128k")
-WORKLOAD_VAR_PARALELIZATION_LIMIT=("4k")
-WORKLOAD_VAR_LB_TYPE=("smart" "dynamic")
-WORKLOAD_VAR_CACHE=("cache_on" "cache_off");
-WORKLOAD_VAR_CACHE_REFRESH_TIME=("500" "1000" "2000" "4000")
+LOCAL_WORKLOADS_PATH=../../workloads-filebench
+LOCAL_WORKLOADS_READ_PATH=$LOCAL_WORKLOADS_PATH/read-data-micro
+LOCAL_WORKLOADS_WRITE_PATH=$LOCAL_WORKLOADS_PATH/write-data-micro
+LOCAL_WORKLOADS_METADATA_PATH=$LOCAL_WORKLOADS_PATH/metadata-micro
 
 #------------------------------------------
 
@@ -39,155 +31,62 @@ METRICS_PATH=$COM_DIRECTORY/metrics
 
 # Nodes data variables
 
-CONFIG_FILE=$COM_DIRECTORY/conf.yaml
-PEERS_IPS_FILE=$COM_DIRECTORY/peer_ips
-NR_PEERS_IN_CLUSTER=$2
-BOOTSTRAPPER_IP=""
-CLIENT_NAME=""
+REMOTE_CONFIG_FILE=$COM_DIRECTORY/conf.yaml
+LOCAL_CONFIG_FILE=../../conf.yaml
 
 #------------------------------------------
 
-# Output variables
-
-OUTPUT_PATH="outputs-run-$1-$(date +"%Y_%m_%d_%I_%M_%p")"
-
 #------------------------------------------
+# Peer configuration variables
 
+# Format of NR_OF_PEERS
+#  a. number_of_peers
+#  b. replication_min
+#  c. replication_max
+#  Delimiter. "_"
+#
+#  Example. 
+#       a_b_c
+#       2_2_3
+#       number_of_peers=2
+#       replication_min=2
+#       replication_max=3
+#
 
-TOTAL_NR_WORKLOADS=$(find $WORKLOADS_PATH -maxdepth 4 -type f -printf "%p\n" | wc -l)
-PEERS_IPS=()
+PEERS_CONFIG=("2_2_3" "4_4_5")
+
+RUNTIME_PER_WORKLOAD=100 #seconds
+NR_OF_ITERATIONS_PER_WORKLOAD=2
+
+WORKLOAD_VAR_IO_SIZE=("4k" "128k")
+WORKLOAD_VAR_PARALELIZATION_LIMIT=("4k" "128k")
+WORKLOAD_VAR_LB_TYPE=("smart" "dynamic")
+WORKLOAD_VAR_CACHE=("cache_on" "cache_off");
+WORKLOAD_VAR_CACHE_REFRESH_TIME=("1000" "30000" "60000")
 
 
 ###########################################################################################################
 #                             Functions                                ####################################
 ###########################################################################################################
 
+# Change group construction replication
+change_gc_rep(){
 
+    #$1 - replication min
+    #$2 - replication max
 
-read_peer_hosts_file() {
-    
-    # $1 = peer_hosts_file
-    
-    while IFS= read -r line; do
-       PEERS_IPS+=($line)
-    done < "$1"
+    sed -i "/rep_min.*/c\    rep_min: $1" $LOCAL_CONFIG_FILE
+    sed -i "/rep_max.*/c\    rep_max: $2" $LOCAL_CONFIG_FILE
+   
 }
-
-get_bootstrapper_ip() {
-    
-    BOOTSTRAPPER_IP=$(kubectl get pods -n lsfs -o wide --no-headers | grep bootstrapper | awk '{ print $6}')
-
-}
-
-get_client_pod_name() {
-    
-    CLIENT_NAME=$(kubectl get pods -n lsfs -o wide --no-headers | grep client1 | awk '{ print $1}')
-
-}
-
-start_dstat() {
-
-    #$1 - workload name
-    #$2 - Peer number
-
-    kubectl exec -n lsfs peer$2 -- bash /$COM_DIRECTORY/scripts/init_dstat.sh $METRICS_PATH $2 run-$1-lsfs-fb.dstat.csv
-}
-
-
-stop_dstat() {
-
-    #$1 - Peer number
-
-    kubectl exec -n lsfs peer$1 -- bash /$COM_DIRECTORY/scripts/stop_dstat.sh &> /dev/null
-}
-
-
-run_fb_workload() {
-
-    #$1 - Workload Path
-    #$2 - Output file
-
-    kubectl exec -it -n lsfs $CLIENT_NAME -- /bin/bash -c "filebench -f /$1" &>> $2
-}
-
-reset_client() {
-
-    #$1 - client_id
-
-    echo "$1" > $COM_DIRECTORY/client_id
-
-    get_client_pod_name
-
-    kubectl delete pod -n lsfs $CLIENT_NAME &> /dev/null
-
-    sleep 20
-}
-
-
-reset_db() {
-
-    #$1 - Command version
-    echo "Clean peers database and reset client."
-
-    kubectl exec -it -n lsfs $CLIENT_NAME -- /bin/bash -c "./build/client_exe $BOOTSTRAPPER_IP $1 /$CONFIG_FILE /$PEERS_IPS_FILE" &> /dev/null
-
-    sleep 10
-
-    kubectl delete pod -n lsfs $CLIENT_NAME &> /dev/null
-
-    sleep 30
-
-}
-
-change_lb(){
-
-    #$1 - LB type (dynamic or smart)
-
-    if [ "$1" = "dynamic" ]; then
-        sed -i "/type.*/c\      type: dynamic" $CONFIG_FILE
-    else
-        sed -i "/type.*/c\      type: smart" $CONFIG_FILE
-    fi
-}
-
-change_cache(){
-
-    #$1 - Cache or no cache
-    #$2 - Cache refresh time
-
-    if [ "$1" = "cache_on" ]; then
-        sed -i "/use_cache.*/c\      use_cache: true" $CONFIG_FILE
-        sed -i "/refresh_cache_time.*/c\      refresh_cache_time: $2" $CONFIG_FILE
-    else
-        sed -i "/use_cache.*/c\      use_cache: False" $CONFIG_FILE
-    fi
-}
-
-
-change_parallelization(){
-
-    #$1 - parallelization limit
-
-    sed -i "/limit_write_paralelization_to.*/c\    limit_write_paralelization_to: $1" $CONFIG_FILE
-    sed -i "/limit_read_paralelization_to.*/c\    limit_read_paralelization_to: $1" $CONFIG_FILE
-}
-
-
-
-
 
 ###########################################################################################################
 #                     Run all filebench workloads                      ####################################
 ###########################################################################################################
 
-# Get Bootstrapper ip
-
-get_bootstrapper_ip
-
-
 # Setup Workloads
 
-for WL_PATH in $(find $WORKLOADS_PATH -maxdepth 4 -type f -printf "%p\n"); do
+for WL_PATH in $(find $LOCAL_WORKLOADS_PATH -maxdepth 4 -type f -printf "%p\n"); do
 
     sed -i "/set \$WORKLOAD_PATH.*/c\set \$WORKLOAD_PATH=$MOUNT_POINT" $WL_PATH
     sed -i "/set \$WORKLOAD_RUNTIME.*/c\set \$WORKLOAD_RUNTIME=$RUNTIME_PER_WORKLOAD" $WL_PATH
@@ -195,75 +94,64 @@ for WL_PATH in $(find $WORKLOADS_PATH -maxdepth 4 -type f -printf "%p\n"); do
 done
 
 
-#------------------------------------------
+for CONFIG_P in ${PEERS_CONFIG[@]}; do
 
-# Run write workloads
+    NR_PEERS=$(echo $CONFIG_P | cut -d "_" -f 1)
+    GC_REP_MIN=$(echo $CONFIG_P | cut -d "_" -f 2)
+    GC_REP_MAX=$(echo $CONFIG_P | cut -d "_" -f 3)
 
-i=0
+    change_gc_rep $GC_REP_MIN $GC_REP_MAX
 
-WORKLOAD_TYPE=write
+    ansible-playbook 1_setup_deploy.yml -i ../hosts -v
 
-mkdir -p $OUTPUT_PATH/$WORKLOAD_TYPE
+    WORKLOAD_TYPE=write
+    OUTPUT_PATH="outputs-run-$CONFIG_P-$(date +"%Y_%m_%d_%I_%M_%p")"
 
-for WL_PATH in $(find $WORKLOADS_WRITE_PATH -maxdepth 2 -type f -printf "%p\n"); do
+    LOAD_BALANCER=dynamic
+    USE_CACHE=False
+    CACHE_REFRESH=1000
 
-    wl_file=$(basename $WL_PATH)
-    wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
+    for WL_PATH in $(find $LOCAL_WORKLOADS_WRITE_PATH -maxdepth 2 -type f -printf "%p\n"); do
 
-    for LB_TYPE in ${WORKLOAD_VAR_LB_TYPE[@]}; do
-
-        change_lb $LB_TYPE
+        wl_file=$(basename $WL_PATH)
+        wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
+        wl_remote_path=$REMOTE_WORKLOADS_WRITE_PATH/$wl_file
 
         for WL_CONF_PARAL_LIMIT in ${WORKLOAD_VAR_PARALELIZATION_LIMIT[@]}; do
 
-            change_parallelization $WL_CONF_PARAL_LIMIT
-            
-            reset_client $((i+1))
-
             for WL_CONF_IO in ${WORKLOAD_VAR_IO_SIZE[@]}; do
-            
-                sed -i "/set \$IO_SIZE.*/c\set \$IO_SIZE=$WL_CONF_IO" $WL_PATH
 
-                output_results_file="$OUTPUT_PATH/$WORKLOAD_TYPE/run-$wl_name-$WL_CONF_IO-$LB_TYPE-$WL_CONF_PARAL_LIMIT-lsfs-fb.output"
-                touch $output_results_file
+                ansible-playbook change_run_config.yml -e "load_balancer=$LOAD_BALANCER config_file=$REMOTE_CONFIG_FILE use_cache=$USE_CACHE cache_refresh=$CACHE_REFRESH paralelization=$WL_CONF_PARAL_LIMIT wl_conf_io=$WL_CONF_IO wl_path=$wl_remote_path" -i ../hosts -v
+                
+                WL_CONF_NAME="$wl_name-$WL_CONF_IO-$LOAD_BALANCER-$WL_CONF_PARAL_LIMIT"
 
+                OUTPUT_FILE_PATH=$OUTPUT_PATH/$WORKLOAD_TYPE/run-$WL_CONF_NAME-lsfs-fb.output
+
+                ansible-playbook output_playbooks/create_output_files.yml -e "output_path=$OUTPUT_PATH wl_type=$WORKLOAD_TYPE output_file_path=$WL_CONF_NAME" -i ../hosts -v
+                
                 for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
 
-                    get_client_pod_name
+                    ansible-playbook 2_pod_deploy.yml -e "nr_peers=$NR_PEERS" -i ../hosts -v
 
-                    echo -e "\nRun: #$RUN_ITER,wl_name:$wl_name-$WL_CONF_IO-$LB_TYPE-$WL_CONF_PARAL_LIMIT,wl_path:$WL_PATH,fs:lsfs\n\n" >> $output_results_file
-
-                    echo "Starting dstat in all $NR_PEERS_IN_CLUSTER peers - $i x."
-
-                    for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
-
-                        start_dstat "$wl_name-$WL_CONF_IO-$LB_TYPE-$WL_CONF_PARAL_LIMIT" $PEER_NR
-                    
-                    done
-
-                    run_fb_workload $WL_PATH $output_results_file
-
-                    echo "Stopping dstat - $i x."
-
-                    for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
-
-                        stop_dstat $PEER_NR
-                    
-                    done
-
-                    reset_db $((i+RUN_ITER))
-            
-                done
+                    ansible-playbook output_playbooks/write_output_header.yml -e "run_nr=$RUN_ITER wl_name=$WL_CONF_NAME wl_path=$wl_remote_path output_file_path=$OUTPUT_FILE_PATH" -i ../hosts -v
                 
-                i=$((i+NR_OF_ITERATIONS_PER_WORKLOAD+1))
-            
+                    ansible-playbook 4_run_workload.yml -e "nr_peers=$NR_PEERS com_directory=$COM_DIRECTORY metrics_path=$METRICS_PATH wl_name=$WL_CONF_NAME wl_path=$wl_remote_path output_file_path=$OUTPUT_FILE_PATH" -i ../hosts -v
+                    
+                    ansible-playbook 5_shutdown_pods.yml -i ../hosts -v
+                    
+                    ansible-playbook clean_playbooks/clean_peer_db.yml -i ../hosts -v
+                    
+                done
+                            
             done
 
         done
-    
+        
     done
 
 done
+
+
 
 #------------------------------------------
 

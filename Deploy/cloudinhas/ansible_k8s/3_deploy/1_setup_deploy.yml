@@ -15,13 +15,8 @@
 
       - name: Put Config File in Shared (Volume) directory
         copy:
-          src: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS/conf.yaml
+          src: ../../conf.yaml
           dest: "/home/{{ ansible_user }}/shared_dir/conf.yaml"
-
-      - name: Create client id file
-        shell: | 
-                touch /home/{{ ansible_user }}/shared_dir/client_id
-                echo "1" > /home/{{ ansible_user }}/shared_dir/client_id
 
       - name: Creates workloads dir
         file:
@@ -30,20 +25,10 @@
 
       - name: Put workloads in Shared (Volume) directory
         copy:
-          src: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS/workloads-filebench/
+          src: ../../workloads-filebench/
           dest: "/home/{{ ansible_user }}/shared_dir/workloads-filebench/"
 
       - name: Put dstat scripts in Shared (Volume) directory
         copy:
-          src: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS/Deploy/cloudinhas/scripts/dstat/
+          src: ../../scripts/dstat/
           dest: "/home/{{ ansible_user }}/shared_dir/scripts/"
-
-
-  - name: Send workloads run script to master
-    hosts: masters
-    tasks:
-      - name: Copy workload run script
-        copy:
-          src: /home/branco/Mestrado/5ano/daniel-LSFS/LSFS/Deploy/cloudinhas/scripts/run_workloads.sh
-          dest: "/home/{{ ansible_user }}/run_workloads.sh"
-

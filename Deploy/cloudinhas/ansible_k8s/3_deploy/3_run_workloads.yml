@@ -1,9 +1,0 @@
-# Play1 - Run workloads script in master node machine
-  - name: Run workloads script 
-    hosts: masters
-
-    tasks:
-
-      - name: Run workloads
-        shell: | 
-                bash /home/{{ ansible_user }}/run_workloads.sh "{{ peer_config_str }}" {{ nr_peers }}

@@ -28,31 +28,40 @@
       boot_ip: "{{ hostvars['localhost']['bootstrapper_ip'] }}"
 
 
-   # Play3 - Collecting pods info (Node name and Ips)
-  - name: Collenting pods info
-    hosts: masters
+  #  # Play3 - Collecting pods info (Node name and Ips)
+  # - name: Collenting pods info
+  #   hosts: masters
 
-    vars: 
-      peer_host_group_name: peers
+  #   tasks:
+
+  #     - name: Collect peer pods IP addresses
+  #       shell: | 
+  #               kubectl get pods -n lsfs -o wide --no-headers | grep peer | awk '{ print $1 ,$6}'
+  #       register: peerPodsIPs
+
+  #     - set_fact:
+  #         peer_nodes: []
+
+  #     - set_fact:
+  #         peer_nodes: "{{ peer_nodes + [{ 'name': name , 'ip' : ip }] }}"
+  #       vars: 
+  #         name: "{{ item.split(' ').0 }}"
+  #         ip: "{{ item.split(' ').1 }}"
+  #       with_items: "{{ peerPodsIPs.stdout_lines }}"
+
+  #     - name: Write hosts to file
+  #       template:
+  #         src: "peer_hosts_template.j2"
+  #         dest: "shared_dir/peer_ips"
+
+
+    # Play4 - Collecting bootstrapper ip
+  - name: Collenting bootstrapper info
+    hosts: localhost
 
     tasks:
-
-      - name: Collect peer pods IP addresses
-        shell: | 
-                kubectl get pods -n lsfs -o wide --no-headers | grep peer | awk '{ print $1 ,$6}'
-        register: peerPodsIPs
-
-      - set_fact:
-          peer_nodes: []
-
-      - set_fact:
-          peer_nodes: "{{ peer_nodes + [{ 'name': name , 'ip' : ip }] }}"
-        vars: 
-          name: "{{ item.split(' ').0 }}"
-          ip: "{{ item.split(' ').1 }}"
-        with_items: "{{ peerPodsIPs.stdout_lines }}"
-
-      - name: Write hosts to file
-        template:
-          src: "hosts_template.j2"
-          dest: "shared_dir/peer_ips"
+        
+        - name: Write hosts to file
+          copy: 
+            content: "{{ hostvars['localhost']['bootstrapper_ip'] }}"
+            dest: bootstrapper_host

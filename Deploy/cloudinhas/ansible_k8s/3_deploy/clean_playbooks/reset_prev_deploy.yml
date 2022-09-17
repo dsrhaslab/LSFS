@@ -2,12 +2,6 @@
   - name: Clean shared directory previous deploy files
     hosts: masters, workers
     tasks:
-
-      - name: Clean peers database
-        become: yes
-        file:
-          path: /home/{{ ansible_user }}/shared_dir/levelDB/
-          state: absent
         
       - name: Clean peer ips file
         become: yes
@@ -25,4 +19,10 @@
         become: yes
         file:
           path: /home/{{ ansible_user }}/shared_dir/workloads-filebench
+          state: absent
+
+      - name: Clean config file
+        become: yes
+        file:
+          path: /home/{{ ansible_user }}/shared_dir/conf.yaml"
           state: absent
