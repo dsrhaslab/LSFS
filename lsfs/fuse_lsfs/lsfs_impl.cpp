@@ -23,32 +23,15 @@ lsfs_impl::lsfs_impl(const std::string& boot_ip, const std::string& ip, int kv_p
     bool use_cache = cache["use_cache"].as<bool>();
     int refresh_cache_time = cache["refresh_cache_time"].as<int>();
     int max_directories_in_cache = cache["max_directories_in_cache"].as<int>();
+    int direct_io = client["direct_io"].as<int>();
 
     try
     {
         size_t max_parallel_write_size_bytes = convert_string_size_to_num_bytes(max_parallel_write_size);
         size_t max_parallel_read_size_bytes = convert_string_size_to_num_bytes(max_parallel_read_size);
-        state = std::make_unique<lsfs_state>(df_client, max_parallel_read_size_bytes, max_parallel_write_size_bytes, use_cache, refresh_cache_time, max_directories_in_cache);
+        state = std::make_unique<lsfs_state>(df_client, max_parallel_read_size_bytes, max_parallel_write_size_bytes, use_cache, refresh_cache_time, max_directories_in_cache, direct_io);
 
-        // cache_maintainer_thr = std::thread([](){
-        //     std::string filename2 = "Cache";
-        //     std::ofstream db_file(filename2);
-        //     db_file << "###########################################################"<< "\n";
-        //     db_file << "######################### Cache ###########################"<< "\n";
-        //     db_file << "###########################################################"<< "\n";
-        //     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        //     int i = 0; 
-        //     while(true){
-        //         state->refresh_dir_cache();
-        //         db_file << "Iteração número: " << i << "\n";
-        //         db_file << state->print_cache() << "\n";
-        //         std::this_thread::sleep_for(std::chrono::milliseconds(state->refresh_cache_time));
-        //         if(i == 50) break;
-        //         i++;
-               
-        //     }
-        //     db_file.close();
-        // });
+
         if(use_cache){
             cache_maintainer_thr = std::thread([](){
                 while(true){

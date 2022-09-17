@@ -13,7 +13,7 @@ main_confs:
     database:
       base_path: /shared_dir/
     anti_entropy:
-      interval_sec: 60
+      interval_sec: 3660
       max_keys_to_send_percentage: 20
       disseminate_latest: False
 
@@ -57,3 +57,4 @@ main_confs:
       use_cache: False
       refresh_cache_time: 1053 #milliseconds
       max_directories_in_cache: 1000
+    direct_io: 1
