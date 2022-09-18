@@ -219,27 +219,18 @@ void anti_entropy::phase_operating(){
         //Add random keys to propagate
         for (auto &key_size : this->store->get_keys()) {
 
-            std::cout << "##### SENDING NORMAL KEY #####" << std::endl;
-
             proto::kv_store* store = message_content->add_store_keys();
             proto::kv_store_key* kv_key = new proto::kv_store_key();
             kv_key->set_key(key_size.first.key);
 
             proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
 
-            std::cout << "Key: " << key_size.first.key << std::endl;
-            std::cout << "Version: ";
-
             for(auto pair : key_size.first.key_version.vv){
-
-                std::cout <<  pair.first << "@" << pair.second << ",";
 
                 proto::kv_store_version *kv_version = kv_key_version->add_version();
                 kv_version->set_client_id(pair.first);
                 kv_version->set_clock(pair.second);
             }
-            std::cout << std::endl;
-            std::cout << "Client: " << key_size.first.key_version.client_id << std::endl;
 
             kv_key_version->set_client_id(key_size.first.key_version.client_id);
 
@@ -248,11 +239,9 @@ void anti_entropy::phase_operating(){
             store->set_is_deleted(false);
             store->set_data_size(key_size.second);
 
-            std::cout << "--------------------------" << std::endl;
         }
         //Add random deleted keys to propagate
         for (auto &deleted_key : this->store->get_deleted_keys()) {
-            std::cout << "##### SENDING DELETED KEY #####" << std::endl;
 
             proto::kv_store* store_del = message_content->add_store_keys();
             proto::kv_store_key *deleted_kv_key = new proto::kv_store_key();
@@ -260,19 +249,12 @@ void anti_entropy::phase_operating(){
 
             proto::kv_store_key_version* deleted_kv_key_version = new proto::kv_store_key_version();
 
-            std::cout << "Key: " << deleted_key.key << std::endl;
-            std::cout << "Version: ";
-
             for(auto pair : deleted_key.key_version.vv){
-
-                std::cout <<  pair.first << "@" << pair.second << ",";
 
                 proto::kv_store_version *deleted_kv_version = deleted_kv_key_version->add_version();
                 deleted_kv_version->set_client_id(pair.first);
                 deleted_kv_version->set_clock(pair.second);
             }
-            std::cout << std::endl;
-            std::cout << "Client: " << deleted_key.key_version.client_id << std::endl;
 
             deleted_kv_key_version->set_client_id(deleted_key.key_version.client_id);
 
@@ -280,14 +262,9 @@ void anti_entropy::phase_operating(){
             store_del->set_allocated_key(deleted_kv_key);
             store_del->set_is_deleted(true);
 
-            std::cout << "--------------------------" << std::endl;
         }
 
-       
-
         message.set_allocated_anti_entropy_msg(message_content);
-
-        std::cout << "################### Sending Anti-Entropy.... "<< std::endl;
 
         this->send_peer_keys(slice_view, message);
     }catch (std::exception& e){

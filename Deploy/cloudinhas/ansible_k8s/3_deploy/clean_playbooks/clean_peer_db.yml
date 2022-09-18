@@ -1,0 +1,11 @@
+# Play1 -Clean peer database
+  - name: Clean leveldb files
+    hosts: masters, workers
+    tasks:
+
+      - name: Clean peers database
+        become: yes
+        file:
+          path: /home/{{ ansible_user }}/shared_dir/levelDB/
+          state: absent
+        

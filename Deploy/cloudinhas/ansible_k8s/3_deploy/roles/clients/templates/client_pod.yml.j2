@@ -1,37 +1,27 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
   name: "client{{ item }}"
   namespace: lsfs
   labels:
     lsfs: client
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      lsfs: client
-  template:
-    metadata:
-      labels:
-        lsfs: client
-    spec:
-      containers:
-      - name: client-container
-        image: brancc0cdocker/lsfs-client
-    #    command: [ "/bin/sh", "-c", "while true; do sleep 3600; done" ]
-        command: ["./build/lsfs_exe"]
-        args: ["{{ bootstrapper_ip }}", "1", "/shared_dir/conf.yaml", "client{{ item }}", "/test_filesystem/InnerFolder", "/test_filesystem/InnerFolder2"]
-        securityContext:                                                                                      
-          privileged: true
-        volumeMounts:
-        - mountPath: /shared_dir
-          name: mount-volume
-          mountPropagation: Bidirectional
-      volumes:
-      - hostPath:
-          path: {{ mount_dir }}
-        name: mount-volume
-      ports: 
-        - containerPort: 12357
-        - containerPort: 12358
-      nodeName: cloud112
+  containers:
+  - name: client-container
+    image: brancc0cdocker/lsfs-client
+    command: ["./build/lsfs_exe"]
+    args: ["{{ bootstrapper_ip }}", "{{ item }}", "/shared_dir/conf.yaml", "client{{ item }}", "/test_filesystem/InnerFolder", "/test_filesystem/InnerFolder2"]
+    securityContext:                                                                                      
+      privileged: true
+    volumeMounts:
+    - mountPath: /shared_dir
+      name: mount-volume
+      mountPropagation: Bidirectional
+  volumes:
+  - hostPath:
+      path: {{ mount_dir }}
+    name: mount-volume
+  ports: 
+    - containerPort: 12357
+    - containerPort: 12358
+  nodeName: cloud112

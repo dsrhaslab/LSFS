@@ -59,10 +59,10 @@ public:
     int refresh_cache_time;
     int max_directories_in_cache;
 
-    
+    int direct_io;
 
 public:
-    lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool use_cache, int refresh_cache_time, int max_directories_in_cache);
+    lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool use_cache, int refresh_cache_time, int max_directories_in_cache, int direct_io);
     
     int put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_key_version& version);
     int put_fixed_size_blocks_from_buffer_limited_paralelization(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_key_version& version);
