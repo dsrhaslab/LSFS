@@ -434,7 +434,7 @@ void client::get_latest_batch(const std::vector<std::string> &keys, std::vector<
         std::vector<peer_data> peers = this->lb->get_n_peers(keys[i], this->max_nodes_to_send_get_request); //throw exception (empty view)
         this->send_get_latest_version(peers, keys[i], req_ids[i], true);
     }
-
+    
     long curr_timeouts = 0;
     bool all_completed = false;
     std::vector<bool> timeout(nr_reads, false);
@@ -462,13 +462,13 @@ void client::get_latest_batch(const std::vector<std::string> &keys, std::vector<
                         }
                         timeout[i] = false;
                     }
-
+                    
                     client_reply_handler::Response get_res = client_reply_handler::Response::Init;
                     data_strs[i] = this->handler->wait_for_get_latest_until(keys[i],req_ids[i], wait_for, wait_until, &get_res);
-                    
+                                       
                     if(get_res == client_reply_handler::Response::Ok || get_res == client_reply_handler::Response::Deleted) 
                         res_count++;
-
+                    
                 }catch(TimeoutException& e){
                     std::cout << "Timeout key: " << keys[i] << std::endl;
                     timeout[i] = true;

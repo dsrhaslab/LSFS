@@ -106,13 +106,13 @@ size_t lsfs_state::read_fixed_size_blocks_to_buffer(char *buf, size_t size, size
         std::string blk_path;
         blk_path.reserve(100);
         blk_path.append(base_path).append(":").append(std::to_string(current_blk));
-
+        
         keys.emplace_back(std::move(blk_path));
         data_strs.emplace_back(nullptr);
     }
     
     df_client->get_latest_batch(keys, data_strs);
-    
+
     for(const std::shared_ptr<std::string>& data_blk: data_strs){
         size_t blk_write_size = std::min((data_blk->size()), (size - read_off));
         data_blk->copy(&buf[read_off], blk_write_size);
@@ -268,7 +268,7 @@ std::unique_ptr<metadata> lsfs_state::get_metadata_stat(const std::string& path)
     kv_store_key_version last_version;
     client_reply_handler::Response response = client_reply_handler::Response::Init;
     std::shared_ptr<std::string> data  = df_client->get_latest_metadata_stat(path, &response, &last_version);
-              
+    
     if(response == client_reply_handler::Response::Deleted || data == nullptr){
         errno = ENOENT;
         return res;

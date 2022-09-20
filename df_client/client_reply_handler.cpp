@@ -291,6 +291,7 @@ void client_reply_handler::change_get_reqid(const std::string &latest_reqid_str,
         this->get_mutexes.insert(std::move(get_mutexes_node));
     }else{
         //It's impossible for this to happen (register a same key)
+        std::cout << "imposible" << std::endl;
     }
 
     lock.unlock();
@@ -574,8 +575,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest_until(con
             std::cv_status status = sync_pair->second.wait_until(lock_key, wait_until);
             if(status == std::cv_status::timeout) timeout_happened = true;
         }
-
-        if(it->second.count >= wait_for){
+        if(it->second.count >= wait_for){      
             //std::cout << "Recebi todas as respostas que queria" << std::endl;
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
@@ -616,7 +616,6 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest_until(con
             else if(max_vv.size() == 1)
                 last_v = max_vv.front();
             
-
             if(!max_vv.empty()){
                 auto it = map_keys.find({key, last_v, false});
                 if(it != map_keys.end()){
@@ -628,7 +627,9 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest_until(con
             }else if(!it->second.deleted_keys.empty()){
                 *get_res = Response::Deleted;
             }else{
-                *get_res = Response::NoData;
+                it->second.count--;
+                lock_key.unlock();
+                throw TimeoutException();
             }
             
 
@@ -651,7 +652,6 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest_until(con
 
     if(*get_res == Response::Init && timeout_happened)
         throw TimeoutException();
-
     return res;
 }
 
@@ -960,6 +960,7 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
 
         sync_pair->second.notify_all();
         reqid_lock.unlock();
+
     }else{
         spdlog::debug("GET REPLY IGNORED - NON EXISTENT KEY");
     }

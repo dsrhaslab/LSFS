@@ -247,7 +247,6 @@ int lsfs_impl::_read(
         if(res != 0){
             return -errno; 
         }
-        
         size_t file_size = stbuf.st_size;
 
         // Verify in which block the offset is placed
@@ -257,7 +256,7 @@ int lsfs_impl::_read(
         size_t off_blk = offset % BLK_SIZE;
         bytes_count = 0;
         size_t current_blk = nr_b_blks - 1;
-
+                
         try {
             // align read with block size
             if (off_blk != 0) {
@@ -281,7 +280,6 @@ int lsfs_impl::_read(
             if(missing_read_size > 0){
                 bytes_count += state->read_fixed_size_blocks_to_buffer_limited_paralelization(&buf[bytes_count], missing_read_size, BLK_SIZE, path, current_blk);
             }
-
         }catch (EmptyViewException& e) {
             e.what();
             errno = EAGAIN; //resource unavailable
