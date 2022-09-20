@@ -6,7 +6,7 @@
 
       - name: Start dstat in all peer pods
         shell: | 
-                kubectl exec -n lsfs peer{{ item }} -- bash /{{ com_directory }}/scripts/init_dstat.sh {{ metrics_path }} peer run-{{ wl_name }}-lsfs-fb.dstat.csv
+                kubectl exec -n lsfs peer{{ item }} -- bash /{{ com_directory }}/scripts/init_dstat.sh {{ metrics_path }} peer{{ item }} run-{{ wl_name }}-lsfs-fb.dstat.csv
         with_items:
           - "{{ range(1, nr_peers | int + 1) | list }}"
         
@@ -18,7 +18,15 @@
 
       - name: Start filebench workload on clients
         shell: | 
-                kubectl exec -it -n lsfs client1 -- /bin/bash -c "filebench -f /home/{{ansible_user}}/{{ wl_path }}" &>> /home/{{ ansible_user }}/{{ output_file_path }}
+                kubectl exec -n lsfs client1 -- /bin/bash -c "filebench -f /{{ wl_path }}" 
+        register: 
+              filebench_output
+
+      - name: Setting filebench output fact
+        set_fact:
+          fb_output: "{{ filebench_output.stdout }}"
+        delegate_to: localhost
+        delegate_facts: true
 
 
       - name: Stop dstat in all peers
@@ -32,4 +40,15 @@
         shell: | 
                 kubectl exec -n lsfs client1 -- bash /{{ com_directory }}/scripts/stop_dstat.sh &> /dev/null
        
-        
+
+
+  # Play - Collecting filebench output
+  - name: Collenting filebench output
+    hosts: localhost
+
+    tasks:
+
+        - name: write output filebench 
+          shell: | 
+                echo "{{ hostvars['localhost']['fb_output'] }}" >> {{ output_path }}
+
