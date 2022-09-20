@@ -92,7 +92,7 @@ public:
     };
     void get_latest_batch(const std::vector<std::string> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for);
     inline void get_latest_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs){
-        get_latest_batch(keys, data_strs, nr_gets_required);
+        get_latest_batch(keys, data_strs, nr_gets_version_required);
     };
     std::unique_ptr<kv_store_key_version> get_latest_version(const std::string& key, client_reply_handler::Response* response, int wait_for);
     inline std::unique_ptr<kv_store_key_version> get_latest_version(const std::string& key, client_reply_handler::Response* response){

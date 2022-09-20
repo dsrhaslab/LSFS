@@ -1,9 +1,0 @@
-# Play1 - Setup output files
-  - name: Setup output header
-    hosts: masters
-    tasks:
-
-       - name: Write output run header
-         shell: | 
-                echo -e "\nRun: #{{ run_nr }},wl_name:{{ wl_name }},wl_path:{{ wl_path }},fs:lsfs\n\n" >> /home/{{ ansible_user }}/{{ output_file_path }}
-

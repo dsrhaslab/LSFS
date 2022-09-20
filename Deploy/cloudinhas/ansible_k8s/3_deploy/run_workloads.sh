@@ -15,6 +15,8 @@ REMOTE_WORKLOADS_READ_PATH=$REMOTE_WORKLOADS_PATH/read-data-micro
 REMOTE_WORKLOADS_WRITE_PATH=$REMOTE_WORKLOADS_PATH/write-data-micro
 REMOTE_WORKLOADS_METADATA_PATH=$REMOTE_WORKLOADS_PATH/metadata-micro
 
+# Workloads LOCAL variables
+
 LOCAL_WORKLOADS_PATH=../../workloads-filebench
 LOCAL_WORKLOADS_READ_PATH=$LOCAL_WORKLOADS_PATH/read-data-micro
 LOCAL_WORKLOADS_WRITE_PATH=$LOCAL_WORKLOADS_PATH/write-data-micro
@@ -25,6 +27,11 @@ LOCAL_WORKLOADS_METADATA_PATH=$LOCAL_WORKLOADS_PATH/metadata-micro
 # Metrics variables
 
 METRICS_PATH=$COM_DIRECTORY/metrics
+
+
+# Output variables
+
+LOCAL_OUTPUT_PATH=../../outputs
 
 
 #------------------------------------------
@@ -107,15 +114,67 @@ for CONFIG_P in ${PEERS_CONFIG[@]}; do
     WORKLOAD_TYPE=write
     OUTPUT_PATH="outputs-run-$CONFIG_P-$(date +"%Y_%m_%d_%I_%M_%p")"
 
+    # LOAD_BALANCER=dynamic
+    # USE_CACHE=False
+    # CACHE_REFRESH=1000
+
+    # mkdir -p $LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE
+
+    # for WL_PATH in $(find $LOCAL_WORKLOADS_WRITE_PATH -maxdepth 2 -type f -printf "%p\n"); do
+
+    #     wl_file=$(basename $WL_PATH)
+    #     wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
+    #     wl_remote_path=$REMOTE_WORKLOADS_WRITE_PATH/$wl_file
+
+    #     for WL_CONF_PARAL_LIMIT in ${WORKLOAD_VAR_PARALELIZATION_LIMIT[@]}; do
+
+    #         for WL_CONF_IO in ${WORKLOAD_VAR_IO_SIZE[@]}; do
+
+    #             ansible-playbook change_run_config.yml -e "load_balancer=$LOAD_BALANCER config_file=$REMOTE_CONFIG_FILE use_cache=$USE_CACHE cache_refresh=$CACHE_REFRESH paralelization=$WL_CONF_PARAL_LIMIT wl_conf_io=$WL_CONF_IO wl_path=$wl_remote_path" -i ../hosts -v
+                
+    #             WL_CONF_NAME="$wl_name-$WL_CONF_IO-$LOAD_BALANCER-$WL_CONF_PARAL_LIMIT"
+
+    #             OUTPUT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE/run-$WL_CONF_NAME-lsfs-fb.output
+
+    #             touch $OUTPUT_FILE_PATH
+
+    #             for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
+
+    #                 ansible-playbook 2_pod_deploy.yml -e "nr_peers=$NR_PEERS" -i ../hosts -v
+
+    #                 echo -e "\nRun: #$RUN_ITER,wl_name:$WL_CONF_NAME,wl_path:$wl_remote_path,fs:lsfs\n\n" >> $OUTPUT_FILE_PATH
+
+    #                 ansible-playbook 4_run_workload.yml -e "nr_peers=$NR_PEERS com_directory=$COM_DIRECTORY metrics_path=$METRICS_PATH wl_name=$WL_CONF_NAME wl_path=$wl_remote_path output_path=$OUTPUT_FILE_PATH" -i ../hosts -v
+                    
+    #                 ansible-playbook 5_shutdown_pods.yml -i ../hosts -v
+                    
+    #                 ansible-playbook clean_playbooks/clean_peer_db.yml -i ../hosts -v
+                    
+    #             done
+                            
+    #         done
+
+    #     done
+        
+    # done
+
+#------------------------------------------
+
+# Run read workloads
+
+    WORKLOAD_TYPE=read
+
     LOAD_BALANCER=dynamic
     USE_CACHE=False
     CACHE_REFRESH=1000
 
-    for WL_PATH in $(find $LOCAL_WORKLOADS_WRITE_PATH -maxdepth 2 -type f -printf "%p\n"); do
+    mkdir -p $LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE
+
+    for WL_PATH in $(find $LOCAL_WORKLOADS_READ_PATH -maxdepth 2 -type f -printf "%p\n"); do
 
         wl_file=$(basename $WL_PATH)
         wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
-        wl_remote_path=$REMOTE_WORKLOADS_WRITE_PATH/$wl_file
+        wl_remote_path=$REMOTE_WORKLOADS_READ_PATH/$wl_file
 
         for WL_CONF_PARAL_LIMIT in ${WORKLOAD_VAR_PARALELIZATION_LIMIT[@]}; do
 
@@ -125,22 +184,20 @@ for CONFIG_P in ${PEERS_CONFIG[@]}; do
                 
                 WL_CONF_NAME="$wl_name-$WL_CONF_IO-$LOAD_BALANCER-$WL_CONF_PARAL_LIMIT"
 
-                OUTPUT_FILE_PATH=$OUTPUT_PATH/$WORKLOAD_TYPE/run-$WL_CONF_NAME-lsfs-fb.output
+                OUTPUT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE/run-$WL_CONF_NAME-lsfs-fb.output
 
-                ansible-playbook output_playbooks/create_output_files.yml -e "output_path=$OUTPUT_PATH wl_type=$WORKLOAD_TYPE output_file_path=$WL_CONF_NAME" -i ../hosts -v
-                
+                touch $OUTPUT_FILE_PATH
+
                 for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
 
                     ansible-playbook 2_pod_deploy.yml -e "nr_peers=$NR_PEERS" -i ../hosts -v
 
-                    ansible-playbook output_playbooks/write_output_header.yml -e "run_nr=$RUN_ITER wl_name=$WL_CONF_NAME wl_path=$wl_remote_path output_file_path=$OUTPUT_FILE_PATH" -i ../hosts -v
-                
-                    ansible-playbook 4_run_workload.yml -e "nr_peers=$NR_PEERS com_directory=$COM_DIRECTORY metrics_path=$METRICS_PATH wl_name=$WL_CONF_NAME wl_path=$wl_remote_path output_file_path=$OUTPUT_FILE_PATH" -i ../hosts -v
+                    echo -e "\nRun: #$RUN_ITER,wl_name:$WL_CONF_NAME,wl_path:$wl_remote_path,fs:lsfs\n\n" >> $OUTPUT_FILE_PATH
+
+                    ansible-playbook 4_run_workload.yml -e "nr_peers=$NR_PEERS com_directory=$COM_DIRECTORY metrics_path=$METRICS_PATH wl_name=$WL_CONF_NAME wl_path=$wl_remote_path output_path=$OUTPUT_FILE_PATH" -i ../hosts -v
                     
                     ansible-playbook 5_shutdown_pods.yml -i ../hosts -v
-                    
-                    ansible-playbook clean_playbooks/clean_peer_db.yml -i ../hosts -v
-                    
+                                        
                 done
                             
             done
@@ -150,93 +207,6 @@ for CONFIG_P in ${PEERS_CONFIG[@]}; do
     done
 
 done
-
-
-
-#------------------------------------------
-
-# Run read workloads
-
-# i=0
-
-# WORKLOAD_TYPE=read
-
-# mkdir -p $OUTPUT_PATH/$WORKLOAD_TYPE
-
-# for WL_PATH in $(find $WORKLOADS_READ_PATH -maxdepth 2 -type f -printf "%p\n"); do
-
-#     wl_file=$(basename $WL_PATH)
-#     wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
-#     wl_type=$(echo $wl_file | cut -f 1 -d '-') 
-
-#     for LB_TYPE in ${WORKLOAD_VAR_LB_TYPE[@]}; do
-
-#         change_lb $LB_TYPE
-
-#         if [ "$wl_type" = "rand" ]; then
-#             NEW_VAR_PARALELIZATION_LIMIT=("4k" "16k" "32k")
-#         else
-#             NEW_VAR_PARALELIZATION_LIMIT=( ${WORKLOAD_VAR_PARALELIZATION_LIMIT[@]} )
-#         fi
-
-#         for WL_CONF_PARAL_LIMIT in ${NEW_VAR_PARALELIZATION_LIMIT[@]}; do
-
-#             change_parallelization $WL_CONF_PARAL_LIMIT
-
-#             reset_client $((i+1))
-
-#             if [[ "$wl_type" = "rand" && "$WL_CONF_PARAL_LIMIT" = "4k" ]]; then
-#                 NEW_VAR_IO_SIZE=("4k")
-#             elif [[ "$wl_type" = "rand" && "$WL_CONF_PARAL_LIMIT" = "16k" ]]; then
-#                 NEW_VAR_IO_SIZE=("32k")
-#             elif [[ "$wl_type" = "rand" && "$WL_CONF_PARAL_LIMIT" = "32k" ]]; then
-#                 NEW_VAR_IO_SIZE=("32k")
-#             else 
-#                 NEW_VAR_IO_SIZE=( ${WORKLOAD_VAR_IO_SIZE[@]} )
-#             fi
-
-#             for WL_CONF_IO in ${NEW_VAR_IO_SIZE[@]}; do
-            
-#                 sed -i "/set \$IO_SIZE.*/c\set \$IO_SIZE=$WL_CONF_IO" $WL_PATH
-
-#                 output_results_file="$OUTPUT_PATH/$WORKLOAD_TYPE/run-$wl_name-$WL_CONF_IO-$LB_TYPE-$WL_CONF_PARAL_LIMIT-lsfs-fb.output"
-#                 touch $output_results_file
-
-#                 for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
-
-#                     get_client_pod_name
-
-#                     echo -e "\nRun: #$RUN_ITER,wl_name:$wl_name-$WL_CONF_IO-$LB_TYPE-$WL_CONF_PARAL_LIMIT,wl_path:$WL_PATH,fs:lsfs\n\n" >> $output_results_file
-
-#                     echo "Starting dstat in all $NR_PEERS_IN_CLUSTER peers - $i x."
-
-#                     for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
-
-#                         start_dstat "$wl_name-$WL_CONF_IO-$LB_TYPE-$WL_CONF_PARAL_LIMIT" $PEER_NR
-                    
-#                     done
-
-#                     run_fb_workload $WL_PATH $output_results_file
-
-#                     echo "Stopping dstat - $i x."
-
-#                     for ((PEER_NR=1; PEER_NR<=NR_PEERS_IN_CLUSTER; PEER_NR++)); do
-
-#                         stop_dstat $PEER_NR
-                    
-#                     done
-                
-#                 done
-            
-#                 i=$((i+NR_OF_ITERATIONS_PER_WORKLOAD+1))
-
-#             done
-
-#         done
-    
-#     done
-
-# done
 
 #------------------------------------------
 
