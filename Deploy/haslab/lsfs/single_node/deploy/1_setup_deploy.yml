@@ -1,0 +1,47 @@
+# Play1 -Setup single_node directory and workloads
+  - name: Setup config and workload files
+    hosts: masters
+    become: yes
+
+    tasks:
+
+      - name: Creates single_node dir
+        file:
+          path: /home/{{ ansible_user }}/single_node
+          state: directory
+      
+      - name: Creates shared_dir
+        file:
+          path: /home/{{ ansible_user }}/single_node/shared_dir
+          state: directory
+      
+      - name: Put Config File in single_node directory
+        copy:
+          src: ../conf.yaml
+          dest: "/home/{{ ansible_user }}/single_node/shared_dir/conf.yaml"
+
+      - name: Creates workloads dir
+        file:
+          path: /home/{{ ansible_user }}/single_node/shared_dir/workloads-filebench
+          state: directory
+
+      - name: Put workloads in single_node directory
+        copy:
+          src: ../../workloads-filebench/
+          dest: "/home/{{ ansible_user }}/single_node/shared_dir/workloads-filebench/"
+
+      - name: Creates dstat scripts dir
+        file:
+          path: /home/{{ ansible_user }}/single_node/shared_dir/dstat
+          state: directory
+
+      - name: Put dstat scripts in single_node directory
+        copy:
+          src: ../../../dstat/
+          dest: "/home/{{ ansible_user }}/single_node/shared_dir/dstat/"
+
+
+      - name: Creates metrics dir
+        file:
+          path: /home/{{ ansible_user }}/single_node/shared_dir/metrics
+          state: directory

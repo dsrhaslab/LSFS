@@ -1,9 +1,9 @@
 main_confs:
-  use_localhost: False
+  use_localhost: true
   peer:
     log_level: off
     mt_data_handler: true
-    warmup_interval: 20
+    warmup_interval: 30
     restart_database_after_warmup: true
     reply_chance: 1
     smart_message_forward: true
@@ -13,7 +13,7 @@ main_confs:
     database:
       base_path: /shared_dir/
     anti_entropy:
-      interval_sec: 3660
+      interval_sec: 3600
       max_keys_to_send_percentage: 20
       disseminate_latest: False
 

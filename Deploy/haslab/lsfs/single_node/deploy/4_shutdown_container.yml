@@ -1,0 +1,15 @@
+ # Play3 - Shutdown container
+  - name: Shutdown running container
+    hosts: masters
+    become: yes
+
+    tasks:
+
+      - name: Stop running container
+        shell: | 
+               docker stop lsfs_local
+
+
+      - name: Delete container
+        shell: | 
+               docker rm lsfs_local
