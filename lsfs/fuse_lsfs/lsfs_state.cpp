@@ -236,7 +236,7 @@ std::unique_ptr<metadata> lsfs_state::get_dir_metadata(const std::string& path, 
     }
     size_t metadata_size = stol(*data);
     
-    res = std::make_unique<metadata>(request_metadata(path, metadata_size, last_version));
+    res = std::move(request_metadata(path, metadata_size, last_version));
     
     return res;
 }
@@ -256,7 +256,7 @@ std::unique_ptr<metadata> lsfs_state::get_dir_metadata(const std::string& path){
     }
     size_t metadata_size = stol(*data);
     
-    res = std::make_unique<metadata>(request_metadata(path, metadata_size, last_version));
+    res = std::move(request_metadata(path, metadata_size, last_version));
     
     return res;
 }
@@ -436,8 +436,11 @@ void lsfs_state::refresh_dir_cache() {
             if(t_now >= t_dir){
                 try{
                     client_reply_handler::Response response = client_reply_handler::Response::Init;
-                    (*it->second)->metadata_p = std::move(get_dir_metadata(it->first, &response));
-                    (*it->second)->last_update = now;
+                    std::unique_ptr<metadata> meta = get_dir_metadata(it->first, &response);
+                    if(meta != nullptr){
+                        (*it->second)->metadata_p = std::move(meta);
+                        (*it->second)->last_update = now;
+                    }                    
                                             
                 }catch(TimeoutException& e){
                     e.what();
@@ -834,7 +837,7 @@ void lsfs_state::reset_dir_cache_add_remove_log(const std::string& path){
     
 }
 
-metadata lsfs_state::request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version){
+std::unique_ptr<metadata> lsfs_state::request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version){
 
     size_t NR_BLKS = (total_s / BLK_SIZE);
 
@@ -857,7 +860,12 @@ metadata lsfs_state::request_metadata(const std::string &base_path, size_t total
         keys.emplace_back(std::move(key));
         data_strs.emplace_back(nullptr);
     }
-    df_client->get_metadata_batch(keys, data_strs);
+    client_reply_handler::Response response;
+    df_client->get_metadata_batch(keys, data_strs, &response);
+
+    if(response == client_reply_handler::Response::Deleted || response == client_reply_handler::Response::NoData){
+        return nullptr;
+    }
     
     std::string met;
     
@@ -865,5 +873,5 @@ metadata lsfs_state::request_metadata(const std::string &base_path, size_t total
         met += *data_blk;
     }
     
-    return metadata::deserialize_from_string(met);
+    return std::make_unique<metadata>(metadata::deserialize_from_string(met));
 }

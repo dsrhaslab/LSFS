@@ -73,6 +73,7 @@ public:
     std::vector<std::string> get_last_keys_limit4() override;
     void update_partition(int p, int np) override;
     std::unordered_map<kv_store_key<std::string>, size_t> get_keys() override;
+    bool is_key_is_for_me(const kv_store_key<std::string>& key) override;
     bool put(const kv_store_key<std::string>& key, const std::string& bytes) override;
     bool put_metadata_child(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir) override;
     bool put_metadata_stat(const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& bytes) override;
@@ -80,6 +81,7 @@ public:
     bool anti_entropy_put(const kv_store_key<std::string>& key, const std::string& value) override;
     std::unique_ptr<std::string> get(const kv_store_key<std::string>& key) override;
     std::unique_ptr<std::string> get_deleted(const kv_store_key<std::string>& key) override;
+    std::unique_ptr<std::string> get_merge(const kv_store_key<std::string>& key) override;
     std::unique_ptr<std::vector<kv_store_key_version>> get_metadata_size(const std::string& key, std::vector<std::unique_ptr<std::string>>& last_data) override;
     std::unique_ptr<std::vector<kv_store_key_version>> get_metadata_stat(const std::string& key, std::vector<std::unique_ptr<std::string>>& data_v) override;
     bool put_deleted(const kv_store_key<std::string>& key, const std::string& value) override;
@@ -220,6 +222,14 @@ void kv_store_leveldb::update_partition(int p, int np) {
         this->clear_seen_log();
         this->clear_seen_deleted_log();
     }
+}
+
+bool kv_store_leveldb::is_key_is_for_me(const kv_store_key<std::string>& key){
+    int k_slice = this->get_slice_for_key(key.key);
+
+    if(this->slice == k_slice)
+        return true;
+    return false;
 }
 
 //Return size difference of map 
@@ -581,6 +591,7 @@ std::unique_ptr<std::vector<kv_store_key_version>> kv_store_leveldb::get_latest_
     return nullptr;
 }
 
+
 bool kv_store_leveldb::put(const kv_store_key<std::string>& key, const std::string& bytes) {
     this->seen_it(key);
     int k_slice = this->get_slice_for_key(key.key);
@@ -799,6 +810,19 @@ std::unique_ptr<std::string> kv_store_leveldb::get(const kv_store_key<std::strin
 
 std::unique_ptr<std::string> kv_store_leveldb::get_deleted(const kv_store_key<std::string>& key) {
     return get_db(key, db_deleted);
+}
+
+std::unique_ptr<std::string> kv_store_leveldb::get_merge(const kv_store_key<std::string>& key) {
+    std::string value;
+    std::string k_c = key.key + "#";
+    
+    leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), k_c, &value);
+
+    if (s.ok()){
+        return std::make_unique<std::string>(std::move(value));
+    }else{
+        return nullptr;
+    }
 }
 
 std::unique_ptr<std::string> kv_store_leveldb::get_anti_entropy(const kv_store_key<std::string>& key, bool* is_merge) {

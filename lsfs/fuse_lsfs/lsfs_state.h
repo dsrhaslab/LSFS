@@ -109,7 +109,7 @@ public:
     int flush_and_release_open_file(const std::string& path);
     void reset_dir_cache_add_remove_log(const std::string& path);
 
-    metadata request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version);
+    std::unique_ptr<metadata> request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version);
 
 };
 

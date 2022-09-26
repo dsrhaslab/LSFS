@@ -26,6 +26,10 @@ public:
 
                 const proto::get_reply_message &msg = message.get_reply_msg();
                 reply_handler->process_get_reply_msg(msg);
+            }else if (message.has_get_met_reply_msg()) {
+
+                const proto::get_metadata_reply_message &msg = message.get_met_reply_msg();
+                reply_handler->process_get_metadata_reply_msg(msg);
             }else if (message.has_put_reply_msg()) {
 
                 const proto::put_reply_message &msg = message.put_reply_msg();

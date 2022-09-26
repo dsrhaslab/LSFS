@@ -371,8 +371,8 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::strin
 
 
 
-std::unique_ptr<std::string> client_reply_handler::wait_for_get_until(const std::string &req_id, int wait_for,
-                                                                      std::chrono::system_clock::time_point &wait_until, Response* get_res){
+std::unique_ptr<std::string> client_reply_handler::wait_for_get_metadata_until(const std::string &req_id, int wait_for,
+                                                                      std::chrono::system_clock::time_point &wait_until, Response* get_res, bool* has_higher_version){
     std::unique_ptr<std::string> res (nullptr);
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
@@ -408,15 +408,21 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_until(const std:
             auto& map_keys = it->second.keys;
             auto& map_del_keys = it->second.deleted_keys;
         
+            if(it->second.metadata_higher_version){
+                *has_higher_version = true;
+                *get_res = Response::NoData;
+            }else{
 
-            if(map_del_keys.size() > 0){
-                *get_res = Response::Deleted;
-            } else {
-                if(map_keys.size() > 0){
-                    res = std::move(map_keys.begin()->second);
-                    *get_res = Response::Ok;
-                } else 
-                    *get_res = Response::NoData;
+                if(map_del_keys.size() > 0){
+                    *get_res = Response::Deleted;
+                } else {
+                    if(map_keys.size() > 0){
+                        res = std::move(map_keys.begin()->second);
+                        *get_res = Response::Ok;
+                    } else {
+                        *get_res = Response::NoData;
+                    }
+                }
             }
 
 
@@ -904,6 +910,53 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
         else
             it->second.deleted_keys.insert(std::make_pair(st_key, nullptr));
         
+        it->second.count++;
+
+        sync_pair->second.notify_all();
+        reqid_lock.unlock();
+    }else{
+        spdlog::debug("GET REPLY IGNORED - NON EXISTENT KEY");
+    }
+}
+
+void client_reply_handler::process_get_metadata_reply_msg(const proto::get_metadata_reply_message &msg) {
+    const std::string& req_id = msg.reqid();
+                    
+    std::unique_lock<std::mutex> lock(this->get_global_mutex);
+
+    boost::regex composite_key(".+:(\\d+)$");
+    boost::cmatch match;
+    auto res = boost::regex_search(req_id.c_str(), match, composite_key);
+
+    auto it = this->get_replies.find(req_id);
+    if(it != this->get_replies.end()){
+        
+        auto& sync_pair = this->get_mutexes.find(req_id)->second;
+        std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
+        lock.unlock(); //free global get lock
+
+        const bool is_deleted = msg.version_is_deleted();
+        const bool higher_version = msg.higher_version();
+        if(!higher_version){
+            std::unique_ptr<std::string> data(nullptr);
+            if(!is_deleted){
+                data = std::make_unique<std::string>(msg.data());
+            }
+
+            kv_store_key_version version;
+            for (auto c : msg.key().key_version().version())
+                version.vv.emplace(c.client_id(), c.clock());
+            version.client_id = msg.key().key_version().client_id();
+
+            kv_store_key<std::string> st_key = {msg.key().key(), version, is_deleted};
+
+            if(!is_deleted)
+                it->second.keys.insert(std::make_pair(st_key, std::move(data)));
+            else
+                it->second.deleted_keys.insert(std::make_pair(st_key, nullptr));
+        }else{
+            it->second.metadata_higher_version = higher_version;
+        }
         it->second.count++;
 
         sync_pair->second.notify_all();

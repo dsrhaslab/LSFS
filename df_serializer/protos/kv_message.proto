@@ -87,6 +87,7 @@ message put_message {
   int64 id = 3;
   kv_store_key key = 4;
   bytes data = 5;
+  bool extra_reply = 6;
 }
 
 message put_with_merge_message {
@@ -95,6 +96,7 @@ message put_with_merge_message {
   int64 id = 3;
   kv_store_key key = 4;
   bytes data = 5;
+  bool extra_reply = 6;
 }
 
 message put_reply_message {
@@ -114,6 +116,7 @@ message delete_message {
   int32 port = 2;
   int64 id = 3;
   kv_store_key key = 4;
+  bool extra_reply = 5;
 }
 
 message delete_reply_message {
@@ -139,6 +142,7 @@ message put_child_message {
   bool is_dir = 6;              //false = file
   string child_path = 7;
   kv_store_key_version past_key_version = 8;
+  bool extra_reply = 9;
 }
 
 message put_metadata_stat_message {
@@ -148,6 +152,7 @@ message put_metadata_stat_message {
   kv_store_key key = 4;
   kv_store_key_version past_key_version = 5;
   bytes data = 6;
+  bool extra_reply = 7;
 }
 
 message get_latest_metadata_size_or_stat_message {
@@ -168,7 +173,16 @@ message get_metadata_message {
   kv_store_key key = 5;
 }
 
-
+message get_metadata_reply_message {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string reqid = 4;
+  kv_store_key key = 5;
+  bytes data = 6;
+  bool version_is_deleted = 7;          //set if version is deleted
+  bool higher_version = 8;
+}
 
 //-------------------------------------------------------------------
 //                      Anti-Entropy messages
@@ -271,5 +285,6 @@ message kv_message {
         put_metadata_stat_message                         put_met_stat_msg = 21;
         get_latest_metadata_size_or_stat_message          get_latest_met_size_or_stat_msg = 22;
         get_metadata_message                              get_met_msg = 23;
+        get_metadata_reply_message                        get_met_reply_msg = 24;
     }
 }

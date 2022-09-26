@@ -64,6 +64,41 @@ void build_get_reply_message(proto::kv_message* msg, std::string& ip, int kv_por
     msg->set_allocated_get_reply_msg(message_content);
 }
 
+void build_get_metadata_reply_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id,
+                                std::unique_ptr<std::string> data,
+                                const std::string& key, const kv_store_key_version& version, bool is_deleted, bool higher_version){
+
+    auto* message_content = new proto::get_metadata_reply_message();
+    message_content->set_ip(ip);
+    message_content->set_port(kv_port);
+    message_content->set_id(id);
+    message_content->set_reqid(req_id);
+    
+    if(data != nullptr)
+        message_content->set_data(data->data(), data->size());
+
+    proto::kv_store_key* kv_key = new proto::kv_store_key();
+    kv_key->set_key(key);
+
+    proto::kv_store_key_version* kv_version = new proto::kv_store_key_version();
+    for(auto const c: version.vv){
+        proto::kv_store_version* vm = kv_version->add_version();
+        vm->set_client_id(c.first);
+        vm->set_clock(c.second);
+    }
+    kv_version->set_client_id(version.client_id);
+    
+    kv_key->set_allocated_key_version(kv_version);
+
+    message_content->set_allocated_key(kv_key);
+
+    message_content->set_version_is_deleted(is_deleted);
+
+    message_content->set_higher_version(higher_version);
+    
+    msg->set_allocated_get_met_reply_msg(message_content);
+}
+
 
 void build_get_latest_version_message(proto::kv_message* msg, std::string& ip, int kv_port, long id,
                                  const std::string& req_id, const std::string& key, bool get_data){
@@ -117,7 +152,7 @@ void build_get_latest_version_reply_message(proto::kv_message* msg, std::string&
 
 
 void build_put_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, 
-                                const std::string& key, const kv_store_key_version& version, const char* data, size_t size){
+                                const std::string& key, const kv_store_key_version& version, const char* data, size_t size, bool extra_reply){
     
     auto* message_content = new proto::put_message();
     message_content->set_ip(ip);
@@ -137,11 +172,13 @@ void build_put_message(proto::kv_message* msg, std::string& ip, int kv_port, lon
     kv_key->set_allocated_key_version(kv_key_version);
     message_content->set_allocated_key(kv_key);
     message_content->set_data(data, size);
+    message_content->set_extra_reply(extra_reply);
+
     msg->set_allocated_put_msg(message_content);
 }
 
 void build_put_with_merge_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, 
-                                const std::string& key, const kv_store_key_version& version, const char* data, size_t size){
+                                const std::string& key, const kv_store_key_version& version, const char* data, size_t size, bool extra_reply){
 
     auto* message_content = new proto::put_with_merge_message();
     message_content->set_ip(ip);
@@ -160,8 +197,10 @@ void build_put_with_merge_message(proto::kv_message* msg, std::string& ip, int k
     kv_key->set_allocated_key_version(kv_key_version);
     message_content->set_allocated_key(kv_key);
     message_content->set_data(data, size);
+    message_content->set_extra_reply(extra_reply);
+
     msg->set_allocated_put_with_merge_msg(message_content);
-                                }
+}
 
 
 void build_put_reply_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, 
@@ -194,7 +233,7 @@ void build_put_reply_message(proto::kv_message* msg, std::string& ip, int kv_por
 
 
 void build_delete_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, 
-                                const std::string& key, const kv_store_key_version& version){
+                                const std::string& key, const kv_store_key_version& version, bool extra_reply){
    
     auto* message_content = new proto::delete_message();
     message_content->set_ip(ip);
@@ -212,6 +251,8 @@ void build_delete_message(proto::kv_message* msg, std::string& ip, int kv_port, 
     
     kv_key->set_allocated_key_version(kv_key_version);
     message_content->set_allocated_key(kv_key);
+    message_content->set_extra_reply(extra_reply);
+
     msg->set_allocated_delete_msg(message_content);            
 }
 
@@ -248,7 +289,7 @@ void build_delete_reply_message(proto::kv_message* msg, std::string& ip, int kv_
 }
 
 void build_put_child_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, 
-                                const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir){
+                                const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir, bool extra_reply){
     
     auto* message_content = new proto::put_child_message();
     message_content->set_ip(ip);
@@ -281,13 +322,14 @@ void build_put_child_message(proto::kv_message* msg, std::string& ip, int kv_por
     message_content->set_is_create(is_create);
     message_content->set_is_dir(is_dir);
     message_content->set_child_path(child_path);
+    message_content->set_extra_reply(extra_reply);
     
     msg->set_allocated_put_child_msg(message_content);
 }
 
 
 void build_put_metadata_stat_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, 
-                                const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const char *data, size_t size){
+                                const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const char *data, size_t size, bool extra_reply){
     
     auto* message_content = new proto::put_metadata_stat_message();
     message_content->set_ip(ip);
@@ -317,6 +359,7 @@ void build_put_metadata_stat_message(proto::kv_message* msg, std::string& ip, in
     
     message_content->set_allocated_past_key_version(kv_vv);
     message_content->set_data(data, size);
+    message_content->set_extra_reply(extra_reply);
     
     msg->set_allocated_put_met_stat_msg(message_content);
 }
