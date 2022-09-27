@@ -250,11 +250,13 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 void data_handler_listener::process_put_message(proto::kv_message &msg) {
     (*this->msg_count)++;
     const auto& message = msg.put_msg();
+    bool request_already_replied = msg.forwarded_within_group();
+
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
     const std::string& key = message.key().key();
     const std::string& data = message.data();
-    bool request_already_replied = msg.forwarded_within_group();
+    bool timed_out_extra_reply = message.extra_reply();
     
     kv_store_key_version version;
     for (auto c : message.key().key_version().version())
@@ -315,17 +317,55 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
             }
         }
     }
+    else if(timed_out_extra_reply){
+        if(this->store->is_key_is_for_me(key_comp)){
+            std::unique_ptr<std::string> data = this->store->get(key_comp);
+            if(data != nullptr){
+
+                float achance = random_float(0.0, 1.0);
+                std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+                if (!request_already_replied || achance <= this->chance) {
+                    proto::kv_message reply_message;
+                    
+                    build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
+
+                    this->reply_client(reply_message, sender_ip, sender_port);
+
+                    msg.set_forwarded_within_group(true);
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                }
+            }
+        } else {
+            if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
+        }
+    }
 }
 
 void data_handler_listener::process_put_with_merge_message(proto::kv_message &msg) {
     (*this->msg_count)++;
     const auto& message = msg.put_with_merge_msg();
+    bool request_already_replied = msg.forwarded_within_group();
+
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
     const std::string& key = message.key().key();
     const std::string& data = message.data();
-    bool request_already_replied = msg.forwarded_within_group();
-
+    bool timed_out_extra_reply = message.extra_reply();
+    
     kv_store_key_version version;
     for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
@@ -376,16 +416,53 @@ void data_handler_listener::process_put_with_merge_message(proto::kv_message &ms
             }
         }
     }
+    else if(timed_out_extra_reply){
+        if(this->store->is_key_is_for_me(key_comp)){
+            std::unique_ptr<std::string> data = this->store->get_merge(key_comp);
+            if(data != nullptr){
+            
+                float achance = random_float(0.0, 1.0);
+                std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+                if (!request_already_replied || achance <= this->chance) {
+                    proto::kv_message reply_message;
+        
+                    build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, true);
+
+                    this->reply_client(reply_message, sender_ip, sender_port);
+                    msg.set_forwarded_within_group(true);
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                }
+            }
+        } else {
+            if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
+        }
+    }
 }
 
 
 void data_handler_listener::process_delete_message(proto::kv_message &msg) {
     (*this->msg_count)++;
     const auto& message = msg.delete_msg();
+    bool request_already_replied = msg.forwarded_within_group();
+    
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
     const std::string& key = message.key().key();
-    bool request_already_replied = msg.forwarded_within_group();
+    bool timed_out_extra_reply = message.extra_reply();
     
     kv_store_key_version version;
     for (auto c : message.key().key_version().version())
@@ -444,6 +521,41 @@ void data_handler_listener::process_delete_message(proto::kv_message &msg) {
             }
         }
     }
+    else if(timed_out_extra_reply){
+        if(this->store->is_key_is_for_me(key_comp)){
+            std::unique_ptr<std::string> data = this->store->get_deleted(key_comp);
+            if(data != nullptr){
+
+                float achance = random_float(0.0, 1.0);
+                std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+                if (!request_already_replied || achance <= this->chance) {
+                    proto::kv_message reply_message;
+                    
+                    build_delete_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version);
+
+                    this->reply_client(reply_message, sender_ip, sender_port);
+                    msg.set_forwarded_within_group(true);
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                }
+            }
+        } else {
+            if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
+        }
+    }
 }
 
 
@@ -458,12 +570,13 @@ void data_handler_listener::process_delete_message(proto::kv_message &msg) {
 
 void data_handler_listener::process_put_child_message(proto::kv_message &msg) {
     const auto& message = msg.put_child_msg();
+    bool request_already_replied = msg.forwarded_within_group();
+
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
     const std::string& key = message.key().key();
     const long id = message.id();
-
-    bool request_already_replied = msg.forwarded_within_group();
+    bool timed_out_extra_reply = message.extra_reply();
     
     kv_store_key_version version;
     for (auto c : message.key().key_version().version())
@@ -687,14 +800,18 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
     const std::string& key = message.key().key();
     const std::string& req_id = message.reqid();
     bool request_already_replied = msg.forwarded_within_group();
+            
 
     // if the request hasn't yet been processed
     if(!this->store->in_log(req_id)){
         this->store->log_req(req_id);
-
+        
         std::unique_ptr<std::string> data(nullptr); 
         std::unique_ptr<std::vector<kv_store_key_version>> del_v(nullptr);
+        std::unique_ptr<std::vector<kv_store_key_version>> last_v(nullptr);
+        
         bool is_deleted = false;
+        bool higher_version = false;
 
         kv_store_key_version version;
         for (auto c : message.key().key_version().version())
@@ -708,29 +825,55 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
         int res_2 = get_blk_num(key, &blk_num_str);
 
         if(res_1 == 0 && res_2 == 0){
-
+            
             int blk_num = std::stoi(blk_num_str);  
 
-            if(this->store->get_slice_for_key(base_path) == this->store->get_slice())
+            if(this->store->get_slice_for_key(base_path) == this->store->get_slice()){
                 del_v = this->store->get_latest_deleted_version(base_path);
+                last_v = this->store->get_latest_version(base_path);
+            }
+
+            if(last_v != nullptr){
+                for(auto lv : *last_v){
+                    kVersionComp comp = comp_version(version, lv);
+                    if(comp == kVersionComp::Lower){
+                        higher_version = true;
+                        
+                        if(del_v != nullptr){
+                            for(auto dv : *del_v){
+                                kVersionComp comp = comp_version(lv, dv);
+                                if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
+                                    is_deleted = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+                }
+            }
 
             
-            if(del_v != nullptr){
+            if(del_v != nullptr && !is_deleted){
                 for(auto dv : *del_v){
                     kVersionComp comp = comp_version(version, dv);
                     if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
                         is_deleted = true;
                         break;
-                    }     
+                    }
                 }
             }
 
             if(!is_deleted){
                 
                 kv_store_key<std::string> get_key = {base_path, version};
+                
                 data = this->store->get(get_key);
+                
                 if(data != nullptr){
-                    size_t NR_BLKS = (data->size() / BLK_SIZE) + 1;
+                    
+                    size_t NR_BLKS = (data->size() / BLK_SIZE);
                     if(data->size() % BLK_SIZE > 0) NR_BLKS = NR_BLKS + 1;
 
                     size_t pos = (blk_num-1)*BLK_SIZE;
@@ -749,14 +892,14 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
             }
         }
 
-        if(data != nullptr || is_deleted){
+        if(data != nullptr || higher_version || is_deleted){
 
             float achance = random_float(0.0, 1.0);
 
             if(!request_already_replied || achance <= this->chance){
                 proto::kv_message reply_message;
 
-                build_get_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, std::move(data), key, version, is_deleted);
+                build_get_metadata_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, std::move(data), key, version, is_deleted, higher_version);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
 

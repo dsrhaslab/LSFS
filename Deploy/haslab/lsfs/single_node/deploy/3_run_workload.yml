@@ -1,0 +1,40 @@
+# Play - Run workload
+  - name: Run Workload + start and stop dstat
+    hosts: masters
+    become: yes
+
+    tasks:
+
+      - name: Start dstat
+        shell: | 
+                docker exec lsfs_local bash /{{ com_directory }}/dstat/init_dstat.sh {{ metrics_path }} all run-{{ wl_name }}-lsfs-fb.dstat.csv
+      
+
+      - name: Start filebench workload
+        shell: | 
+                docker exec lsfs_local filebench -f /{{ wl_path }}
+        register: 
+              filebench_output
+
+      - name: Setting filebench output fact
+        set_fact:
+          fb_output: "{{ filebench_output.stdout }}"
+        delegate_to: localhost
+        delegate_facts: true
+
+      - name: Stop dstat 
+        shell: | 
+                docker exec lsfs_local bash /{{ com_directory }}/dstat/stop_dstat.sh &> /dev/null
+
+    
+
+  # Play - Collecting filebench output
+  - name: Collenting filebench output
+    hosts: localhost
+
+    tasks:
+
+        - name: write output filebench 
+          shell: | 
+                echo "{{ hostvars['localhost']['fb_output'] }}" >> {{ output_path }}
+

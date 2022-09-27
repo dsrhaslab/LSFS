@@ -48,6 +48,7 @@ public:
                               void(*action)(tcp_client_server_connection::tcp_client_connection& connection, const std::string&, std::map<long, long>&, long, bool, bool, const char* data, size_t data_size)) = 0;
     virtual void update_partition(int p, int np) = 0;
     virtual std::unordered_map<kv_store_key<T>, size_t> get_keys() = 0;
+    virtual bool is_key_is_for_me(const kv_store_key<std::string>& key) = 0;
     virtual bool put(const kv_store_key<T>& key, const std::string& bytes) = 0;
     virtual bool put_metadata_child(const T& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir) = 0;
     virtual bool put_metadata_stat(const T& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& bytes) = 0;
@@ -55,6 +56,7 @@ public:
     virtual bool anti_entropy_put(const kv_store_key<std::string>& key, const std::string& value) = 0;
     virtual std::unique_ptr<std::string> get(const kv_store_key<T>& key) = 0;
     virtual std::unique_ptr<std::string> get_deleted(const kv_store_key<T>& key) = 0;
+    virtual std::unique_ptr<std::string> get_merge(const kv_store_key<std::string>& key) = 0;
     virtual bool put_deleted(const kv_store_key<T>& key, const std::string& value) = 0;
     virtual bool anti_entropy_remove(const kv_store_key<T>& key, const std::string& value) = 0;
     virtual bool remove(const kv_store_key<std::string>& key) = 0;

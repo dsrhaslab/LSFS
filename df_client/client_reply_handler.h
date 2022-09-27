@@ -31,6 +31,7 @@ struct get_Replies {
     std::unordered_map<kv_store_key<std::string>, std::unique_ptr<std::string>> keys;
     std::unordered_map<kv_store_key<std::string>, std::unique_ptr<std::string>> deleted_keys;
     int count;
+    bool metadata_higher_version;
 };
 
 
@@ -74,7 +75,7 @@ public:
     void register_get_data(const std::string& req_id);
     std::unique_ptr<std::string> wait_for_get(const std::string& req_id, int wait_for, Response* get_res);
     size_t wait_for_get_metadata_size(const std::string& req_id, int wait_for, Response* get_res);
-    std::unique_ptr<std::string> wait_for_get_until(const std::string& req_id, int wait_for, std::chrono::system_clock::time_point& wait_until, Response* get_res);
+    std::unique_ptr<std::string> wait_for_get_metadata_until(const std::string& req_id, int wait_for, std::chrono::system_clock::time_point& wait_until, Response* get_res, bool* has_higher_version);
     void clear_get_keys_entries(std::vector<std::string>& erasing_keys);
     void register_get_latest_version(const std::string& req_id);
     std::unique_ptr<kv_store_key_version> wait_for_get_latest_version(const std::string& req_id, int wait_for, Response* get_res);
@@ -83,6 +84,7 @@ public:
     std::unique_ptr<std::string> wait_for_get_latest(const std::string &key, const std::string& req_id, int wait_for, Response* get_res, kv_store_key_version* last_version);
     std::vector<std::unique_ptr<std::string>> wait_for_get_latest_concurrent(const std::string &key, const std::string& req_id, int wait_for, Response* get_res);
     void process_get_reply_msg(const proto::get_reply_message &message);
+    void process_get_metadata_reply_msg(const proto::get_metadata_reply_message &msg);
     void process_put_reply_msg(const proto::put_reply_message &message);
     void process_delete_reply_msg(const proto::delete_reply_message &msg);
     void process_get_latest_version_reply_msg(const proto::get_latest_version_reply_message &message);

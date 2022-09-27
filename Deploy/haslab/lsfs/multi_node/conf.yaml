@@ -3,7 +3,7 @@ main_confs:
   peer:
     log_level: off
     mt_data_handler: true
-    warmup_interval: 20
+    warmup_interval: 120
     restart_database_after_warmup: true
     reply_chance: 1
     smart_message_forward: true
@@ -18,8 +18,8 @@ main_confs:
       disseminate_latest: False
 
   group_construction:
-    rep_max: 2
-    rep_min: 1
+    rep_max: 5
+    rep_min: 3
     max_age: 30
 
   pss:
@@ -39,10 +39,10 @@ main_confs:
     base_path: /shared_dir/
     max_nodes_to_send_get_request: 3
     max_nodes_to_send_put_request: 3
-    nr_puts_required: 1
+    nr_puts_required: 3
     nr_gets_required: 1
     nr_gets_version_required: 1
-    client_wait_timeout: 1
+    client_wait_timeout: 3
     max_nr_requests_timeouts: 5
     limit_write_paralelization_to: 32k
     limit_read_paralelization_to: 32k
@@ -57,4 +57,4 @@ main_confs:
       use_cache: False
       refresh_cache_time: 1053 #milliseconds
       max_directories_in_cache: 1000
-    direct_io: 0
+    direct_io: 1

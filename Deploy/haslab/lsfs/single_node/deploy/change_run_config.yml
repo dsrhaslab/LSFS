@@ -1,0 +1,29 @@
+# Play1 - Setup config and workload parameters
+  - name: Setup config and workload parameters
+    hosts: masters
+    become: yes
+
+    tasks:
+
+      - name: Replacing Load Balancer
+        shell: | 
+                sed -i "/type.*/c\      type: {{ load_balancer }}" single_node/{{ config_file }}
+
+      - name: Replacing Cache
+        shell: | 
+                sed -i "/use_cache.*/c\      use_cache: {{ use_cache }}" single_node/{{ config_file }}
+
+      - name: Replacing Cache refresh time
+        shell: | 
+                sed -i "/refresh_cache_time.*/c\      refresh_cache_time: {{ cache_refresh }}" single_node/{{ config_file }}
+
+
+      - name: Replacing limit paralelization
+        shell: | 
+                sed -i "/limit_write_paralelization_to.*/c\    limit_write_paralelization_to: {{ paralelization }}" single_node/{{ config_file }}
+                sed -i "/limit_read_paralelization_to.*/c\    limit_read_paralelization_to: {{ paralelization }}" single_node/{{ config_file }}
+
+
+      - name: Replacing workload io size
+        shell: | 
+                sed -i "/set \$IO_SIZE.*/c\set \$IO_SIZE={{ wl_conf_io }}"  single_node/{{ wl_path }}
