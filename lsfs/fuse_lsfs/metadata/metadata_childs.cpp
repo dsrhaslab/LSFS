@@ -11,7 +11,12 @@ metadata_childs::metadata_childs(const metadata_childs& met): childs(met.childs)
 
 void metadata_childs::add_child(std::string path, bool is_dir) {
     std::pair<FileType::FileType, Status::Status> obj = std::make_pair(is_dir? FileType::DIRECTORY : FileType::FILE, Status::ADDED);
-    this->childs.insert({path, obj});
+    auto it = this->childs.find(path);
+    if (it != this->childs.end()){
+        it->second = obj;
+    }else{
+        this->childs.insert({path, obj});
+    }
 }
 
 void metadata_childs::remove_child(std::string path, bool is_dir) {
