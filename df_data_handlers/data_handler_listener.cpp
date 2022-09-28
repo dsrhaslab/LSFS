@@ -854,7 +854,6 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
                 }
             }
 
-            
             if(del_v != nullptr && !is_deleted){
                 for(auto dv : *del_v){
                     kVersionComp comp = comp_version(version, dv);
@@ -865,7 +864,7 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
                 }
             }
 
-            if(!is_deleted){
+            if(!is_deleted && !higher_version){
                 
                 kv_store_key<std::string> get_key = {base_path, version};
                 
