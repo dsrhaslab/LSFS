@@ -908,7 +908,7 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
                     }
 
                     client_reply_handler::Response get_res = client_reply_handler::Response::Init;
-                    bool has_higher_version;
+                    bool has_higher_version = false;
                     data_strs[i] = this->handler->wait_for_get_metadata_until(req_ids[i], wait_for, wait_until, &get_res, &has_higher_version);
                     
                     if(get_res == client_reply_handler::Response::Ok) 

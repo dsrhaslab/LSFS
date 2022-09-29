@@ -423,7 +423,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_metadata_until(c
                         *get_res = Response::NoData;
                     }
                 }
-            }
+            }           
 
 
             // unlock key mutex because we have to get locks in order
@@ -938,6 +938,7 @@ void client_reply_handler::process_get_metadata_reply_msg(const proto::get_metad
         const bool is_deleted = msg.version_is_deleted();
         const bool higher_version = msg.higher_version();
         if(!higher_version){
+            
             std::unique_ptr<std::string> data(nullptr);
             if(!is_deleted){
                 data = std::make_unique<std::string>(msg.data());
@@ -954,9 +955,10 @@ void client_reply_handler::process_get_metadata_reply_msg(const proto::get_metad
                 it->second.keys.insert(std::make_pair(st_key, std::move(data)));
             else
                 it->second.deleted_keys.insert(std::make_pair(st_key, nullptr));
-        }else{
-            it->second.metadata_higher_version = higher_version;
         }
+            
+        it->second.metadata_higher_version = higher_version;
+        
         it->second.count++;
 
         sync_pair->second.notify_all();
