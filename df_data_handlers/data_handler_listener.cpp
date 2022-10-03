@@ -813,7 +813,7 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
 
             if(this->store->get_slice_for_key(base_path) == this->store->get_slice()){
                 del_v = this->store->get_latest_deleted_version(base_path);
-                last_v = this->store->get_latest_version(base_path);
+                //last_v = this->store->get_latest_version(base_path);
             }
 
             if(last_v != nullptr){
@@ -912,6 +912,7 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
                 }
             }
         }else{
+            std::cout << "Not responding to client" << std::endl;
             // if i don't have the content of the message -> forward it
             int obj_slice = this->store->get_slice_for_key(key);
             std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
