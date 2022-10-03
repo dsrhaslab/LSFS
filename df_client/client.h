@@ -128,9 +128,12 @@ public:
         return get_latest_metadata_stat(key, response, last_version, nr_gets_version_required);
     }
 
-    void get_metadata_batch(const std::vector<kv_store_key<std::string>> &keys, std::vector<std::shared_ptr<std::string>> &data_strs,client_reply_handler::Response* response, int wait_for);
+    void get_metadata_batch(const std::vector<kv_store_key<std::string>> &keys, std::vector<std::shared_ptr<std::string>> &data_strs,client_reply_handler::Response* response, int max_timeout, int wait_for);
     inline void get_metadata_batch(const std::vector<kv_store_key<std::string>> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, client_reply_handler::Response* response){
-        return get_metadata_batch(keys, data_strs, response, nr_gets_required);
+        return get_metadata_batch(keys, data_strs, response, max_timeouts, nr_gets_required);
+    }
+    inline void get_metadata_batch(const std::vector<kv_store_key<std::string>> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, client_reply_handler::Response* response, int max_timeout){
+        return get_metadata_batch(keys, data_strs, response, max_timeout, nr_gets_required);
     }
 
     void del_db(const std::string& key, const kv_store_key_version& version, std::vector<std::string> peers);

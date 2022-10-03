@@ -8,11 +8,12 @@
 #include <spdlog/spdlog.h>
 
 lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool use_cache,
-     int refresh_cache_time, int max_directories_in_cache, int direct_io):
+     int refresh_cache_time, int max_directories_in_cache, int cache_max_nr_requests_timeout, int direct_io):
 
         df_client(std::move(df_client)), max_parallel_read_size(max_parallel_read_size),
         max_parallel_write_size(max_parallel_write_size), use_cache(use_cache),
-        refresh_cache_time(refresh_cache_time), max_directories_in_cache(max_directories_in_cache), direct_io(direct_io)
+        refresh_cache_time(refresh_cache_time), max_directories_in_cache(max_directories_in_cache), cache_max_nr_requests_timeout(cache_max_nr_requests_timeout),
+        direct_io(direct_io)
 {
     if(use_cache){
         dir_cache_map.reserve(max_directories_in_cache);
@@ -223,7 +224,7 @@ int lsfs_state::delete_file_or_dir(const std::string& path){
     return return_value;
 }
 
-std::unique_ptr<metadata> lsfs_state::get_dir_metadata(const std::string& path, client_reply_handler::Response* response){
+std::unique_ptr<metadata> lsfs_state::get_dir_metadata_for_cache(const std::string& path, client_reply_handler::Response* response){
     std::unique_ptr<metadata> res = nullptr;
 
     //Get size of metadata
@@ -236,7 +237,7 @@ std::unique_ptr<metadata> lsfs_state::get_dir_metadata(const std::string& path, 
     }
     size_t metadata_size = stol(*data);
     
-    res = std::move(request_metadata(path, metadata_size, last_version));
+    res = std::move(request_metadata(path, metadata_size, last_version, true));
     
     return res;
 }
@@ -436,7 +437,7 @@ void lsfs_state::refresh_dir_cache() {
             if(t_now >= t_dir){
                 try{
                     client_reply_handler::Response response = client_reply_handler::Response::Init;
-                    std::unique_ptr<metadata> meta = get_dir_metadata(it->first, &response);
+                    std::unique_ptr<metadata> meta = get_dir_metadata_for_cache(it->first, &response);
                     if(meta != nullptr){
                         (*it->second)->metadata_p = std::move(meta);
                         (*it->second)->last_update = now;
@@ -837,7 +838,7 @@ void lsfs_state::reset_dir_cache_add_remove_log(const std::string& path){
     
 }
 
-std::unique_ptr<metadata> lsfs_state::request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version){
+std::unique_ptr<metadata> lsfs_state::request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version, bool for_cache){
 
     size_t NR_BLKS = (total_s / BLK_SIZE);
 
@@ -861,7 +862,11 @@ std::unique_ptr<metadata> lsfs_state::request_metadata(const std::string &base_p
         data_strs.emplace_back(nullptr);
     }
     client_reply_handler::Response response;
-    df_client->get_metadata_batch(keys, data_strs, &response);
+    if(for_cache){
+        df_client->get_metadata_batch(keys, data_strs, &response, this->cache_max_nr_requests_timeout);
+    }else{
+        df_client->get_metadata_batch(keys, data_strs, &response);
+    }
 
     if(response == client_reply_handler::Response::Deleted || response == client_reply_handler::Response::NoData){
         return nullptr;

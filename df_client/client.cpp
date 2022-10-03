@@ -860,7 +860,7 @@ std::unique_ptr<std::string> client::get_latest_metadata_size_or_stat(const std:
 
 
 // if data_strs null then the data was deleted!
-void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, client_reply_handler::Response* response, int wait_for) {
+void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, client_reply_handler::Response* response, int max_timeout, int wait_for) {
 
     long nr_reads = keys.size();
     std::vector<std::string> req_ids(nr_reads);
@@ -940,7 +940,7 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
         }
 
         all_completed = res_count == data_strs.size();
-    }while( !all_completed && curr_timeouts < this->max_timeouts); // do while there are incompleted gets
+    }while( !all_completed && curr_timeouts < max_timeout); // do while there are incompleted gets
 
     if(all_completed){
         *response = client_reply_handler::Response::Ok;
@@ -959,7 +959,7 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
     }
     this->handler->clear_get_keys_entries(req_ids);
 
-    if(curr_timeouts >= this->max_timeouts){
+    if(curr_timeouts >= max_timeout){
         std::cout << "FULL TIMEOUT" << std::endl;
         throw TimeoutException();
     }
