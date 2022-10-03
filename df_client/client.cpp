@@ -179,7 +179,7 @@ void client::put(const std::string& key, const kv_store_key_version& version, co
         }
 
         if(curr_timeouts > 0){
-            status = this->send_put(peers, key, new_version, data, size, false);
+            status = this->send_put(peers, key, new_version, data, size, true);
         }else{
             status = this->send_put(peers, key, new_version, data, size);
         }
@@ -259,7 +259,7 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
                     }else{
                         peers = this->lb->get_n_random_peers(this->max_nodes_to_send_put_request); //throw exception
                     }
-                    this->send_put(peers, key, k_version, datas[i], sizes[i], false);
+                    this->send_put(peers, key, k_version, datas[i], sizes[i], true);
                 }
             }
         }
@@ -319,7 +319,7 @@ void client::put_with_merge(const std::string& key, const kv_store_key_version& 
         }
         
         if(curr_timeouts > 0){
-            status = this->send_put_with_merge(peers, key, new_version, data, size, false);
+            status = this->send_put_with_merge(peers, key, new_version, data, size, true);
         }else{
             status = this->send_put_with_merge(peers, key, new_version, data, size);
         }
@@ -366,7 +366,7 @@ void client::del(const std::string& key, const kv_store_key_version& version, in
         }
 
         if(curr_timeouts > 0){
-            status = this->send_delete(peers, key, version, false);
+            status = this->send_delete(peers, key, version, true);
         }else{
             status = this->send_delete(peers, key, version);
         }
@@ -725,7 +725,7 @@ void client::put_child(const std::string& key, const kv_store_key_version& versi
         }
 
         if(curr_timeouts > 0){
-            status = this->send_put_child(peers, key, new_version, version, child_path, is_create, is_dir, false);
+            status = this->send_put_child(peers, key, new_version, version, child_path, is_create, is_dir, true);
         }else{
             status = this->send_put_child(peers, key, new_version, version, child_path, is_create, is_dir);
         }
@@ -776,7 +776,7 @@ void client::put_metadata_stat(const std::string& key, const kv_store_key_versio
         }
 
         if(curr_timeouts > 0){
-            status = this->send_put_metadata_stat(peers, key, new_version, version, data, size, false);
+            status = this->send_put_metadata_stat(peers, key, new_version, version, data, size, true);
         }else{
             status = this->send_put_metadata_stat(peers, key, new_version, version, data, size);
         }

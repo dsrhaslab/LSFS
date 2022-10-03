@@ -64,21 +64,21 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
     }
 }
 
-void data_handler_listener::forward_decider(proto::kv_message &msg, const std::string& key){
-     if (this->smart_forward) {
-        int obj_slice = this->store->get_slice_for_key(key);
-        std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
-        if (slice_peers.empty()) {
-            std::vector<peer_data> view = this->pss_ptr->get_view();
-            this->forward_message(view, const_cast<proto::kv_message &>(msg));
-        } else {
-            this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
-        }
-    } else {
-        std::vector<peer_data> view = this->pss_ptr->get_view();
-        this->forward_message(view, const_cast<proto::kv_message &>(msg));
-    }
-}
+// void data_handler_listener::forward_decider(proto::kv_message &msg, const std::string& key){
+//      if (this->smart_forward) {
+//         int obj_slice = this->store->get_slice_for_key(key);
+//         std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+//         if (slice_peers.empty()) {
+//             std::vector<peer_data> view = this->pss_ptr->get_view();
+//             this->forward_message(view, const_cast<proto::kv_message &>(msg));
+//         } else {
+//             this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+//         }
+//     } else {
+//         std::vector<peer_data> view = this->pss_ptr->get_view();
+//         this->forward_message(view, const_cast<proto::kv_message &>(msg));
+//     }
+// }
 
 void data_handler_listener::process_get_message(proto::kv_message &msg) {
     (*this->msg_count)++;
@@ -305,7 +305,7 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
             float achance = random_float(0.0, 1.0);
 
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-            if (!request_already_replied || achance <= this->chance) {
+           if (!request_already_replied || achance <= this->chance) {
                 proto::kv_message reply_message;
                 
                 build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
@@ -313,12 +313,24 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
                 this->reply_client(reply_message, sender_ip, sender_port);
 
                 msg.set_forwarded_within_group(true);
-            }
-            
-            this->forward_message(view, const_cast<proto::kv_message &>(msg));
-            
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            } else {
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }     
         } else {
-            forward_decider(msg, key);
+           if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
         }
     }
     else if(timed_out_extra_reply){
@@ -337,7 +349,19 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
                 }
             }
         } else {
-            forward_decider(msg, key);
+            if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
         }
     }
 }
@@ -385,12 +409,25 @@ void data_handler_listener::process_put_with_merge_message(proto::kv_message &ms
 
                 this->reply_client(reply_message, sender_ip, sender_port);
                 msg.set_forwarded_within_group(true);
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            } else {
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
 
-            this->forward_message(view, const_cast<proto::kv_message &>(msg));
-
         } else {
-            forward_decider(msg, key);
+            if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
         }
     }
     else if(timed_out_extra_reply){
@@ -410,7 +447,19 @@ void data_handler_listener::process_put_with_merge_message(proto::kv_message &ms
                 }
             }
         } else {
-            forward_decider(msg, key);
+            if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
         }
     }
 }
@@ -463,12 +512,25 @@ void data_handler_listener::process_delete_message(proto::kv_message &msg) {
 
                 this->reply_client(reply_message, sender_ip, sender_port);
                 msg.set_forwarded_within_group(true);
-            } 
-            
-            this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            } else {
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
             
         } else {
-            forward_decider(msg, key);
+            if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
         }
     }
     else if(timed_out_extra_reply){
@@ -487,7 +549,19 @@ void data_handler_listener::process_delete_message(proto::kv_message &msg) {
                 }
             }
         } else {
-           forward_decider(msg, key);
+           if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
         }
     }
 }
@@ -550,50 +624,63 @@ void data_handler_listener::process_put_child_message(proto::kv_message &msg) {
                 this->reply_client(reply_message, sender_ip, sender_port);
 
                 msg.set_forwarded_within_group(true);
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            } else {
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
-            
-            this->forward_message(view, const_cast<proto::kv_message &>(msg));
 
         } else {
-            forward_decider(msg, key);
+            if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
         }
     }
-    else if(timed_out_extra_reply){
-        if(this->store->is_key_is_for_me(key_comp)){
-            std::unique_ptr<std::vector<kv_store_key_version>> last_v = this->store->get_latest_version(key);
-            if(last_v != nullptr){
-                bool can_respond = false;
+    // else if(timed_out_extra_reply){
+    //     if(this->store->is_key_is_for_me(key_comp)){
+    //         std::unique_ptr<std::vector<kv_store_key_version>> last_v = this->store->get_latest_version(key);
+    //         if(last_v != nullptr){
+    //             bool can_respond = false;
 
-                for(auto lv : *last_v){
-                    kVersionComp comp = comp_version(lv, version);
-                    if(comp == kVersionComp::Equal || comp == kVersionComp::Bigger){
-                        can_respond = true;
-                        break;
-                    }
-                }
+    //             for(auto lv : *last_v){
+    //                 kVersionComp comp = comp_version(lv, version);
+    //                 if(comp == kVersionComp::Equal || comp == kVersionComp::Bigger){
+    //                     can_respond = true;
+    //                     break;
+    //                 }
+    //             }
 
-                if(can_respond){
-                    float achance = random_float(0.0, 1.0);
-                    std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-                    if (!request_already_replied || achance <= this->chance) {
-                        proto::kv_message reply_message;
+    //             if(can_respond){
+    //                 float achance = random_float(0.0, 1.0);
+    //                 std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+    //                 if (!request_already_replied || achance <= this->chance) {
+    //                     proto::kv_message reply_message;
 
-                        build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
+    //                     build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
 
-                        this->reply_client(reply_message, sender_ip, sender_port);   
-                    }
-                }
-                else{
-                    forward_decider(msg, key);
-                }
-            }
-            else{
-                forward_decider(msg, key);
-            }
-        } else {
-            forward_decider(msg, key);
-        }
-    }
+    //                     this->reply_client(reply_message, sender_ip, sender_port);   
+    //                 }
+    //             }
+    //             else{
+    //                 forward_decider(msg, key);
+    //             }
+    //         }
+    //         else{
+    //             forward_decider(msg, key);
+    //         }
+    //     } else {
+    //         forward_decider(msg, key);
+    //     }
+    // }
 }
 
 
@@ -634,7 +721,7 @@ void data_handler_listener::process_put_metadata_stat_message(proto::kv_message 
             float achance = random_float(0.0, 1.0);
 
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-            if (!request_already_replied || achance <= this->chance) {
+           if (!request_already_replied || achance <= this->chance) {
                 proto::kv_message reply_message;
 
                 build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
@@ -642,50 +729,63 @@ void data_handler_listener::process_put_metadata_stat_message(proto::kv_message 
                 this->reply_client(reply_message, sender_ip, sender_port);
 
                 msg.set_forwarded_within_group(true);
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            } else {
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
             }
-            
-            this->forward_message(view, const_cast<proto::kv_message &>(msg));
 
         } else {
-            forward_decider(msg, key);
+            if (this->smart_forward) {
+                int obj_slice = this->store->get_slice_for_key(key);
+                std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+                if (slice_peers.empty()) {
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                } else {
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }
+            } else {
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
         }
     }
-    else if(timed_out_extra_reply){
-        if(this->store->is_key_is_for_me(key_comp)){
-            std::unique_ptr<std::vector<kv_store_key_version>> last_v = this->store->get_latest_version(key);
-            if(last_v != nullptr){
-                bool can_respond = false;
+    // else if(timed_out_extra_reply){
+    //     if(this->store->is_key_is_for_me(key_comp)){
+    //         std::unique_ptr<std::vector<kv_store_key_version>> last_v = this->store->get_latest_version(key);
+    //         if(last_v != nullptr){
+    //             bool can_respond = false;
 
-                for(auto lv : *last_v){
-                    kVersionComp comp = comp_version(lv, version);
-                    if(comp == kVersionComp::Equal || comp == kVersionComp::Bigger){
-                        can_respond = true;
-                        break;
-                    }
-                }
+    //             for(auto lv : *last_v){
+    //                 kVersionComp comp = comp_version(lv, version);
+    //                 if(comp == kVersionComp::Equal || comp == kVersionComp::Bigger){
+    //                     can_respond = true;
+    //                     break;
+    //                 }
+    //             }
 
-                if(can_respond){
-                    float achance = random_float(0.0, 1.0);
-                    std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-                    if (!request_already_replied || achance <= this->chance) {
-                        proto::kv_message reply_message;
+    //             if(can_respond){
+    //                 float achance = random_float(0.0, 1.0);
+    //                 std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+    //                 if (!request_already_replied || achance <= this->chance) {
+    //                     proto::kv_message reply_message;
 
-                        build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
+    //                     build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
 
-                        this->reply_client(reply_message, sender_ip, sender_port);   
-                    }
-                }
-                else{
-                    forward_decider(msg, key);
-                }
-            }
-            else{
-                forward_decider(msg, key);
-            }
-        } else {
-            forward_decider(msg, key);
-        }
-    }
+    //                     this->reply_client(reply_message, sender_ip, sender_port);   
+    //                 }
+    //             }
+    //             else{
+    //                 forward_decider(msg, key);
+    //             }
+    //         }
+    //         else{
+    //             forward_decider(msg, key);
+    //         }
+    //     } else {
+    //         forward_decider(msg, key);
+    //     }
+    // }
 }
 
 
