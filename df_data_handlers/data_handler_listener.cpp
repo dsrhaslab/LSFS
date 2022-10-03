@@ -812,49 +812,47 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
             int blk_num = std::stoi(blk_num_str);  
 
             if(this->store->get_slice_for_key(base_path) == this->store->get_slice()){
-                del_v = this->store->get_latest_deleted_version(base_path);
-                //last_v = this->store->get_latest_version(base_path);
-            }
-
-            if(last_v != nullptr){
-                for(auto lv : *last_v){
-                    kVersionComp comp = comp_version(version, lv);
-                    if(comp == kVersionComp::Lower){
-                        higher_version = true;
-                        
-                        if(del_v != nullptr){
-                            for(auto dv : *del_v){
-                                kVersionComp comp = comp_version(lv, dv);
-                                if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
-                                    is_deleted = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        break;
-                    }
-                }
-            }
-
-            if(del_v != nullptr && !is_deleted){
-                for(auto dv : *del_v){
-                    kVersionComp comp = comp_version(version, dv);
-                    if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
-                        is_deleted = true;
-                        break;
-                    }
-                }
-            }
-
-            if(!is_deleted && !higher_version){
                 
                 kv_store_key<std::string> get_key = {base_path, version};
-                
                 data = this->store->get(get_key);
-                
-                if(data != nullptr){
-                    
+
+                if(data == nullptr){
+
+                    del_v = this->store->get_latest_deleted_version(base_path);
+                    last_v = this->store->get_latest_version(base_path);
+
+                    if(last_v != nullptr){
+                        for(auto lv : *last_v){
+                            kVersionComp comp = comp_version(version, lv);
+                            if(comp == kVersionComp::Lower){
+                                higher_version = true;
+                                
+                                if(del_v != nullptr){
+                                    for(auto dv : *del_v){
+                                        kVersionComp comp = comp_version(lv, dv);
+                                        if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
+                                            is_deleted = true;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                break;
+                            }
+                        }
+                    }
+
+                    if(del_v != nullptr && !is_deleted){
+                        for(auto dv : *del_v){
+                            kVersionComp comp = comp_version(version, dv);
+                            if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
+                                is_deleted = true;
+                                break;
+                            }
+                        }
+                    }
+                }else{
+                        
                     size_t NR_BLKS = (data->size() / BLK_SIZE);
                     if(data->size() % BLK_SIZE > 0) NR_BLKS = NR_BLKS + 1;
 
@@ -870,9 +868,11 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
                     }
 
                     data = std::make_unique<std::string>(value);
+                    
                 }
             }
         }
+        
 
         if(data != nullptr || higher_version || is_deleted){
 
