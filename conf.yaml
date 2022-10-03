@@ -43,9 +43,9 @@ main_confs:
     nr_gets_required: 1
     nr_gets_version_required: 1
     client_wait_timeout: 1
-    max_nr_requests_timeouts: 5
-    limit_write_paralelization_to: 32k
-    limit_read_paralelization_to: 32k
+    max_nr_requests_timeouts: 100
+    limit_write_paralelization_to: 4k
+    limit_read_paralelization_to: 4k
     mt_client_handler: true
     nr_client_handler_ths: 3
     load_balancer:
@@ -54,7 +54,8 @@ main_confs:
       smart_load_balancer_group_knowledge: 3
       smart_max_view_age: 50
     cache:
-      use_cache: False
-      refresh_cache_time: 1053 #milliseconds
+      use_cache: true
+      refresh_cache_time: 1000 #milliseconds
       max_directories_in_cache: 1000
-    direct_io: 0
+      max_nr_requests_timeout: 5
+    direct_io: 1
