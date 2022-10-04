@@ -21,7 +21,7 @@ int lsfs_impl::_getattr(
     struct fuse_file_info *fi
     )
 {
-    //std::cout << "### SysCall: _getattr  ===> Path: " << path << std::endl;
+    std::cout << "### SysCall: _getattr  ===> Path: " << path << std::endl;
 
     int res = 0;
 
@@ -67,7 +67,7 @@ int lsfs_impl::_chmod(
     struct fuse_file_info *fi
     )
 {
-    //std::cout << "### SysCall: _chmod" << std::endl;
+    std::cout << "### SysCall: _chmod" << std::endl;
 
     const int result = fi ? fchmod((int)fi->fh, mode) : chmod(path, mode);
 
@@ -79,7 +79,7 @@ int lsfs_impl::_chown(
     struct fuse_file_info *fi
     )
 {
-    //std::cout << "### SysCall: _chown" << std::endl;
+    std::cout << "### SysCall: _chown" << std::endl;
     const int result =
         fi ?
         fchown((int)fi->fh, uid, gid) :
@@ -93,7 +93,7 @@ int lsfs_impl::_utimens(
     struct fuse_file_info *fi
     )
 {
-    //std::cout << "### SysCall: _utimens" << std::endl;
+    std::cout << "### SysCall: _utimens" << std::endl;
     int result;
 
     if(!is_temp_file(path)) {
@@ -149,7 +149,7 @@ int lsfs_impl::_truncate(
     struct fuse_file_info *fi
     )
 {
-    //std::cout << "### SysCall: _truncate" << std::endl;
+    std::cout << "### SysCall: _truncate" << std::endl;
 
     int result;
     
@@ -208,7 +208,7 @@ int lsfs_impl::_fallocate(
     struct fuse_file_info *fi
     )
 {
-    //std::cout << "### SysCall: _fallocate" << std::endl;
+    std::cout << "### SysCall: _fallocate" << std::endl;
 
     (void)path;
 
