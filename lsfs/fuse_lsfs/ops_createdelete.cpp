@@ -39,7 +39,7 @@ int lsfs_impl::_unlink(
     const char *path
     )
 {
-    std::cout << "### SysCall: _unlink  ==> Path: " << path  << std::endl;
+    //std::cout << "### SysCall: _unlink  ==> Path: " << path  << std::endl;
 
     int res = 0;
 
@@ -117,7 +117,7 @@ int lsfs_impl::_mkdir(
     const char *path, mode_t mode
     )
 {
-    std::cout << "### SysCall: _mkdir  ==> Path: " << path << std::endl;
+    //std::cout << "### SysCall: _mkdir  ==> Path: " << path << std::endl;
     
 
     if (!fuse_pt_impersonate_calling_process_highlevel(&mode))
@@ -136,7 +136,6 @@ int lsfs_impl::_mkdir(
 
     try{
 
-        //if(((std::string)path).find("/testF/") == std::string::npos)
         res = state->put_dir_metadata(to_send, path);
 
         res = state->add_child_to_parent_dir(path, true);
@@ -166,7 +165,7 @@ int lsfs_impl::_rmdir(
     const char *path
     )
 {
-    std::cout << "### SysCall: _rmdir  ==> Path: " << path << std::endl;
+    //std::cout << "### SysCall: _rmdir  ==> Path: " << path << std::endl;
 
     int res = 0;
 
