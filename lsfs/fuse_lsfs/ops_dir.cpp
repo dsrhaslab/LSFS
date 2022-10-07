@@ -41,7 +41,7 @@ int lsfs_impl::_opendir(
     struct fuse_file_info *fi
     )
 {
-    //std::cout << "### SysCall: _opendir" << std::endl;
+    std::cout << "### SysCall: _opendir" << std::endl;
     return 0;
 }
 
@@ -51,7 +51,7 @@ int lsfs_impl::_releasedir(
     )
 {
     (void)path;
-    //std::cout << "### SysCall: _releasedir" << std::endl;
+    std::cout << "### SysCall: _releasedir" << std::endl;
 
     return 0;
 }
@@ -62,7 +62,7 @@ int lsfs_impl::_fsyncdir(
     )
 {
     (void)path;
-    //std::cout << "### SysCall: _fsyncdir" << std::endl;
+    std::cout << "### SysCall: _fsyncdir" << std::endl;
 
     return 0;
 }
@@ -74,7 +74,7 @@ int lsfs_impl::_readdir(
 {
     (void)path;
 
-    //std::cout << "### SysCall: _readdir  ==> Path: " << path << std::endl;
+    std::cout << "### SysCall: _readdir  ==> Path: " << path << std::endl;
 
     enum fuse_fill_dir_flags fill_flags = static_cast<fuse_fill_dir_flags>(0);
 
