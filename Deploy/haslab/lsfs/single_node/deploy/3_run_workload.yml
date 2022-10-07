@@ -7,7 +7,7 @@
 
       - name: Start dstat
         shell: | 
-                docker exec lsfs_local bash /{{ com_directory }}/dstat/init_dstat.sh {{ metrics_path }} all run-{{ wl_name }}-lsfs-fb.dstat.csv
+                docker exec lsfs_local bash /{{ container_com_directory }}/dstat/init_dstat.sh /{{ container_com_directory }}/metrics run-{{ wl_name }}-lsfs.dstat.csv
       
 
       - name: Start filebench workload
@@ -24,7 +24,7 @@
 
       - name: Stop dstat 
         shell: | 
-                docker exec lsfs_local bash /{{ com_directory }}/dstat/stop_dstat.sh &> /dev/null
+                docker exec lsfs_local bash /{{ container_com_directory }}/dstat/stop_dstat.sh &> /dev/null
 
     
 
@@ -36,5 +36,18 @@
 
         - name: write output filebench 
           shell: | 
-                echo "{{ hostvars['localhost']['fb_output'] }}" >> {{ output_path }}
+                echo "{{ hostvars['localhost']['fb_output'] }}" >> ../{{ output_path }}
 
+
+  # Play - Collecting dstat output
+  - name: Collenting dstat output
+    hosts: masters
+
+    tasks:
+
+        - name: Copy dstat output to local
+          fetch:
+            src: /home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/run-{{ wl_name }}-lsfs.dstat.csv
+            dest: ../{{ dstat_path }}/
+            flat: yes
+            fail_on_missing: no

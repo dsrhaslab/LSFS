@@ -1,5 +1,5 @@
 [masters]
-master1 ansible_host=cloud112
+master1 ansible_host=cloud111
 
 [all:vars]
 ansible_user="{{ hosts_user }}"

@@ -10,7 +10,14 @@ spec:
   - name: bootstrapper-container
     image: brancc0cdocker/lsfs-bootstrapper
     command: ["./build/bootstrapper_exe"]
-    args: ["conf.yaml"]
+    args: ["/shared_dir/conf.yaml"]
+    volumeMounts:
+    - mountPath: /shared_dir
+      name: mount-volume
+  volumes:
+  - hostPath:
+      path: {{ mount_dir }}
+    name: mount-volume
   ports: 
     - containerPort: 12345
   nodeName: cloud112

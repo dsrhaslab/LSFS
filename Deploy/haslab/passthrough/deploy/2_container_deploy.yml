@@ -1,0 +1,27 @@
+# Play1 - Initiate container and processes
+  - name: Initiate container and processes
+    hosts: masters
+    become: yes
+
+    tasks:
+
+      - name: Create docker container with pseudo-tty
+        shell: | 
+                docker run --privileged --volume=/home/{{ ansible_user }}/passthrough/test_filesystem/InnerFolder:/test_filesystem/InnerFolder --name passthrough -t -d fuse_passthrough
+
+      - name: Copy workloads
+        shell: | 
+                docker cp /home/{{ ansible_user }}/passthrough/workloads-filebench passthrough:/workloads-filebench
+
+      - name: Filebench needed command
+        shell: | 
+                docker cp /home/{{ ansible_user }}/passthrough/fileb_script.sh passthrough:/fileb_script.sh
+
+      - name: Filebench needed command
+        shell: | 
+                docker exec -d passthrough bash fileb_script.sh
+
+
+      - name: Mount filesystem
+        shell: | 
+                docker exec -d passthrough ./passthrough /test_filesystem/InnerFolder

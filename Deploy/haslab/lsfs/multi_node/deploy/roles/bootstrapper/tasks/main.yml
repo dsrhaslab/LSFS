@@ -3,7 +3,7 @@
   k8s:
     kubeconfig: "/home/{{ hosts_user }}/.kube/config"
     state: present
-    definition: "{{ lookup('file', '{{ role_path }}/files/bootstrapper_pod.yml') | from_yaml }}"
+    definition: "{{ lookup('template', '{{ role_path }}/templates/bootstrapper_pod.yml.j2') }}"
     validate:
       fail_on_error: yes
   register: bootstrapper_container

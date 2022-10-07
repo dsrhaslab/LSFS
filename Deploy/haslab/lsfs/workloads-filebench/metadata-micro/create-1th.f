@@ -1,13 +1,15 @@
 
 set $WORKLOAD_PATH=/test_filesystem/InnerFolder
 set $NR_THREADS=1
-set $WORKLOAD_RUNTIME=100
+set $WORKLOAD_RUNTIME=10
 
-set $NR_FILES=100000
-set $MEAN_DIR_WIDTH=200
+set $NR_FILES=75000
+set $MEAN_DIR_WIDTH=250
 set $IO_SIZE=4k
 
 # ------------------------------------------------------ #
+
+set mode quit firstdone
 
 define flowop name=createwriteclose
 {

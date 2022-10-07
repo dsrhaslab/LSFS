@@ -1,0 +1,19 @@
+ # Play3 - Shutdown container
+  - name: Shutdown running container
+    hosts: masters
+    become: yes
+
+    tasks:
+
+      - name: Umount filesystem
+        shell: | 
+                docker exec passthrough umount /test_filesystem/InnerFolder
+
+      - name: Stop running container
+        shell: | 
+               docker stop passthrough
+
+
+      - name: Delete container
+        shell: | 
+               docker rm passthrough

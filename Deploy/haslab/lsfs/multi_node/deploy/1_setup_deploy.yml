@@ -1,39 +1,44 @@
  # Play1 -Setup shared directory and workloads
   - name: Setup config and workload files
     hosts: masters, workers
+    become: yes
+
+    vars: 
+        remote_dir: /home/{{ ansible_user }}/{{ remote_com_directory }}
+
     tasks:
 
       - name: Creates shared dir
         file:
-          path: /home/{{ ansible_user }}/shared_dir
+          path: "{{ remote_dir }}"
           state: directory
       
       - name: Creates database dir
         file:
-          path: /home/{{ ansible_user }}/shared_dir/levelDB
+          path: "{{ remote_dir }}/levelDB"
           state: directory
 
       - name: Put Config File in Shared (Volume) directory
         copy:
           src: ../conf.yaml
-          dest: "/home/{{ ansible_user }}/shared_dir/conf.yaml"
+          dest: "{{ remote_dir }}/conf.yaml"
 
       - name: Creates workloads dir
         file:
-          path: /home/{{ ansible_user }}/shared_dir/workloads-filebench
+          path: "{{ remote_dir }}/workloads-filebench"
           state: directory
 
       - name: Put workloads in Shared (Volume) directory
         copy:
           src: ../../workloads-filebench/
-          dest: "/home/{{ ansible_user }}/shared_dir/workloads-filebench/"
+          dest: "{{ remote_dir }}/workloads-filebench/"
 
       - name: Creates dstat scripts dir
         file:
-          path: /home/{{ ansible_user }}/shared_dir/dstat
+          path: "{{ remote_dir }}/dstat"
           state: directory
 
       - name: Put dstat scripts in Shared (Volume) directory
         copy:
           src: ../../../dstat/
-          dest: "/home/{{ ansible_user }}/shared_dir/dstat/"
+          dest: "{{ remote_dir }}/dstat/"

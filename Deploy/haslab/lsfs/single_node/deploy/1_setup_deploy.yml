@@ -3,45 +3,43 @@
     hosts: masters
     become: yes
 
+    vars: 
+        remote_dir: /home/{{ ansible_user }}/{{ remote_com_directory }}
+
     tasks:
 
-      - name: Creates single_node dir
-        file:
-          path: /home/{{ ansible_user }}/single_node
-          state: directory
-      
       - name: Creates shared_dir
         file:
-          path: /home/{{ ansible_user }}/single_node/shared_dir
+          path: "{{ remote_dir }}"
           state: directory
       
       - name: Put Config File in single_node directory
         copy:
           src: ../conf.yaml
-          dest: "/home/{{ ansible_user }}/single_node/shared_dir/conf.yaml"
+          dest: "{{ remote_dir }}/conf.yaml"
 
       - name: Creates workloads dir
         file:
-          path: /home/{{ ansible_user }}/single_node/shared_dir/workloads-filebench
+          path: "{{ remote_dir }}/workloads-filebench"
           state: directory
 
       - name: Put workloads in single_node directory
         copy:
           src: ../../workloads-filebench/
-          dest: "/home/{{ ansible_user }}/single_node/shared_dir/workloads-filebench/"
+          dest: "{{ remote_dir }}/workloads-filebench/"
 
       - name: Creates dstat scripts dir
         file:
-          path: /home/{{ ansible_user }}/single_node/shared_dir/dstat
+          path: "{{ remote_dir }}/dstat"
           state: directory
 
       - name: Put dstat scripts in single_node directory
         copy:
           src: ../../../dstat/
-          dest: "/home/{{ ansible_user }}/single_node/shared_dir/dstat/"
+          dest: "{{ remote_dir }}/dstat/"
 
 
       - name: Creates metrics dir
         file:
-          path: /home/{{ ansible_user }}/single_node/shared_dir/metrics
+          path: "{{ remote_dir }}/metrics"
           state: directory

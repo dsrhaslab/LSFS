@@ -3,7 +3,7 @@ main_confs:
   peer:
     log_level: off
     mt_data_handler: true
-    warmup_interval: 120
+    warmup_interval: 30
     restart_database_after_warmup: true
     reply_chance: 1
     smart_message_forward: true
@@ -18,8 +18,8 @@ main_confs:
       disseminate_latest: False
 
   group_construction:
-    rep_max: 5
-    rep_min: 3
+    rep_max: 2
+    rep_min: 1
     max_age: 30
 
   pss:
@@ -42,8 +42,8 @@ main_confs:
     nr_puts_required: 3
     nr_gets_required: 1
     nr_gets_version_required: 1
-    client_wait_timeout: 3
-    max_nr_requests_timeouts: 5
+    client_wait_timeout: 2
+    max_nr_requests_timeouts: 100
     limit_write_paralelization_to: 32k
     limit_read_paralelization_to: 32k
     mt_client_handler: true
@@ -54,7 +54,8 @@ main_confs:
       smart_load_balancer_group_knowledge: 3
       smart_max_view_age: 50
     cache:
-      use_cache: False
-      refresh_cache_time: 1053 #milliseconds
+      use_cache: true
+      refresh_cache_time: 1000 #milliseconds
       max_directories_in_cache: 1000
+      max_nr_requests_timeout: 5
     direct_io: 1
