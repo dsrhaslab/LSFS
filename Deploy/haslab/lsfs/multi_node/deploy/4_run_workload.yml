@@ -6,14 +6,14 @@
 
       - name: Start dstat in all peer pods
         shell: | 
-                kubectl exec -n lsfs peer{{ item }} -- bash /{{ com_directory }}/dstat/init_dstat.sh {{ metrics_path }} peer{{ item }} run-{{ wl_name }}-lsfs-fb.dstat.csv
+                kubectl exec -n lsfs peer{{ item }} -- bash /{{ container_com_directory }}/dstat/init_dstat.sh /{{ container_com_directory }}/metrics run-{{ wl_name }}-lsfs-peer{{ item }}.dstat.csv
         with_items:
           - "{{ range(1, nr_peers | int + 1) | list }}"
         
 
       - name: Start dstat in client pods
         shell: | 
-                kubectl exec -n lsfs client1 -- bash /{{ com_directory }}/dstat/init_dstat.sh {{ metrics_path }} client run-{{ wl_name }}-lsfs-fb.dstat.csv
+                kubectl exec -n lsfs client1 -- bash /{{ container_com_directory }}/dstat/init_dstat.sh /{{ container_com_directory }}/metrics run-{{ wl_name }}-lsfs-client1.dstat.csv
         
 
       - name: Start filebench workload on clients
@@ -31,15 +31,14 @@
 
       - name: Stop dstat in all peers
         shell: | 
-                kubectl exec -n lsfs peer{{ item }} -- bash /{{ com_directory }}/dstat/stop_dstat.sh &> /dev/null
+                kubectl exec -n lsfs peer{{ item }} -- bash /{{ container_com_directory }}/dstat/stop_dstat.sh &> /dev/null
         with_items:
           - "{{ range(1, nr_peers | int + 1) | list }}"
 
 
       - name: Stop dstat in clients
         shell: | 
-                kubectl exec -n lsfs client1 -- bash /{{ com_directory }}/dstat/stop_dstat.sh &> /dev/null
-       
+                kubectl exec -n lsfs client1 -- bash /{{ container_com_directory }}/dstat/stop_dstat.sh &> /dev/null
 
 
   # Play - Collecting filebench output
@@ -50,5 +49,28 @@
 
         - name: write output filebench 
           shell: | 
-                echo "{{ hostvars['localhost']['fb_output'] }}" >> {{ output_path }}
+                echo "{{ hostvars['localhost']['fb_output'] }}" >> ../{{ output_path }}
 
+
+  # Play - Collecting dstat output
+  - name: Collenting dstat output
+    hosts: masters, workers
+    become: yes
+
+    tasks:
+
+        - name: Copy peers dstat output to local
+          fetch:
+            src: /home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/run-{{ wl_name }}-lsfs-peer{{ item }}.dstat.csv
+            dest: ../{{ dstat_path }}/
+            flat: yes
+            fail_on_missing: no
+          with_items:
+            - "{{ range(1, nr_peers | int + 1) | list }}"
+
+        - name: Copy client dstat output to local
+          fetch:
+            src: /home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/run-{{ wl_name }}-lsfs-client1.dstat.csv
+            dest: ../{{ dstat_path }}/
+            flat: yes
+            fail_on_missing: no

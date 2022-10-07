@@ -6,23 +6,23 @@
       - name: Clean peer ips file
         become: yes
         file:
-          path: /home/{{ ansible_user }}/shared_dir/peer_ips
+          path: /home/{{ ansible_user }}/{{ remote_com_directory }}/peer_ips
           state: absent
 
       # - name: Clean metrics files
       #   become: yes
       #   file:
-      #     path: /home/{{ ansible_user }}/shared_dir/metrics
+      #     path: /home/{{ ansible_user }}/{{ remote_com_directory }}/metrics
       #     state: absent
 
       - name: Clean workloads files
         become: yes
         file:
-          path: /home/{{ ansible_user }}/shared_dir/workloads-filebench
+          path: /home/{{ ansible_user }}/{{ remote_com_directory }}/workloads-filebench
           state: absent
 
       - name: Clean config file
         become: yes
         file:
-          path: /home/{{ ansible_user }}/shared_dir/conf.yaml"
+          path: /home/{{ ansible_user }}/{{ remote_com_directory }}/conf.yaml"
           state: absent

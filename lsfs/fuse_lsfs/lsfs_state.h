@@ -58,6 +58,8 @@ public:
     bool use_cache;
     int refresh_cache_time;
     int max_directories_in_cache;
+
+    int max_nr_requests_timeout;
     int cache_max_nr_requests_timeout;
 
     int direct_io;
@@ -65,7 +67,7 @@ public:
     
 
 public:
-    lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool use_cache, int refresh_cache_time, int max_directories_in_cache, int cache_max_nr_requests_timeout, int direct_io);
+    lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool use_cache, int refresh_cache_time, int max_directories_in_cache, int max_nr_requests_timeout, int cache_max_nr_requests_timeout, int direct_io);
     
     int put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_key_version& version);
     int put_fixed_size_blocks_from_buffer_limited_paralelization(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_key_version& version);
@@ -112,7 +114,8 @@ public:
     int flush_and_release_open_file(const std::string& path);
     void reset_dir_cache_add_remove_log(const std::string& path);
 
-    std::unique_ptr<metadata> request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version, bool for_cache = false);
+    std::unique_ptr<metadata> request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version,
+         client_reply_handler::Response* response, bool for_cache = false);
 
 };
 

@@ -877,6 +877,8 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
         this->send_get_metadata(peers, keys[i].key, keys[i].key_version, req_ids[i]);
     }
 
+    bool exited = false;
+
     long curr_timeouts = 0;
     bool all_completed = false;
     std::vector<bool> timeout(nr_reads, false);
@@ -909,7 +911,7 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
 
                     client_reply_handler::Response get_res = client_reply_handler::Response::Init;
                     bool has_higher_version = false;
-                    data_strs[i] = this->handler->wait_for_get_metadata_until(req_ids[i], wait_for, wait_until, &get_res, &has_higher_version);
+                    data_strs[i] = this->handler->wait_for_get_metadata_until(req_ids[i], wait_for, wait_until, &get_res);
                     
                     if(get_res == client_reply_handler::Response::Ok) 
                         res_count++;
@@ -919,8 +921,8 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
                         break;
                     }
 
-                    if(has_higher_version){
-                        *response = client_reply_handler::Response::NoData;
+                    if(get_res == client_reply_handler::Response::NoData_HigherVersion){
+                        *response = client_reply_handler::Response::NoData_HigherVersion;
                         break;
                     }
 
@@ -935,7 +937,8 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
             curr_timeouts++;
             happend_timeout = false;
         }
-        if(*response == client_reply_handler::Response::NoData || *response == client_reply_handler::Response::Deleted){
+        if(*response == client_reply_handler::Response::NoData_HigherVersion || *response == client_reply_handler::Response::Deleted){
+            exited = true;
             break;
         }
 
@@ -945,6 +948,10 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
     if(all_completed){
         *response = client_reply_handler::Response::Ok;
     }
+    else if(exited){
+        *response = client_reply_handler::Response::NoData;
+    }
+
 
     // clear not succeded keys from put maps
     auto it_req_ids = req_ids.begin();

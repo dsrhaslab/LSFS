@@ -1,35 +1,40 @@
  # Play3 - Shutdown pods
   - name: Replacing atributes in config and workloads files 
     hosts: masters
+    become: yes
+
+    vars: 
+        remote_dir: /home/{{ ansible_user }}/{{ remote_com_directory }}
+
 
     tasks:
 
       - name: Replacing Load Balancer
         shell: | 
-                sed -i "/type.*/c\      type: {{ load_balancer }}" {{ config_file }}
+                sed -i "/type.*/c\      type: {{ load_balancer }}" {{ remote_dir }}/conf.yaml
 
       - name: Replacing Cache
         shell: | 
-                sed -i "/use_cache.*/c\      use_cache: {{ use_cache }}" {{ config_file }}
+                sed -i "/use_cache.*/c\      use_cache: {{ use_cache }}" {{ remote_dir }}/conf.yaml
 
       - name: Replacing Cache refresh time
         shell: | 
-                sed -i "/refresh_cache_time.*/c\      refresh_cache_time: {{ cache_refresh }}" {{ config_file }}
+                sed -i "/refresh_cache_time.*/c\      refresh_cache_time: {{ cache_refresh }}" {{ remote_dir }}/conf.yaml
 
 
       - name: Replacing limit paralelization
         shell: | 
-                sed -i "/limit_write_paralelization_to.*/c\    limit_write_paralelization_to: {{ paralelization }}" {{ config_file }}
-                sed -i "/limit_read_paralelization_to.*/c\    limit_read_paralelization_to: {{ paralelization }}" {{ config_file }}
+                sed -i "/limit_write_paralelization_to.*/c\    limit_write_paralelization_to: {{ paralelization }}" {{ remote_dir }}/conf.yaml
+                sed -i "/limit_read_paralelization_to.*/c\    limit_read_paralelization_to: {{ paralelization }}" {{ remote_dir }}/conf.yaml
 
 
       - name: Replacing nr requests required
         shell: | 
-                sed -i "/nr_puts_required.*/c\    nr_puts_required: {{ nr_puts_req }}" {{ config_file }}
-                sed -i "/nr_gets_required.*/c\    nr_gets_required: {{ nr_gets_req }}" {{ config_file }}
-                sed -i "/nr_gets_version_required.*/c\    nr_gets_version_required: {{ nr_gets_vrs_req }}" {{ config_file }}
+                sed -i "/nr_puts_required.*/c\    nr_puts_required: {{ nr_puts_req }}" {{ remote_dir }}/conf.yaml
+                sed -i "/nr_gets_required.*/c\    nr_gets_required: {{ nr_gets_req }}" {{ remote_dir }}/conf.yaml
+                sed -i "/nr_gets_version_required.*/c\    nr_gets_version_required: {{ nr_gets_vrs_req }}" {{ remote_dir }}/conf.yaml
 
 
       - name: Replacing workload io size
         shell: | 
-                sed -i "/set \$IO_SIZE.*/c\set \$IO_SIZE={{ wl_conf_io }}" {{ wl_path }}
+                sed -i "/set \$IO_SIZE.*/c\set \$IO_SIZE={{ wl_conf_io }}" /home/{{ ansible_user }}/{{ wl_path }}

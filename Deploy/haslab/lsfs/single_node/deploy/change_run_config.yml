@@ -3,27 +3,30 @@
     hosts: masters
     become: yes
 
+    vars: 
+        remote_dir: /home/{{ ansible_user }}/{{ remote_com_directory }}
+
     tasks:
 
       - name: Replacing Load Balancer
         shell: | 
-                sed -i "/type.*/c\      type: {{ load_balancer }}" single_node/{{ config_file }}
+                sed -i "/type.*/c\      type: {{ load_balancer }}" {{ remote_dir }}/conf.yaml
 
       - name: Replacing Cache
         shell: | 
-                sed -i "/use_cache.*/c\      use_cache: {{ use_cache }}" single_node/{{ config_file }}
+                sed -i "/use_cache.*/c\      use_cache: {{ use_cache }}" {{ remote_dir }}/conf.yaml
 
       - name: Replacing Cache refresh time
         shell: | 
-                sed -i "/refresh_cache_time.*/c\      refresh_cache_time: {{ cache_refresh }}" single_node/{{ config_file }}
+                sed -i "/refresh_cache_time.*/c\      refresh_cache_time: {{ cache_refresh }}" {{ remote_dir }}/conf.yaml
 
 
       - name: Replacing limit paralelization
         shell: | 
-                sed -i "/limit_write_paralelization_to.*/c\    limit_write_paralelization_to: {{ paralelization }}" single_node/{{ config_file }}
-                sed -i "/limit_read_paralelization_to.*/c\    limit_read_paralelization_to: {{ paralelization }}" single_node/{{ config_file }}
+                sed -i "/limit_write_paralelization_to.*/c\    limit_write_paralelization_to: {{ paralelization }}" {{ remote_dir }}/conf.yaml
+                sed -i "/limit_read_paralelization_to.*/c\    limit_read_paralelization_to: {{ paralelization }}" {{ remote_dir }}/conf.yaml
 
 
       - name: Replacing workload io size
         shell: | 
-                sed -i "/set \$IO_SIZE.*/c\set \$IO_SIZE={{ wl_conf_io }}"  single_node/{{ wl_path }}
+                sed -i "/set \$IO_SIZE.*/c\set \$IO_SIZE={{ wl_conf_io }}"  /home/{{ ansible_user }}/{{ wl_path }}

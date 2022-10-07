@@ -6,6 +6,6 @@
       - name: Clean peers database
         become: yes
         file:
-          path: /home/{{ ansible_user }}/shared_dir/levelDB/
+          path: /home/{{ ansible_user }}/{{ remote_com_directory }}/levelDB/
           state: absent
         

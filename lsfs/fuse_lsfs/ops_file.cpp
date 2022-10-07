@@ -233,7 +233,7 @@ int lsfs_impl::_read(
         struct fuse_file_info *fi
 )
 {
-    //std::cout << "### SysCall: _read"  << (std::string) path << std::endl;
+    //std::cout << "### SysCall: _read ->"  << (std::string) path << std::endl;
 
     (void)path;
 
@@ -256,7 +256,12 @@ int lsfs_impl::_read(
         size_t off_blk = offset % BLK_SIZE;
         bytes_count = 0;
         size_t current_blk = nr_b_blks - 1;
-                
+
+
+        if(offset >= file_size){
+            return 0;
+        }
+
         try {
             // align read with block size
             if (off_blk != 0) {
@@ -276,7 +281,8 @@ int lsfs_impl::_read(
             // What's left to read is the minimum between what I'm supposed to read
             // and the file size from the point I'm reading
             //Ou le ate size ou ate ao final do ficheiro que e possivel ver pelo file_size
-            size_t missing_read_size = std::min((size - bytes_count),(file_size - offset - bytes_count)); 
+            int missing_read_size = std::min((size - bytes_count),(file_size - offset - bytes_count)); 
+            
             if(missing_read_size > 0){
                 bytes_count += state->read_fixed_size_blocks_to_buffer_limited_paralelization(&buf[bytes_count], missing_read_size, BLK_SIZE, path, current_blk);
             }

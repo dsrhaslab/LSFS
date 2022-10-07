@@ -12,19 +12,19 @@
 
       - name: Create docker container with pseudo-tty
         shell: | 
-                docker run --privileged --volume=/home/{{ ansible_user }}/single_node/{{ com_directory }}:/{{ com_directory }} --name lsfs_local -t -d {{ image_name }}
+                docker run --privileged --volume=/home/{{ ansible_user }}/{{ remote_com_directory }}:/{{ container_com_directory }} --name lsfs_local -t -d {{ image_name }}
 
       - name: Exec bootstrapper process
         shell: | 
-                docker exec -d lsfs_local ./build/bootstrapper_exe /{{ com_directory }}/conf.yaml
+                docker exec -d lsfs_local ./build/bootstrapper_exe /{{ container_com_directory }}/conf.yaml
 
-      - name: Exec peer process
+      - name: Exec peer1 process
         shell: | 
-                docker exec -d lsfs_local ./build/peer_exe 1 0.75 /{{ com_directory }}/conf.yaml 127.0.0.1 12365 12366 12367 -n
+                docker exec -d lsfs_local ./build/peer_exe 1 0.75 /{{ container_com_directory }}/conf.yaml 127.0.0.1 12365 12366 12367 -n
 
-      - name: Exec peer process
+      - name: Exec peer2 process
         shell: | 
-                docker exec -d lsfs_local ./build/peer_exe 2 0.25 /{{ com_directory }}/conf.yaml 127.0.0.1 12368 12369 12370 -n
+                docker exec -d lsfs_local ./build/peer_exe 2 0.25 /{{ container_com_directory }}/conf.yaml 127.0.0.1 12368 12369 12370 -n
 
       - name: Pause for 60 seconds until peer is started
         pause:
@@ -42,4 +42,4 @@
 
       - name: Exec client process
         shell: | 
-                docker exec -d lsfs_local ./build/lsfs_exe 127.0.0.1 1 /{{ com_directory }}/conf.yaml client1 /test_filesystem/InnerFolder /test_filesystem/InnerFolder2
+                docker exec -d lsfs_local ./build/lsfs_exe 127.0.0.1 1 /{{ container_com_directory }}/conf.yaml client1 /test_filesystem/InnerFolder /test_filesystem/InnerFolder2

@@ -51,37 +51,37 @@
 
 
 
- # Play2 - Kubernets setup installation
-- name: Kubernetes setup
-  hosts: all
-  become: yes
+#  # Play2 - Kubernets setup installation
+# - name: Kubernetes setup
+#   hosts: all
+#   become: yes
 
-  tasks:
-    - name: Add apt_key
-      apt_key: 
-        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg 
+#   tasks:
+#     - name: Add apt_key
+#       apt_key: 
+#         url: https://packages.cloud.google.com/apt/doc/apt-key.gpg 
 
-    - name: Add k8s repository
-      apt_repository:
-        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+#     - name: Add k8s repository
+#       apt_repository:
+#         repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
 
-    - name: k8s lists
-      shell: | 
-              ####### ALT:
-              cat << EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
-              deb https://apt.kubernetes.io/ kubernetes-xenial main
-              EOF
+#     - name: k8s lists
+#       shell: | 
+#               ####### ALT:
+#               cat << EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
+#               deb https://apt.kubernetes.io/ kubernetes-xenial main
+#               EOF
 
-    - name: Install k8s
-      shell: | 
-              sudo apt-get update
-              sudo apt-get install -y kubeadm kubelet kubectl
-              sudo apt-mark hold kubeadm kubelet kubectl
+#     - name: Install k8s
+#       shell: | 
+#               sudo apt-get update
+#               sudo apt-get install -y kubeadm kubelet kubectl
+#               sudo apt-mark hold kubeadm kubelet kubectl
 
-    - name: Disable swap
-      shell: |
-               sudo swapoff -a
-               sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+#     - name: Disable swap
+#       shell: |
+#                sudo swapoff -a
+#                sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 
  # Play3 - Install ansible k8s pre-requirements
@@ -100,52 +100,52 @@
               sudo pip install openshift pyyaml kubernetes kubernetes-validate
 
 
- # Play4 - Kubernets master initialization
-- name: Kubernetes init master
-  hosts: masters
+#  # Play4 - Kubernets master initialization
+# - name: Kubernetes init master
+#   hosts: masters
 
-  tasks:
+#   tasks:
 
-    - name: Init master kubeadm
-      shell: |
-              sudo kubeadm init --pod-network-cidr=10.244.0.0/16
-      register: workers_join_cluster
+#     - name: Init master kubeadm
+#       shell: |
+#               sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+#       register: workers_join_cluster
       
-    - name: Debug init master node
-      debug:
-        var: workers_join_cluster
-        verbosity: 2
+#     - name: Debug init master node
+#       debug:
+#         var: workers_join_cluster
+#         verbosity: 2
 
-    - name: Create a directory for the cluster
-      shell: |
-              mkdir -p .kube
-              sudo cp -i /etc/kubernetes/admin.conf .kube/config
-              sudo chown $(id -u):$(id -g) .kube/config
+#     - name: Create a directory for the cluster
+#       shell: |
+#               mkdir -p .kube
+#               sudo cp -i /etc/kubernetes/admin.conf .kube/config
+#               sudo chown $(id -u):$(id -g) .kube/config
 
-    - name: Check Nodes
-      shell: | 
-              kubectl get nodes
-      register: nodes_result
+#     - name: Check Nodes
+#       shell: | 
+#               kubectl get nodes
+#       register: nodes_result
 
-    - name: Debug kubectl Nodes
-      debug:
-        var: nodes_result
-        verbosity: 2 
+#     - name: Debug kubectl Nodes
+#       debug:
+#         var: nodes_result
+#         verbosity: 2 
 
-    - name: Deploy Pod Network to Cluster
-      shell: | 
-              kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-              kubectl get pods --all-namespaces
+#     - name: Deploy Pod Network to Cluster
+#       shell: | 
+#               kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+#               kubectl get pods --all-namespaces
 
-    - name: Check if Schedulerand Controller-panel if Healthy
-      shell: | 
-              kubectl get cs
-      register: cs_result
+#     - name: Check if Schedulerand Controller-panel if Healthy
+#       shell: | 
+#               kubectl get cs
+#       register: cs_result
 
-    - name: Debug kubectl cs
-      debug:
-        var: cs_result
-        verbosity: 2 
+#     - name: Debug kubectl cs
+#       debug:
+#         var: cs_result
+#         verbosity: 2 
     
  # Play5 - Install necessary packages
 - name: Installing packages
