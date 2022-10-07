@@ -372,7 +372,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::strin
 
 
 std::unique_ptr<std::string> client_reply_handler::wait_for_get_metadata_until(const std::string &req_id, int wait_for,
-                                                                      std::chrono::system_clock::time_point &wait_until, Response* get_res, bool* has_higher_version){
+                                                                      std::chrono::system_clock::time_point &wait_until, Response* get_res){
     std::unique_ptr<std::string> res (nullptr);
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
@@ -409,8 +409,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_metadata_until(c
             auto& map_del_keys = it->second.deleted_keys;
         
             if(it->second.metadata_higher_version){
-                *has_higher_version = true;
-                *get_res = Response::NoData;
+                *get_res = Response::NoData_HigherVersion;
             }else{
 
                 if(map_del_keys.size() > 0){

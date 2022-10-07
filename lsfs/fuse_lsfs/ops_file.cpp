@@ -57,7 +57,7 @@ int lsfs_impl::_create(
         struct fuse_file_info *fi
 )
 {
-    std::cout << "### SysCall: _create" << std::endl;
+    //std::cout << "### SysCall: _create" << std::endl;
 
     if (!fuse_pt_impersonate_calling_process_highlevel(&mode))
         return -errno;
@@ -86,7 +86,7 @@ int lsfs_impl::_open(
         struct fuse_file_info *fi
 )
 {
-    std::cout << "### SysCall: _open" << std::endl;
+    //std::cout << "### SysCall: _open" << std::endl;
 
     int res = 0;
 
@@ -130,7 +130,7 @@ int lsfs_impl::_flush(const char *path, struct fuse_file_info *fi){
 
     (void)path;
 
-    std::cout << "### SysCall: _flush  ==> Path:" << (std::string) path << std::endl;
+    //std::cout << "### SysCall: _flush  ==> Path:" << (std::string) path << std::endl;
 
     if(!is_temp_file(path)) {
         try{
@@ -161,7 +161,7 @@ int lsfs_impl::_release(
         struct fuse_file_info *fi
 )
 {
-    std::cout << "### SysCall: _release" << std::endl;
+    //std::cout << "### SysCall: _release" << std::endl;
 
     const int fd = (int)fi->fh;
 
@@ -195,7 +195,7 @@ int lsfs_impl::_fsync(
         struct fuse_file_info *fi
 )
 {
-    std::cout << "### SysCall: _fsync" << std::endl;
+    //std::cout << "### SysCall: _fsync" << std::endl;
 
     const int fd = (int)fi->fh;
 
@@ -233,7 +233,7 @@ int lsfs_impl::_read(
         struct fuse_file_info *fi
 )
 {
-    //std::cout << "### SysCall: _read ->"  << (std::string) path << " Size: " << size << " offset: " << offset << std::endl;
+    //std::cout << "### SysCall: _read ->"  << (std::string) path << std::endl;
 
     (void)path;
 
@@ -283,8 +283,6 @@ int lsfs_impl::_read(
             //Ou le ate size ou ate ao final do ficheiro que e possivel ver pelo file_size
             int missing_read_size = std::min((size - bytes_count),(file_size - offset - bytes_count)); 
             
-            std::cout << "### SysCall: _read ->"  << (std::string) path << " Size: " << size << " offset: " << offset << " Missing read size = " << missing_read_size << " Real: " << file_size << " - " << bytes_count << std::endl;
-
             if(missing_read_size > 0){
                 bytes_count += state->read_fixed_size_blocks_to_buffer_limited_paralelization(&buf[bytes_count], missing_read_size, BLK_SIZE, path, current_blk);
             }
@@ -316,7 +314,7 @@ int lsfs_impl::_write(
         struct fuse_file_info *fi
 )
 {
-    std::cout << "### SysCall: _write" << std::endl;
+    //std::cout << "### SysCall: _write" << std::endl;
 
     (void)path;
     int result;
