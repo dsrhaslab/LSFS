@@ -7,15 +7,15 @@
 
       - name: Create docker container with pseudo-tty
         shell: | 
-                docker run --privileged --volume=/home/{{ ansible_user }}/passthrough/test_filesystem/InnerFolder:/test_filesystem/InnerFolder --name passthrough -t -d fuse_passthrough
+                docker run --privileged --volume=/home/{{ ansible_user }}/lsfs/passthrough/test_filesystem/InnerFolder:/test_filesystem/InnerFolder --name passthrough -t -d fuse_passthrough
 
       - name: Copy workloads
         shell: | 
-                docker cp /home/{{ ansible_user }}/passthrough/workloads-filebench passthrough:/workloads-filebench
+                docker cp /home/{{ ansible_user }}/lsfs/passthrough/workloads-filebench passthrough:/workloads-filebench
 
       - name: Filebench needed command
         shell: | 
-                docker cp /home/{{ ansible_user }}/passthrough/fileb_script.sh passthrough:/fileb_script.sh
+                docker cp /home/{{ ansible_user }}/lsfs/passthrough/fileb_script.sh passthrough:/fileb_script.sh
 
       - name: Filebench needed command
         shell: | 

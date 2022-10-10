@@ -1,0 +1,72 @@
+
+Run: #1,wl_name:seq-write-1th-128k-dynamic-4k,wl_path:shared_dir/workloads-filebench/write-data-micro/seq-write-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.015: Populating and pre-allocating filesets
+0.015: fileset-1 populated: 1 files, avg. dir. width = 1, avg. dir. depth = -nan, 0 leafdirs, 1024.000MB total size
+0.016: Removing fileset-1 tree (if exists)
+0.041: Pre-allocating directories in fileset-1 tree
+0.048: Pre-allocating files in fileset-1 tree
+0.048: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+0.048: Population and pre-allocation of filesets completed
+0.882: Attempting to create fileset more than once, ignoring
+0.882: Starting 1 process-1 instances
+2.504: Running...
+902.570: Run took 900 seconds...
+902.570: Per-Operation Breakdown
+finish-1             0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close-1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+write-1              163570ops      182ops/s  22.7mb/s    5.500ms/op [2.589ms - 67.035ms]
+create-1             1ops        0ops/s   0.0mb/s   13.699ms/op [13.699ms - 13.699ms]
+902.570: IO Summary: 163571 ops 181.732 ops/s 0/182 rd/wr  22.7mb/s 5.500ms/op
+902.570: Shutting down processes
+
+Run: #2,wl_name:seq-write-1th-128k-dynamic-4k,wl_path:shared_dir/workloads-filebench/write-data-micro/seq-write-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.022: Populating and pre-allocating filesets
+0.023: fileset-1 populated: 1 files, avg. dir. width = 1, avg. dir. depth = -nan, 0 leafdirs, 1024.000MB total size
+0.024: Removing fileset-1 tree (if exists)
+0.051: Pre-allocating directories in fileset-1 tree
+0.061: Pre-allocating files in fileset-1 tree
+0.061: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+0.061: Population and pre-allocation of filesets completed
+0.895: Attempting to create fileset more than once, ignoring
+0.895: Starting 1 process-1 instances
+2.613: Running...
+902.676: Run took 900 seconds...
+902.676: Per-Operation Breakdown
+finish-1             0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close-1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+write-1              169347ops      188ops/s  23.5mb/s    5.312ms/op [2.579ms - 65.542ms]
+create-1             1ops        0ops/s   0.0mb/s   14.075ms/op [14.075ms - 14.075ms]
+902.676: IO Summary: 169348 ops 188.151 ops/s 0/188 rd/wr  23.5mb/s 5.312ms/op
+902.676: Shutting down processes
+
+Run: #3,wl_name:seq-write-1th-128k-dynamic-4k,wl_path:shared_dir/workloads-filebench/write-data-micro/seq-write-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.008: Populating and pre-allocating filesets
+0.009: fileset-1 populated: 1 files, avg. dir. width = 1, avg. dir. depth = -nan, 0 leafdirs, 1024.000MB total size
+0.009: Removing fileset-1 tree (if exists)
+0.045: Pre-allocating directories in fileset-1 tree
+0.053: Pre-allocating files in fileset-1 tree
+0.053: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+0.053: Population and pre-allocation of filesets completed
+0.900: Attempting to create fileset more than once, ignoring
+0.900: Starting 1 process-1 instances
+2.432: Running...
+902.501: Run took 900 seconds...
+902.501: Per-Operation Breakdown
+finish-1             0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close-1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+write-1              150061ops      167ops/s  20.8mb/s    5.995ms/op [2.594ms - 58.088ms]
+create-1             1ops        0ops/s   0.0mb/s   14.112ms/op [14.112ms - 14.112ms]
+902.501: IO Summary: 150062 ops 166.723 ops/s 0/167 rd/wr  20.8mb/s 5.995ms/op
+902.501: Shutting down processes

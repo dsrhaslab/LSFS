@@ -18,8 +18,8 @@ main_confs:
       disseminate_latest: False
 
   group_construction:
-    rep_max: 1
-    rep_min: 1
+    rep_max: 3
+    rep_min: 2
     max_age: 30
 
   pss:
