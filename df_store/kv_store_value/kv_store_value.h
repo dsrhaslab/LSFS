@@ -1,21 +1,9 @@
 #ifndef P2PFS_KV_STORE_VALUE_H
 #define P2PFS_KV_STORE_VALUE_H
 
+#include <boost/serialization/vector.hpp>
 
 #include "kv_store_version_data.h"
-
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/utility.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-
-#include <boost/iostreams/device/array.hpp>
-#include <boost/iostreams/device/back_inserter.hpp>
-#include <boost/iostreams/stream.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-
-
 
 
 /*

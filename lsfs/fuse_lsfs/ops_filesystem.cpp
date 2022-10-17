@@ -2,7 +2,7 @@
 #include <sys/statvfs.h>
 
 #include "util.h"
-#include "lsfs/fuse_lsfs/lsfs_impl.h"
+#include "lsfs_impl.h"
 
 int lsfs_impl::_statfs(
     const char *path, struct statvfs *stbuf

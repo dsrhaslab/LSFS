@@ -1,17 +1,6 @@
 #ifndef P2PFS_METADATA_H
 #define P2PFS_METADATA_H
 
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/set.hpp>
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/utility.hpp>
-
-#include <boost/iostreams/device/array.hpp>
-#include <boost/iostreams/device/back_inserter.hpp>
-#include <boost/iostreams/stream.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-
 #include "metadata_attr.h"
 #include "metadata_childs.h"
 #include "df_util/serialize.h"

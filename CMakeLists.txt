@@ -43,6 +43,8 @@ add_executable(bootstrapper_exe
         exceptions/socket_read_exception.h
         exceptions/socket_send_exception.h
         df_util/randomizer.h
+        df_util/util.cpp
+        df_util/util.h
         )
 
 target_link_libraries(bootstrapper_exe PUBLIC ${PROTOBUF_LIBRARIES})

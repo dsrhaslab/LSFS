@@ -7,28 +7,17 @@
 
 #include <leveldb/db.h>
 #include "leveldb/write_batch.h"
-#include "exceptions/custom_exceptions.h"
-#include "df_util/util.h"
 #include <unordered_map>
 #include <unordered_set>
-#include <atomic>
-#include <mutex>
-#include <memory>
-#include "kv_store_key.h"
-#include "kv_store.h"
-#include "kv_store_value/kv_store_value.h"
-#include <climits>
-#include <cstring>
-#include <functional>
-#include <sstream>
-#include <iostream>
-#include <fstream>
-#include <cstdlib>
-#include <filesystem>
 #include <random>
-#include <filesystem>
+
+#include "exceptions/custom_exceptions.h"
+#include "kv_store.h"
+#include "kv_store_key.h"
+#include "kv_store_value/kv_store_value.h"
 #include "lsfs/fuse_lsfs/metadata/metadata.h"
 #include "df_util/serialize.h"
+#include "df_util/util.h"
 
 namespace fs = std::filesystem;
 
@@ -542,10 +531,12 @@ bool kv_store_leveldb::remove_from_main_db(const kv_store_key<std::string>& key)
 
                 value_f = deserialize_from_string<kv_store_value_f>(value.serialized_v_type);
                 
-                for(auto it = value_f.vdata.begin(); it != value_f.vdata.end(); ++it){
+                for(auto it = value_f.vdata.begin(); it != value_f.vdata.end();){
                     kVersionComp vcomp = comp_version(key.version, it->version);
                     if(vcomp == kVersionComp::Lower || vcomp == kVersionComp::Equal){
-                        value_f.vdata.erase(it);
+                        it = value_f.vdata.erase(it);
+                    }else{
+                        ++it;
                     }
                 }
 

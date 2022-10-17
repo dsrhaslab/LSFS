@@ -12,7 +12,9 @@
 
 #include <kv_message.pb.h>
 
-#include "df_store/kv_store.h"
+#include "df_util/util_objects.h"
+#include "df_store/kv_store_value/kv_store_version.h"
+
 
 void build_get_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id, const std::string& key, const kv_store_version& version, bool no_data);
 void build_get_reply_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id, std::unique_ptr<std::string> data, const std::string& key, const kv_store_version& version, bool is_deleted = false);

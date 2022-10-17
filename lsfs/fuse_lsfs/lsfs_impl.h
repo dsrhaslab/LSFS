@@ -10,13 +10,13 @@
 #include <cstddef>
 #include <sys/statvfs.h>
 #include <spdlog/logger.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include "yaml-cpp/yaml.h"
 
 #include "lsfs_state.h"
 #include "lsfs/fuse_common/fuse_wrapper.h"
 #include "lsfs/fuse_common/fuse_wrapper.cpp"
 #include "df_client/client.h"
-#include "metadata/metadata_attr.h"
-#include "metadata/metadata_childs.h"
 #include "exceptions/custom_exceptions.h"
 #include "util.h"
 

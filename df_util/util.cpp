@@ -1,54 +1,39 @@
 #include "util.h"
 
-int split_composite_total(std::string comp_key, std::string* key, std::map<long, long>* version, long* client_id){
-    boost::cmatch match;
-    auto res = boost::regex_search(comp_key.c_str(), match, composite_key);
 
-    try{
-        if(match.size() > 3){
-            *key = std::string(match[1].str());
-            
-            std::string vers = match[2].str();
+std::string get_local_ip_address(){
+    int sock = socket(PF_INET, SOCK_DGRAM, 0);
+    sockaddr_in loopback;
 
-            *client_id = stol(match[3].str());
-
-            std::vector<std::string> cli;
-            boost::split(cli, vers, boost::is_any_of(","));
-
-            if(cli.size() <= 0){
-                 version = nullptr;
-                 return 0;
-            }
-
-            for(auto x: cli){
-                std::vector<std::string> cli_id_clock;
-                boost::split(cli_id_clock, x, boost::is_any_of("@"));
-
-                version->insert(std::make_pair(std::stol(cli_id_clock[0]), std::stol(cli_id_clock[1])));
-            }
-
-        }
-    }catch(std::invalid_argument e){
-        return -1;
+    if (sock == -1) {
+        throw "ERROR CREATING SOCKET";
     }
-    return 0;
-}
 
+    std::memset(&loopback, 0, sizeof(loopback));
+    loopback.sin_family = AF_INET;
+    loopback.sin_addr.s_addr = INADDR_LOOPBACK;   // using loopback ip address
+    loopback.sin_port = htons(9);                 // using debug port
 
-int split_composite_key(std::string comp_key, std::string* key){
-    boost::cmatch match;
-    auto res = boost::regex_search(comp_key.c_str(), match, composite_key);
-
-    try{
-        if(match.size() > 2){
-            *key = std::string(match[1].str());
-        }
-    }catch(std::invalid_argument e){
-        return -1;
+    if (connect(sock, reinterpret_cast<sockaddr*>(&loopback), sizeof(loopback)) == -1) {
+        close(sock);
+        throw "ERROR COULD NOT CONNECT";
     }
-    return 0;
-}
 
+    socklen_t addrlen = sizeof(loopback);
+    if (getsockname(sock, reinterpret_cast<sockaddr*>(&loopback), &addrlen) == -1) {
+        close(sock);
+        throw "ERROR COULD NOT GETSOCKNAME";
+    }
+
+    close(sock);
+
+    char buf[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &loopback.sin_addr, buf, INET_ADDRSTRLEN) == 0x0) {
+        throw "ERROR COULD NOT INET_NTOP";
+    } else {
+        return std::string(buf);
+    }
+}
 
 
 int get_base_path(const std::string& key, std::string* base_path){
@@ -82,7 +67,7 @@ int get_blk_num(const std::string& key, std::string* blk_num){
 }
 
 
-// Version Vector to string
+
 std::string vv2str(std::map<long, long> vv){
     std::string mapStr;
     for(auto& x: vv){
@@ -103,21 +88,6 @@ std::string compose_key_toString(std::string key, kv_store_version version){
 }
 
 
-std::map<long, long>* str2vv(std::string vv_str){
-    std::vector<std::string> peers;
-    boost::split(peers, vv_str, boost::is_any_of(","));
-
-    std::map<long, long>* vv;
-    if(peers.size() <= 0) vv = nullptr;
-
-    for(auto x: peers){
-        std::vector<std::string> peer_id_clock;
-        boost::split(peer_id_clock, x, boost::is_any_of("@"));
-        
-        vv->insert(std::make_pair(std::stol(peer_id_clock[0]), std::stol(peer_id_clock[1])));
-    } 
-    return vv;
-}
 
 void print_kv(const kv_store_key<std::string>& kv){
     std::cout << "##### Key: " << kv.key << " Vector: <";
@@ -147,7 +117,7 @@ void print_kv(const kv_store_version& kv){
          //<y@3, z@1, u@3, x@2> > <x@1, y@2, z@1>
 
 //k1 compared to k2
-kVersionComp comp_version(const kv_store_version& k1, const kv_store_version k2){
+kVersionComp comp_version(const kv_store_version& k1, const kv_store_version& k2){
     bool is_equal = true;
     bool is_lower = true;
     bool is_bigger = true;
@@ -188,26 +158,6 @@ kVersionComp comp_version(const kv_store_version& k1, const kv_store_version k2)
     return kVersionComp::Concurrent;
 }
 
-
-kv_store_version merge_vkv(const std::vector<kv_store_version>& vkv){
-    kv_store_version res;
-
-    for(auto &kv: vkv){
-        for(auto p: kv.vv){
-            auto it = res.vv.find(p.first);
-            if(it == res.vv.end())
-                res.vv.insert(std::make_pair(p.first, p.second));
-            else {
-                if(it->second < p.second)
-                    it->second = p.second;
-            }   
-        }
-        if(kv.client_id < res.client_id)
-            res.client_id = kv.client_id;
-    }
-    return res;
-}
-
 kv_store_version merge_kv(const kv_store_version& k1, const kv_store_version& k2){
     kv_store_version res = k1;
 
@@ -233,13 +183,6 @@ kv_store_version add_vv(std::pair<long, long> version, const kv_store_version& k
 }
 
 
-int sum_vv_clock(kv_store_version& v){
-    int sum = 0;
-    for(auto &cc: v.vv){
-        sum += cc.second;
-    }
-    return sum;
-}
 
 //Considera-se que o id do cliente é único
 kv_store_version choose_latest_version(std::vector<kv_store_version>& kvv_v){

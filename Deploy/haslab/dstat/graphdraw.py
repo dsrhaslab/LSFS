@@ -95,6 +95,14 @@ def import_dstat_from_file(path, labelname):
         axs[1,1].plot(v_time_list, v_read_list, '-', label = labelname, color="black")
         axs[2,0].plot(v_time_list, v_cach_list, '-', label = labelname, color="black")
         axs[2,1].plot(v_time_list, v_free_list, '-', label = labelname, color="black")
+    else:
+        axs[0,0].plot(v_time_list, v_usr_list, '-', label = labelname, color="green")
+        axs[0,1].plot(v_time_list, v_used_list, '-', label = labelname, color="green")
+        axs[1,0].plot(v_time_list, v_writ_list, '-', label = labelname, color="green")
+        axs[1,1].plot(v_time_list, v_read_list, '-', label = labelname, color="green")
+        axs[2,0].plot(v_time_list, v_cach_list, '-', label = labelname, color="green")
+        axs[2,1].plot(v_time_list, v_free_list, '-', label = labelname, color="green")
+    
 
     axs[0,0].set_xlim(0, seconds_counter)
     axs[0,1].set_xlim(0, seconds_counter)
@@ -146,6 +154,8 @@ for path in os.listdir(arg_dstat_folder):
         import_dstat_from_file("%s/%s" % (arg_dstat_folder, path), "peer2")
     if re.search(".*{}.*client.*.csv".format(arg_workload), path):
         import_dstat_from_file("%s/%s" % (arg_dstat_folder, path), "client")
+    else:
+        import_dstat_from_file("%s/%s" % (arg_dstat_folder, path), "single node")
 
 fig.suptitle("Workload: %s" % arg_workload)
 fig.set_size_inches(20, 20)

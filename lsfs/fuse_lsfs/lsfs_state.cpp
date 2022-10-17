@@ -1,7 +1,4 @@
 #include "lsfs_state.h"
-#include <ctime>
-#include <utility>
-#include <spdlog/spdlog.h>
 
 lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool use_cache,
      int refresh_cache_time, int max_directories_in_cache, int max_nr_requests_timeout, int cache_max_nr_requests_timeout, int direct_io):

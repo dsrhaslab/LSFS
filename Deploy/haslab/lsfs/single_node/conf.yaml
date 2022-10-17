@@ -15,7 +15,6 @@ main_confs:
     anti_entropy:
       interval_sec: 3600
       max_keys_to_send_percentage: 20
-      disseminate_latest: False
 
   group_construction:
     rep_max: 2

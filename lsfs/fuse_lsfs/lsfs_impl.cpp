@@ -1,7 +1,4 @@
-#include <spdlog/sinks/basic_file_sink.h>
 #include "lsfs_impl.h"
-#include "yaml-cpp/yaml.h"
-
 
 std::unique_ptr<lsfs_state> state;
 std::shared_ptr<client> df_client;

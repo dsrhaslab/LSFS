@@ -4,41 +4,9 @@
 
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
+
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
-
-std::string get_local_ip_address(){
-    int sock = socket(PF_INET, SOCK_DGRAM, 0);
-    sockaddr_in loopback;
-
-    if (sock == -1) {
-        throw "ERROR CREATING SOCKET";
-    }
-
-    std::memset(&loopback, 0, sizeof(loopback));
-    loopback.sin_family = AF_INET;
-    loopback.sin_addr.s_addr = INADDR_LOOPBACK;   // using loopback ip address
-    loopback.sin_port = htons(9);                 // using debug port
-
-    if (connect(sock, reinterpret_cast<sockaddr*>(&loopback), sizeof(loopback)) == -1) {
-        close(sock);
-        throw "ERROR COULD NOT CONNECT";
-    }
-
-    socklen_t addrlen = sizeof(loopback);
-    if (getsockname(sock, reinterpret_cast<sockaddr*>(&loopback), &addrlen) == -1) {
-        close(sock);
-        throw "ERROR COULD NOT GETSOCKNAME";
-    }
-
-    close(sock);
-
-    char buf[INET_ADDRSTRLEN];
-    if (inet_ntop(AF_INET, &loopback.sin_addr, buf, INET_ADDRSTRLEN) == 0x0) {
-        throw "ERROR COULD NOT INET_NTOP";
-    } else {
-        return std::string(buf);
-    }
-}
+#include "df_util/util.h"
 
 int main(int argc, char *argv[])
 {
