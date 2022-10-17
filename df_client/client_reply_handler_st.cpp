@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 1/27/20.
-//
-
 #include "client_reply_handler_st.h"
 
 

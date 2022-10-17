@@ -1,12 +1,11 @@
-//
-// Created by danielsf97 on 1/16/20.
-//
-
 #include "data_handler_listener.h"
 #include "df_communication/udp_async_server.h"
 
-data_handler_listener::data_handler_listener(std::string ip, int kv_port, long id, float chance, pss* pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart, long* msg_count, long* fwd_count)
-    : ip(std::move(ip)), kv_port(kv_port), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)), msg_count(msg_count), fwd_count(fwd_count) {}
+data_handler_listener::data_handler_listener(std::string ip, int kv_port, long id, float chance, pss* pss, group_construction* group_c, 
+                                        anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
+    : ip(std::move(ip)), kv_port(kv_port), id(id), chance(chance), pss_ptr(pss), group_c_ptr(group_c), anti_ent_ptr(anti_ent), 
+        store(std::move(store)), smart_forward(smart), socket_send(socket(PF_INET, SOCK_DGRAM, 0)) {}
+
 
 void data_handler_listener::reply_client(proto::kv_message& message, const std::string& sender_ip, int sender_port){
     try{
@@ -42,7 +41,6 @@ void data_handler_listener::forward_message(const std::vector<peer_data>& view_t
     size_t data_size = buf.size();
 
     for(const peer_data& peer: view_to_send){
-        (*this->fwd_count)++;
         try {
             struct sockaddr_in serverAddr;
             memset(&serverAddr, '\0', sizeof(serverAddr));
@@ -81,7 +79,6 @@ void data_handler_listener::forward_decider(proto::kv_message &msg, const std::s
 }
 
 void data_handler_listener::process_get_message(proto::kv_message &msg) {
-    (*this->msg_count)++;
     const proto::get_message& message = msg.get_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
@@ -95,31 +92,29 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
         this->store->log_req(req_id);
 
         std::unique_ptr<std::string> data(nullptr); 
-        std::unique_ptr<std::vector<kv_store_key_version>> del_v(nullptr);
+        std::vector<kv_store_version> del_v;
         bool is_deleted = false;
-        kv_store_key_version version;
-        version.client_id = message.key().key_version().client_id();
-
+        
+        kv_store_version version;
         for (auto c : message.key().key_version().version())
             version.vv.emplace(c.client_id(), c.clock());
+        version.client_id = message.key().key_version().client_id();
 
         if(this->store->get_slice_for_key(key) == this->store->get_slice())
-            del_v = this->store->get_latest_deleted_version(key);
-
-        
-        if(del_v != nullptr){
-            for(auto dv : *del_v){
-                kVersionComp comp = comp_version(version, dv);
-                if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
-                    is_deleted = true;
-                    break;
+            if(this->store->get_latest_deleted_version(key, del_v)){
+                for(auto dv : del_v){
+                    kVersionComp comp = comp_version(version, dv);
+                    if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
+                        is_deleted = true;
+                        break;
+                    }
                 }
             }
-        }
-
+            
+        
         if(!is_deleted){
-            kv_store_key<std::string> get_key = {key, version};
-            data = this->store->get(get_key);
+            kv_store_key<std::string> key_comp = {key, version};
+            data = this->store->get_data(key_comp);
         }
 
         if(data != nullptr || is_deleted){
@@ -177,7 +172,6 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
 
 
 void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg) {
-     (*this->msg_count)++;
     const proto::get_latest_version_message& message = msg.get_latest_version_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
@@ -190,31 +184,32 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
     if(!this->store->in_log(req_id)){
         this->store->log_req(req_id);
 
-        //std::cout << "Get latest ##### Key: " << key << std::endl;
-
-        std::unique_ptr<std::vector<kv_store_key_version>> version(nullptr);
-        std::unique_ptr<std::vector<kv_store_key_version>> del_v(nullptr);
+        std::vector<kv_store_version> lastest_v;
+        std::vector<kv_store_version> latest_del_v;
         std::vector<std::unique_ptr<std::string>> data_v;
+
+        bool got_latest_version = false;
+        bool got_latest_deleted_version = false;
 
         // It only make sense to query for the last known version of the key
         // to peers that belong to the same slice of the key
         if(this->store->get_slice_for_key(key) == this->store->get_slice()){
             try {
-                 
                 if(get_data)
-                    version = this->store->get_latest_data_version(key, data_v);
+                    got_latest_version = this->store->get_latest_data_version(key, lastest_v, data_v);
                 else
-                    version = this->store->get_latest_version(key);
+                    got_latest_version = this->store->get_latest_version(key, lastest_v);
 
-                del_v = this->store->get_latest_deleted_version(key);
-                
+                got_latest_deleted_version = this->store->get_latest_deleted_version(key, latest_del_v);
+
                 // when the peer was supposed to have a key but it doesn't, replies with key version -1
                 // to prevent for the client to have to wait for a timeout if a certain key does not exist.
                 
-                if(version == nullptr) 
-                    version = std::make_unique<std::vector<kv_store_key_version>>();
-                if(del_v == nullptr)
-                    del_v = std::make_unique<std::vector<kv_store_key_version>>();
+                if(!got_latest_version || !got_latest_deleted_version){
+                    got_latest_version = true;
+                    got_latest_deleted_version = true;
+                }
+                    
                 
             }catch(std::exception& e){
                 //LevelDBException
@@ -222,14 +217,14 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
             }
         }
 
-        if(version != nullptr || del_v != nullptr){
+        if(got_latest_version || got_latest_deleted_version){
             
             float achance = random_float(0.0, 1.0);
 
             if(!request_already_replied || achance <= this->chance){
                 proto::kv_message reply_message;
 
-                build_get_latest_version_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, *version, get_data, data_v, *del_v);
+                build_get_latest_version_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, lastest_v, get_data, data_v, latest_del_v);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
 
@@ -264,7 +259,6 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 
 
 void data_handler_listener::process_put_message(proto::kv_message &msg) {
-    (*this->msg_count)++;
     const auto& message = msg.put_msg();
     bool request_already_replied = msg.forwarded_within_group();
 
@@ -274,25 +268,26 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
     const std::string& data = message.data();
     bool timed_out_extra_reply = message.extra_reply();
     
-    kv_store_key_version version;
+    kv_store_version version;
     for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
-
     version.client_id = message.key().key_version().client_id();
-    
-    kv_store_key<std::string> key_comp = {key, version, false, false};
 
-    if (!this->store->have_seen(key_comp)) {
-        bool stored;
+    FileType::FileType f_type;
+    if(message.type() == proto::FileType::DIRECTORY)
+        f_type = FileType::DIRECTORY;
+    else
+        f_type = FileType::FILE;
+
+    kv_store_key<std::string> key_comp = {key, version, f_type, false};
+
+    if(!this->store->have_seen(key_comp)) {
+        bool stored = false;
         try {
         
             stored = this->store->put(key_comp, data);
             
-            if(key.find("/print_nr") != std::string::npos){
-                std::cout << "Number of messages: " << *msg_count << std::endl;
-                std::cout << "Number of messages fwrd: " << *fwd_count << std::endl;
-                
-            }else if(key.find("/print_db") != std::string::npos){
+            if(key.find("/print_db") != std::string::npos){
                 this->store->print_store(this->id);
             }
 
@@ -300,15 +295,15 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
             stored = false;
         }
 
-        if (stored) {
+        if(stored) {
 
             float achance = random_float(0.0, 1.0);
 
             std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-           if (!request_already_replied || achance <= this->chance) {
+           if(!request_already_replied || achance <= this->chance) {
                 proto::kv_message reply_message;
                 
-                build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
+                build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, f_type);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
 
@@ -323,91 +318,20 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
     }
     else if(timed_out_extra_reply){
         if(this->store->is_key_is_for_me(key_comp)){
-            std::unique_ptr<std::string> data = this->store->get(key_comp);
-            if(data != nullptr){
+            bool exists = this->store->verify_if_version_exists(key_comp);
+            if(exists){
 
                 float achance = random_float(0.0, 1.0);
                 std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
                 if (!request_already_replied || achance <= this->chance) {
                     proto::kv_message reply_message;
                     
-                    build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
+                    build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, f_type);
 
                     this->reply_client(reply_message, sender_ip, sender_port);
                 }
-            }
-        } else {
-            forward_decider(msg, key);
-        }
-    }
-}
-
-
-
-void data_handler_listener::process_put_with_merge_message(proto::kv_message &msg) {
-    (*this->msg_count)++;
-    const auto& message = msg.put_with_merge_msg();
-    bool request_already_replied = msg.forwarded_within_group();
-
-    const std::string& sender_ip = message.ip();
-    const int sender_port = message.port();
-    const std::string& key = message.key().key();
-    const std::string& data = message.data();
-    bool timed_out_extra_reply = message.extra_reply();
-    
-    kv_store_key_version version;
-    for (auto c : message.key().key_version().version())
-        version.vv.emplace(c.client_id(), c.clock());
-    version.client_id = message.key().key_version().client_id();
-
-    kv_store_key<std::string> key_comp = {key, version, false, true};
-
-    if (!this->store->have_seen(key_comp)) {
-    
-        bool stored;
-
-        try {
-            stored = this->store->put_with_merge(key_comp, data);
-    
-        }catch(std::exception& e){
-            stored = false;
-        }
-
-        if (stored) {
-
-            float achance = random_float(0.0, 1.0);
-
-            std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-            if (!request_already_replied || achance <= this->chance) {
-                proto::kv_message reply_message;
-    
-                build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, true);
-
-                this->reply_client(reply_message, sender_ip, sender_port);
-                msg.set_forwarded_within_group(true);
-            }
-            
-            this->forward_message(view, const_cast<proto::kv_message &>(msg));
-
-        } else {
-            forward_decider(msg, key);
-        }
-    }
-    else if(timed_out_extra_reply){
-        if(this->store->is_key_is_for_me(key_comp)){
-            std::unique_ptr<std::string> data = this->store->get_merge(key_comp);
-            if(data != nullptr){
-            
-                float achance = random_float(0.0, 1.0);
-                std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-                if (!request_already_replied || achance <= this->chance) {
-                    proto::kv_message reply_message;
-        
-                    build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, true);
-
-                    this->reply_client(reply_message, sender_ip, sender_port);
-                
-                }
+            }else{
+                forward_decider(msg, key);
             }
         } else {
             forward_decider(msg, key);
@@ -417,7 +341,6 @@ void data_handler_listener::process_put_with_merge_message(proto::kv_message &ms
 
 
 void data_handler_listener::process_delete_message(proto::kv_message &msg) {
-    (*this->msg_count)++;
     const auto& message = msg.delete_msg();
     bool request_already_replied = msg.forwarded_within_group();
     
@@ -426,27 +349,25 @@ void data_handler_listener::process_delete_message(proto::kv_message &msg) {
     const std::string& key = message.key().key();
     bool timed_out_extra_reply = message.extra_reply();
     
-    kv_store_key_version version;
+    kv_store_version version;
     for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
     version.client_id = message.key().key_version().client_id();
     
-    kv_store_key<std::string> key_comp = {key, version, true};
+     FileType::FileType f_type;
+    if(message.type() == proto::FileType::DIRECTORY)
+        f_type = FileType::DIRECTORY;
+    else 
+        f_type = FileType::FILE;
+
+    kv_store_key<std::string> key_comp = {key, version, f_type, true};
     
     if (!this->store->have_seen_deleted(key_comp)) {
         bool deleted;
         try {
             
-            if(key.find("delete_all_db") != std::string::npos){ 
-                deleted = this->store->clean_db();
-                this->store->clear_seen_log();
-                this->store->clear_seen_deleted_log();
-                this->store->clear_request_log();
-                this->store->clear_anti_entropy_log();
-                this->store->seen_it_deleted(key_comp);
-            }else{
-                deleted = this->store->remove(key_comp);
-            }
+            deleted = this->store->remove(key_comp);
+            
         }catch(std::exception& e){
             deleted = false;
         }
@@ -459,7 +380,7 @@ void data_handler_listener::process_delete_message(proto::kv_message &msg) {
             if (!request_already_replied || achance <= this->chance) {
                 proto::kv_message reply_message;
                 
-                build_delete_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version);
+                build_delete_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, f_type);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
                 msg.set_forwarded_within_group(true);
@@ -473,18 +394,19 @@ void data_handler_listener::process_delete_message(proto::kv_message &msg) {
     }
     else if(timed_out_extra_reply){
         if(this->store->is_key_is_for_me(key_comp)){
-            std::unique_ptr<std::string> data = this->store->get_deleted(key_comp);
-            if(data != nullptr){
-
+            bool exists = this->store->verify_if_version_exists_in_deleted(key_comp);
+            if(exists){
                 float achance = random_float(0.0, 1.0);
                 std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
                 if (!request_already_replied || achance <= this->chance) {
                     proto::kv_message reply_message;
                     
-                    build_delete_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version);
+                    build_delete_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, f_type);
 
                     this->reply_client(reply_message, sender_ip, sender_port);
                 }
+            }else{
+                forward_decider(msg, key);
             }
         } else {
            forward_decider(msg, key);
@@ -512,17 +434,12 @@ void data_handler_listener::process_put_child_message(proto::kv_message &msg) {
     const long id = message.id();
     bool timed_out_extra_reply = message.extra_reply();
     
-    kv_store_key_version version;
+    kv_store_version version;
     for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
     version.client_id = message.key().key_version().client_id();
     
-    kv_store_key<std::string> key_comp = {key, version, false, false};
-
-    kv_store_key_version past_v;
-    for (auto c : message.past_key_version().version())
-        past_v.vv.emplace(c.client_id(), c.clock());
-    past_v.client_id = message.past_key_version().client_id();
+    kv_store_key<std::string> key_comp = {key, version, FileType::DIRECTORY, false};
 
     const bool is_create = message.is_create();
     const bool is_dir = message.is_dir();
@@ -531,7 +448,7 @@ void data_handler_listener::process_put_child_message(proto::kv_message &msg) {
     if (!this->store->have_seen(key_comp)) {
         bool stored;
         try {
-            stored = this->store->put_metadata_child(key, version, past_v, child_path, is_create, is_dir);
+            stored = this->store->put_metadata_child(key_comp, child_path, is_create, is_dir);
             
         }catch(std::exception& e){
             stored = false;
@@ -545,7 +462,7 @@ void data_handler_listener::process_put_child_message(proto::kv_message &msg) {
             if (!request_already_replied || achance <= this->chance) {
                 proto::kv_message reply_message;
 
-                build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
+                build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, FileType::DIRECTORY);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
 
@@ -560,31 +477,16 @@ void data_handler_listener::process_put_child_message(proto::kv_message &msg) {
     }
     else if(timed_out_extra_reply){
         if(this->store->is_key_is_for_me(key_comp)){
-            std::unique_ptr<std::vector<kv_store_key_version>> last_v = this->store->get_latest_version(key);
-            if(last_v != nullptr){
-                bool can_respond = false;
+            bool can_respond = this->store->verify_if_version_exists(key_comp);
+            if(can_respond){
+                float achance = random_float(0.0, 1.0);
+                std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+                if (!request_already_replied || achance <= this->chance) {
+                    proto::kv_message reply_message;
 
-                for(auto lv : *last_v){
-                    kVersionComp comp = comp_version(lv, version);
-                    if(comp == kVersionComp::Equal || comp == kVersionComp::Bigger){
-                        can_respond = true;
-                        break;
-                    }
-                }
+                    build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, FileType::DIRECTORY);
 
-                if(can_respond){
-                    float achance = random_float(0.0, 1.0);
-                    std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-                    if (!request_already_replied || achance <= this->chance) {
-                        proto::kv_message reply_message;
-
-                        build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
-
-                        this->reply_client(reply_message, sender_ip, sender_port);   
-                    }
-                }
-                else{
-                    forward_decider(msg, key);
+                    this->reply_client(reply_message, sender_ip, sender_port);   
                 }
             }
             else{
@@ -597,136 +499,42 @@ void data_handler_listener::process_put_child_message(proto::kv_message &msg) {
 }
 
 
-void data_handler_listener::process_put_metadata_stat_message(proto::kv_message &msg) {
-    (*this->msg_count)++;
-    const auto& message = msg.put_met_stat_msg();
-    bool request_already_replied = msg.forwarded_within_group();
-    
-    const std::string& sender_ip = message.ip();
-    const int sender_port = message.port();
-    const std::string& key = message.key().key();
-    const std::string& data = message.data();
-    bool timed_out_extra_reply = message.extra_reply();
-    
-    kv_store_key_version version;
-    for (auto c : message.key().key_version().version())
-        version.vv.emplace(c.client_id(), c.clock());
-    version.client_id = message.key().key_version().client_id();
-    
-    kv_store_key<std::string> key_comp = {key, version, false, false};
-
-    kv_store_key_version past_v;
-    for (auto c : message.past_key_version().version())
-        past_v.vv.emplace(c.client_id(), c.clock());
-    past_v.client_id = message.past_key_version().client_id();
-
-    if (!this->store->have_seen(key_comp)) {
-        bool stored;
-        try {
-            stored = this->store->put_metadata_stat(key, version, past_v, data);
-
-        }catch(std::exception& e){
-            stored = false;
-        }
-
-        if (stored) {
-
-            float achance = random_float(0.0, 1.0);
-
-            std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-           if (!request_already_replied || achance <= this->chance) {
-                proto::kv_message reply_message;
-
-                build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
-
-                this->reply_client(reply_message, sender_ip, sender_port);
-
-                msg.set_forwarded_within_group(true);
-            }    
-            
-            this->forward_message(view, const_cast<proto::kv_message &>(msg));
-            
-        } else {
-            forward_decider(msg, key);
-        }
-    }
-    else if(timed_out_extra_reply){
-        if(this->store->is_key_is_for_me(key_comp)){
-            std::unique_ptr<std::vector<kv_store_key_version>> last_v = this->store->get_latest_version(key);
-            if(last_v != nullptr){
-                bool can_respond = false;
-
-                for(auto lv : *last_v){
-                    kVersionComp comp = comp_version(lv, version);
-                    if(comp == kVersionComp::Equal || comp == kVersionComp::Bigger){
-                        can_respond = true;
-                        break;
-                    }
-                }
-
-                if(can_respond){
-                    float achance = random_float(0.0, 1.0);
-                    std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-                    if (!request_already_replied || achance <= this->chance) {
-                        proto::kv_message reply_message;
-
-                        build_put_reply_message(&reply_message, this->ip, this->kv_port, this->id, key, version, false);
-
-                        this->reply_client(reply_message, sender_ip, sender_port);   
-                    }
-                }
-                else{
-                    forward_decider(msg, key);
-                }
-            }
-            else{
-                forward_decider(msg, key);
-            }
-        } else {
-            forward_decider(msg, key);
-        }
-    }
-}
-
-
-void data_handler_listener::process_get_latest_metadata_size_or_stat_msg(proto::kv_message msg) {
-    (*this->msg_count)++;
-    const auto& message = msg.get_latest_met_size_or_stat_msg();
+void data_handler_listener::process_get_latest_metadata_stat_msg(proto::kv_message msg) {
+    const auto& message = msg.get_latest_met_stat_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
     const std::string& key = message.key();
     const std::string& req_id = message.reqid();
-    const bool get_size = message.get_size();
-    const bool get_stat = message.get_stat();
 
     bool request_already_replied = msg.forwarded_within_group();
     // if request has not yet been processed
     if(!this->store->in_log(req_id)){
         this->store->log_req(req_id);
 
-        std::unique_ptr<std::vector<kv_store_key_version>> version(nullptr);
-        std::unique_ptr<std::vector<kv_store_key_version>> del_v(nullptr);
+        std::vector<kv_store_version> latest_v;
+        std::vector<kv_store_version> latest_del_v;
         std::vector<std::unique_ptr<std::string>> data_v;
+
+        bool got_data = false;
+        bool got_latest_deleted_version = false;
 
         // It only make sense to query for the last known version of the key
         // to peers that belong to the same slice of the key
         if(this->store->get_slice_for_key(key) == this->store->get_slice()){
             try {
                 
-                if(get_size){
-                    version = this->store->get_metadata_size(key, data_v);
-                }else{
-                    version = this->store->get_metadata_stat(key, data_v);
-                }
-                del_v = this->store->get_latest_deleted_version(key);
+                got_data = this->store->get_metadata_stat(key, latest_v, data_v);
+                
+                got_latest_deleted_version = this->store->get_latest_deleted_version(key, latest_del_v);
                 
                 // when the peer was supposed to have a key but it doesn't, replies with key version -1
                 // to prevent for the client to have to wait for a timeout if a certain key does not exist.
                 
-                if(version == nullptr) 
-                    version = std::make_unique<std::vector<kv_store_key_version>>();
-                if(del_v == nullptr)
-                    del_v = std::make_unique<std::vector<kv_store_key_version>>();
+                if(!got_data || !got_latest_deleted_version){
+                    got_data = true;
+                    got_latest_deleted_version = true;
+                }
+                   
                 
             }catch(std::exception& e){
                 //LevelDBException
@@ -734,14 +542,98 @@ void data_handler_listener::process_get_latest_metadata_size_or_stat_msg(proto::
             }
         }
 
-        if(version != nullptr || del_v != nullptr){
+        if(got_data || got_latest_deleted_version){
             
             float achance = random_float(0.0, 1.0);
 
             if(!request_already_replied || achance <= this->chance){
                 proto::kv_message reply_message;
     
-                build_get_latest_version_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, *version, true, data_v, *del_v);
+                build_get_latest_version_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, latest_v, true, data_v, latest_del_v);
+
+                this->reply_client(reply_message, sender_ip, sender_port);
+
+                std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
+                msg.set_forwarded_within_group(true); 
+                this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+
+            }else{
+                std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
+                if(!slice_peers.empty() && this->smart_forward){
+                    // forward to other peers from my slice as its the right slice for the key
+                    // trying to speed up quorum
+                    this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                }else{
+                    std::vector<peer_data> view = this->pss_ptr->get_view();
+                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                }
+            }
+        }else{
+            //se não tenho o conteudo da chave -> fazer forward
+            int obj_slice = this->store->get_slice_for_key(key);
+            std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
+            if(!slice_peers.empty() && this->smart_forward){
+                this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+            }else{
+                std::vector<peer_data> view = this->pss_ptr->get_view();
+                this->forward_message(view, const_cast<proto::kv_message &>(msg));
+            }
+        }
+    }
+}
+
+
+void data_handler_listener::process_get_latest_metadata_size_msg(proto::kv_message msg) {
+    const auto& message = msg.get_latest_met_size_msg();
+    const std::string& sender_ip = message.ip();
+    const int sender_port = message.port();
+    const std::string& key = message.key();
+    const std::string& req_id = message.reqid();
+
+    bool request_already_replied = msg.forwarded_within_group();
+    // if request has not yet been processed
+    if(!this->store->in_log(req_id)){
+        this->store->log_req(req_id);
+
+        std::vector<kv_store_version> latest_v;
+        std::vector<kv_store_version> latest_del_v;
+        std::vector<std::unique_ptr<std::string>> data_v;
+
+        bool got_data = false;
+        bool got_latest_deleted_version = false;
+
+        // It only make sense to query for the last known version of the key
+        // to peers that belong to the same slice of the key
+        if(this->store->get_slice_for_key(key) == this->store->get_slice()){
+            try {
+
+                got_data = this->store->get_metadata_size(key, latest_v, data_v);
+                
+                got_latest_deleted_version = this->store->get_latest_deleted_version(key, latest_del_v);
+                
+                // when the peer was supposed to have a key but it doesn't, replies with key version -1
+                // to prevent for the client to have to wait for a timeout if a certain key does not exist.
+                
+                if(!got_data || !got_latest_deleted_version){
+                    got_data = true;
+                    got_latest_deleted_version = true;
+                }
+                   
+                
+            }catch(std::exception& e){
+                //LevelDBException
+                e.what();
+            }
+        }
+
+        if(got_data || got_latest_deleted_version){
+            
+            float achance = random_float(0.0, 1.0);
+
+            if(!request_already_replied || achance <= this->chance){
+                proto::kv_message reply_message;
+    
+                build_get_latest_version_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, latest_v, true, data_v, latest_del_v);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
 
@@ -776,7 +668,6 @@ void data_handler_listener::process_get_latest_metadata_size_or_stat_msg(proto::
 
 
 void data_handler_listener::process_get_metadata_message(proto::kv_message &msg) {
-    (*this->msg_count)++;
     const proto::get_metadata_message& message = msg.get_met_msg();
     const std::string& sender_ip = message.ip();
     const int sender_port = message.port();
@@ -790,13 +681,16 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
         this->store->log_req(req_id);
         
         std::unique_ptr<std::string> data(nullptr); 
-        std::unique_ptr<std::vector<kv_store_key_version>> del_v(nullptr);
-        std::unique_ptr<std::vector<kv_store_key_version>> last_v(nullptr);
+        std::vector<kv_store_version> last_del_v;
+        std::vector<kv_store_version> last_v;
+
+        bool got_latest_version = false;
+        bool got_latest_deleted_version = false;
         
         bool is_deleted = false;
         bool higher_version = false;
 
-        kv_store_key_version version;
+        kv_store_version version;
         for (auto c : message.key().key_version().version())
             version.vv.emplace(c.client_id(), c.clock());
         version.client_id = message.key().key_version().client_id();
@@ -809,71 +703,44 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
 
         if(res_1 == 0 && res_2 == 0){
             
-            int blk_num = std::stoi(blk_num_str);  
+            int blk_num = std::stoi(blk_num_str);
 
             if(this->store->get_slice_for_key(base_path) == this->store->get_slice()){
                 
-                kv_store_key<std::string> get_key = {base_path, version};
-                data = this->store->get(get_key);
-
+                kv_store_key<std::string> get_key = {base_path, version, FileType::DIRECTORY};
+                data = this->store->get_data(get_key);
+                
                 if(data == nullptr){
 
-                    del_v = this->store->get_latest_deleted_version(base_path);
-                    last_v = this->store->get_latest_version(base_path);
+                    got_latest_version = this->store->get_latest_version(base_path, last_v);
+                    got_latest_deleted_version = this->store->get_latest_deleted_version(base_path, last_del_v);
 
-                    if(last_v != nullptr){
-                        for(auto lv : *last_v){
-                            kVersionComp comp = comp_version(version, lv);
-                            if(comp == kVersionComp::Lower){
-                                higher_version = true;
-                                
-                                if(del_v != nullptr){
-                                    for(auto dv : *del_v){
-                                        kVersionComp comp = comp_version(lv, dv);
-                                        if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
-                                            is_deleted = true;
-                                            break;
-                                        }
-                                    }
+                    if(got_latest_version){
+                        kVersionComp comp = comp_version(version, last_v.at(0));
+                        if(comp == kVersionComp::Lower){
+                            higher_version = true;
+                            
+                            if(got_latest_deleted_version){
+                                kVersionComp comp = comp_version(last_v.at(0), last_del_v.at(0));
+                                if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
+                                    is_deleted = true;
                                 }
-
-                                break;
                             }
                         }
                     }
 
-                    if(del_v != nullptr && !is_deleted){
-                        for(auto dv : *del_v){
-                            kVersionComp comp = comp_version(version, dv);
-                            if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
-                                is_deleted = true;
-                                break;
-                            }
+                    if(got_latest_deleted_version && !is_deleted){
+                        kVersionComp comp = comp_version(version, last_del_v.at(0));
+                        if(comp == kVersionComp::Lower || comp == kVersionComp::Equal){
+                            is_deleted = true;
                         }
                     }
                 }else{
-                        
-                    size_t NR_BLKS = (data->size() / BLK_SIZE);
-                    if(data->size() % BLK_SIZE > 0) NR_BLKS = NR_BLKS + 1;
-
-                    size_t pos = (blk_num-1)*BLK_SIZE;
-
-                    std::string value;
-
-                    //Last block
-                    if(blk_num == NR_BLKS){
-                        value = data->substr(pos);  
-                    }else{
-                        value = data->substr(pos, BLK_SIZE); 
-                    }
-
-                    data = std::make_unique<std::string>(value);
-                    
+                    data = split_data(std::move(data), blk_num);
                 }
             }
         }
         
-
         if(data != nullptr || higher_version || is_deleted){
 
             float achance = random_float(0.0, 1.0);
@@ -927,7 +794,7 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
 }
 
 
-//---------------------------------------------------------------------------------------------------------------------------
+// //---------------------------------------------------------------------------------------------------------------------------
 
 
 long data_handler_listener::get_anti_entropy_req_count(){
@@ -948,16 +815,22 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
         
         for(auto& sk: message.store_keys()){
             auto& key = sk.key();
-            kv_store_key_version version;
+            kv_store_version version;
             for(auto& vector: key.key_version().version()){
                 version.vv.emplace(vector.client_id(), vector.clock());
             }
             version.client_id = key.key_version().client_id();
+            
+            FileType::FileType f_type;
+            if(sk.type() == proto::FileType::DIRECTORY) 
+                f_type = FileType::DIRECTORY;
+            else 
+                f_type = FileType::FILE;
 
             if(sk.is_deleted())
-                deleted_keys_to_request.insert({key.key(), version, sk.is_deleted()});
+                deleted_keys_to_request.insert({key.key(), version, f_type, sk.is_deleted()});
             else{
-                kv_store_key<std::string> st_key ={key.key(), version, sk.is_deleted()};
+                kv_store_key<std::string> st_key ={key.key(), version, f_type, sk.is_deleted()};
                 keys_to_request.insert(std::make_pair(st_key, sk.data_size()));
             }
         }
@@ -967,50 +840,39 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
         this->store->remove_from_set_existent_deleted_keys(deleted_keys_to_request);
         std::cout << "################### Only need " << deleted_keys_to_request.size() << " deleted keys." << std::endl;
 
-        for (auto &key_size: keys_to_request) {
+        for (auto &[key_comp, size]: keys_to_request) {
             
-            if(key_size.second > BLK_SIZE){
+            if(key_comp.f_type == FileType::DIRECTORY && size > BLK_SIZE){
+
                     
-                if(this->store->get_incomplete_blks(key_size.first, tmp_blks_to_request)){
+                if(this->store->get_incomplete_blks(key_comp, size, tmp_blks_to_request)){
                      
-                    for(auto blk_num: tmp_blks_to_request){
-                        
-                        std::string blk_path;
-                        blk_path.reserve(100);
-                        blk_path.append(key_size.first.key).append(":").append(std::to_string(blk_num));
-
-                        proto::kv_message get_msg;
-
-                        std::string req_id;
-                        req_id.reserve(50);
-                        req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
-
-                        build_anti_entropy_get_metadata_message(&get_msg, this->ip, this->kv_port, this->id, req_id, blk_path, key_size.first.key_version, false);
-
-                        this->reply_client(get_msg, message.ip(), message.port());
-                    }
-
                 }else{
-                    this->store->put_tmp_key_entry_size(key_size.first, key_size.second);
+                    this->store->put_tmp_key_entry_size(key_comp, size);
 
-                    size_t NR_BLKS = (key_size.second / BLK_SIZE) + 1;    
+                    size_t NR_BLKS = (size / BLK_SIZE);
+                    if(size % BLK_SIZE > 0) NR_BLKS = NR_BLKS + 1;
 
-                    for(int i = 1; i <= NR_BLKS; i++){
+                    for(int i = 1; i <= NR_BLKS; i++)
+                        tmp_blks_to_request.push_back(i);
 
-                        std::string blk_path;
-                        blk_path.reserve(100);
-                        blk_path.append(key_size.first.key).append(":").append(std::to_string(i));
+                }
 
-                        proto::kv_message get_msg;
+                for(auto blk_num: tmp_blks_to_request){
+                        
+                    std::string blk_path;
+                    blk_path.reserve(100);
+                    blk_path.append(key_comp.key).append(":").append(std::to_string(blk_num));
 
-                        std::string req_id;
-                        req_id.reserve(50);
-                        req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
+                    proto::kv_message get_msg;
 
-                        build_anti_entropy_get_metadata_message(&get_msg, this->ip, this->kv_port, this->id, req_id, blk_path, key_size.first.key_version, false);
+                    std::string req_id;
+                    req_id.reserve(50);
+                    req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
 
-                        this->reply_client(get_msg, message.ip(), message.port());               
-                    }
+                    build_anti_entropy_get_metadata_message(&get_msg, this->ip, this->kv_port, this->id, req_id, blk_path, key_comp.version, key_comp.f_type, false);
+
+                    this->reply_client(get_msg, message.ip(), message.port());
                 }
             }else{
 
@@ -1020,7 +882,7 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
                 req_id.reserve(50);
                 req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
 
-                build_anti_entropy_get_message(&get_msg, this->ip, this->kv_port, this->id, req_id, key_size.first.key, key_size.first.key_version, false);
+                build_anti_entropy_get_message(&get_msg, this->ip, this->kv_port, this->id, req_id, key_comp.key, key_comp.version, key_comp.f_type, false);
 
                 this->reply_client(get_msg, message.ip(), message.port());
             }            
@@ -1034,7 +896,7 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
             req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
 
             //merge = false because this is deleted key, merge is irrelevant
-            build_anti_entropy_get_message(&get_msg, this->ip, this->kv_port, this->id, req_id, deleted_key.key, deleted_key.key_version, true);
+            build_anti_entropy_get_message(&get_msg, this->ip, this->kv_port, this->id, req_id, deleted_key.key, deleted_key.version, deleted_key.f_type, true);
             
             this->reply_client(get_msg, message.ip(), message.port());
         }
@@ -1051,30 +913,34 @@ void data_handler_listener::process_anti_entropy_get_message(proto::kv_message& 
     const int sender_port = message.port();
     const std::string& key = message.key().key();
     const std::string& req_id = message.reqid();
-    std::unique_ptr<std::string> data(nullptr); //*data = undefined
+    std::unique_ptr<std::string> data(nullptr);
     bool request_already_replied = msg.forwarded_within_group();
-
+    
     if(req_id.rfind("intern", 0) == 0){
         if(!this->store->in_anti_entropy_log(req_id)){
+            this->store->log_anti_entropy_req(req_id);
             
-            kv_store_key_version version;
+            kv_store_version version;
             for (auto c : message.key().key_version().version())
                 version.vv.emplace(c.client_id(), c.clock());
             version.client_id = message.key().key_version().client_id();
 
             bool is_deleted = message.is_deleted();
 
-            kv_store_key<std::string> get_key = {key, version, is_deleted};
+            FileType::FileType f_type;
+            if(message.type() == proto::FileType::DIRECTORY)
+                f_type = FileType::DIRECTORY;
+            else
+                f_type == FileType::FILE;
 
-            this->store->log_anti_entropy_req(req_id);
-            
-            bool is_merge;
-            data = this->store->get_anti_entropy(get_key, &is_merge);
+            kv_store_key<std::string> get_key = {key, version, f_type, is_deleted};
+            //TODO - Verify if f_type is correct.
+            data = this->store->get_data(get_key);
 
             if(data != nullptr){
                 proto::kv_message reply_message;
 
-                build_anti_entropy_get_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, version, is_deleted, is_merge, std::move(data));
+                build_anti_entropy_get_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, version, f_type, is_deleted, std::move(data));
 
                 std::cout << "################### Sending Get Reply Anti-entropy Message" << std::endl;
 
@@ -1095,21 +961,25 @@ void data_handler_listener::process_anti_entropy_get_metadata_message(proto::kv_
     const int sender_port = message.port();
     const std::string& key = message.key().key();
     const std::string& req_id = message.reqid();
-    std::unique_ptr<std::string> data(nullptr); //*data = undefined
+    std::unique_ptr<std::string> data(nullptr);
     bool request_already_replied = msg.forwarded_within_group();
 
     if(req_id.rfind("intern", 0) == 0){
         if(!this->store->in_anti_entropy_log(req_id)){
-
             this->store->log_anti_entropy_req(req_id);
             
-            kv_store_key_version version;
+            kv_store_version version;
             for (auto c : message.key().key_version().version())
                 version.vv.emplace(c.client_id(), c.clock());
             version.client_id = message.key().key_version().client_id();
 
+            FileType::FileType f_type;
+            if(message.type() == proto::FileType::DIRECTORY)
+                f_type = FileType::DIRECTORY;
+            else
+                f_type == FileType::FILE;
+
             bool is_deleted = message.is_deleted();
-            bool is_merge = true; //merge is for metadata so true
 
             std::string base_path;
             std::string blk_num_str;
@@ -1121,31 +991,17 @@ void data_handler_listener::process_anti_entropy_get_metadata_message(proto::kv_
 
                 int blk_num = std::stoi(blk_num_str);  
 
-                kv_store_key<std::string> get_key = {base_path, version, is_deleted};
+                kv_store_key<std::string> get_key = {base_path, version, f_type, is_deleted};
                 
-                data = this->store->get_anti_entropy(get_key, &is_merge);
-                if(data != nullptr){
-                    size_t NR_BLKS = (data->size() / BLK_SIZE) + 1;
-
-                    size_t pos = (blk_num-1)*BLK_SIZE;
-
-                    std::string value;
-
-                    //Last block
-                    if(blk_num == NR_BLKS){
-                        value = data->substr(pos);  
-                    }else{
-                        value = data->substr(pos, BLK_SIZE); 
-                    }
-
-                    data = std::make_unique<std::string>(value);
-                }
+                data = this->store->get_data(get_key);
+                
+                data = split_data(std::move(data), blk_num);
             }
             
             if(data != nullptr){
                 proto::kv_message reply_message;
 
-                build_anti_entropy_get_metadata_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, version, is_deleted, is_merge, std::move(data));
+                build_anti_entropy_get_metadata_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, version, f_type, is_deleted, std::move(data));
 
                 std::cout << "################### Sending Get Metadata Reply Anti-entropy Message" << std::endl;
 
@@ -1166,34 +1022,37 @@ void data_handler_listener::process_anti_entropy_get_reply_message(proto::kv_mes
     
     std::cout << "################### Got Reply Message for key: " << key << std::endl;
 
-    kv_store_key_version version;
+    kv_store_version version;
     for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
     version.client_id = message.key().key_version().client_id();
 
     const std::string& data = message.data();
 
+    FileType::FileType f_type;
+    if(message.type() == proto::FileType::DIRECTORY)
+        f_type = FileType::DIRECTORY;
+    else
+        f_type == FileType::FILE;
+
     bool is_deleted = message.is_deleted();
-    bool is_merge = message.is_merge();
 
     std::cout << "################### Is key deleted:  "<< is_deleted << std::endl;
     
-    kv_store_key<std::string> key_comp = {key, version, is_deleted, is_merge};
+    kv_store_key<std::string> key_comp = {key, version, f_type, is_deleted};
     
     if(!is_deleted && !this->store->have_seen(key_comp)) {
         std::cout << "################### Entered normal key zone" << std::endl;
         try {
-            if(is_merge){
-                bool stored = this->store->put_with_merge(key_comp, data);
-            }else{
-                bool stored = this->store->put(key_comp, data);
-            }
+           
+            bool stored = this->store->put(key_comp, data);
+            
         } catch(std::exception& e){}
     }
     else if(is_deleted && !this->store->have_seen_deleted(key_comp)) {
         std::cout << "################### Entered deleted key zone" << std::endl;
         try {
-            bool stored = this->store->anti_entropy_remove(key_comp, data);
+            bool stored = this->store->remove(key_comp);
         } catch(std::exception& e){}
     }
 }
@@ -1205,17 +1064,22 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
     
     std::cout << "################### Got Reply Message for Metadata key: " << key << std::endl;
 
-    kv_store_key_version version;
+    kv_store_version version;
     for (auto c : message.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
     version.client_id = message.key().key_version().client_id();
 
     const std::string& data = message.data();
 
-    bool is_deleted = message.is_deleted();
-    bool is_merge = message.is_merge();
+    FileType::FileType f_type;
+    if(message.type() == proto::FileType::DIRECTORY)
+        f_type = FileType::DIRECTORY;
+    else
+        f_type == FileType::FILE;
 
-    kv_store_key<std::string> key_comp = {key, version, is_deleted, is_merge};
+    bool is_deleted = message.is_deleted();
+
+    kv_store_key<std::string> key_comp = {key, version, f_type, is_deleted};
     
     if(!this->store->have_seen(key_comp) || !this->store->have_seen_deleted(key_comp)) {
         std::cout << "################### Trying to incorporate blk" << std::endl;
@@ -1231,119 +1095,118 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
             bool have_size = this->store->get_tmp_key_entry_size(base_path, key_comp, &value);
             if(have_size){
                 size = stol(value);
-                size_t blk_num = (size / BLK_SIZE) + 1;
-                bool have_all = this->store->check_if_have_all_blks_and_put_metadata(base_path, key_comp, blk_num);
+                size_t NR_BLKS = (size / BLK_SIZE);
+                if(size % BLK_SIZE > 0) NR_BLKS = NR_BLKS + 1;
+                bool have_all = this->store->check_if_have_all_blks_and_put_metadata(base_path, key_comp, NR_BLKS);
                 if(have_all){
                     std::cout << "################### Have all the blks, incorporate in normal db" << std::endl;
-                    this->store->delete_metadata_from_tmp_anti_entropy(base_path, key_comp, blk_num);
+                    this->store->delete_metadata_from_tmp_anti_entropy(base_path, key_comp, NR_BLKS);
                 }
             }
-            
-
         } catch(std::exception& e){}
     }
 }
 
 
 
-void data_handler_listener::process_recover_request_msg(proto::kv_message& msg) {
-    const proto::recover_request_message& message = msg.recover_request_msg();
-    const std::string& sender_ip = message.ip();
-    int sender_recover_port = message.recover_port();
-    int nr_slices = message.nr_slices();
-    int slice = message.slice();
+// void data_handler_listener::process_recover_request_msg(proto::kv_message& msg) {
+//     const proto::recover_request_message& message = msg.recover_request_msg();
+//     const std::string& sender_ip = message.ip();
+//     int sender_recover_port = message.recover_port();
+//     int nr_slices = message.nr_slices();
+//     int slice = message.slice();
 
-    if(this->group_c_ptr->get_my_group() != slice ||
-       this->group_c_ptr->get_nr_groups() != nr_slices ||
-       !this->group_c_ptr->has_recovered())
-    {
-        return;
-    }
+//     if(this->group_c_ptr->get_my_group() != slice ||
+//        this->group_c_ptr->get_nr_groups() != nr_slices ||
+//        !this->group_c_ptr->has_recovered())
+//     {
+//         return;
+//     }
 
-    try {
-        tcp_client_server_connection::tcp_client_connection connection(sender_ip.c_str(), sender_recover_port);
+//     try {
+//         tcp_client_server_connection::tcp_client_connection connection(sender_ip.c_str(), sender_recover_port);
 
-        char rcv_buf[65500];
+//         char rcv_buf[65500];
 
-        int bytes_rcv = connection.recv_msg(rcv_buf); //throw exception
+//         int bytes_rcv = connection.recv_msg(rcv_buf); //throw exception
 
-        proto::kv_message kv_message_rcv;
-        kv_message_rcv.ParseFromArray(rcv_buf, bytes_rcv);
+//         proto::kv_message kv_message_rcv;
+//         kv_message_rcv.ParseFromArray(rcv_buf, bytes_rcv);
 
-        if(kv_message_rcv.has_recover_offset_msg()) {
+//         if(kv_message_rcv.has_recover_offset_msg()) {
 
-            const proto::recover_offset_message& off_msg = kv_message_rcv.recover_offset_msg();
-            std::vector<std::string> off_keys;
-            std::vector<std::string> off_deleted_keys;
-            for(auto& key: off_msg.keys()){
-                off_keys.emplace_back(key);
-            }
-            for(auto& del_key: off_msg.deleted_keys()){
-                off_deleted_keys.emplace_back(del_key);
-            }
+//             const proto::recover_offset_message& off_msg = kv_message_rcv.recover_offset_msg();
+//             std::vector<std::string> off_keys;
+//             std::vector<std::string> off_deleted_keys;
+//             for(auto& key: off_msg.keys()){
+//                 off_keys.emplace_back(key);
+//             }
+//             for(auto& del_key: off_msg.deleted_keys()){
+//                 off_deleted_keys.emplace_back(del_key);
+//             }
 
-            // For Each Key greater than offset send to peer
-            this->store->send_keys_gt(off_keys, off_deleted_keys, connection,
-                                      [](tcp_client_server_connection::tcp_client_connection& connection, const std::string& key,
-                                         std::map<long, long>& version, long client_id, bool is_deleted, bool is_merge, const char* data, size_t data_size){
-                                          proto::kv_message kv_message;
-                                          kv_message.set_forwarded_within_group(false);
-                                          auto* message_content = new proto::recover_data_message();
+//             // For Each Key greater than offset send to peer
+//             this->store->send_keys_gt(off_keys, off_deleted_keys, connection,
+//                                       [](tcp_client_server_connection::tcp_client_connection& connection, const std::string& key,
+//                                          std::map<long, long>& version, long client_id, bool is_deleted, bool is_merge, const char* data, size_t data_size){
+//                                           proto::kv_message kv_message;
+//                                           kv_message.set_forwarded_within_group(false);
+//                                           auto* message_content = new proto::recover_data_message();
                                           
-                                          proto::kv_store* store = new proto::kv_store();
-                                          proto::kv_store_key* kv_key = new proto::kv_store_key();
-                                          kv_key->set_key(key);
-                                          proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
+//                                           proto::kv_store* store = new proto::kv_store();
+//                                           proto::kv_store_key* kv_key = new proto::kv_store_key();
+//                                           kv_key->set_key(key);
+//                                           proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
 
-                                            for(auto const c: version){
-                                                proto::kv_store_version *kv_version = kv_key_version->add_version();
-                                                kv_version->set_client_id(c.first);
-                                                kv_version->set_clock(c.second);
-                                            }
+//                                             for(auto const c: version){
+//                                                 proto::kv_store_version *kv_version = kv_key_version->add_version();
+//                                                 kv_version->set_client_id(c.first);
+//                                                 kv_version->set_clock(c.second);
+//                                             }
 
-                                          kv_key_version->set_client_id(client_id);
+//                                           kv_key_version->set_client_id(client_id);
 
-                                          kv_key->set_allocated_key_version(kv_key_version);
+//                                           kv_key->set_allocated_key_version(kv_key_version);
 
-                                          store->set_is_deleted(is_deleted);
-                                          store->set_is_merge(is_merge);
-                                          store->set_allocated_key(kv_key);
+//                                           store->set_is_deleted(is_deleted);
+//                                           store->set_is_merge(is_merge);
+//                                           store->set_allocated_key(kv_key);
 
-                                          message_content->set_allocated_store_keys(store);
+//                                           message_content->set_allocated_store_keys(store);
 
-                                          message_content->set_data(data, data_size);
-                                          kv_message.set_allocated_recover_data_msg(message_content);
+//                                           message_content->set_data(data, data_size);
+//                                           kv_message.set_allocated_recover_data_msg(message_content);
 
-                                          std::string buf;
-                                          kv_message.SerializeToString(&buf);
+//                                           std::string buf;
+//                                           kv_message.SerializeToString(&buf);
 
-                                          try {
-                                              connection.send_msg(buf.data(), buf.size());
-                                          }catch(std::exception& e){
-                                              std::cerr << "Exception: " << e.what() << std::endl;
-                                          }
-                                      });
+//                                           try {
+//                                               connection.send_msg(buf.data(), buf.size());
+//                                           }catch(std::exception& e){
+//                                               std::cerr << "Exception: " << e.what() << std::endl;
+//                                           }
+//                                       });
 
-            // Send Recover Done Message
-            proto::kv_message kv_message;
-            kv_message.set_forwarded_within_group(false);
-            auto* message_content = new proto::recover_termination_message();
-            kv_message.set_allocated_recover_termination_msg(message_content);
-            std::string buf;
-            kv_message.SerializeToString(&buf);
+//             // Send Recover Done Message
+//             proto::kv_message kv_message;
+//             kv_message.set_forwarded_within_group(false);
+//             auto* message_content = new proto::recover_termination_message();
+//             kv_message.set_allocated_recover_termination_msg(message_content);
+//             std::string buf;
+//             kv_message.SerializeToString(&buf);
 
-            try {
-                connection.send_msg(buf.data(), buf.size());
-            }catch(std::exception& e){
-                std::cerr << "Exception: " << e.what() << " " << strerror(errno) << std::endl;
-            }
-            connection.wait_for_remote_end_to_close_socket();
-        }
+//             try {
+//                 connection.send_msg(buf.data(), buf.size());
+//             }catch(std::exception& e){
+//                 std::cerr << "Exception: " << e.what() << " " << strerror(errno) << std::endl;
+//             }
+//             connection.wait_for_remote_end_to_close_socket();
+//         }
 
-    }catch(const char* e){
-        std::cerr << "Exception: " << e << std::endl;
-    }catch(std::exception& e){
-        std::cerr << "Exception: " << e.what() << std::endl;
-    }
-}
+//     }catch(const char* e){
+//         std::cerr << "Exception: " << e << std::endl;
+//     }catch(std::exception& e){
+//         std::cerr << "Exception: " << e.what() << std::endl;
+//     }
+// }
 

@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 3/11/20.
-//
-
 #ifndef P2PFS_LSFS_STATE_H
 #define P2PFS_LSFS_STATE_H
 
@@ -14,6 +10,7 @@
 #include <sys/statvfs.h>
 #include <spdlog/logger.h>
 #include <list>
+
 #include "df_client/client.h"
 #include "df_client/client_reply_handler.h"
 #include "metadata/metadata.h"
@@ -39,7 +36,7 @@ public:
     struct file {
         FileAccess::FileAccess access_t;
         std::shared_ptr<struct stat> stat;
-        kv_store_key_version version;
+        kv_store_version version;
     };
 
     std::recursive_mutex open_files_mutex;
@@ -69,23 +66,24 @@ public:
 public:
     lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_read_size, size_t max_parallel_write_size, bool use_cache, int refresh_cache_time, int max_directories_in_cache, int max_nr_requests_timeout, int cache_max_nr_requests_timeout, int direct_io);
     
-    int put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_key_version& version);
-    int put_fixed_size_blocks_from_buffer_limited_paralelization(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_key_version& version);
+    int put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_version& version);
+    int put_fixed_size_blocks_from_buffer_limited_paralelization(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_version& version);
     size_t read_fixed_size_blocks_to_buffer(char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk);
     size_t read_fixed_size_blocks_to_buffer_limited_paralelization(char *buf, size_t size, size_t block_size, const char *base_path, size_t current_blk);
 
-    int put_block(const std::string& path, const char* buf, size_t size, const kv_store_key_version& version, bool is_merge = false);
+    int put_block(const std::string& path, const char* buf, size_t size, const kv_store_version& version, FileType::FileType f_type);
     int put_dir_metadata(metadata& met, const std::string& path);
     int put_file_metadata(metadata& met, const std::string& path);
-    int put_file_metadata(metadata& met, const std::string& path, const kv_store_key_version& version);
-    int put_dir_metadata_stat(metadata& met, const std::string& path);
+    int put_file_metadata(metadata& met, const std::string& path, const kv_store_version& version);
     int put_dir_metadata_child(const std::string& path, const std::string& child_path, bool is_create, bool is_dir);
     int put_with_merge_metadata(metadata& met, const std::string& path);
-    int delete_file_or_dir(const std::string& path);
+    int delete_file(const std::string& path);
+    int delete_dir(const std::string& path);
+    int delete_(const std::string& path, FileType::FileType f_type);
     std::unique_ptr<metadata> get_dir_metadata(const std::string& path);
     std::unique_ptr<metadata> get_dir_metadata_for_cache(const std::string& path, client_reply_handler::Response* response);
-    std::unique_ptr<metadata> get_metadata_stat(const std::string& path);
-    std::unique_ptr<metadata> get_metadata_stat(const std::string& path, kv_store_key_version* last_version);
+    std::unique_ptr<metadata_attr> get_metadata_stat(const std::string& path);
+    std::unique_ptr<metadata_attr> get_metadata_stat(const std::string& path, kv_store_version* last_version);
 
     void add_to_dir_cache(const std::string& path, metadata met);
     bool check_if_cache_full();
@@ -102,19 +100,19 @@ public:
     std::string print_cache();
 
     void add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access);
-    void add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access, kv_store_key_version n_version);
+    void add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access, kv_store_version n_version);
     bool is_file_opened(const std::string& path);
     bool is_dir_cached(const std::string& path);
     bool update_open_file_metadata(const std::string& path, struct stat& stbuf);
     bool update_file_size_if_opened(const std::string& path, size_t size);
     bool update_file_time_if_opened(const std::string& path, const struct timespec ts[2]);
     bool get_metadata_if_file_opened(const std::string& path, struct stat* stbuf);
-    bool get_version_if_file_opened(const std::string& path, kv_store_key_version* version);
+    bool get_version_if_file_opened(const std::string& path, kv_store_version* version);
     int flush_open_file(const std::string& path);
     int flush_and_release_open_file(const std::string& path);
     void reset_dir_cache_add_remove_log(const std::string& path);
 
-    std::unique_ptr<metadata> request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version,
+    std::unique_ptr<metadata> request_metadata(const std::string &base_path, size_t total_s, const kv_store_version& last_version,
          client_reply_handler::Response* response, bool for_cache = false);
 
 };

@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 1/30/20.
-//
-
 #ifndef P2PFS_ANTI_ENTROPY_H
 #define P2PFS_ANTI_ENTROPY_H
 

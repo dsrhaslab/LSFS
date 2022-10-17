@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 3/4/20.
-//
-
 #include "util.h"
 
 int split_composite_total(std::string comp_key, std::string* key, std::map<long, long>* version, long* client_id){
@@ -98,7 +94,7 @@ std::string vv2str(std::map<long, long> vv){
     return mapStr; 
 }
 
-std::string compose_key_toString(std::string key, kv_store_key_version version){
+std::string compose_key_toString(std::string key, kv_store_version version){
     std::string toStr;
     std::string mapStr = vv2str(version.vv);
     toStr.append(key).append("#").append(mapStr).append("#").append(std::to_string(version.client_id));
@@ -126,14 +122,14 @@ std::map<long, long>* str2vv(std::string vv_str){
 void print_kv(const kv_store_key<std::string>& kv){
     std::cout << "##### Key: " << kv.key << " Vector: <";
 
-    for(auto pair: kv.key_version.vv)
+    for(auto pair: kv.version.vv)
         std::cout << "(" <<  pair.first << "@" << pair.second << "),";
     
-    std::cout << ">" << " Client: " << kv.key_version.client_id << std::endl;
+    std::cout << ">" << " Client: " << kv.version.client_id << std::endl;
 }
 
 
-void print_kv(const kv_store_key_version& kv){
+void print_kv(const kv_store_version& kv){
     std::cout << " Vector: <";
 
     for(auto pair: kv.vv)
@@ -151,7 +147,7 @@ void print_kv(const kv_store_key_version& kv){
          //<y@3, z@1, u@3, x@2> > <x@1, y@2, z@1>
 
 //k1 compared to k2
-kVersionComp comp_version(const kv_store_key_version& k1, const kv_store_key_version k2){
+kVersionComp comp_version(const kv_store_version& k1, const kv_store_version k2){
     bool is_equal = true;
     bool is_lower = true;
     bool is_bigger = true;
@@ -193,8 +189,8 @@ kVersionComp comp_version(const kv_store_key_version& k1, const kv_store_key_ver
 }
 
 
-kv_store_key_version merge_vkv(const std::vector<kv_store_key_version>& vkv){
-    kv_store_key_version res;
+kv_store_version merge_vkv(const std::vector<kv_store_version>& vkv){
+    kv_store_version res;
 
     for(auto &kv: vkv){
         for(auto p: kv.vv){
@@ -212,8 +208,8 @@ kv_store_key_version merge_vkv(const std::vector<kv_store_key_version>& vkv){
     return res;
 }
 
-kv_store_key_version merge_kv(const kv_store_key_version& k1, const kv_store_key_version& k2){
-    kv_store_key_version res = k1;
+kv_store_version merge_kv(const kv_store_version& k1, const kv_store_version& k2){
+    kv_store_version res = k1;
 
     for(auto p: k2.vv){
         auto it = res.vv.find(p.first);
@@ -230,14 +226,14 @@ kv_store_key_version merge_kv(const kv_store_key_version& k1, const kv_store_key
     return res;
 }
 
-kv_store_key_version add_vv(std::pair<long, long> version, const kv_store_key_version& k2){
-    kv_store_key_version k1;
+kv_store_version add_vv(std::pair<long, long> version, const kv_store_version& k2){
+    kv_store_version k1;
     k1.vv.insert(version);
     return merge_kv(k1, k2);
 }
 
 
-int sum_vv_clock(kv_store_key_version& v){
+int sum_vv_clock(kv_store_version& v){
     int sum = 0;
     for(auto &cc: v.vv){
         sum += cc.second;
@@ -246,9 +242,9 @@ int sum_vv_clock(kv_store_key_version& v){
 }
 
 //Considera-se que o id do cliente é único
-kv_store_key_version choose_latest_version(std::vector<kv_store_key_version>& kvv_v){
+kv_store_version choose_latest_version(std::vector<kv_store_version>& kvv_v){
 
-    kv_store_key_version choosed_v;
+    kv_store_version choosed_v;
 
     for(auto &kvv: kvv_v){
         if(kvv.client_id < choosed_v.client_id)
@@ -258,3 +254,25 @@ kv_store_key_version choose_latest_version(std::vector<kv_store_key_version>& kv
 }
 
 
+
+std::unique_ptr<std::string> split_data(std::unique_ptr<std::string> data, int blk_num){
+    if(data != nullptr){
+        size_t NR_BLKS = (data->size() / BLK_SIZE);
+        if(data->size() % BLK_SIZE > 0) NR_BLKS = NR_BLKS + 1;
+
+        size_t pos = (blk_num - 1)*BLK_SIZE;
+
+        std::string value;
+
+        //Last block
+        if(blk_num == NR_BLKS){
+            value = data->substr(pos);  
+        }else{
+            value = data->substr(pos, BLK_SIZE); 
+        }
+
+        return std::make_unique<std::string>(value);
+    }
+
+    return nullptr;
+}

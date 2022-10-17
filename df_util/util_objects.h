@@ -1,20 +1,12 @@
-//
-// Created by danielsf97 on 2/26/20.
-//
+#ifndef P2PFS_UTIL_OBJECTS_H
+#define P2PFS_UTIL_OBJECTS_H
 
-#ifndef P2PFS_SERIALIZE_H
-#define P2PFS_SERIALIZE_H
+#include <boost/serialization/binary_object.hpp>
 
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/set.hpp>
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/utility.hpp>
-
-#include <boost/iostreams/device/array.hpp>
-#include <boost/iostreams/device/back_inserter.hpp>
-#include <boost/iostreams/stream.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
+enum kVersionComp 
+{
+    Lower, Bigger, Equal, Concurrent
+};
 
 namespace FileType{
     enum FileType {FILE = 0, DIRECTORY = 1};
@@ -35,6 +27,7 @@ namespace FileType{
         }
     };
 }
+
 
 namespace Status{
     enum Status {ADDED = 0, REMOVED = 1, NONE = 2};
@@ -74,4 +67,4 @@ namespace boost {
     } 
 } 
 
-#endif //P2PFS_SERIALIZE_H
+#endif //P2PFS_UTIL_OBJECTS_H

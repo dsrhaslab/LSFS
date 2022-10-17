@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 2/26/20.
-//
-
 #ifndef P2PFS_METADATA_ATTR_H
 #define P2PFS_METADATA_ATTR_H
 
@@ -19,7 +15,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "serialize.h"
+#include "df_util/util_objects.h"
 #include "lsfs/fuse_common/macros.h"   
 
 
@@ -35,8 +31,6 @@ public:
     metadata_attr(struct stat& stbuf);
     metadata_attr() = default;
     metadata_attr(const metadata_attr& met);
-    static std::string serialize_to_string(metadata_attr& met);
-    static metadata_attr deserialize_from_string(const std::string& string_serial);
     static void initialize_metadata(struct stat* stbuf, mode_t mode, nlink_t nlink, gid_t gid, uid_t uid);
 };
 

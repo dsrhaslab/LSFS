@@ -1,7 +1,6 @@
 #ifndef P2PFS_CLOCK_VV_TH_H
 #define P2PFS_CLOCK_VV_TH_H
 
-
 #include <atomic>
 #include <mutex>
 #include <condition_variable>

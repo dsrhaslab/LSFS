@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 5/24/20.
-//
-
 #include "data_handler_listener_mt.h"
 
 class data_handler_listener_worker : public udp_handler{
@@ -26,36 +22,33 @@ public:
             }else if(msg.has_put_msg()){
                 //std::cout << "Received put message from client " << std::endl;
                 data_handler->process_put_message(msg);
-            }else if(msg.has_put_with_merge_msg()){
-                //std::cout << "Received put with merge message from client " << std::endl;
-                data_handler->process_put_with_merge_message(msg);
             }else if(msg.has_delete_msg()){
                 //std::cout << "Received delete message from client " << std::endl;
                 data_handler->process_delete_message(msg);
             }else if(msg.has_put_child_msg()){
                 //std::cout << "Received Put child message from client " << std::endl;
                 data_handler->process_put_child_message(msg);
-            }else if(msg.has_put_met_stat_msg()){
-                //std::cout << "Received Put metadata stat from client " << std::endl;
-                data_handler->process_put_metadata_stat_message(msg);
-            }else if(msg.has_get_latest_met_size_or_stat_msg()){
+            }else if(msg.has_get_latest_met_stat_msg()){
                 //std::cout << "Received get latest size or stat message from client " << std::endl;
-                data_handler->process_get_latest_metadata_size_or_stat_msg(msg);
+                data_handler->process_get_latest_metadata_stat_msg(msg);
+            }else if(msg.has_get_latest_met_size_msg()){
+                //std::cout << "Received get latest size or stat message from client " << std::endl;
+                data_handler->process_get_latest_metadata_size_msg(msg);
             }else if(msg.has_get_met_msg()){
                 //std::cout << "Received get metadata message from client " << std::endl;
                 data_handler->process_get_metadata_message(msg);
-            }else if(msg.has_anti_entropy_msg()){
-                data_handler->process_anti_entropy_message(msg);
-            }else if(msg.has_anti_entropy_get_msg()){
-                data_handler->process_anti_entropy_get_message(msg);
-            }else if(msg.has_anti_entropy_get_met_msg()){
-                data_handler->process_anti_entropy_get_metadata_message(msg);
-            }else if(msg.has_anti_entropy_get_reply_msg()){
-                data_handler->process_anti_entropy_get_reply_message(msg);
-            }else if(msg.has_anti_entropy_get_met_reply_msg()){
-                data_handler->process_anti_entropy_get_metadata_reply_message(msg);
-            }else if(msg.has_recover_request_msg()){
-                data_handler->process_recover_request_msg(msg);
+            // }else if(msg.has_anti_entropy_msg()){
+            //     data_handler->process_anti_entropy_message(msg);
+            // }else if(msg.has_anti_entropy_get_msg()){
+            //     data_handler->process_anti_entropy_get_message(msg);
+            // }else if(msg.has_anti_entropy_get_met_msg()){
+            //     data_handler->process_anti_entropy_get_metadata_message(msg);
+            // }else if(msg.has_anti_entropy_get_reply_msg()){
+            //     data_handler->process_anti_entropy_get_reply_message(msg);
+            // }else if(msg.has_anti_entropy_get_met_reply_msg()){
+            //     data_handler->process_anti_entropy_get_metadata_reply_message(msg);
+            // }else if(msg.has_recover_request_msg()){
+            //     data_handler->process_recover_request_msg(msg);
             }
 
         }
@@ -66,8 +59,8 @@ public:
     }
 };
 
-data_handler_listener_mt::data_handler_listener_mt(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart, long* msg_count, long* fwd_count)
-        : data_handler_listener(std::move(ip), kv_port, id, chance, pss, group_c, anti_ent, std::move(store), smart, msg_count, fwd_count){}
+data_handler_listener_mt::data_handler_listener_mt(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
+        : data_handler_listener(std::move(ip), kv_port, id, chance, pss, group_c, anti_ent, std::move(store), smart){}
 
 void data_handler_listener_mt::operator()() {
 

@@ -1,11 +1,7 @@
-//
-// Created by danielsf97 on 5/24/20.
-//
-
 #include "data_handler_listener_st.h"
 
-data_handler_listener_st::data_handler_listener_st(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart, long* msg_count, long* fwd_count)
-        : data_handler_listener(std::move(ip), kv_port, id, chance, pss, group_c, anti_ent, std::move(store), smart, msg_count, fwd_count), socket_rcv(socket(AF_INET, SOCK_DGRAM, 0)){}
+data_handler_listener_st::data_handler_listener_st(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart)
+        : data_handler_listener(std::move(ip), kv_port, id, chance, pss, group_c, anti_ent, std::move(store), smart), socket_rcv(socket(AF_INET, SOCK_DGRAM, 0)){}
 
 void data_handler_listener_st::operator()() {
 
@@ -39,30 +35,28 @@ void data_handler_listener_st::operator()() {
                     this->process_get_latest_version_msg(msg);
                 }else if(msg.has_put_msg()){
                     this->process_put_message(msg);
-                }else if(msg.has_put_with_merge_msg()){
-                    this->process_put_with_merge_message(msg);
                 }else if(msg.has_delete_msg()){
                     this->process_delete_message(msg);
                 }else if(msg.has_put_child_msg()){
                     this->process_put_child_message(msg);
-                }else if(msg.has_put_met_stat_msg()){
-                    this->process_put_metadata_stat_message(msg);
-                }else if(msg.has_get_latest_met_size_or_stat_msg()){
-                    this->process_get_latest_metadata_size_or_stat_msg(msg);
+                }else if(msg.has_get_latest_met_stat_msg()){
+                    this->process_get_latest_metadata_stat_msg(msg);
+                }else if(msg.has_get_latest_met_size_msg()){
+                    this->process_get_latest_metadata_size_msg(msg);
                 }else if(msg.has_get_met_msg()){
                     this->process_get_metadata_message(msg);
-                }else if(msg.has_anti_entropy_msg()){
-                    this->process_anti_entropy_message(msg);
-                }else if(msg.has_anti_entropy_get_msg()){
-                    this->process_anti_entropy_get_message(msg);
-                }else if(msg.has_anti_entropy_get_met_msg()){
-                    this->process_anti_entropy_get_metadata_message(msg);
-                }else if(msg.has_anti_entropy_get_reply_msg()){
-                    this->process_anti_entropy_get_reply_message(msg);
-                }else if(msg.has_anti_entropy_get_met_reply_msg()){
-                    this->process_anti_entropy_get_metadata_reply_message(msg);
-                }else if(msg.has_recover_request_msg()){
-                    this->process_recover_request_msg(msg);
+                // }else if(msg.has_anti_entropy_msg()){
+                //     this->process_anti_entropy_message(msg);
+                // }else if(msg.has_anti_entropy_get_msg()){
+                //     this->process_anti_entropy_get_message(msg);
+                // }else if(msg.has_anti_entropy_get_met_msg()){
+                //     this->process_anti_entropy_get_metadata_message(msg);
+                // }else if(msg.has_anti_entropy_get_reply_msg()){
+                //     this->process_anti_entropy_get_reply_message(msg);
+                // }else if(msg.has_anti_entropy_get_met_reply_msg()){
+                //     this->process_anti_entropy_get_metadata_reply_message(msg);
+                // }else if(msg.has_recover_request_msg()){
+                //     this->process_recover_request_msg(msg);
                 }
             }
             catch(const char* e){

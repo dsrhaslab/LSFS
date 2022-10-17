@@ -1,6 +1,5 @@
-/* -------------------------------------------------------------------------- */
-
 #define _XOPEN_SOURCE 500
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -12,7 +11,6 @@
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
 #include "metadata/metadata.h"
 
-/* -------------------------------------------------------------------------- */
 
 int lsfs_impl::_mknod(
     const char *path, mode_t mode, dev_t rdev
@@ -44,7 +42,7 @@ int lsfs_impl::_unlink(
     int res = 0;
 
     try{
-        res = state->delete_file_or_dir(path);
+        res = state->delete_file(path);
         if(res != 0) return -errno;
 
         res = state->remove_child_from_parent_dir(path, false);
@@ -192,7 +190,7 @@ int lsfs_impl::_rmdir(
             }
         }
 
-        res = state->delete_file_or_dir(path);
+        res = state->delete_dir(path);
         if(res != 0) return -errno;
 
         if(state->use_cache) state->remove_from_dir_cache(path);
@@ -215,5 +213,3 @@ int lsfs_impl::_rmdir(
 
     return res == 0? 0 : -errno;
 }
-
-/* -------------------------------------------------------------------------- */

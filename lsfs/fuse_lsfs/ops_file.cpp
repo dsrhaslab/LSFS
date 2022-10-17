@@ -1,6 +1,5 @@
-/* -------------------------------------------------------------------------- */
-
 #define _XOPEN_SOURCE 500
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -10,8 +9,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "exceptions/custom_exceptions.h"
 
+#include "exceptions/custom_exceptions.h"
 #include "util.h"
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
 #include "metadata/metadata.h"
@@ -99,13 +98,13 @@ int lsfs_impl::_open(
 
 
             if(!state->is_file_opened(path)){
-                kv_store_key_version last_version;
-                std::shared_ptr<metadata> met = state->get_metadata_stat(path, &last_version);
+                kv_store_version last_version;
+                std::shared_ptr<metadata_attr> met_attr = state->get_metadata_stat(path, &last_version);
                 
-                if(met == nullptr)
+                if(met_attr == nullptr)
                     return -errno;
                 else
-                    state->add_open_file(path, met->attr.stbuf, FileAccess::ACCESSED, last_version);
+                    state->add_open_file(path, met_attr->stbuf, FileAccess::ACCESSED, last_version);
             }
 
         }catch(TimeoutException& e){
@@ -331,7 +330,7 @@ int lsfs_impl::_write(
             return -errno;
         }
 
-        kv_store_key_version version;
+        kv_store_version version;
         if(!state->get_version_if_file_opened(path, &version)){
             errno = EAGAIN; //resource unavailable
             return -errno;
@@ -370,7 +369,7 @@ int lsfs_impl::_write(
                         std::string blk_path;
                         blk_path.reserve(100);
                         blk_path.append(path).append(":").append(std::to_string(current_blk)); 
-                        int res = state->put_block(blk_path, put_buf, write_s + off_blk, version); 
+                        int res = state->put_block(blk_path, put_buf, write_s + off_blk, version, FileType::FILE); 
                         if(res == -1){
                             return -errno;
                         }
@@ -418,5 +417,3 @@ int lsfs_impl::_write(
 
     return result;
 }
-
-/* -------------------------------------------------------------------------- */

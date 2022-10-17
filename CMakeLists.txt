@@ -70,20 +70,29 @@ add_executable( peer_exe
         df_communication/udp_async_server.cpp
         df_core/group_construction.cpp
         df_core/group_construction.h
+
+        df_util/util_objects.h
+        df_util/serialize.h
+        df_store/kv_store_value/kv_store_version.h
+        df_store/kv_store_value/kv_store_version_data.h
+        df_store/kv_store_value/kv_store_value.h
+        df_store/kv_store_key.h
+        df_store/kv_store.h
+        df_store/kv_store_leveldb.h
+        df_util/util.cpp
+        df_util/util.h
+
         df_util/message_builder/message_builder.cpp
         df_util/message_builder/message_builder.h
+
         df_data_handlers/data_handler_listener.cpp
         df_data_handlers/data_handler_listener.h
-        df_store/kv_store.h df_store/kv_store_key.h
         df_data_handlers/anti_entropy.cpp
         df_data_handlers/anti_entropy.h
         df_core/peer.h
         df_core/peer.cpp
-        df_store/kv_store_leveldb.h
+       
         exceptions/leveldb_error.h
-        df_util/util.cpp
-        df_util/util.h
-        df_store/kv_store_key_version.h
 
         #necessary for merge function
         lsfs/fuse_lsfs/storage_specific.cpp
@@ -93,7 +102,7 @@ add_executable( peer_exe
         lsfs/fuse_lsfs/metadata/metadata_attr.cpp
         lsfs/fuse_lsfs/metadata/metadata_childs.h
         lsfs/fuse_lsfs/metadata/metadata_childs.cpp
-        lsfs/fuse_lsfs/metadata/serialize.h
+        
         lsfs/fuse_lsfs/util.h
         lsfs/fuse_lsfs/util.cpp
         df_data_handlers/data_handler_listener_mt.cpp
@@ -156,7 +165,7 @@ add_executable( client_exe
         df_client/client_reply_handler_mt.h
         df_client/client_reply_handler.cpp
         df_client/client_reply_handler.h
-        df_store/kv_store_key_version.h
+        df_store/kv_store_value/kv_store_version.h
 
         #necessary for merge function
         lsfs/fuse_lsfs/storage_specific.cpp
@@ -166,7 +175,7 @@ add_executable( client_exe
         lsfs/fuse_lsfs/metadata/metadata_attr.cpp
         lsfs/fuse_lsfs/metadata/metadata_childs.h
         lsfs/fuse_lsfs/metadata/metadata_childs.cpp
-        lsfs/fuse_lsfs/metadata/serialize.h
+        #lsfs/fuse_lsfs/metadata/serialize.h
         lsfs/fuse_lsfs/util.h
         lsfs/fuse_lsfs/util.cpp
         df_loadbalancing/smart_load_balancer.cpp
@@ -239,7 +248,7 @@ add_executable( lsfs_exe
         lsfs/fuse_lsfs/metadata/metadata_attr.cpp
         lsfs/fuse_lsfs/metadata/metadata_childs.h
         lsfs/fuse_lsfs/metadata/metadata_childs.cpp
-        lsfs/fuse_lsfs/metadata/serialize.h
+        #lsfs/fuse_lsfs/metadata/serialize.h
         
         df_client/client_reply_handler_mt.cpp
         df_client/client_reply_handler_mt.h

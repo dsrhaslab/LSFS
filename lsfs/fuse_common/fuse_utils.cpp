@@ -11,7 +11,6 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-/* -------------------------------------------------------------------------- */
 
 pid_t fuse_pt_get_tid(void)
 {
@@ -88,7 +87,6 @@ void fuse_pt_unimpersonate(void)
         print_error_errno_and_fail("syscall(SYS_setresuid, -1, 0, -1) failed");
 }
 
-/* -------------------------------------------------------------------------- */
 
 void print_error_v(const char *fmt, va_list args)
 {

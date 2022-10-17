@@ -1,10 +1,5 @@
-//
-// Created by danielsf97 on 10/7/19.
-//
-
 #ifndef DATAFLASKSCPP_BOOTSTRAPPER_IMPL_H
 #define DATAFLASKSCPP_BOOTSTRAPPER_IMPL_H
-
 
 #include <string>
 #include <unordered_map>
@@ -28,8 +23,6 @@
 
 #include "bootstrapper.h"
 #include "df_tcp_client_server_connection/tcp_client_server_connection.h"
-
-
 
 
 class BootstrapperImpl: public Bootstrapper{

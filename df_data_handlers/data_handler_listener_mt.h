@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 5/24/20.
-//
-
 #ifndef P2PFS_DATA_HANDLER_LISTENER_MT_H
 #define P2PFS_DATA_HANDLER_LISTENER_MT_H
 
@@ -18,7 +14,7 @@ private:
     boost::thread_group thread_pool;
 
 public:
-    data_handler_listener_mt(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart, long* msg_count, long* fwd_count);
+    data_handler_listener_mt(std::string ip, int kv_port, long id, float chance, pss *pss, group_construction* group_c, anti_entropy* anti_ent, std::shared_ptr<kv_store<std::string>> store, bool smart);
     ~data_handler_listener_mt() = default;
     void operator ()();
     void stop_thread();

@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 2/26/20.
-//
-
 #ifndef P2PFS_METADATA_H
 #define P2PFS_METADATA_H
 
@@ -18,6 +14,7 @@
 
 #include "metadata_attr.h"
 #include "metadata_childs.h"
+#include "df_util/serialize.h"
 
 
 class metadata {
@@ -33,8 +30,6 @@ public:
     metadata(metadata_attr attr);
     metadata(const metadata& met);
     metadata() = default;
-    static std::string serialize_to_string(metadata& met);
-    static metadata deserialize_from_string(const std::string& string_serial);
     static std::string merge_attr(metadata met1, metadata met2);
 };
 

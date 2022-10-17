@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 3/11/20.
-//
-
 #include "lsfs_state.h"
 #include <ctime>
 #include <utility>
@@ -23,7 +19,7 @@ lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_re
 }
 
 int lsfs_state::put_fixed_size_blocks_from_buffer_limited_paralelization(const char *buf, size_t size,
-                                                                         size_t block_size, const char *base_path, size_t current_blk, const kv_store_key_version& version) {
+                                                                         size_t block_size, const char *base_path, size_t current_blk, const kv_store_version& version) {
 
     size_t write_off = 0;
     while(write_off < size){
@@ -40,7 +36,7 @@ int lsfs_state::put_fixed_size_blocks_from_buffer_limited_paralelization(const c
     return 0;
 }
 
-int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_key_version& version){
+int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_version& version){
     int return_value;
     size_t read_off = 0;
     size_t nr_blocks = (size / block_size) + (size % block_size == 0 ? 0 : 1);
@@ -65,7 +61,7 @@ int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, 
 
         //version.client_id = df_client->get_id();
 
-        kv_store_key<std::string> kv = {blk_path, version, false};
+        kv_store_key<std::string> kv = {blk_path, version, FileType::FILE, false};
         keys.emplace_back(kv);
         buffers.emplace_back(&buf[read_off]);
         sizes.emplace_back(write_size);
@@ -124,75 +120,56 @@ size_t lsfs_state::read_fixed_size_blocks_to_buffer(char *buf, size_t size, size
     return read_off;
 }
 
-int lsfs_state::put_block(const std::string& path, const char* buf, size_t size, const kv_store_key_version& version, bool is_merge) {
+int lsfs_state::put_block(const std::string& path, const char* buf, size_t size, const kv_store_version& version, FileType::FileType f_type) {
     int return_value = 0;
 
-    if(!is_merge) df_client->put(path, version, buf, size);
-    else df_client->put_with_merge(path, version, buf, size);
+    df_client->put(path, version, f_type, buf, size);
 
     return return_value;
 }
 
 int lsfs_state::put_dir_metadata(metadata& met, const std::string& path){
     // serialize metadata object
-    std::string metadata_str = metadata::serialize_to_string(met);
+    std::string metadata_str = serialize_to_string<metadata>(met);
 
     client_reply_handler::Response response = client_reply_handler::Response::Init;
-    std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path, &response);
+    std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(path, &response);
     
-    kv_store_key_version version; 
+    kv_store_version version; 
     if(last_v != nullptr){
         version = *last_v; 
     }   
 
-    return this->put_block(path, metadata_str.data(), metadata_str.size(), version, true);
+    return this->put_block(path, metadata_str.data(), metadata_str.size(), version, FileType::DIRECTORY);
 }
 
 int lsfs_state::put_file_metadata(metadata& met, const std::string& path){
     // serialize metadata object
-    std::string metadata_str = metadata::serialize_to_string(met);
+    std::string metadata_str = serialize_to_string<metadata>(met);
 
     client_reply_handler::Response response = client_reply_handler::Response::Init;
-    std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path, &response);
+    std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(path, &response);
     
-    kv_store_key_version version; 
+    kv_store_version version; 
     if(last_v != nullptr){
         version = *last_v; 
     }
     
-    return this->put_block(path, metadata_str.data(), metadata_str.size(), version);
+    return this->put_block(path, metadata_str.data(), metadata_str.size(), version, FileType::FILE);
 }
 
-int lsfs_state::put_file_metadata(metadata& met, const std::string& path, const kv_store_key_version& version){
+int lsfs_state::put_file_metadata(metadata& met, const std::string& path, const kv_store_version& version){
     // serialize metadata object
-    std::string metadata_str = metadata::serialize_to_string(met);
-     return this->put_block(path, metadata_str.data(), metadata_str.size(), version);
-}
-
-int lsfs_state::put_dir_metadata_stat(metadata& met, const std::string& path){
-    // serialize metadata object
-    std::string metadata_str = metadata_attr::serialize_to_string(met.attr);
-
-    client_reply_handler::Response response = client_reply_handler::Response::Init;
-    std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path, &response);
-    
-    kv_store_key_version version; 
-    if(last_v != nullptr){
-        version = *last_v; 
-        df_client->put_metadata_stat(path, version, metadata_str.data(), metadata_str.size());
-    }else{
-        errno = ENOENT;
-        return -1;
-    }    
-     return 0;
+    std::string metadata_str = serialize_to_string<metadata>(met);
+     return this->put_block(path, metadata_str.data(), metadata_str.size(), version, FileType::FILE);
 }
 
 int lsfs_state::put_dir_metadata_child(const std::string& path, const std::string& child_path, bool is_create, bool is_dir){
 
     client_reply_handler::Response response = client_reply_handler::Response::Init;
-    std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path, &response);
+    std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(path, &response);
     
-    kv_store_key_version version; 
+    kv_store_version version; 
     if(last_v != nullptr){
         version = *last_v;  
         df_client->put_child(path, version, child_path, is_create, is_dir);
@@ -204,17 +181,17 @@ int lsfs_state::put_dir_metadata_child(const std::string& path, const std::strin
 }
 
 
-int lsfs_state::delete_file_or_dir(const std::string& path){
+int lsfs_state::delete_(const std::string& path, FileType::FileType f_type){
     int return_value = 0;
 
     client_reply_handler::Response response = client_reply_handler::Response::Init;
-    std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(path, &response);
+    std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(path, &response);
     
-    kv_store_key_version version; 
+    kv_store_version version; 
     if(last_v != nullptr){
         version = *last_v; 
 
-        df_client->del(path, version);
+        df_client->del(path, version, f_type);
 
     }else{
         errno = ENOENT;
@@ -225,12 +202,21 @@ int lsfs_state::delete_file_or_dir(const std::string& path){
     return return_value;
 }
 
+int lsfs_state::delete_file(const std::string& path){
+    return delete_(path, FileType::FILE);
+}
+
+int lsfs_state::delete_dir(const std::string& path){
+    return delete_(path, FileType::DIRECTORY);
+}
+
+
 std::unique_ptr<metadata> lsfs_state::get_dir_metadata_for_cache(const std::string& path, client_reply_handler::Response* response){
     std::unique_ptr<metadata> res = nullptr;
 
     for(int i=0; i<this->cache_max_nr_requests_timeout; i++){
         //Get size of metadata
-        kv_store_key_version last_version;
+        kv_store_version last_version;
         std::shared_ptr<std::string> data  = df_client->get_latest_metadata_size(path, response, &last_version);
         
         if(*response == client_reply_handler::Response::Deleted || data == nullptr){
@@ -253,7 +239,7 @@ std::unique_ptr<metadata> lsfs_state::get_dir_metadata(const std::string& path){
 
     for(int i=0; i<this->max_nr_requests_timeout; i++){
         //Get size of metadata
-        kv_store_key_version last_version;
+        kv_store_version last_version;
         std::shared_ptr<std::string> data  = df_client->get_latest_metadata_size(path, &response, &last_version);
         
         if(response == client_reply_handler::Response::Deleted || data == nullptr){
@@ -279,39 +265,31 @@ std::unique_ptr<metadata> lsfs_state::get_dir_metadata(const std::string& path){
     return res;
 }
 
-std::unique_ptr<metadata> lsfs_state::get_metadata_stat(const std::string& path){
-    std::unique_ptr<metadata> res = nullptr;
+std::unique_ptr<metadata_attr> lsfs_state::get_metadata_stat(const std::string& path){
 
-    //Get size of metadata
-    kv_store_key_version last_version;
+    kv_store_version last_version;
     client_reply_handler::Response response = client_reply_handler::Response::Init;
     std::shared_ptr<std::string> data  = df_client->get_latest_metadata_stat(path, &response, &last_version);
     
     if(response == client_reply_handler::Response::Deleted || data == nullptr){
         errno = ENOENT;
-        return res;
+        return nullptr;
     }
-    metadata met(metadata_attr::deserialize_from_string(*data));
-    res = std::make_unique<metadata>(met);
-
-    return res;
+    ;
+    return std::make_unique<metadata_attr>(deserialize_from_string<metadata_attr>(*data));
 }
 
-std::unique_ptr<metadata> lsfs_state::get_metadata_stat(const std::string& path, kv_store_key_version* last_version){
-    std::unique_ptr<metadata> res = nullptr;
+std::unique_ptr<metadata_attr> lsfs_state::get_metadata_stat(const std::string& path, kv_store_version* last_version){
 
-    //Get size of metadata
     client_reply_handler::Response response = client_reply_handler::Response::Init;
     std::shared_ptr<std::string> data  = df_client->get_latest_metadata_stat(path, &response, last_version);
               
     if(response == client_reply_handler::Response::Deleted || data == nullptr){
         errno = ENOENT;
-        return res;
+        return nullptr;
     }
-    metadata met(metadata_attr::deserialize_from_string(*data));
-    res = std::make_unique<metadata>(met);
 
-    return res;
+    return std::make_unique<metadata_attr>(deserialize_from_string<metadata_attr>(*data));
 }
 
 void lsfs_state::add_to_dir_cache(const std::string& path, metadata met) {
@@ -555,13 +533,13 @@ void lsfs_state::add_open_file(const std::string& path, struct stat& stbuf, File
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
     if(it == open_files.end()) {
-        kv_store_key_version version;
+        kv_store_version version;
         struct file file_c = {.access_t = access, .stat = std::make_shared<struct stat>(stbuf), .version = version};
         open_files.emplace(path, file_c);
     }
 }
 
-void lsfs_state::add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access, kv_store_key_version n_version){
+void lsfs_state::add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access, kv_store_version n_version){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
     if(it == open_files.end()) {
@@ -691,7 +669,7 @@ bool lsfs_state::get_metadata_if_file_opened(const std::string& path, struct sta
     return false;
 }
 
-bool lsfs_state::get_version_if_file_opened(const std::string& path, kv_store_key_version* version){
+bool lsfs_state::get_version_if_file_opened(const std::string& path, kv_store_version* version){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
     if(it != open_files.end()) {
@@ -855,7 +833,7 @@ void lsfs_state::reset_dir_cache_add_remove_log(const std::string& path){
     
 }
 
-std::unique_ptr<metadata> lsfs_state::request_metadata(const std::string &base_path, size_t total_s, const kv_store_key_version& last_version, client_reply_handler::Response* response, bool for_cache){
+std::unique_ptr<metadata> lsfs_state::request_metadata(const std::string &base_path, size_t total_s, const kv_store_version& last_version, client_reply_handler::Response* response, bool for_cache){
 
     size_t NR_BLKS = (total_s / BLK_SIZE);
 
@@ -873,7 +851,7 @@ std::unique_ptr<metadata> lsfs_state::request_metadata(const std::string &base_p
         blk_path.reserve(100);
         blk_path.append(base_path).append(":").append(std::to_string(i));
 
-        kv_store_key<std::string> key = {blk_path, last_version, false};
+        kv_store_key<std::string> key = {blk_path, last_version, FileType::DIRECTORY, false};
 
         keys.emplace_back(std::move(key));
         data_strs.emplace_back(nullptr);
@@ -895,5 +873,5 @@ std::unique_ptr<metadata> lsfs_state::request_metadata(const std::string &base_p
         met += *data_blk;
     }
     
-    return std::make_unique<metadata>(metadata::deserialize_from_string(met));
+    return std::make_unique<metadata>(deserialize_from_string<metadata>(met));
 }

@@ -1,8 +1,6 @@
 #ifndef P2PFS_CLOCK_H
 #define P2PFS_CLOCK_H
 
-
-
 #include <atomic>
 #include <mutex>
 

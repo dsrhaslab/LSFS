@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 3/16/20.
-//
-
 #ifndef P2PFS_CLIENT_REPLY_HANDLER_H
 #define P2PFS_CLIENT_REPLY_HANDLER_H
 
@@ -78,10 +74,10 @@ public:
     std::unique_ptr<std::string> wait_for_get_metadata_until(const std::string& req_id, int wait_for, std::chrono::system_clock::time_point& wait_until, Response* get_res);
     void clear_get_keys_entries(std::vector<std::string>& erasing_keys);
     void register_get_latest_version(const std::string& req_id);
-    std::unique_ptr<kv_store_key_version> wait_for_get_latest_version(const std::string& req_id, int wait_for, Response* get_res);
+    std::unique_ptr<kv_store_version> wait_for_get_latest_version(const std::string& req_id, int wait_for, Response* get_res);
     std::unique_ptr<std::string> wait_for_get_latest_until(const std::string &key, const std::string &req_id, int wait_for,
                                                                       std::chrono::system_clock::time_point &wait_until, Response* get_res);
-    std::unique_ptr<std::string> wait_for_get_latest(const std::string &key, const std::string& req_id, int wait_for, Response* get_res, kv_store_key_version* last_version);
+    std::unique_ptr<std::string> wait_for_get_latest(const std::string &key, const std::string& req_id, int wait_for, Response* get_res, kv_store_version* last_version);
     std::vector<std::unique_ptr<std::string>> wait_for_get_latest_concurrent(const std::string &key, const std::string& req_id, int wait_for, Response* get_res);
     void process_get_reply_msg(const proto::get_reply_message &message);
     void process_get_metadata_reply_msg(const proto::get_metadata_reply_message &msg);

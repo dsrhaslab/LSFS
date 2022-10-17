@@ -1,5 +1,3 @@
-/* -------------------------------------------------------------------------- */
-
 #define _XOPEN_SOURCE 500
 #include <errno.h>
 #include <stddef.h>
@@ -8,7 +6,6 @@
 #include "util.h"
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
 
-/* -------------------------------------------------------------------------- */
 
 int lsfs_impl::_symlink(
     const char *from, const char *to
@@ -44,5 +41,3 @@ int lsfs_impl::_readlink(
 
     return 0;
 }
-
-/* -------------------------------------------------------------------------- */
