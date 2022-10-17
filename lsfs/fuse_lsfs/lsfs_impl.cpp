@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 2/9/20.
-//
-
 #include <spdlog/sinks/basic_file_sink.h>
 #include "lsfs_impl.h"
 #include "yaml-cpp/yaml.h"

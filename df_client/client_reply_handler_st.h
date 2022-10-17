@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 1/27/20.
-//
-
 #ifndef P2PFS_CLIENT_REPLY_HANDLER_ST_H
 #define P2PFS_CLIENT_REPLY_HANDLER_ST_H
 

@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 2/26/20.
-//
-
 #ifndef P2PFS_METADATA_CHILDS_H
 #define P2PFS_METADATA_CHILDS_H
 
@@ -19,7 +15,7 @@
 #include <map>
 #include <iostream>
 
-#include "serialize.h"
+#include "df_util/util_objects.h"
 
 
 class metadata_childs {
@@ -33,13 +29,12 @@ public:
     template<class Archive> void serialize(Archive& ar, const unsigned int version);
     metadata_childs() = default;
     metadata_childs(const metadata_childs& met);
-    static std::string serialize_to_string(metadata_childs& met);
-    static metadata_childs deserialize_from_string(const std::string& string_serial);
     void add_child(std::string path, bool is_dir);
     void remove_child(std::string path, bool is_dir);
     void reset_add_remove_log();
     void reset_status();
     bool is_empty();
+    void print_childs();
 };
 
 template<class Archive>

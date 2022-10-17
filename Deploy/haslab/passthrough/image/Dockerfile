@@ -27,6 +27,6 @@ RUN git clone https://github.com/libfuse/libfuse.git
 
 RUN cd / && mkdir test_filesystem/ && mkdir test_filesystem/InnerFolder/ && mkdir test_filesystem/InnerFolder2/
 
-RUN sed -i '75i 	cfg->direct_io = 1;' fuse-3.9.1/example/passthrough.c
+RUN sed -i '74s/.*/	cfg->direct_io = 1;/' fuse-3.9.1/example/passthrough.c
 
 RUN gcc -Wall fuse-3.9.1/example/passthrough.c `pkg-config fuse3 --cflags --libs` -o passthrough

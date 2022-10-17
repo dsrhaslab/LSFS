@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 10/7/19.
-//
-
 #include "bootstrapper_impl.h"
 
 

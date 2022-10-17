@@ -1,6 +1,5 @@
-/* -------------------------------------------------------------------------- */
-
 #define _XOPEN_SOURCE 500
+
 #include <float.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -64,7 +63,7 @@ void*  lsfs_impl::_init(
     try{
 
         client_reply_handler::Response response = client_reply_handler::Response::Init;    
-        std::unique_ptr<kv_store_key_version> last_v = df_client->get_latest_version(root_path, &response);
+        std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(root_path, &response);
 
          if(response == client_reply_handler::Response::NoData || response == client_reply_handler::Response::Deleted){
             //filesystem not initialize
@@ -83,8 +82,6 @@ void*  lsfs_impl::_init(
         exit(1);
     }
 
-    //state->clear_all_dir_cache();
-
     return NULL;
 }
 
@@ -94,5 +91,3 @@ void lsfs_impl::_destroy(
 {
     (void)private_data;
 }
-
-/* -------------------------------------------------------------------------- */

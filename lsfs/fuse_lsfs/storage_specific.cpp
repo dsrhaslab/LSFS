@@ -1,13 +1,9 @@
-//
-// Created by danielsf97 on 3/25/20.
-//
-
 #include "metadata/metadata.h"
 #include "util.h"
 
 std::string merge_metadata(const std::string& bytes, const std::string& new_bytes){
-    metadata met1 = metadata::deserialize_from_string(bytes);
-    metadata met2 = metadata::deserialize_from_string(new_bytes);
+    metadata met1 = deserialize_from_string<metadata>(bytes);
+    metadata met2 = deserialize_from_string<metadata>(new_bytes);
 
     std::map<std::string, std::pair<FileType::FileType, Status::Status>> temp;
 
@@ -57,6 +53,6 @@ std::string merge_metadata(const std::string& bytes, const std::string& new_byte
         met1.attr.stbuf.st_ctim = met2.attr.stbuf.st_ctim; //or of permissions
     }
 
-    return metadata::serialize_to_string(met1);
+    return serialize_to_string<metadata>(met1);
 }
 

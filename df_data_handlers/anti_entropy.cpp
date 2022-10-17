@@ -1,8 +1,3 @@
-//
-// Created by danielsf97 on 1/30/20.
-//
-
-
 #include "anti_entropy.h"
 
 anti_entropy::anti_entropy(std::string ip, int kv_port, int recover_port, long id, double pos, pss *pss_ptr, group_construction* group_c,
@@ -101,11 +96,10 @@ void anti_entropy::phase_starting() {
 
 bool anti_entropy::recover_state(tcp_client_server_connection::tcp_server_connection& connection, int* socket){
 
-    /*TODO Optmization -> get last 4 keys stored in order to not recover the whole database everytime
-    */
-    std::vector<std::string> keys_offset; //= this->store->get_last_keys_limit4();
+    std::vector<std::string> keys_offset;
     std::vector<std::string> keys_deleted_offset;
 
+    //Sending Recover request message.
     proto::kv_message kv_message;
     kv_message.set_forwarded_within_group(false);
     auto* message_content = new proto::recover_offset_message();
@@ -125,6 +119,7 @@ bool anti_entropy::recover_state(tcp_client_server_connection::tcp_server_connec
         return false;
     }
 
+    //Waiting for multiple replies until termination message arrival.
     bool finished_recovering = false;
 
     char rcv_buf [65500];
@@ -142,16 +137,18 @@ bool anti_entropy::recover_state(tcp_client_server_connection::tcp_server_connec
                 const proto::kv_store& store = message.store_keys();
                 const proto::kv_store_key& key = store.key();
 
-                kv_store_key_version version;
+                kv_store_version version;
                 for (auto c : key.key_version().version())
                     version.vv.emplace(c.client_id(), c.clock());
                 version.client_id = key.key_version().client_id();
+
+                FileType::FileType type = store.type() == proto::FileType::DIRECTORY? FileType::DIRECTORY : FileType::FILE;
                     
-                kv_store_key<std::string> key_comp = {key.key(), version, store.is_deleted(), store.is_merge()};
+                kv_store_key<std::string> key_comp = {key.key(), version, type, store.is_deleted()};
                 if(store.is_deleted()){
-                    this->store->anti_entropy_remove(key_comp, message.data());
+                    this->store->remove(key_comp);
                 }else{
-                    this->store->anti_entropy_put(key_comp, message.data());
+                    this->store->put(key_comp, message.data());
                 }
             }
         }catch(const char* e) {
@@ -217,27 +214,31 @@ void anti_entropy::phase_operating(){
         message_content->set_port(this->kv_port);
         message_content->set_id(this->id);
         //Add random keys to propagate
-        for (auto &key_size : this->store->get_keys()) {
+        for (auto &[key_comp, size] : this->store->get_keys()) {
 
             proto::kv_store* store = message_content->add_store_keys();
             proto::kv_store_key* kv_key = new proto::kv_store_key();
-            kv_key->set_key(key_size.first.key);
+            kv_key->set_key(key_comp.key);
 
             proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
 
-            for(auto pair : key_size.first.key_version.vv){
+            for(auto pair : key_comp.version.vv){
 
                 proto::kv_store_version *kv_version = kv_key_version->add_version();
                 kv_version->set_client_id(pair.first);
                 kv_version->set_clock(pair.second);
             }
 
-            kv_key_version->set_client_id(key_size.first.key_version.client_id);
+            kv_key_version->set_client_id(key_comp.version.client_id);
 
             kv_key->set_allocated_key_version(kv_key_version);
             store->set_allocated_key(kv_key);
             store->set_is_deleted(false);
-            store->set_data_size(key_size.second);
+            if(key_comp.f_type == FileType::DIRECTORY) 
+                store->set_type(proto::FileType::DIRECTORY);
+            else 
+                store->set_type(proto::FileType::FILE);
+            store->set_data_size(size);
 
         }
         //Add random deleted keys to propagate
@@ -249,18 +250,22 @@ void anti_entropy::phase_operating(){
 
             proto::kv_store_key_version* deleted_kv_key_version = new proto::kv_store_key_version();
 
-            for(auto pair : deleted_key.key_version.vv){
+            for(auto pair : deleted_key.version.vv){
 
                 proto::kv_store_version *deleted_kv_version = deleted_kv_key_version->add_version();
                 deleted_kv_version->set_client_id(pair.first);
                 deleted_kv_version->set_clock(pair.second);
             }
 
-            deleted_kv_key_version->set_client_id(deleted_key.key_version.client_id);
+            deleted_kv_key_version->set_client_id(deleted_key.version.client_id);
 
             deleted_kv_key->set_allocated_key_version(deleted_kv_key_version);
             store_del->set_allocated_key(deleted_kv_key);
             store_del->set_is_deleted(true);
+            if(deleted_key.f_type == FileType::DIRECTORY) 
+                store_del->set_type(proto::FileType::DIRECTORY);
+            else 
+                store_del->set_type(proto::FileType::FILE);
 
         }
 

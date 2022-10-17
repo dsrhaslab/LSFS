@@ -1,10 +1,5 @@
-//
-// Created by danielsf97 on 1/27/20.
-//
-
 #ifndef P2PFS_CLIENT_H
 #define P2PFS_CLIENT_H
-
 
 #include <string>
 #include <thread>
@@ -74,28 +69,24 @@ public:
     inline void put_batch(const std::vector<kv_store_key<std::string>> &keys, const std::vector<const char*>& datas, const std::vector<size_t>& sizes) {
         put_batch(keys, datas, sizes, nr_puts_required);
     };
-    void put(const std::string& key, const kv_store_key_version& version, const char* data, size_t size, int wait_for);
-    inline void put(const std::string& key, const kv_store_key_version& version, const char* data, size_t size) {
-        put(key, version, data, size, nr_puts_required);
+    void put(const std::string& key, const kv_store_version& version, FileType::FileType f_type, const char* data, size_t size, int wait_for);
+    inline void put(const std::string& key, const kv_store_version& version, FileType::FileType f_type, const char* data, size_t size) {
+        put(key, version, f_type, data, size, nr_puts_required);
     };
-    void put_with_merge(const std::string& key, const kv_store_key_version& version, const char* data, size_t size, int wait_for);
-    inline void put_with_merge(const std::string& key, const kv_store_key_version& version, const char* data, size_t size) {
-        put_with_merge(key, version, data, size, nr_puts_required);
+    void del(const std::string& key, const kv_store_version& version, FileType::FileType f_type, int wait_for);
+    inline void del(const std::string& key, const kv_store_version& version, FileType::FileType f_type){
+        del(key, version, f_type, nr_puts_required);
     };
-    void del(const std::string& key, const kv_store_key_version& version, int wait_for);
-    inline void del(const std::string& key, const kv_store_key_version& version){
-        del(key, version, nr_puts_required);
-    };
-    std::unique_ptr<std::string> get(const std::string& key, const kv_store_key_version& version, client_reply_handler::Response* response, int wait_for, bool no_data = false);
-    inline std::unique_ptr<std::string> get(const std::string& key, const kv_store_key_version& version, client_reply_handler::Response* response){
+    std::unique_ptr<std::string> get(const std::string& key, const kv_store_version& version, client_reply_handler::Response* response, int wait_for, bool no_data = false);
+    inline std::unique_ptr<std::string> get(const std::string& key, const kv_store_version& version, client_reply_handler::Response* response){
         return get(key, version, response, nr_gets_required, false);
     };
     void get_latest_batch(const std::vector<std::string> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, int wait_for);
     inline void get_latest_batch(const std::vector<std::string>& keys, std::vector<std::shared_ptr<std::string>>& data_strs){
         get_latest_batch(keys, data_strs, nr_gets_version_required);
     };
-    std::unique_ptr<kv_store_key_version> get_latest_version(const std::string& key, client_reply_handler::Response* response, int wait_for);
-    inline std::unique_ptr<kv_store_key_version> get_latest_version(const std::string& key, client_reply_handler::Response* response){
+    std::unique_ptr<kv_store_version> get_latest_version(const std::string& key, client_reply_handler::Response* response, int wait_for);
+    inline std::unique_ptr<kv_store_version> get_latest_version(const std::string& key, client_reply_handler::Response* response){
         return get_latest_version(key, response, nr_gets_version_required);
     };
     std::unique_ptr<std::string> get_latest(const std::string& key, client_reply_handler::Response* response, int wait_for);
@@ -103,28 +94,18 @@ public:
         return get_latest(key, response, nr_gets_version_required);
     };
 
-    std::vector<std::unique_ptr<std::string>> get_latest_concurrent(const std::string& key, client_reply_handler::Response* response, int wait_for);
-    inline std::vector<std::unique_ptr<std::string>> get_latest_concurrent(const std::string& key, client_reply_handler::Response* response){
-        return get_latest_concurrent(key, response, nr_gets_version_required);
-    }
-
-    void put_child(const std::string& key, const kv_store_key_version& version, const std::string& child_path, bool is_create, bool is_dir, int wait_for);
-    inline void put_child(const std::string& key, const kv_store_key_version& version, const std::string& child_path, bool is_create, bool is_dir){
+    void put_child(const std::string& key, const kv_store_version& version, const std::string& child_path, bool is_create, bool is_dir, int wait_for);
+    inline void put_child(const std::string& key, const kv_store_version& version, const std::string& child_path, bool is_create, bool is_dir){
         return put_child(key, version, child_path, is_create, is_dir, nr_puts_required);
     }
-
-    void put_metadata_stat(const std::string& key, const kv_store_key_version& version,const char *data, size_t size, int wait_for);
-    inline void put_metadata_stat(const std::string& key, const kv_store_key_version& version, const char *data, size_t size){
-        put_metadata_stat(key, version, data, size, nr_puts_required);
-    }
     
-    std::unique_ptr<std::string> get_latest_metadata_size(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version, int wait_for);
-    inline std::unique_ptr<std::string> get_latest_metadata_size(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version) {
+    std::unique_ptr<std::string> get_latest_metadata_size(const std::string& key, client_reply_handler::Response* response, kv_store_version* last_version, int wait_for);
+    inline std::unique_ptr<std::string> get_latest_metadata_size(const std::string& key, client_reply_handler::Response* response, kv_store_version* last_version) {
         return get_latest_metadata_size(key, response, last_version, nr_gets_version_required);
     }
 
-    std::unique_ptr<std::string> get_latest_metadata_stat(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version, int wait_for);
-    inline std::unique_ptr<std::string> get_latest_metadata_stat(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version) {
+    std::unique_ptr<std::string> get_latest_metadata_stat(const std::string& key, client_reply_handler::Response* response, kv_store_version* last_version, int wait_for);
+    inline std::unique_ptr<std::string> get_latest_metadata_stat(const std::string& key, client_reply_handler::Response* response, kv_store_version* last_version) {
         return get_latest_metadata_stat(key, response, last_version, nr_gets_version_required);
     }
 
@@ -136,23 +117,20 @@ public:
         return get_metadata_batch(keys, data_strs, response, max_timeout, nr_gets_required);
     }
 
-    void del_db(const std::string& key, const kv_store_key_version& version, std::vector<std::string> peers);
-
 
 private:
     long inc_and_get_request_count();
     int send_msg(peer_data& target_peer, proto::kv_message& msg);
-    int send_get(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const std::string& req_id, bool no_data);
-    int send_put(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const char* data, size_t size, bool extra_reply = false);
-    int send_delete(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, bool extra_reply = false);
-    int send_put_with_merge(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const char* data, size_t size, bool extra_reply = false);
+    int send_get(std::vector<peer_data>& peers, const std::string& key, const kv_store_version& version, const std::string& req_id, bool no_data);
+    int send_put(std::vector<peer_data>& peers, const std::string& key, const kv_store_version& version, FileType::FileType f_type, const char* data, size_t size, bool extra_reply = false);
+    int send_delete(std::vector<peer_data>& peers, const std::string& key, const kv_store_version& version, FileType::FileType f_type, bool extra_reply = false);
     int send_get_latest_version(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id, bool with_data = false);
-    int send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const std::string& child_path, bool is_create, bool is_dir, bool extra_reply = false);
-    int send_put_metadata_stat(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const kv_store_key_version& past_version, const char *data, size_t size, bool extra_reply = false);
-    int send_get_latest_met_size_or_stat(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id, bool get_size, bool get_stat);
-    int send_get_metadata(std::vector<peer_data>& peers, const std::string& key, const kv_store_key_version& version, const std::string& req_id);
+    int send_put_child(std::vector<peer_data>& peers, const std::string& key, const kv_store_version& version, const std::string& child_path, bool is_create, bool is_dir, bool extra_reply = false);
+    int send_get_latest_metadata_stat(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id);
+    int send_get_latest_metadata_size(std::vector<peer_data>& peers, const std::string& key, const std::string& req_id);
+    int send_get_metadata(std::vector<peer_data>& peers, const std::string& key, const kv_store_version& version, const std::string& req_id);
 
-    std::unique_ptr<std::string> get_latest_metadata_size_or_stat(const std::string& key, client_reply_handler::Response* response, kv_store_key_version* last_version, bool get_size, bool get_stat, int wait_for);
+    std::unique_ptr<std::string> get_latest_metadata_size_or_stat(const std::string& key, client_reply_handler::Response* response, kv_store_version* last_version, bool get_size, bool get_stat, int wait_for);
 
 };
 

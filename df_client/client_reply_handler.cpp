@@ -1,9 +1,4 @@
-//
-// Created by danielsf97 on 3/16/20.
-//
-
 #include "client_reply_handler.h"
-
 
 
 client_reply_handler::client_reply_handler(std::string ip, int kv_port, int pss_port, long wait_timeout):
@@ -448,8 +443,8 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_metadata_until(c
     return res;
 }
 
-std::unique_ptr<kv_store_key_version> client_reply_handler::wait_for_get_latest_version(const std::string& req_id, int wait_for, Response* get_res) {
-    std::unique_ptr<kv_store_key_version> res (nullptr);
+std::unique_ptr<kv_store_version> client_reply_handler::wait_for_get_latest_version(const std::string& req_id, int wait_for, Response* get_res) {
+    std::unique_ptr<kv_store_version> res (nullptr);
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
 
@@ -489,12 +484,12 @@ std::unique_ptr<kv_store_key_version> client_reply_handler::wait_for_get_latest_
             auto& map_keys = it->second.keys;
             auto& map_del_keys = it->second.deleted_keys;
 
-            std::vector<kv_store_key_version> max_vv;
+            std::vector<kv_store_version> max_vv;
 
             for(auto& kv : map_keys){
                 bool deleted = false;
                 for(auto& kv_del : map_del_keys){
-                    kVersionComp comp_del = comp_version(kv.first.key_version, kv_del.first.key_version);
+                    kVersionComp comp_del = comp_version(kv.first.version, kv_del.first.version);
                     
                     if(comp_del == kVersionComp::Lower || comp_del == kVersionComp::Equal){
                         deleted = true;
@@ -504,26 +499,26 @@ std::unique_ptr<kv_store_key_version> client_reply_handler::wait_for_get_latest_
                 if(!deleted){
                     int cout_concurrent = 0;
                     for(int i = 0; i < max_vv.size(); i++){
-                        kVersionComp comp_max = comp_version(kv.first.key_version, max_vv.at(i));
+                        kVersionComp comp_max = comp_version(kv.first.version, max_vv.at(i));
                         if(comp_max == kVersionComp::Bigger){
-                            max_vv.at(i) = kv.first.key_version;
+                            max_vv.at(i) = kv.first.version;
                             break;
                         } else if(comp_max == kVersionComp::Concurrent)
                             cout_concurrent++;
                     }
                     if(cout_concurrent == max_vv.size())
-                        max_vv.push_back(kv.first.key_version);
+                        max_vv.push_back(kv.first.version);
                 }
             }
 
-            kv_store_key_version last_v;
+            kv_store_version last_v;
             if(max_vv.size() > 1)
                 last_v = choose_latest_version(max_vv);
             else if(max_vv.size() == 1)
                 last_v = max_vv.front();
              
             if(!max_vv.empty()){
-                res = std::make_unique<kv_store_key_version>(last_v);
+                res = std::make_unique<kv_store_version>(last_v);
                 *get_res = Response::Ok;
              }else if(!it->second.deleted_keys.empty()){
                 *get_res = Response::Deleted;
@@ -588,12 +583,12 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest_until(con
             auto& map_keys = it->second.keys;
             auto& map_del_keys = it->second.deleted_keys;
 
-            std::vector<kv_store_key_version> max_vv;
+            std::vector<kv_store_version> max_vv;
 
             for(auto& kv : map_keys){
                 bool deleted = false;
                 for(auto& kv_del : map_del_keys){
-                    kVersionComp comp_del = comp_version(kv.first.key_version, kv_del.first.key_version);
+                    kVersionComp comp_del = comp_version(kv.first.version, kv_del.first.version);
                     
                     if(comp_del == kVersionComp::Lower || comp_del == kVersionComp::Equal){
                         deleted = true;
@@ -603,26 +598,26 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest_until(con
                 if(!deleted){
                     int cout_concurrent = 0;
                     for(int i = 0; i < max_vv.size(); i++){
-                        kVersionComp comp_max = comp_version(kv.first.key_version, max_vv.at(i));
+                        kVersionComp comp_max = comp_version(kv.first.version, max_vv.at(i));
                         if(comp_max == kVersionComp::Bigger){
-                            max_vv.at(i) = kv.first.key_version;
+                            max_vv.at(i) = kv.first.version;
                             break;
                         } else if(comp_max == kVersionComp::Concurrent)
                             cout_concurrent++;
                     }
                     if(cout_concurrent == max_vv.size())
-                        max_vv.push_back(kv.first.key_version);
+                        max_vv.push_back(kv.first.version);
                 }
             }
 
-            kv_store_key_version last_v;
+            kv_store_version last_v;
             if(max_vv.size() > 1)
                 last_v = choose_latest_version(max_vv);
             else if(max_vv.size() == 1)
                 last_v = max_vv.front();
             
             if(!max_vv.empty()){
-                auto it = map_keys.find({key, last_v, false});
+                auto it = map_keys.find({key, last_v});
                 if(it != map_keys.end()){
                     res = std::move(it->second);
                     *get_res = Response::Ok;
@@ -661,7 +656,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest_until(con
 }
 
 
-std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest(const std::string &key, const std::string& req_id, int wait_for, Response* get_res, kv_store_key_version* last_version) {
+std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest(const std::string &key, const std::string& req_id, int wait_for, Response* get_res, kv_store_version* last_version) {
     std::unique_ptr<std::string> res (nullptr);
 
     std::unique_lock<std::mutex> lock(this->get_global_mutex);
@@ -702,12 +697,12 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest(const std
             auto& map_keys = it->second.keys;
             auto& map_del_keys = it->second.deleted_keys;
 
-            std::vector<kv_store_key_version> max_vv;
+            std::vector<kv_store_version> max_vv;
 
             for(auto& kv : map_keys){
                 bool deleted = false;
                 for(auto& kv_del : map_del_keys){
-                    kVersionComp comp_del = comp_version(kv.first.key_version, kv_del.first.key_version);
+                    kVersionComp comp_del = comp_version(kv.first.version, kv_del.first.version);
                     
                     if(comp_del == kVersionComp::Lower || comp_del == kVersionComp::Equal){
                         deleted = true;
@@ -717,19 +712,19 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest(const std
                 if(!deleted){
                     int cout_concurrent = 0;
                     for(int i = 0; i < max_vv.size(); i++){
-                        kVersionComp comp_max = comp_version(kv.first.key_version, max_vv.at(i));
+                        kVersionComp comp_max = comp_version(kv.first.version, max_vv.at(i));
                         if(comp_max == kVersionComp::Bigger){
-                            max_vv.at(i) = kv.first.key_version;
+                            max_vv.at(i) = kv.first.version;
                             break;
                         } else if(comp_max == kVersionComp::Concurrent)
                             cout_concurrent++;
                     }
                     if(cout_concurrent == max_vv.size())
-                        max_vv.push_back(kv.first.key_version);
+                        max_vv.push_back(kv.first.version);
                 }
             }
 
-            kv_store_key_version last_v;
+            kv_store_version last_v;
             if(max_vv.size() > 1)
                 last_v = choose_latest_version(max_vv);
             else if(max_vv.size() == 1)
@@ -737,7 +732,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest(const std
             
 
             if(!max_vv.empty()){
-                auto it = map_keys.find({key, last_v, false});
+                auto it = map_keys.find({key, last_v});
                 if(it != map_keys.end()){
                     res = std::move(it->second);
                     *get_res = Response::Ok;
@@ -813,12 +808,12 @@ std::vector<std::unique_ptr<std::string>> client_reply_handler::wait_for_get_lat
             auto& map_keys = it->second.keys;
             auto& map_del_keys = it->second.deleted_keys;
 
-            std::vector<kv_store_key_version> max_vv;
+            std::vector<kv_store_version> max_vv;
 
             for(auto& kv : map_keys){
                 bool deleted = false;
                 for(auto& kv_del : map_del_keys){
-                    kVersionComp comp_del = comp_version(kv.first.key_version, kv_del.first.key_version);
+                    kVersionComp comp_del = comp_version(kv.first.version, kv_del.first.version);
                     
                     if(comp_del == kVersionComp::Lower || comp_del == kVersionComp::Equal){
                         deleted = true;
@@ -828,16 +823,16 @@ std::vector<std::unique_ptr<std::string>> client_reply_handler::wait_for_get_lat
                 if(!deleted){
                     int cout_concurrent = 0;
                     for(int i = 0; i < max_vv.size(); i++){
-                        kVersionComp comp_max = comp_version(kv.first.key_version, max_vv.at(i));
+                        kVersionComp comp_max = comp_version(kv.first.version, max_vv.at(i));
                         if(comp_max == kVersionComp::Bigger){
-                            max_vv.at(i) = kv.first.key_version;
+                            max_vv.at(i) = kv.first.version;
                             res.at(i) = std::move(kv.second);
                             break;
                         } else if(comp_max == kVersionComp::Concurrent)
                             cout_concurrent++;
                     }
                     if(cout_concurrent == max_vv.size())
-                        max_vv.push_back(kv.first.key_version);
+                        max_vv.push_back(kv.first.version);
                         res.push_back(std::move(kv.second));
                 }
             }
@@ -897,12 +892,12 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
             data = std::make_unique<std::string>(msg.data());
         }
 
-        kv_store_key_version version;
+        kv_store_version version;
         for (auto c : msg.key().key_version().version())
             version.vv.emplace(c.client_id(), c.clock());
         version.client_id = msg.key().key_version().client_id();
 
-        kv_store_key<std::string> st_key = {msg.key().key(), version, is_deleted};
+        kv_store_key<std::string> st_key = {msg.key().key(), version, FileType::FILE, is_deleted};
 
         if(!is_deleted)
             it->second.keys.insert(std::make_pair(st_key, std::move(data)));
@@ -943,12 +938,12 @@ void client_reply_handler::process_get_metadata_reply_msg(const proto::get_metad
                 data = std::make_unique<std::string>(msg.data());
             }
 
-            kv_store_key_version version;
+            kv_store_version version;
             for (auto c : msg.key().key_version().version())
                 version.vv.emplace(c.client_id(), c.clock());
             version.client_id = msg.key().key_version().client_id();
 
-            kv_store_key<std::string> st_key = {msg.key().key(), version, is_deleted};
+            kv_store_key<std::string> st_key = {msg.key().key(), version, FileType::DIRECTORY, is_deleted};
 
             if(!is_deleted)
                 it->second.keys.insert(std::make_pair(st_key, std::move(data)));
@@ -984,13 +979,13 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
         lock.unlock(); //free global get lock
 
         for(auto k : msg.last_v()){
-            kv_store_key_version kv;
+            kv_store_version kv;
             for (auto c : k.version()){
                 kv.vv.emplace(c.client_id(), c.clock());
             }
             kv.client_id = k.client_id();
             
-            kv_store_key<std::string> st_key = {msg.key(), kv, false};
+            kv_store_key<std::string> st_key = {msg.key(), kv};
             
             std::unique_ptr<std::string> data(nullptr);
             if(!k.data().empty())
@@ -1000,13 +995,13 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
         }
 
        for(auto k : msg.last_deleted_v()){
-            kv_store_key_version kv_del;
+            kv_store_version kv_del;
             for (auto c : k.version()){
                 kv_del.vv.emplace(c.client_id(), c.clock());
             }
             kv_del.client_id = k.client_id();
 
-            kv_store_key<std::string> st_del_key = {msg.key(), kv_del, true};
+            kv_store_key<std::string> st_del_key = {msg.key(), kv_del, FileType::FILE, true};
             it->second.deleted_keys.insert(std::make_pair(st_del_key, nullptr));
         }
 
@@ -1022,14 +1017,18 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
 
 void client_reply_handler::process_put_reply_msg(const proto::put_reply_message &msg) {
     const std::string& key = msg.key().key();
-    kv_store_key_version version;
+    kv_store_version version;
     for (auto c : msg.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
     version.client_id = msg.key().key_version().client_id();
 
-    bool is_merge = msg.is_merge();
+    FileType::FileType type;
+    if(msg.type() == proto::FileType::FILE)
+        type = FileType::FILE;
+    else
+        type = FileType::DIRECTORY;
 
-    kv_store_key<std::string> comp_key = {key, version, false, is_merge};
+    kv_store_key<std::string> comp_key = {key, version, type, false};
 
     std::unique_lock<std::mutex> lock(this->put_global_mutex);
     auto it = this->put_replies.find(comp_key);
@@ -1052,12 +1051,19 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
 
 void client_reply_handler::process_delete_reply_msg(const proto::delete_reply_message &msg) {
     const std::string& key = msg.key().key();
-    kv_store_key_version version;
+    kv_store_version version;
     for (auto c : msg.key().key_version().version())
         version.vv.emplace(c.client_id(), c.clock());
     version.client_id = msg.key().key_version().client_id();
 
-    kv_store_key<std::string> comp_key = {key, version, true};
+    FileType::FileType type;
+    if(msg.type() == proto::FileType::FILE)
+        type = FileType::FILE;
+    else
+        type = FileType::DIRECTORY;
+    
+
+    kv_store_key<std::string> comp_key = {key, version, type, true};
     long replier_id = msg.id();
 
     std::unique_lock<std::mutex> lock(this->delete_global_mutex);

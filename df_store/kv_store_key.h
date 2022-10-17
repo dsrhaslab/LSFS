@@ -5,19 +5,22 @@
 #ifndef P2PFS_KV_STORE_KEY_H
 #define P2PFS_KV_STORE_KEY_H
 
-#include "kv_store_key_version.h"
+#include "kv_store_value/kv_store_version.h"
+#include "df_util/util_objects.h"
+
 
 template <typename T>
 struct kv_store_key {
     T key;
-    kv_store_key_version key_version;
+    kv_store_version version;
+    FileType::FileType f_type = FileType::FILE;
     bool is_deleted = false;
-    bool is_merge = false;
+    
     
     inline bool operator==(const kv_store_key& other) const
     {
-        return this->key == other.key && this->key_version == other.key_version
-                && this->is_deleted == other.is_deleted && this->is_merge == other.is_merge;
+        return this->key == other.key && this->version == other.version
+                && this->is_deleted == other.is_deleted && this->f_type == other.f_type;
     }
 };
 

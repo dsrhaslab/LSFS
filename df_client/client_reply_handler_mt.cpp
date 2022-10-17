@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 3/8/20.
-//
-
 #include "client_reply_handler_mt.h"
 #include "df_communication/udp_async_server.h"
 

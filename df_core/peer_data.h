@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 10/12/19.
-//
-
 #ifndef DATAFLASKSCPP_PEER_DATA_H
 #define DATAFLASKSCPP_PEER_DATA_H
 
@@ -9,9 +5,9 @@
 
 struct peer_data {
     std::string ip;
-    int kv_port; //Data Port
-    int pss_port; //Pss Port
-    int recover_port; //Recover Port - Anti Entropy
+    int kv_port; 
+    int pss_port; 
+    int recover_port; 
     int age;
     long id;
     //group construction
@@ -21,7 +17,7 @@ struct peer_data {
 
     bool operator<(const struct peer_data& rhs) const
     {
-        return id < rhs.id;  //assume that you compare the record based on a
+        return id < rhs.id;  //assume that you compare the record based on a id
     }
 
 };

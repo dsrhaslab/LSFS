@@ -6,29 +6,29 @@
 
       - name: Creates passthrough dir
         file:
-          path: /home/{{ ansible_user }}/passthrough
+          path: /home/{{ ansible_user }}/lsfs/passthrough
           state: directory
       
       - name: Creates workloads dir
         file:
-          path: /home/{{ ansible_user }}/passthrough/workloads-filebench
+          path: /home/{{ ansible_user }}/lsfs/passthrough/workloads-filebench
           state: directory
 
       - name: Put workloads in directory
         copy:
           src: ../workloads-filebench/
-          dest: "/home/{{ ansible_user }}/passthrough/workloads-filebench/"
+          dest: "/home/{{ ansible_user }}/lsfs/passthrough/workloads-filebench/"
 
       - name: Put Docker file
         copy:
           src: ../image/Dockerfile
-          dest: "/home/{{ ansible_user }}/passthrough/Dockerfile"
+          dest: "/home/{{ ansible_user }}/lsfs/passthrough/Dockerfile"
 
       - name: Put filebe_script file
         copy:
           src: ../fileb_script.sh
-          dest: "/home/{{ ansible_user }}/passthrough/fileb_script.sh"
+          dest: "/home/{{ ansible_user }}/lsfs/passthrough/fileb_script.sh"
 
       - name: Build image
         shell: | 
-                docker build -t fuse_passthrough /home/{{ ansible_user }}/passthrough/
+                docker build -t fuse_passthrough /home/{{ ansible_user }}/lsfs/passthrough/

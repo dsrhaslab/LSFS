@@ -1,7 +1,3 @@
-//
-// Created by danielsf97 on 10/7/19.
-//
-
 #ifndef DATAFLASKSCPP_BOOTSTRAPPER_H
 #define DATAFLASKSCPP_BOOTSTRAPPER_H
 

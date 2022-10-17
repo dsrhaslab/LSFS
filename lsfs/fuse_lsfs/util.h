@@ -1,12 +1,8 @@
 #ifndef fuse_pt_header_util_h_
 #define fuse_pt_header_util_h_
 
-/* -------------------------------------------------------------------------- */
-
 #include <boost/regex.hpp>
 #include "lsfs/fuse_common/macros.h"
-
-/* -------------------------------------------------------------------------- */
 
 static boost::regex string_capacity_size_regex("(\\d+)([bBkKmM])$");
 static boost::regex temp_extensions("(\\.swx$|\\.swp$|\\.inf$|/\\.|~$)");
@@ -20,5 +16,5 @@ bool operator <(const timespec& lhs, const timespec& rhs);
 std::string merge_metadata(std::string& bytes, std::string& new_bytes);
 size_t convert_string_size_to_num_bytes(const std::string &format_size);
 
-/* -------------------------------------------------------------------------- */
+
 #endif /* fuse_pt_header_util_h_ */

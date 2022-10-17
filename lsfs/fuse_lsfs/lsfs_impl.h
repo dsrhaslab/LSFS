@@ -1,13 +1,17 @@
-//
-// Created by danielsf97 on 2/4/20.
-//
-
 #ifndef P2PFS_LSFS_IMPL_H
 #define P2PFS_LSFS_IMPL_H
 
 #include <vector>
-#include "lsfs_state.h"
 #include <queue>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <cstddef>
+#include <sys/statvfs.h>
+#include <spdlog/logger.h>
+
+#include "lsfs_state.h"
 #include "lsfs/fuse_common/fuse_wrapper.h"
 #include "lsfs/fuse_common/fuse_wrapper.cpp"
 #include "df_client/client.h"
@@ -16,13 +20,7 @@
 #include "exceptions/custom_exceptions.h"
 #include "util.h"
 
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <cstddef>
-#include <sys/statvfs.h>
-#include <spdlog/logger.h>
+
 
 extern std::unique_ptr<lsfs_state> state;
 extern std::shared_ptr<client> df_client;

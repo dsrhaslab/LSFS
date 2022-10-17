@@ -1,20 +1,18 @@
-/* -------------------------------------------------------------------------- */
-
 #define _ATFILE_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #define _XOPEN_SOURCE 500
+
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "exceptions/custom_exceptions.h"
 
+#include "exceptions/custom_exceptions.h"
 #include "util.h"
 #include "lsfs/fuse_lsfs/lsfs_impl.h"
 #include "metadata/metadata.h"
 
-/* -------------------------------------------------------------------------- */
 
 int lsfs_impl::_getattr(
     const char *path, struct stat *stbuf,
@@ -36,12 +34,12 @@ int lsfs_impl::_getattr(
 
         if(!got_metadata){
             try{
-                std::unique_ptr<metadata> met = state->get_metadata_stat(path);
-                if(met == nullptr)
+                std::unique_ptr<metadata_attr> met_attr = state->get_metadata_stat(path);
+                if(met_attr == nullptr)
                     return -errno;
                     
                 // copy metadata received to struct stat
-                memcpy(stbuf, &met->attr.stbuf, sizeof(struct stat));
+                memcpy(stbuf, &met_attr->stbuf, sizeof(struct stat));
 
                  
             } catch (EmptyViewException& e) {
@@ -214,5 +212,3 @@ int lsfs_impl::_fallocate(
 
     return (fallocate((int)fi->fh, mode, offset, length) == 0) ? 0 : -errno;
 }
-
-/* -------------------------------------------------------------------------- */

@@ -1,11 +1,8 @@
-/* -------------------------------------------------------------------------- */
 #include "util.h"
 
 bool is_temp_file(const std::string& path){
     boost::cmatch match;
     return boost::regex_search(path.c_str(), match, temp_extensions);
-    //std::smatch match;
-    //return std::regex_search(path, match, temp_extensions);
 }
 
 std::unique_ptr<std::string> get_parent_dir(const std::string& path){
