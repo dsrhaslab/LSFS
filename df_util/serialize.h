@@ -1,19 +1,11 @@
 #ifndef P2PFS_SERIALIZE_H
 #define P2PFS_SERIALIZE_H
 
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/set.hpp>
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/utility.hpp>
-#include <boost/serialization/serialization.hpp>
-
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/device/back_inserter.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-
-#include "df_store/kv_store_value/kv_store_value.h"
 
 template<class T> 
 std::string serialize_to_string(const T& object){

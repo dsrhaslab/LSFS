@@ -21,7 +21,6 @@
 #include "lsfs/fuse_common/macros.h"
 #include "df_util/util_objects.h"
 #include "df_util/serialize.h"
-#include "lsfs/fuse_lsfs/metadata/metadata.h"
 
 
 class data_handler_listener {

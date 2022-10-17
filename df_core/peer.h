@@ -25,6 +25,7 @@
 #include "df_data_handlers/anti_entropy.h"
 #include "df_store/kv_store_leveldb.h"
 #include "group_construction.h"
+#include "df_util/util.h"
 
 
 

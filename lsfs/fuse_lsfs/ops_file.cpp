@@ -12,7 +12,7 @@
 
 #include "exceptions/custom_exceptions.h"
 #include "util.h"
-#include "lsfs/fuse_lsfs/lsfs_impl.h"
+#include "lsfs_impl.h"
 #include "metadata/metadata.h"
 
 /* -------------------------------------------------------------------------- */
@@ -232,13 +232,15 @@ int lsfs_impl::_read(
         struct fuse_file_info *fi
 )
 {
-    //std::cout << "### SysCall: _read ->"  << (std::string) path << std::endl;
-
     (void)path;
 
     size_t bytes_count;
 
     if (!is_temp_file(path)) {
+
+        if(size > BLK_SIZE){
+            std::cout << "Readahead maior que o BLK: " << size << std::endl;
+        }
 
         // get file info
         struct stat stbuf;
@@ -319,6 +321,10 @@ int lsfs_impl::_write(
     int result;
 
     if (!is_temp_file(path)) {
+
+        if(size > BLK_SIZE){
+            std::cout << "Writeahead maior que o BLK: " << size << std::endl;
+        }
 
         //TODO fazer caching com stack de getattr's
 
