@@ -981,21 +981,21 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
         std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
         lock.unlock(); //free global get lock
 
-    //     for(auto k : msg.last_v()){
-    //         kv_store_version kv;
-    //         for (auto c : k.version()){
-    //             kv.vv.emplace(c.client_id(), c.clock());
-    //         }
-    //         kv.client_id = k.client_id();
+        for(auto k : msg.last_v()){
+            kv_store_version kv;
+            for (auto c : k.version()){
+                kv.vv.emplace(c.client_id(), c.clock());
+            }
+            kv.client_id = k.client_id();
             
-    //         kv_store_key<std::string> st_key = {msg.key(), kv};
+            kv_store_key<std::string> st_key = {msg.key(), kv};
             
-    //         std::unique_ptr<std::string> data(nullptr);
-    //         if(!k.data().empty())
-    //             data = std::make_unique<std::string>(k.data());
+            std::unique_ptr<std::string> data(nullptr);
+            if(!k.data().empty())
+                data = std::make_unique<std::string>(k.data());
             
-    //         it->second.keys.insert(std::make_pair(st_key, std::move(data)));
-    //     }
+            it->second.keys.insert(std::make_pair(st_key, std::move(data)));
+        }
 
     //    for(auto k : msg.last_deleted_v()){
     //         kv_store_version kv_del;

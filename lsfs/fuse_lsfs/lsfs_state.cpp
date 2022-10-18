@@ -133,7 +133,7 @@ size_t lsfs_state::read_fixed_size_blocks_to_buffer(char *buf, size_t size, size
         read_off += blk_write_size;
     }
 
-    return BLK_SIZE;
+    return size;
 }
 
 /*
