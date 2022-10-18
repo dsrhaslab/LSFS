@@ -1,10 +1,21 @@
 #include "util.h"
 
+/*
+    Checks if a given path is a temporary file.
+
+    Return true if it does, false otherwise.
+*/
 bool is_temp_file(const std::string& path){
     boost::cmatch match;
     return boost::regex_search(path.c_str(), match, temp_extensions);
 }
 
+/*
+    Retrieves from given path the parent dir.
+    Ex: /dir1/file => /dir1.
+
+    Return unique_ptr for the string parent dir.
+*/
 std::unique_ptr<std::string> get_parent_dir(const std::string& path){
     boost::cmatch match;
 
@@ -21,6 +32,12 @@ std::unique_ptr<std::string> get_parent_dir(const std::string& path){
     return nullptr;
 }
 
+/*
+    Retrieves from given path the child name.
+    Ex: /dir1/file => file.
+
+    Return unique_ptr for the string child name.
+*/
 std::unique_ptr<std::string> get_child_name(const std::string& path){
     boost::cmatch match;
 
@@ -33,6 +50,10 @@ std::unique_ptr<std::string> get_child_name(const std::string& path){
     return nullptr;
 }
 
+/*
+    Operator comparator for timespec.
+    Used for storage_specific.cpp and metadata/metadata.cpp
+*/
 bool operator <(const timespec& lhs, const timespec& rhs){
     if (lhs.tv_sec == rhs.tv_sec)
         return lhs.tv_nsec < rhs.tv_nsec;
@@ -40,6 +61,13 @@ bool operator <(const timespec& lhs, const timespec& rhs){
         return lhs.tv_sec < rhs.tv_sec;
 }
 
+/*
+    Converts string size to number in bytes.
+    Must be multiple of BLK_SIZE.
+    Ex: 1k => 1024 bytes.
+    
+    Returns size_t if valid string format argument.
+*/
 size_t convert_string_size_to_num_bytes(const std::string &format_size) {
     boost::cmatch match;
     auto res = boost::regex_search(format_size.c_str(), match, string_capacity_size_regex);

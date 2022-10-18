@@ -58,8 +58,7 @@ private:
 public:
     kv_store_leveldb(std::string(*f)(const std::string&, const std::string&), long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, int anti_entropy_max_keys_to_send_percentage);
     ~kv_store_leveldb();
-    // void send_keys_gt(std::vector<std::string> &off_keys, std::vector<std::string> &off_deleted_keys, tcp_client_server_connection::tcp_client_connection &connection,
-    //                   void (*action)(tcp_client_server_connection::tcp_client_connection &, const std::string &, std::map<long, long>&, long , bool, bool, const char*, size_t)) override;
+    
     int init(void*, long id) override;
     void close() override;
     int restart_database() override;
@@ -96,6 +95,9 @@ public:
     bool check_if_have_all_blks_and_put_metadata(const std::string& base_path, const kv_store_key<std::string>& key, size_t blk_num) override;
     void delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const kv_store_key<std::string>& key, size_t blk_num) override;
     bool get_incomplete_blks(const kv_store_key<std::string>& key, size_t new_size, std::vector<size_t>& tmp_blks_to_request) override;
+
+    // void send_keys_gt(std::vector<std::string> &off_keys, std::vector<std::string> &off_deleted_keys, tcp_client_server_connection::tcp_client_connection &connection,
+    //                   void (*action)(tcp_client_server_connection::tcp_client_connection &, const std::string &, std::map<long, long>&, long , bool, FileType::FileType, const char*, size_t)) override;
 
     void print_store(long id) override;
     bool clean_db() override;
@@ -1366,6 +1368,90 @@ void kv_store_leveldb::delete_metadata_from_tmp_anti_entropy(const std::string& 
         db_tmp_anti_entropy->Delete(leveldb::WriteOptions(), blk_path);
     }   
 }
+
+
+// void kv_store_leveldb::send_keys_gt(tcp_client_server_connection::tcp_client_connection &connection,
+//                                     void (*send)(tcp_client_server_connection::tcp_client_connection &, const std::string &, std::map<long, long>&, long, bool, FileType::FileType, const char*, size_t)) {
+
+//     leveldb::Iterator *it = db->NewIterator(leveldb::ReadOptions());
+//     bool found_offset_key = false;
+//     if(off_keys.empty()){
+//         it->SeekToFirst();
+//     }else {
+//         for (auto key_it = off_keys.begin(); key_it != off_keys.end() && !found_offset_key; ++key_it) {
+//             std::string prefix = *key_it;
+//             it->Seek(prefix);
+//             if (it->Valid() && it->key().starts_with(prefix)) {
+//                 found_offset_key = true;
+//                 break;
+//             } else {
+//                 it->SeekToFirst();
+//             }
+//         }
+//     }
+
+//     for (it->SeekToFirst();; it->Valid(); it->Next()) {
+//         std::string comp_key = it->key().ToString();
+//         std::string current_key;
+//         std::string value;
+//         std::map<long, long> current_vector;
+//         long cli_id;
+//         split_composite_total(comp_key, &current_key, &current_vector, &cli_id);
+//         leveldb::Status s = db_merge_log->Get(leveldb::ReadOptions(), comp_key, &value);
+//         bool is_merge = s.ok();
+//         try {
+//             send(connection, current_key, it->value().data(), it->value().size());
+//         }catch(std::exception& e){
+//             std::cerr << "Exception: " << e.what()  << " " << strerror(errno) << std::endl;
+//         }
+//     }
+
+//     if (!it->status().ok()) {
+//         delete it;
+//         throw LevelDBException();
+//     } else {
+//         delete it;
+//     }
+
+
+//     it = db_deleted->NewIterator(leveldb::ReadOptions());
+//     found_offset_key = false;
+//     if(off_deleted_keys.empty()){
+//         it->SeekToFirst();
+//     }else {
+//         for (auto key_it = off_deleted_keys.begin(); key_it != off_deleted_keys.end() && !found_offset_key; ++key_it) {
+//             std::string prefix = *key_it + "#";
+//             it->Seek(prefix);
+//             if (it->Valid() && it->key().starts_with(prefix)) {
+//                 found_offset_key = true;
+//                 break;
+//             } else {
+//                 it->SeekToFirst();
+//             }
+//         }
+//     }
+
+//     for (; it->Valid(); it->Next()) {
+//         std::string comp_key = it->key().ToString();
+//         std::string current_key;
+//         std::string value;
+//         std::map<long, long> current_vector;
+//         long cli_id;
+//         split_composite_total(comp_key, &current_key, &current_vector, &cli_id);
+//         try {
+//             send(connection, current_key, current_vector, cli_id, true, false, it->value().data(), it->value().size());
+//         }catch(std::exception& e){
+//             std::cerr << "Exception: " << e.what()  << " " << strerror(errno) << std::endl;
+//         }
+//     }
+
+//     if (!it->status().ok()) {
+//         delete it;
+//         throw LevelDBException();
+//     } else {
+//         delete it;
+//     }
+// }
 
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

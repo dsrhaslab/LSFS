@@ -43,8 +43,8 @@ main_confs:
     nr_gets_version_required: 1
     client_wait_timeout: 1
     max_nr_requests_timeouts: 10
-    limit_write_paralelization_to: 32k
-    limit_read_paralelization_to: 32k
+    limit_write_paralelization_to: 4k
+    limit_read_paralelization_to: 4k
     mt_client_handler: true
     nr_client_handler_ths: 3
     load_balancer:

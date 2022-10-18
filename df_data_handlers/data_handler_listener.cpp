@@ -1133,75 +1133,66 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
 //         proto::kv_message kv_message_rcv;
 //         kv_message_rcv.ParseFromArray(rcv_buf, bytes_rcv);
 
-//         if(kv_message_rcv.has_recover_offset_msg()) {
+//         // For Each Key greater than offset send to peer
+//         this->store->send_keys_gt(connection,
+//                                     [](tcp_client_server_connection::tcp_client_connection& connection, const std::string& key,
+//                                         std::map<long, long>& version, long client_id, bool is_deleted, FileType::FileType f_type, const char* data, size_t data_size){
+//                                         proto::kv_message kv_message;
+//                                         kv_message.set_forwarded_within_group(false);
+//                                         auto* message_content = new proto::recover_data_message();
+                                        
+//                                         proto::kv_store* store = new proto::kv_store();
+//                                         proto::kv_store_key* kv_key = new proto::kv_store_key();
+//                                         kv_key->set_key(key);
+//                                         proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
 
-//             const proto::recover_offset_message& off_msg = kv_message_rcv.recover_offset_msg();
-//             std::vector<std::string> off_keys;
-//             std::vector<std::string> off_deleted_keys;
-//             for(auto& key: off_msg.keys()){
-//                 off_keys.emplace_back(key);
-//             }
-//             for(auto& del_key: off_msg.deleted_keys()){
-//                 off_deleted_keys.emplace_back(del_key);
-//             }
+//                                         for(auto const c: version){
+//                                             proto::kv_store_version *kv_version = kv_key_version->add_version();
+//                                             kv_version->set_client_id(c.first);
+//                                             kv_version->set_clock(c.second);
+//                                         }
 
-//             // For Each Key greater than offset send to peer
-//             this->store->send_keys_gt(off_keys, off_deleted_keys, connection,
-//                                       [](tcp_client_server_connection::tcp_client_connection& connection, const std::string& key,
-//                                          std::map<long, long>& version, long client_id, bool is_deleted, bool is_merge, const char* data, size_t data_size){
-//                                           proto::kv_message kv_message;
-//                                           kv_message.set_forwarded_within_group(false);
-//                                           auto* message_content = new proto::recover_data_message();
-                                          
-//                                           proto::kv_store* store = new proto::kv_store();
-//                                           proto::kv_store_key* kv_key = new proto::kv_store_key();
-//                                           kv_key->set_key(key);
-//                                           proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
+//                                         kv_key_version->set_client_id(client_id);
 
-//                                             for(auto const c: version){
-//                                                 proto::kv_store_version *kv_version = kv_key_version->add_version();
-//                                                 kv_version->set_client_id(c.first);
-//                                                 kv_version->set_clock(c.second);
-//                                             }
+//                                         kv_key->set_allocated_key_version(kv_key_version);
 
-//                                           kv_key_version->set_client_id(client_id);
+//                                         store->set_is_deleted(is_deleted);
+//                                         if(f_type == FileType::DIRECTORY)
+//                                         store->set_type(proto::FileType::DIRECTORY);
+//                                         else 
+//                                         store->set_type(proto::FileType::FILE);
 
-//                                           kv_key->set_allocated_key_version(kv_key_version);
+//                                         store->set_allocated_key(kv_key);
 
-//                                           store->set_is_deleted(is_deleted);
-//                                           store->set_is_merge(is_merge);
-//                                           store->set_allocated_key(kv_key);
+//                                         message_content->set_allocated_store_keys(store);
 
-//                                           message_content->set_allocated_store_keys(store);
+//                                         message_content->set_data(data, data_size);
+//                                         kv_message.set_allocated_recover_data_msg(message_content);
 
-//                                           message_content->set_data(data, data_size);
-//                                           kv_message.set_allocated_recover_data_msg(message_content);
+//                                         std::string buf;
+//                                         kv_message.SerializeToString(&buf);
 
-//                                           std::string buf;
-//                                           kv_message.SerializeToString(&buf);
+//                                         try {
+//                                             connection.send_msg(buf.data(), buf.size());
+//                                         }catch(std::exception& e){
+//                                             std::cerr << "Exception: " << e.what() << std::endl;
+//                                         }
+//                                     });
 
-//                                           try {
-//                                               connection.send_msg(buf.data(), buf.size());
-//                                           }catch(std::exception& e){
-//                                               std::cerr << "Exception: " << e.what() << std::endl;
-//                                           }
-//                                       });
+//         // Send Recover Done Message
+//         proto::kv_message kv_message;
+//         kv_message.set_forwarded_within_group(false);
+//         auto* message_content = new proto::recover_termination_message();
+//         kv_message.set_allocated_recover_termination_msg(message_content);
+//         std::string buf;
+//         kv_message.SerializeToString(&buf);
 
-//             // Send Recover Done Message
-//             proto::kv_message kv_message;
-//             kv_message.set_forwarded_within_group(false);
-//             auto* message_content = new proto::recover_termination_message();
-//             kv_message.set_allocated_recover_termination_msg(message_content);
-//             std::string buf;
-//             kv_message.SerializeToString(&buf);
-
-//             try {
-//                 connection.send_msg(buf.data(), buf.size());
-//             }catch(std::exception& e){
-//                 std::cerr << "Exception: " << e.what() << " " << strerror(errno) << std::endl;
-//             }
-//             connection.wait_for_remote_end_to_close_socket();
+//         try {
+//             connection.send_msg(buf.data(), buf.size());
+//         }catch(std::exception& e){
+//             std::cerr << "Exception: " << e.what() << " " << strerror(errno) << std::endl;
 //         }
+//         connection.wait_for_remote_end_to_close_socket();
 
 //     }catch(const char* e){
 //         std::cerr << "Exception: " << e << std::endl;

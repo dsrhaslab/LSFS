@@ -45,9 +45,6 @@ public:
     virtual std::string db_name() const = 0;
     virtual void update_partition(int p, int np) = 0;
     virtual bool is_key_is_for_me(const kv_store_key<T>& key) = 0;
-    
-    // virtual void send_keys_gt(std::vector<std::string>& off_keys, std::vector<std::string> &off_deleted_keys, tcp_client_server_connection::tcp_client_connection& connection,
-    //                           void(*action)(tcp_client_server_connection::tcp_client_connection& connection, const std::string&, std::map<long, long>&, long, bool, bool, const char* data, size_t data_size)) = 0;
         
     virtual bool put(const kv_store_key<T>& key, const std::string& bytes) = 0;
     virtual bool put_metadata_child(const kv_store_key<T>& key, const std::string& child_path, bool is_create, bool is_dir) = 0;
@@ -78,10 +75,12 @@ public:
     virtual bool check_if_have_all_blks_and_put_metadata(const std::string& base_path, const kv_store_key<T>& key, size_t blk_num) = 0;
     virtual void delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const kv_store_key<T>& key, size_t blk_num) = 0;
     virtual bool get_incomplete_blks(const kv_store_key<T>& key, size_t new_size, std::vector<size_t>& tmp_blks_to_request) = 0;
- 
+    
+    // virtual void send_keys_gt(tcp_client_server_connection::tcp_client_connection& connection,
+    //                           void(*action)(tcp_client_server_connection::tcp_client_connection& connection, const std::string&, std::map<long, long>&, long, bool, FileType::FileType, const char* data, size_t data_size)) = 0;
+
     virtual void print_store(long id) = 0;
     virtual bool clean_db() = 0;
-
 
     int get_slice_for_key(const T& key);
     void clear_seen_log();

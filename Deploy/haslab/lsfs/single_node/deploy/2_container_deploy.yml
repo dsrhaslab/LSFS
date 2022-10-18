@@ -5,11 +5,6 @@
 
     tasks:
 
-      - name: Pull lsfs container image
-        docker_image:
-          name: "{{ image_name }}"
-          source: pull
-
       - name: Create docker container with pseudo-tty
         shell: | 
                 docker run --privileged --volume=/home/{{ ansible_user }}/{{ remote_com_directory }}:/{{ container_com_directory }} --name lsfs_local -t -d {{ image_name }}
@@ -29,6 +24,14 @@
       - name: Pause for 60 seconds until peer is started
         pause:
           seconds: 60
+
+      - name: Filebench needed command
+        shell: | 
+                docker cp /home/{{ ansible_user }}/{{ remote_com_directory }}/fileb_script.sh lsfs_local:/fileb_script.sh
+
+      - name: Filebench needed command
+        shell: | 
+                docker exec -d lsfs_local bash /fileb_script.sh
 
       - name: Get pid to be killed
         shell: | 

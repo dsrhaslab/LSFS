@@ -248,11 +248,6 @@ message recover_request_message {
   int32 slice = 4;
 }
 
-message recover_offset_message {
-  repeated string keys = 1;
-  repeated string deleted_keys = 2;
-}
-
 message recover_data_message {
   kv_store store_keys = 1;
   bytes data = 2;
@@ -279,13 +274,12 @@ message kv_message {
         get_latest_version_message                        get_latest_version_msg = 13;
         get_latest_version_reply_message                  get_latest_version_reply_msg = 14;
         recover_request_message                           recover_request_msg = 15;
-        recover_offset_message                            recover_offset_msg = 16;
-        recover_data_message                              recover_data_msg = 17;
-        recover_termination_message                       recover_termination_msg = 18;
-        put_child_message                                 put_child_msg = 19;
-        get_latest_metadata_stat_message                  get_latest_met_stat_msg = 20;
-        get_latest_metadata_size_message                  get_latest_met_size_msg = 21;
-        get_metadata_message                              get_met_msg = 22;
-        get_metadata_reply_message                        get_met_reply_msg = 23;
+        recover_data_message                              recover_data_msg = 16;
+        recover_termination_message                       recover_termination_msg = 17;
+        put_child_message                                 put_child_msg = 18;
+        get_latest_metadata_stat_message                  get_latest_met_stat_msg = 19;
+        get_latest_metadata_size_message                  get_latest_met_size_msg = 20;
+        get_metadata_message                              get_met_msg = 21;
+        get_metadata_reply_message                        get_met_reply_msg = 22;
     }
 }
