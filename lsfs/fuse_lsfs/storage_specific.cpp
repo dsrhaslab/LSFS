@@ -1,6 +1,12 @@
 #include "metadata/metadata.h"
 #include "util.h"
 
+/*
+    Merge function of directory metadata structure.
+    First argument (string bytes) has priority over the second (string new_bytes).
+
+    Returns serialized merged string.
+*/
 std::string merge_metadata(const std::string& bytes, const std::string& new_bytes){
     metadata met1 = deserialize_from_string<metadata>(bytes);
     metadata met2 = deserialize_from_string<metadata>(new_bytes);

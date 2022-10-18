@@ -59,7 +59,7 @@ public:
     void process_anti_entropy_get_metadata_message(proto::kv_message& msg);
     void process_anti_entropy_get_reply_message(proto::kv_message &msg);
     void process_anti_entropy_get_metadata_reply_message(proto::kv_message &msg);
-    void process_recover_request_msg(proto::kv_message& message);
+    //void process_recover_request_msg(proto::kv_message& message);
 
     virtual void operator ()() = 0;
     virtual void stop_thread() = 0;

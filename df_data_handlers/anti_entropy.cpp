@@ -95,30 +95,6 @@ void anti_entropy::phase_starting() {
 }
 
 bool anti_entropy::recover_state(tcp_client_server_connection::tcp_server_connection& connection, int* socket){
-
-    std::vector<std::string> keys_offset;
-    std::vector<std::string> keys_deleted_offset;
-
-    //Sending Recover request message.
-    proto::kv_message kv_message;
-    kv_message.set_forwarded_within_group(false);
-    auto* message_content = new proto::recover_offset_message();
-    for(std::string& key: keys_offset)
-        message_content->add_keys(key);
-    for(std::string& del_key: keys_deleted_offset)
-        message_content->add_deleted_keys(del_key);
-    kv_message.set_allocated_recover_offset_msg(message_content);
-
-    std::string buf;
-    kv_message.SerializeToString(&buf);
-
-    try {
-        connection.send_msg(socket, buf.data(), buf.size());
-    }catch(const char* e){
-        std::cerr << "Exception: " << e << std::endl;
-        return false;
-    }
-
     //Waiting for multiple replies until termination message arrival.
     bool finished_recovering = false;
 

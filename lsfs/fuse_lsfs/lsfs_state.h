@@ -42,11 +42,14 @@ public:
         kv_store_version version;
     };
 
+    // Open Files temporary structure
     std::recursive_mutex open_files_mutex;
     std::unordered_map<std::string, file> open_files;
     
+    // Global LRU mutex
     std::recursive_mutex dir_cache_mutex;
-    //LRU
+    
+    // LRU (Least Recently Used) structure.
     std::list<std::shared_ptr<directory>> dir_cache_list;
     std::unordered_map<std::string, std::list<std::shared_ptr<directory>>::iterator> dir_cache_map;
     std::unordered_map<std::string, std::unique_ptr<std::mutex>> dir_cache_map_mutex;
@@ -113,7 +116,6 @@ public:
     bool get_version_if_file_opened(const std::string& path, kv_store_version* version);
     int flush_open_file(const std::string& path);
     int flush_and_release_open_file(const std::string& path);
-    void reset_dir_cache_add_remove_log(const std::string& path);
 
     std::unique_ptr<metadata> request_metadata(const std::string &base_path, size_t total_s, const kv_store_version& last_version,
          client_reply_handler::Response* response, bool for_cache = false);

@@ -15,6 +15,12 @@ lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_re
     }
 }
 
+/*
+    Put blocks organization in parallel_write_size blocks batch.
+    Ex: max_parallel_write_size = 32k, aggregates 32k/BLK_SIZE blocks to send in batch.
+
+    Return 0 if ok, -1 otherwise.
+*/
 int lsfs_state::put_fixed_size_blocks_from_buffer_limited_paralelization(const char *buf, size_t size,
                                                                          size_t block_size, const char *base_path, size_t current_blk, const kv_store_version& version) {
 
@@ -33,6 +39,11 @@ int lsfs_state::put_fixed_size_blocks_from_buffer_limited_paralelization(const c
     return 0;
 }
 
+/*
+    Put blocks from given buffer in structures to send to next client phase.
+
+    Return 0.
+*/
 int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_version& version){
     int return_value;
     size_t read_off = 0;
@@ -56,8 +67,6 @@ int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, 
         blk_path.reserve(100);
         blk_path.append(base_path).append(":").append(std::to_string(current_blk));
 
-        //version.client_id = df_client->get_id();
-
         kv_store_key<std::string> kv = {blk_path, version, FileType::FILE, false};
         keys.emplace_back(kv);
         buffers.emplace_back(&buf[read_off]);
@@ -74,6 +83,12 @@ int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, 
 
 }
 
+/*
+    Read blocks organization in parallel_read_size blocks.
+    Ex: max_parallel_read_size = 32k, requests 32k/BLK_SIZE blocks in batch.
+
+    Return bytes read.
+*/
 size_t lsfs_state::read_fixed_size_blocks_to_buffer_limited_paralelization(char *buf, size_t size, size_t block_size, const char *base_path, size_t current_blk) {
     size_t read_off = 0;
     while(read_off < size){
@@ -85,7 +100,11 @@ size_t lsfs_state::read_fixed_size_blocks_to_buffer_limited_paralelization(char 
     return read_off;
 }
 
+/*
+    Read blocks to a given buffer.
 
+    Return bytes read.
+*/
 size_t lsfs_state::read_fixed_size_blocks_to_buffer(char *buf, size_t size, size_t block_size, const char *base_path, size_t current_blk) {
     size_t read_off = 0;
     size_t nr_blocks = (size / block_size) + (size % block_size == 0 ? 0 : 1);
@@ -114,9 +133,14 @@ size_t lsfs_state::read_fixed_size_blocks_to_buffer(char *buf, size_t size, size
         read_off += blk_write_size;
     }
 
-    return read_off;
+    return BLK_SIZE;
 }
 
+/*
+    Put single block.
+
+    Return 0.
+*/
 int lsfs_state::put_block(const std::string& path, const char* buf, size_t size, const kv_store_version& version, FileType::FileType f_type) {
     int return_value = 0;
 
@@ -125,6 +149,10 @@ int lsfs_state::put_block(const std::string& path, const char* buf, size_t size,
     return return_value;
 }
 
+/*
+    Put directory metadata. 
+    Only used when creating directory (mkdir).
+*/
 int lsfs_state::put_dir_metadata(metadata& met, const std::string& path){
     // serialize metadata object
     std::string metadata_str = serialize_to_string<metadata>(met);
@@ -140,6 +168,10 @@ int lsfs_state::put_dir_metadata(metadata& met, const std::string& path){
     return this->put_block(path, metadata_str.data(), metadata_str.size(), version, FileType::DIRECTORY);
 }
 
+/*
+    Put file metadata.
+    Checks if already exists path in storage nodes.
+*/
 int lsfs_state::put_file_metadata(metadata& met, const std::string& path){
     // serialize metadata object
     std::string metadata_str = serialize_to_string<metadata>(met);
@@ -155,35 +187,48 @@ int lsfs_state::put_file_metadata(metadata& met, const std::string& path){
     return this->put_block(path, metadata_str.data(), metadata_str.size(), version, FileType::FILE);
 }
 
+
+/*
+    Put file metadata given a known version.
+*/
 int lsfs_state::put_file_metadata(metadata& met, const std::string& path, const kv_store_version& version){
     // serialize metadata object
     std::string metadata_str = serialize_to_string<metadata>(met);
-     return this->put_block(path, metadata_str.data(), metadata_str.size(), version, FileType::FILE);
+    return this->put_block(path, metadata_str.data(), metadata_str.size(), version, FileType::FILE);
 }
 
+/*
+    Put dir metadata child on storage nodes.
+*/
 int lsfs_state::put_dir_metadata_child(const std::string& path, const std::string& child_path, bool is_create, bool is_dir){
 
-    client_reply_handler::Response response = client_reply_handler::Response::Init;
-    std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(path, &response);
+    // //Can be removed get latest_version
+    // client_reply_handler::Response response = client_reply_handler::Response::Init;
+    // std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(path, &response);
     
     kv_store_version version; 
-    if(last_v != nullptr){
-        version = *last_v;  
-        df_client->put_child(path, version, child_path, is_create, is_dir);
-    }else{
-        errno = ENOENT;
-        return -1;
-    }    
+    //if(last_v != nullptr){
+    //    version = *last_v;  
+    df_client->put_child(path, version, child_path, is_create, is_dir);
+    // }else{
+    //     errno = ENOENT;
+    //     return -1;
+    // }    
     return 0;  
 }
 
+/*
+    Deletes path.
 
+    Return 0 if file exists, -1 otherwise.
+*/
 int lsfs_state::delete_(const std::string& path, FileType::FileType f_type){
     int return_value = 0;
 
+    //Needs to get latest version for concurrency purposes.
     client_reply_handler::Response response = client_reply_handler::Response::Init;
     std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(path, &response);
-    
+
     kv_store_version version; 
     if(last_v != nullptr){
         version = *last_v; 
@@ -199,15 +244,30 @@ int lsfs_state::delete_(const std::string& path, FileType::FileType f_type){
     return return_value;
 }
 
+/*
+    Deletes file path (unlink).
+
+    Return 0 if file exists, -1 otherwise.
+*/
 int lsfs_state::delete_file(const std::string& path){
     return delete_(path, FileType::FILE);
 }
 
+/*
+    Deletes directory path (rmdir).
+
+    Return 0 if file exists, -1 otherwise.
+*/
 int lsfs_state::delete_dir(const std::string& path){
     return delete_(path, FileType::DIRECTORY);
 }
 
+/*
+    Tries to obtain metadata from storage nodes.
+    Tries to request "cache_max_nr_requests_timeout" times before given up.
 
+    Return unique_ptr to metadata structure or null_ptr.
+*/
 std::unique_ptr<metadata> lsfs_state::get_dir_metadata_for_cache(const std::string& path, client_reply_handler::Response* response){
     std::unique_ptr<metadata> res = nullptr;
 
@@ -229,7 +289,12 @@ std::unique_ptr<metadata> lsfs_state::get_dir_metadata_for_cache(const std::stri
     return res;
 }
 
+/*
+    Tries to obtain metadata from storage nodes.
+    Tries to request "max_nr_requests_timeout" times before given up.
 
+    Return unique_ptr to metadata structure or null_ptr.
+*/
 std::unique_ptr<metadata> lsfs_state::get_dir_metadata(const std::string& path){
     std::unique_ptr<metadata> res = nullptr;
     client_reply_handler::Response response = client_reply_handler::Response::Init;
@@ -262,6 +327,11 @@ std::unique_ptr<metadata> lsfs_state::get_dir_metadata(const std::string& path){
     return res;
 }
 
+/*
+   Request latest metadata stat for a given path.
+
+   Returns unique_ptr to metadata_attr structure or null_ptr.
+*/
 std::unique_ptr<metadata_attr> lsfs_state::get_metadata_stat(const std::string& path){
 
     kv_store_version last_version;
@@ -276,6 +346,12 @@ std::unique_ptr<metadata_attr> lsfs_state::get_metadata_stat(const std::string& 
     return std::make_unique<metadata_attr>(deserialize_from_string<metadata_attr>(*data));
 }
 
+/*
+   Request latest metadata stat for a given path.
+
+   Returns unique_ptr to metadata_attr structure or null_ptr,
+    and respective version for the received data.
+*/
 std::unique_ptr<metadata_attr> lsfs_state::get_metadata_stat(const std::string& path, kv_store_version* last_version){
 
     client_reply_handler::Response response = client_reply_handler::Response::Init;
@@ -289,6 +365,9 @@ std::unique_ptr<metadata_attr> lsfs_state::get_metadata_stat(const std::string& 
     return std::make_unique<metadata_attr>(deserialize_from_string<metadata_attr>(*data));
 }
 
+/*
+   Adds directory metadata to cache.
+*/
 void lsfs_state::add_to_dir_cache(const std::string& path, metadata met) {
     std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
 
@@ -347,7 +426,12 @@ void lsfs_state::add_to_dir_cache(const std::string& path, metadata met) {
     
 }
 
+/*
+   Print Cache.
+   Not completed.
 
+   Return string to be printed.
+*/
 std::string lsfs_state::print_cache(){
     std::unique_lock<std::recursive_mutex> lk(dir_cache_mutex);
     std::string res = "";
@@ -368,7 +452,9 @@ std::string lsfs_state::print_cache(){
 }
 
 
-
+/*
+   Removes entry path from directory cache.
+*/
 void lsfs_state::remove_from_dir_cache(const std::string& path) {
     std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
     
@@ -390,14 +476,21 @@ void lsfs_state::remove_from_dir_cache(const std::string& path) {
     lk.unlock();
 }
 
+/*
+  Checks if cache is full.
 
+  Return true if full, false otherwise.
+*/
 bool lsfs_state::check_if_cache_full(){
     std::scoped_lock<std::recursive_mutex> lk (dir_cache_mutex);
 
     return dir_cache_map.size() > max_directories_in_cache;
 }
 
-
+/*
+    Refreshes cache entry if not updated in the last refresh_cache_time interval.
+    refresh_cache_time in milliseconds.
+*/
 void lsfs_state::refresh_dir_cache() {
     struct timespec now;
     
@@ -449,7 +542,9 @@ void lsfs_state::refresh_dir_cache() {
     
 }
 
-
+/*
+    Adds directory metadata child to cache if parent path cached.
+*/
 void lsfs_state::add_child_to_dir_cache(const std::string& parent_path, const std::string& child_name, bool is_dir){
     std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
 
@@ -467,14 +562,16 @@ void lsfs_state::add_child_to_dir_cache(const std::string& parent_path, const st
     }
 }
 
-
+/*
+    Adds child to parent dir (cache and storage nodes).
+    
+    Return 0 if ok, errno otherwise.
+*/
 int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
     std::unique_ptr<std::string> parent_path = get_parent_dir(path);
     std::unique_ptr<std::string> child_name = get_child_name(path);
 
     if(parent_path != nullptr){
-        //std::cout << "Parent Path: " << *parent_path << std::endl;
-        bool was_not_in_cache = false;
 
         if(use_cache) this->add_child_to_dir_cache(*parent_path, *child_name, is_dir);
         
@@ -489,6 +586,9 @@ int lsfs_state::add_child_to_parent_dir(const std::string& path, bool is_dir) {
     return 0;
 }
 
+/*
+    Removes directory metadata child from cache if parent path cached.
+*/
 void lsfs_state::remove_child_from_dir_cache(const std::string& parent_path, const std::string& child_name, bool is_dir){
     std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
 
@@ -505,12 +605,16 @@ void lsfs_state::remove_child_from_dir_cache(const std::string& parent_path, con
     }
 }
 
+/*
+    Removes child from parent dir (cache and storage nodes).
+    
+    Return 0 if ok, errno otherwise.
+*/
 int lsfs_state::remove_child_from_parent_dir(const std::string& path, bool is_dir) {
     std::unique_ptr<std::string> parent_path = get_parent_dir(path);
     std::unique_ptr<std::string> child_name = get_child_name(path);
 
     if(parent_path != nullptr){
-        bool was_not_in_cache = false;
 
         if(use_cache) this->remove_child_from_dir_cache(*parent_path, *child_name, is_dir);
         
@@ -518,14 +622,15 @@ int lsfs_state::remove_child_from_parent_dir(const std::string& path, bool is_di
         if(res != 0){
             return -errno;
         }
-
     }
-
     // root directory doesn't have a parent
     return 0;
 }
 
-
+/*
+    Adds entry to open files structure.
+    Used when file is created.
+*/
 void lsfs_state::add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
@@ -536,6 +641,10 @@ void lsfs_state::add_open_file(const std::string& path, struct stat& stbuf, File
     }
 }
 
+/*
+    Adds entry to open files structure, specifying the version.
+    Used when file is opened.
+*/
 void lsfs_state::add_open_file(const std::string& path, struct stat& stbuf, FileAccess::FileAccess access, kv_store_version n_version){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
@@ -545,6 +654,11 @@ void lsfs_state::add_open_file(const std::string& path, struct stat& stbuf, File
     }
 }
 
+/*
+    Verifies in open files structure if a given path exists.
+
+    Return true if exists, false otherwise.
+*/
 bool lsfs_state::is_file_opened(const std::string& path){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
@@ -554,6 +668,11 @@ bool lsfs_state::is_file_opened(const std::string& path){
     return false;
 }
 
+/*
+    Verifies if a directory path is cached.
+
+    Return true if cached, false otherwise.
+*/
 bool lsfs_state::is_dir_cached(const std::string& path){
     std::scoped_lock<std::recursive_mutex> lk (dir_cache_mutex);
     auto it = dir_cache_map.find(path);
@@ -563,6 +682,11 @@ bool lsfs_state::is_dir_cached(const std::string& path){
     return false;
 }
 
+/*
+    Updates cached file metadata given a stat struct.
+
+    Return true if existes, false otherwise.
+*/
 bool lsfs_state::update_open_file_metadata(const std::string& path, struct stat& stbuf){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
@@ -619,6 +743,11 @@ bool lsfs_state::update_open_file_metadata(const std::string& path, struct stat&
     return false;
 }
 
+/*
+    Updates file size.
+
+    Return true if existes, false otherwise.
+*/
 bool lsfs_state::update_file_size_if_opened(const std::string& path, size_t size){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     struct stat stbuf;
@@ -640,6 +769,11 @@ bool lsfs_state::update_file_size_if_opened(const std::string& path, size_t size
     }
 }
 
+/*
+    Updates file times.
+
+    Return true if existes, false otherwise.
+*/
 bool lsfs_state::update_file_time_if_opened(const std::string& path, const struct timespec ts[2]){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     struct stat stbuf;
@@ -655,6 +789,11 @@ bool lsfs_state::update_file_time_if_opened(const std::string& path, const struc
     }
 }
 
+/*
+    Retrieves file metadata.
+
+    Return true if existes, false otherwise.
+*/
 bool lsfs_state::get_metadata_if_file_opened(const std::string& path, struct stat* stbuf){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
@@ -666,6 +805,11 @@ bool lsfs_state::get_metadata_if_file_opened(const std::string& path, struct sta
     return false;
 }
 
+/*
+    Retrieves file version.
+
+    Return true if existes, false otherwise.
+*/
 bool lsfs_state::get_version_if_file_opened(const std::string& path, kv_store_version* version){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
@@ -677,6 +821,11 @@ bool lsfs_state::get_version_if_file_opened(const std::string& path, kv_store_ve
     return false;
 }
 
+/*
+    Retrieves directory metadata_attr stat from cache.
+
+    Return true if cached, false otherwise.
+*/
 bool lsfs_state::get_metadata_if_dir_cached(const std::string& path, struct stat* stbuf){
     std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
     
@@ -703,7 +852,11 @@ bool lsfs_state::get_metadata_if_dir_cached(const std::string& path, struct stat
     return false;
 }
 
-
+/*
+    Retrieves directory object from cache.
+    
+    Return shared_ptr of directory obj or nullptr.
+*/
 std::shared_ptr<lsfs_state::directory> lsfs_state::get_metadata_if_dir_cached(const std::string& path){
     std::shared_ptr<directory> res(nullptr);
     std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
@@ -730,6 +883,12 @@ std::shared_ptr<lsfs_state::directory> lsfs_state::get_metadata_if_dir_cached(co
     return res;
 }
 
+/*
+    Verifies if directory metadata childs are empty.
+    
+    Return true if empty, false otherwise.
+    Return bool* true if cache, false otherwise.
+*/
 bool lsfs_state::is_dir_childs_empty(const std::string& path, bool* dir_cached){
     std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
     bool res = false;
@@ -752,7 +911,11 @@ bool lsfs_state::is_dir_childs_empty(const std::string& path, bool* dir_cached){
     return res;
 }
 
+/*
+    Flushes open file to storage peers.
 
+    Return 0 if file exists, errno (No such file or directory) otherwise.
+*/
 int lsfs_state::flush_open_file(const std::string& path){
     std::scoped_lock<std::recursive_mutex> lk (open_files_mutex);
     auto it = open_files.find(path);
@@ -793,6 +956,11 @@ int lsfs_state::flush_open_file(const std::string& path){
     return -errno;
 }
 
+/*
+    Flushes open file to storage peers and removes it from open files.
+
+    Return 0 if file exists, errno (No such file or directory) otherwise.
+*/
 int lsfs_state::flush_and_release_open_file(const std::string& path) {
     std::scoped_lock<std::recursive_mutex> lk(open_files_mutex);
     int res = flush_open_file(path);
@@ -806,6 +974,9 @@ int lsfs_state::flush_and_release_open_file(const std::string& path) {
     return 0;
 }
 
+/*
+    Clears direcotry cache.
+*/
 void lsfs_state::clear_all_dir_cache() {
     std::scoped_lock<std::recursive_mutex> lk(dir_cache_mutex);
     this->dir_cache_map.clear();
@@ -813,23 +984,11 @@ void lsfs_state::clear_all_dir_cache() {
     this->dir_cache_map_mutex.clear();
 }
 
-void lsfs_state::reset_dir_cache_add_remove_log(const std::string& path){
-    std::unique_lock<std::recursive_mutex> lk (dir_cache_mutex);
-    auto it = dir_cache_map.find(path);
-    if(it != dir_cache_map.end()){
-        
-        auto it_mutex = dir_cache_map_mutex.find(path);
+/*
+    Request metadata blocks and constructs final metadata structure.
 
-        std::unique_lock<std::mutex> lk_dir(*it_mutex->second);
-        lk.unlock();
-
-        (*it->second)->metadata_p->childs.reset_add_remove_log();
-
-        lk_dir.unlock();
-    }
-    
-}
-
+    Return unique_ptr to metadata or nullptr.
+*/
 std::unique_ptr<metadata> lsfs_state::request_metadata(const std::string &base_path, size_t total_s, const kv_store_version& last_version, client_reply_handler::Response* response, bool for_cache){
 
     size_t NR_BLKS = (total_s / BLK_SIZE);

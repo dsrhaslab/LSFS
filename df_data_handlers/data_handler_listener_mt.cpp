@@ -37,16 +37,16 @@ public:
             }else if(msg.has_get_met_msg()){
                 //std::cout << "Received get metadata message from client " << std::endl;
                 data_handler->process_get_metadata_message(msg);
-            // }else if(msg.has_anti_entropy_msg()){
-            //     data_handler->process_anti_entropy_message(msg);
-            // }else if(msg.has_anti_entropy_get_msg()){
-            //     data_handler->process_anti_entropy_get_message(msg);
-            // }else if(msg.has_anti_entropy_get_met_msg()){
-            //     data_handler->process_anti_entropy_get_metadata_message(msg);
-            // }else if(msg.has_anti_entropy_get_reply_msg()){
-            //     data_handler->process_anti_entropy_get_reply_message(msg);
-            // }else if(msg.has_anti_entropy_get_met_reply_msg()){
-            //     data_handler->process_anti_entropy_get_metadata_reply_message(msg);
+            }else if(msg.has_anti_entropy_msg()){
+                data_handler->process_anti_entropy_message(msg);
+            }else if(msg.has_anti_entropy_get_msg()){
+                data_handler->process_anti_entropy_get_message(msg);
+            }else if(msg.has_anti_entropy_get_met_msg()){
+                data_handler->process_anti_entropy_get_metadata_message(msg);
+            }else if(msg.has_anti_entropy_get_reply_msg()){
+                data_handler->process_anti_entropy_get_reply_message(msg);
+            }else if(msg.has_anti_entropy_get_met_reply_msg()){
+                data_handler->process_anti_entropy_get_metadata_reply_message(msg);
             // }else if(msg.has_recover_request_msg()){
             //     data_handler->process_recover_request_msg(msg);
             }

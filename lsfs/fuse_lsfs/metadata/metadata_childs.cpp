@@ -62,5 +62,4 @@ void metadata_childs::print_childs() {
         std::cout << key << ">,";
     }
     std::cout << std::endl;
-    
 }
