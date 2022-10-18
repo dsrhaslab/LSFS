@@ -43,3 +43,13 @@
         file:
           path: "{{ remote_dir }}/metrics"
           state: directory
+
+      - name: Put filebe_script file
+        copy:
+          src: ../fileb_script.sh
+          dest: "{{ remote_dir }}/fileb_script.sh"
+
+      - name: Pull lsfs container image
+        docker_image:
+          name: "{{ image_name }}"
+          source: pull
