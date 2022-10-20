@@ -127,11 +127,11 @@ size_t lsfs_state::read_fixed_size_blocks_to_buffer(char *buf, size_t size, size
     
     df_client->get_latest_batch(keys, data_strs);
 
-    for(const std::shared_ptr<std::string>& data_blk: data_strs){
-        size_t blk_write_size = std::min((data_blk->size()), (size - read_off));
-        data_blk->copy(&buf[read_off], blk_write_size);
-        read_off += blk_write_size;
-    }
+    // for(const std::shared_ptr<std::string>& data_blk: data_strs){
+    //     size_t blk_write_size = std::min((data_blk->size()), (size - read_off));
+    //     data_blk->copy(&buf[read_off], blk_write_size);
+    //     read_off += blk_write_size;
+    // }
 
     return size;
 }

@@ -81,6 +81,7 @@ public:
 
     virtual void print_store(long id) = 0;
     virtual bool clean_db() = 0;
+    virtual bool put_dummy(const std::string& key, const std::string& bytes) = 0;
 
     int get_slice_for_key(const T& key);
     void clear_seen_log();

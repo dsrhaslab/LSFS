@@ -101,6 +101,8 @@ public:
 
     void print_store(long id) override;
     bool clean_db() override;
+
+    bool put_dummy(const std::string& key, const std::string& bytes) override;
  
 };
 
@@ -146,6 +148,7 @@ int kv_store_leveldb::init(void* path, long id){
 
     leveldb::Options options;
     options.create_if_missing = true;
+
     std::string db_name = this->path + std::to_string(id);
     std::string db_delete_name = db_name + "_deleted";
     std::string db_tmp_anti_entropy_name = db_name + "_tmp_anti_entropy";
@@ -2585,6 +2588,19 @@ bool kv_store_leveldb::clean_db(){
     }
     return res;
 }
+
+bool kv_store_leveldb::put_dummy(const std::string& key, const std::string& bytes) {
+   
+    leveldb::Status s = db->Put(leveldb::WriteOptions(), key, bytes);
+
+    if(s.ok()){
+        this->record_count++;
+        return true;
+    }
+    return false;
+}
+
+
 
 
 #endif //P2PFS_KV_STORE_LEVELDB_H

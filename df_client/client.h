@@ -117,7 +117,8 @@ public:
         return get_metadata_batch(keys, data_strs, response, max_timeout, nr_gets_required);
     }
 
-
+    void dummy_msg(const std::string& file, const std::string& key, bool is_write);
+    
 private:
     long inc_and_get_request_count();
     int send_msg(peer_data& target_peer, proto::kv_message& msg);

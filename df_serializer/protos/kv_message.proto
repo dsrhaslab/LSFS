@@ -104,6 +104,16 @@ message put_reply_message {
   FileType type = 5;
 }
 
+message dummy {
+  string ip = 1;
+  int32 port = 2;
+  int64 id = 3;
+  string key = 4;
+  bool is_write = 5;
+  bytes data = 6;
+}
+
+
 //-------------------------------------------------------------------
 //                        Delete messages 
 //-------------------------------------------------------------------
@@ -281,5 +291,6 @@ message kv_message {
         get_latest_metadata_size_message                  get_latest_met_size_msg = 20;
         get_metadata_message                              get_met_msg = 21;
         get_metadata_reply_message                        get_met_reply_msg = 22;
+        dummy                                             dummy_msg = 23;
     }
 }
