@@ -385,7 +385,13 @@ void client::get_latest_batch(const std::vector<std::string> &keys, std::vector<
         
         this->handler->register_get_data(req_ids[i]);
 
-        std::vector<peer_data> peers = this->lb->get_n_peers(keys[i], this->max_nodes_to_send_get_request); //throw exception (empty view)
+        // std::vector<peer_data> peers = this->lb->get_n_peers(keys[i], this->max_nodes_to_send_get_request); //throw exception (empty view)
+        // this->send_get_latest_version(peers, keys[i], req_ids[i], true);
+    }
+
+
+    for(size_t i = 0; i < keys.size(); i++){
+        std::vector<peer_data> peers = this->lb->get_n_peers(keys[i], this->max_nodes_to_send_put_request); //throw exception
         this->send_get_latest_version(peers, keys[i], req_ids[i], true);
     }
     
@@ -844,3 +850,55 @@ void client::get_metadata_batch(const std::vector<kv_store_key<std::string>> &ke
         throw TimeoutException();
     }
 }
+
+
+
+
+void client::dummy_msg(const std::string& file, const std::string& key, bool is_write) {
+    proto::kv_message msg;
+
+    auto* message_content = new proto::dummy();
+    message_content->set_ip(this->ip);
+    message_content->set_port(this->kv_port);
+    message_content->set_id(this->id);
+    message_content->set_key(key);
+    message_content->set_is_write(is_write);
+    message_content->set_data(file.data(), file.size());
+
+    msg.set_allocated_dummy_msg(message_content);
+
+    this->handler->register_dummy(key); // throw const char* (concurrent writes over the same key)
+    
+    bool succeed = false;
+    int curr_timeouts = 0;
+    while(!succeed && curr_timeouts < this->max_timeouts){
+        int status = 0;
+        std::vector<peer_data> peers;
+        if (curr_timeouts + 1 <= 2){
+            peers = this->lb->get_n_peers(key, this->max_nodes_to_send_put_request); //throw exception
+        }else{
+            peers = this->lb->get_n_random_peers(this->max_nodes_to_send_put_request); //throw exception
+        }
+
+        if(curr_timeouts > 0){
+            status =  this->send_msg(peers.at(0), msg);
+        }else{
+            status =  this->send_msg(peers.at(0), msg);
+        }
+        
+        if(status == 0){
+            try{
+                succeed = this->handler->wait_for_dummy(key);
+            }catch(TimeoutException& e){
+                std::cout << "Timeout key Dummy: " << key << std::endl;
+                curr_timeouts++;
+            }
+        }
+    }
+    
+    if(!succeed){
+        throw TimeoutException();
+    }
+}
+
+

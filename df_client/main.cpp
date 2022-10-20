@@ -16,27 +16,68 @@
 
 
 int main(int argc, char **argv) {
-    // if(argc < 4){
-    //     exit(1);
-    // }
+    if(argc < 2){
+        exit(1);
+    }
 
     
-    // std::string ip = "";
-    // std::string boot_ip = argv[1];
-    // char *p;
-    // int clock = strtol(argv[2], NULL, 10);
-    // std::string config_path = argv[3];
-    // int pss_port = 12377;
-    // int kv_port = 12378;
-    // long id = 9999;
-    // try{
-    //         ip = get_local_ip_address();
-    // }catch(const char* e){
-    //     std::cerr << "Error Obtaining IP Address: " << e << std::endl;
-    //     exit(1);
-    // }
+    std::string ip = "";
+    std::string boot_ip = argv[1];
+    char *p;
+    std::string config_path = argv[2];
+    int pss_port = 12377;
+    int kv_port = 12378;
+    long id = 9999;
+    try{
+            ip = get_local_ip_address();
+    }catch(const char* e){
+        std::cerr << "Error Obtaining IP Address: " << e << std::endl;
+        exit(1);
+    }
 
-    // client cli = client(boot_ip, ip, kv_port, pss_port, id, config_path);
+    client cli = client(boot_ip, ip, kv_port, pss_port, id, config_path);
+
+    std::string file = "";
+
+    for(int i = 0; i < BLK_SIZE; i++){
+        file = file +"a";
+    }
+
+    std::string key;
+    //Populate for read
+    for(int i = 0; i < 250; i++){
+        key = "file/ola/ll:" + std::to_string(i);
+        cli.dummy_msg(file, key, true);
+    }
+    bool is_write = false;
+    // bool is_write = true;
+
+    double stop_time = 600.0;
+
+    long total_send = 0;
+    time_t start = time(NULL);
+    bool terminate = true;
+    int i = 0;
+    while (terminate) {
+        time_t end = time(NULL);
+        double elapsed = difftime(end, start);
+        if(i >= 250);
+            i = 0;
+
+        key = "file/ola/ll:" +  std::to_string(i);
+        cli.dummy_msg(file, key, is_write);
+        total_send += BLK_SIZE;
+
+        if (elapsed >= stop_time /* seconds */)
+            terminate = false;
+        i++;
+    }
+    std::cout << "Sent:" << total_send << "k in " << stop_time << "s" << std::endl;
+    double mb = total_send/1000000;
+    double mbs = mb/stop_time;
+    std::cout << mbs << "mb/s" << std::endl;
+
+
 
     // std::ifstream infile(argv[4]);
 
@@ -56,5 +97,5 @@ int main(int argc, char **argv) {
 
     // cli.stop();   
 
-    // return 0;
+     return 0;
 }

@@ -1086,3 +1086,100 @@ void client_reply_handler::process_delete_reply_msg(const proto::delete_reply_me
         spdlog::debug("DELETE REPLY IGNORED - NON EXISTENT KEY");
     }
 }
+
+
+
+
+
+void client_reply_handler::process_dummy_msg(const proto::dummy &msg) {
+   const std::string& key = msg.key();
+
+    std::unique_lock<std::mutex> lock(this->dummy_mutex);
+
+    auto it = this->dummy_replies.find(key);
+    if(it != this->dummy_replies.end()){
+        
+        auto& sync_pair = this->dummy_mutexes.find(key)->second;
+        std::unique_lock<std::mutex> key_lock(sync_pair->first);
+
+        lock.unlock(); //free global put lock
+
+        it->second.emplace(1);
+        sync_pair->second.notify_all();
+        key_lock.unlock();
+    }else{
+        spdlog::debug("DELETE REPLY IGNORED - NON EXISTENT KEY");
+    }
+   
+}
+
+
+
+bool client_reply_handler::wait_for_dummy(const std::string& key){
+    bool succeed = false;
+
+    std::unique_lock<std::mutex> lock(this->dummy_mutex);
+
+    bool timeout_happened = false;
+    bool waited = false;
+
+    auto it = this->dummy_replies.find(key);
+    if(it != this->dummy_replies.end()) {
+        // if key exists, lock key
+        auto &sync_pair = this->dummy_mutexes.find(key)->second;
+        std::unique_lock<std::mutex> lock_key(sync_pair->first);
+
+        if (it->second.size() < 1) {
+            // if we still don't have the number of needed replies
+
+            // unlock global put lock
+            lock.unlock();
+            //unlock for key notify -> it performs automatic lock of the key
+            std::cv_status status = sync_pair->second.wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
+            if(status == std::cv_status::timeout) timeout_happened = true;
+            // unlock key mutex, because we must get locks in the same order
+            lock_key.unlock();
+            lock.lock();
+            lock_key.lock();
+        }
+
+        succeed = it->second.size() >= 1;
+        if (succeed) {
+
+            // if put has already been successfully performed, since we have all locks
+            // we can remove the key entries
+            this->dummy_replies.erase(it);
+            // We don't need to awake threads that can be strapped on cond variable
+            // since it's certain that a single thread is able to wait for a same key
+            auto it_key = this->dummy_mutexes.find(key);
+            // It's strictly needes to free key lock as if we don't, when leaving scope it will
+            // try to perform a release on a non-existent mutex (SIGSEV)
+            lock_key.unlock();
+            this->dummy_mutexes.erase(it_key);
+        }
+    }
+
+    lock.unlock();
+
+    if(!succeed && timeout_happened)
+        throw TimeoutException();
+
+    return succeed;
+}
+
+void client_reply_handler::register_dummy(const std::string& key) {
+    std::unique_lock<std::mutex> lock(this->dummy_mutex);
+
+    auto it = this->dummy_replies.find(key);
+    if(it == this->dummy_replies.end()){
+        // key does not exist
+        std::set<long> temp;
+        this->dummy_replies.emplace(key, std::move(temp));
+        auto sync_pair = std::make_unique<std::pair<std::mutex, std::condition_variable>>();
+        this->dummy_mutexes.emplace(std::move(key), std::move(sync_pair));
+    }else{
+        throw ConcurrentWritesSameKeyException();
+    }
+
+    lock.unlock();
+}

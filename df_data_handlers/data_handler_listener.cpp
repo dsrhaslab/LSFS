@@ -200,7 +200,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                 else
                     got_latest_version = this->store->get_latest_version(key, lastest_v);
 
-                got_latest_deleted_version = this->store->get_latest_deleted_version(key, latest_del_v);
+                //got_latest_deleted_version = this->store->get_latest_deleted_version(key, latest_del_v);
 
                 // when the peer was supposed to have a key but it doesn't, replies with key version -1
                 // to prevent for the client to have to wait for a timeout if a certain key does not exist.
@@ -336,6 +336,53 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
         } else {
             forward_decider(msg, key);
         }
+    }
+}
+
+
+void data_handler_listener::process_dummy_message(proto::kv_message &msg) {
+    const auto& message = msg.dummy_msg();
+    const std::string& sender_ip = message.ip();
+    const int sender_port = message.port();
+    const std::string& key = message.key();
+    bool is_write = message.is_write();
+    const std::string& data = message.data();
+ 
+    bool stored = false;
+    std::unique_ptr<std::string> dat(nullptr);
+    try {
+        if(is_write){
+            stored = this->store->put_dummy(key, data);
+        }else{
+            dat = this->store->get(key);
+            if(dat == nullptr){
+                std::cout << "No data" << std::endl;
+            }else{
+                stored = true;
+                }
+        }
+
+
+        
+    }catch(std::exception& e){
+        stored = false;
+    }
+
+    if(stored) {
+
+        float achance = random_float(0.0, 1.0);
+
+            proto::kv_message reply_message;
+
+                auto* message_content = new proto::dummy();
+
+            message_content->set_key(key);
+            message_content->set_is_write(is_write);
+
+            reply_message.set_allocated_dummy_msg(message_content);
+
+            this->reply_client(reply_message, sender_ip, sender_port);
+
     }
 }
 

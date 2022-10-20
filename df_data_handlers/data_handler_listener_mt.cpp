@@ -49,6 +49,8 @@ public:
                 data_handler->process_anti_entropy_get_metadata_reply_message(msg);
             // }else if(msg.has_recover_request_msg()){
             //     data_handler->process_recover_request_msg(msg);
+            }else if(msg.has_dummy_msg()){
+                data_handler->process_dummy_message(msg);
             }
 
         }
