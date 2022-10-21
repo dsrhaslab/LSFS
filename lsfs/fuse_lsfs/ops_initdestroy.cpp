@@ -62,17 +62,17 @@ void*  lsfs_impl::_init(
     const char* root_path = "/";
     try{
 
-        client_reply_handler::Response response = client_reply_handler::Response::Init;    
-        std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(root_path, &response);
+        //client_reply_handler::Response response = client_reply_handler::Response::Init;    
+        //std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(root_path, &response);
 
-         if(response == client_reply_handler::Response::NoData || response == client_reply_handler::Response::Deleted){
+         //if(response == client_reply_handler::Response::NoData || response == client_reply_handler::Response::Deleted){
             //filesystem not initialize
             int res = _mkdir(root_path, 0777);
             if(res != 0){
                 std::cout << "Error creating root" << std::endl;
                 exit(1);
             }
-        }
+        //}
     
     } catch (EmptyViewException& e) {
         e.what();

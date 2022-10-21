@@ -237,7 +237,7 @@ int lsfs_impl::_read(
     size_t bytes_count;
 
     if (!is_temp_file(path)) {
-
+        
         // get file info
         struct stat stbuf;
         int res = lsfs_impl::_getattr(path, &stbuf, NULL);
@@ -253,7 +253,6 @@ int lsfs_impl::_read(
         size_t off_blk = offset % BLK_SIZE;
         bytes_count = 0;
         size_t current_blk = nr_b_blks - 1;
-
 
         if(offset >= file_size){
             return 0;
@@ -322,7 +321,6 @@ int lsfs_impl::_write(
 
         // get file info
         struct stat stbuf;
-
         int res = lsfs_impl::_getattr(path, &stbuf,NULL);
         if(res != 0){
             return -errno;

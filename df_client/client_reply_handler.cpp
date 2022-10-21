@@ -238,7 +238,7 @@ void client_reply_handler::register_get(const std::string& req_id) {
     if(it == this->get_replies.end()){
         // key exists
         get_Replies temp = {.keys = std::unordered_map<kv_store_key<std::string>, std::unique_ptr<std::string>> (), .deleted_keys = std::unordered_map<kv_store_key<std::string>, std::unique_ptr<std::string>> (),
-                         .count = 0};
+                         .count = std::set<long> ()};
         this->get_replies.emplace(req_id, std::move(temp));
         auto sync_pair = std::make_unique<std::pair<std::mutex, std::condition_variable>>();
         this->get_mutexes.emplace(req_id, std::move(sync_pair));
@@ -305,7 +305,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::strin
         auto &sync_pair = this->get_mutexes.find(req_id)->second;
         std::unique_lock<std::mutex> lock_key(sync_pair->first);
 
-        if (it->second.count < wait_for) {
+        if (it->second.count.size() < wait_for) {
             // if we still don't have the number of needed replies
 
             // unlock global get lock
@@ -324,7 +324,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get(const std::strin
         if(waited) {
             it = this->get_replies.find(req_id);
         }
-        if(it->second.count >= wait_for){
+        if(it->second.count.size() >= wait_for){
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
 
@@ -387,7 +387,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_metadata_until(c
         auto &sync_pair = it_key->second;
         std::unique_lock<std::mutex> lock_key(sync_pair->first);
 
-        if (it->second.count < wait_for) {
+        if (it->second.count.size() < wait_for) {
             // if we still don't have the necessary repies
 
             // wait for key notify -> it performs automatic lock of the key
@@ -395,7 +395,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_metadata_until(c
             if(status == std::cv_status::timeout) timeout_happened = true;
         }
 
-        if(it->second.count >= wait_for){
+        if(it->second.count.size() >= wait_for){
 
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
@@ -457,7 +457,7 @@ std::unique_ptr<kv_store_version> client_reply_handler::wait_for_get_latest_vers
         auto &sync_pair = this->get_mutexes.find(req_id)->second;
         std::unique_lock<std::mutex> lock_key(sync_pair->first);
 
-        if (it->second.count < wait_for) {
+        if (it->second.count.size() < wait_for) {
             // if we still don't have the number of needed replies
 
             // unlock global get lock
@@ -476,7 +476,7 @@ std::unique_ptr<kv_store_version> client_reply_handler::wait_for_get_latest_vers
         if(waited){
             it = this->get_replies.find(req_id);
         }
-        if(it->second.count >= wait_for){
+        if(it->second.count.size() >= wait_for){
             //std::cout << "Recebi todas as respostas que queria" << std::endl;
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
@@ -568,14 +568,14 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest_until(con
 
         lock.unlock();
 
-        if (it->second.count < wait_for) {
+        if (it->second.count.size() < wait_for) {
             // if we still don't have the necessary repies
 
             // wait for key notify -> it performs automatic lock of the key
             std::cv_status status = sync_pair->second.wait_until(lock_key, wait_until);
             if(status == std::cv_status::timeout) timeout_happened = true;
         }
-        if(it->second.count >= wait_for){      
+        if(it->second.count.size() >= wait_for){      
             //std::cout << "Recebi todas as respostas que queria" << std::endl;
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
@@ -673,7 +673,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest(const std
         auto &sync_pair = this->get_mutexes.find(req_id)->second;
         std::unique_lock<std::mutex> lock_key(sync_pair->first);
 
-        if (it->second.count < wait_for) {
+        if (it->second.count.size() < wait_for) {
             // if we still don't have the number of needed replies
 
             // unlock global get lock
@@ -692,7 +692,7 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest(const std
         if(waited){
             it = this->get_replies.find(req_id);
         }
-        if(it->second.count >= wait_for){
+        if(it->second.count.size() >= wait_for){
             //std::cout << "Recebi todas as respostas que queria" << std::endl;
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
@@ -784,7 +784,7 @@ std::vector<std::unique_ptr<std::string>> client_reply_handler::wait_for_get_lat
         auto &sync_pair = this->get_mutexes.find(req_id)->second;
         std::unique_lock<std::mutex> lock_key(sync_pair->first);
 
-        if (it->second.count < wait_for) {
+        if (it->second.count.size() < wait_for) {
             // if we still don't have the number of needed replies
 
             // unlock global get lock
@@ -803,7 +803,7 @@ std::vector<std::unique_ptr<std::string>> client_reply_handler::wait_for_get_lat
         if(waited){
             it = this->get_replies.find(req_id);
         }
-        if(it->second.count >= wait_for){
+        if(it->second.count.size() >= wait_for){
             //std::cout << "Recebi todas as respostas que queria" << std::endl;
             // if we already have the majority of replies, as we still hold the locks
             // we can remove the entries for the key
@@ -907,7 +907,8 @@ void client_reply_handler::process_get_reply_msg(const proto::get_reply_message 
         else
             it->second.deleted_keys.insert(std::make_pair(st_key, nullptr));
         
-        it->second.count++;
+        long replier_id = msg.id();
+        it->second.count.emplace(replier_id);
 
         sync_pair->second.notify_all();
         reqid_lock.unlock();
@@ -956,7 +957,8 @@ void client_reply_handler::process_get_metadata_reply_msg(const proto::get_metad
             
         it->second.metadata_higher_version = higher_version;
         
-        it->second.count++;
+        long replier_id = msg.id();
+        it->second.count.emplace(replier_id);
 
         sync_pair->second.notify_all();
         reqid_lock.unlock();
@@ -981,6 +983,8 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
         std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
         lock.unlock(); //free global get lock
 
+        if(!msg.skip()){
+
         for(auto k : msg.last_v()){
             kv_store_version kv;
             for (auto c : k.version()){
@@ -996,6 +1000,7 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
             
             it->second.keys.insert(std::make_pair(st_key, std::move(data)));
         }
+        }
 
     //    for(auto k : msg.last_deleted_v()){
     //         kv_store_version kv_del;
@@ -1008,7 +1013,8 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
     //         it->second.deleted_keys.insert(std::make_pair(st_del_key, nullptr));
     //     }
 
-        it->second.count++;
+        long replier_id = msg.id();
+        it->second.count.emplace(replier_id);
 
         sync_pair->second.notify_all();
         reqid_lock.unlock();
@@ -1043,8 +1049,8 @@ void client_reply_handler::process_put_reply_msg(const proto::put_reply_message 
         lock.unlock(); //free global put lock
 
         long replier_id = msg.id();
-
         it->second.emplace(replier_id);
+        
         sync_pair->second.notify_all();
         key_lock.unlock();
     }else{

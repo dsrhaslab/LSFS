@@ -443,20 +443,18 @@ void client::get_latest_batch(const std::vector<std::string> &keys, std::vector<
         all_completed = res_count == data_strs.size();
     }while( !all_completed && curr_timeouts < this->max_timeouts); // do while there are incompleted gets
 
-    // clear not succeded keys from put maps
-    auto it_req_ids = req_ids.begin();
-    for(size_t i = 0; i < data_strs.size(); i++){
-        if(data_strs[i] != nullptr){
-            // if the block read succedded, remove entry from req_ids
-            // as it's not necessary to remove that key from the get map
-            it_req_ids = req_ids.erase(it_req_ids);
-        }else{
-            ++it_req_ids;
-        }
-    }
-    this->handler->clear_get_keys_entries(req_ids);
-
     if(!all_completed){
+         // clear not succeded keys from get maps
+        auto it_req_ids = req_ids.begin();
+        for(size_t i = 0; i < data_strs.size(); i++){
+            if(data_strs[i] == nullptr){
+                it_req_ids = req_ids.erase(it_req_ids);
+            }else{
+                ++it_req_ids;
+            }
+        }
+        this->handler->clear_get_keys_entries(req_ids);
+
         throw TimeoutException();
     }
 }
