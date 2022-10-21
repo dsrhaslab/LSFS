@@ -288,10 +288,7 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
         bool stored = false;
         try {
         
-            if(f_type == FileType::DIRECTORY)
-                stored = this->store->put_with_merge(key_comp, data);
-            // else
-                 stored = true; //this->store->put_dummy(key, data);
+            stored = this->store->put(key_comp, data);
             
             if(key.find("/print_db") != std::string::npos){
                 this->store->print_store(this->id);
