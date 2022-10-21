@@ -197,9 +197,9 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
         //if(this->store->get_slice_for_key(key) == this->store->get_slice()){
             try {
                 if(get_data){
-                    got_latest_version = this->store->get_latest_data_version(key, lastest_v, data_v);
-                    //got_latest_version = true;
-                    //this->store->get(key);
+                    //got_latest_version = this->store->get_latest_data_version(key, lastest_v, data_v);
+                    got_latest_version = true;
+                    this->store->get(key);
                 }else
                     got_latest_version = this->store->get_latest_version(key, lastest_v);
 
@@ -288,7 +288,10 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
         bool stored = false;
         try {
         
-            stored = this->store->put(key_comp, data);
+            if(f_type == FileType::DIRECTORY)
+                stored = this->store->put_with_merge(key_comp, data);
+            else
+                stored = this->store->put_dummy(key, data);
             
             if(key.find("/print_db") != std::string::npos){
                 this->store->print_store(this->id);

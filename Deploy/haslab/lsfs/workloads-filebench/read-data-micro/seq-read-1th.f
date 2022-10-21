@@ -1,5 +1,5 @@
 
-set $WORKLOAD_PATH=test_filesystem/InnerFolder
+set $WORKLOAD_PATH=/test_filesystem/InnerFolder
 set $NR_THREADS=1
 set $WORKLOAD_RUNTIME=900
 
@@ -14,7 +14,7 @@ set $NR_ITERATIONS=312500000
 set mode quit firstdone
 
 define fileset name="fileset-1", path=$WORKLOAD_PATH, entries=$NR_FILES, dirwidth=$MEAN_DIR_WIDTH, dirgamma=0,
-               filesize=$FILE_SIZE, prealloc, reuse, paralloc
+               filesize=$FILE_SIZE, prealloc
 
 define process name="process-1", instances=1
 {
