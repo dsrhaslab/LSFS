@@ -13,6 +13,7 @@ lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_re
         dir_cache_map.reserve(max_directories_in_cache);
         dir_cache_map_mutex.reserve(max_directories_in_cache);
     }
+
 }
 
 /*

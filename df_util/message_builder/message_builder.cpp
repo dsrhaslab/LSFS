@@ -78,7 +78,7 @@ void build_get_latest_version_message(proto::kv_message* msg, std::string& ip, i
 
 void build_get_latest_version_reply_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id, 
                                  const std::string& key, const std::vector<kv_store_version>& vversion, bool bring_data, 
-                                 const std::vector<std::unique_ptr<std::string>>& vdata, const std::vector<kv_store_version>& vdel_version){
+                                 const std::vector<std::unique_ptr<std::string>>& vdata, const std::vector<kv_store_version>& vdel_version, bool skip){
 
     auto* message_content = new proto::get_latest_version_reply_message();
     message_content->set_ip(ip);
@@ -87,6 +87,9 @@ void build_get_latest_version_reply_message(proto::kv_message* msg, std::string&
     message_content->set_reqid(req_id);
 
     message_content->set_key(key);
+    message_content->set_skip(skip);
+    
+    if(!skip){
     for(int i = 0; i < vversion.size() ; i++){
         proto::kv_store_key_version_w_data *kv_key_version = message_content->add_last_v();
         
@@ -100,16 +103,17 @@ void build_get_latest_version_reply_message(proto::kv_message* msg, std::string&
         }
         kv_key_version->set_client_id(vversion[i].client_id);
     }
-
-    for(auto const v: vdel_version){
-        proto::kv_store_key_version *kv_del_version = message_content->add_last_deleted_v();
-        for(auto const c: v.vv){
-            proto::kv_store_version *kv_del_v = kv_del_version->add_version();
-            kv_del_v->set_client_id(c.first);
-            kv_del_v->set_clock(c.second);
-        }
-        kv_del_version->set_client_id(v.client_id);
     }
+
+    // for(auto const v: vdel_version){
+    //     proto::kv_store_key_version *kv_del_version = message_content->add_last_deleted_v();
+    //     for(auto const c: v.vv){
+    //         proto::kv_store_version *kv_del_v = kv_del_version->add_version();
+    //         kv_del_v->set_client_id(c.first);
+    //         kv_del_v->set_clock(c.second);
+    //     }
+    //     kv_del_version->set_client_id(v.client_id);
+    // }
     msg->set_allocated_get_latest_version_reply_msg(message_content);
 }
 

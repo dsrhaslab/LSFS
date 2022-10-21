@@ -743,6 +743,7 @@ bool kv_store_leveldb::get_latest_data_version(const std::string& key, std::vect
 
         return true;
     }
+    return true;
 }
 
 

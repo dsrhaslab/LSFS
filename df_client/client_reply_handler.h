@@ -26,7 +26,7 @@ class client_reply_handler {
 struct get_Replies {
     std::unordered_map<kv_store_key<std::string>, std::unique_ptr<std::string>> keys;
     std::unordered_map<kv_store_key<std::string>, std::unique_ptr<std::string>> deleted_keys;
-    int count;
+    std::set<long> count;
     bool metadata_higher_version;
 };
 
