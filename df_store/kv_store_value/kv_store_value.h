@@ -8,27 +8,10 @@
 
 /*
     General wrapper structure that stores key value.
-    Specifies FileType to be able to deserialize string to respective structure.
+    File and Dir in same structure even though Dir doesn't need the vector, only one element.
 */
 struct kv_store_value{
     FileType::FileType f_type;
-    std::string serialized_v_type;
-
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive &ar, const unsigned int version) {
-        ar&this->f_type;
-        ar&this->serialized_v_type;
-    }
-
-};
-
-
-/*
-    Structure to store File type versions_data
-*/
-struct kv_store_value_f {
-
     std::vector<kv_store_version_data>  vdata;
 
 
@@ -39,26 +22,10 @@ struct kv_store_value_f {
     friend class boost::serialization::access;
     template<class Archive>
     void serialize(Archive &ar, const unsigned int version) {
+        ar&this->f_type;
         ar&this->vdata;
     }
 
 };
-
-
-/*
-    Structure to store Directory type version_data
-*/
-struct kv_store_value_d {
-
-    kv_store_version_data  vdata;
-
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive &ar, const unsigned int version) {
-        ar&this->vdata;
-    }
-};
-
-
 
 #endif //P2PFS_KV_STORE_VALUE_H
