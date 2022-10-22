@@ -197,8 +197,8 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
         //if(this->store->get_slice_for_key(key) == this->store->get_slice()){
             try {
                 if(get_data){
-                    //got_latest_version = this->store->get_latest_data_version(key, lastest_v, data_v);
-                    got_latest_version = true;
+                    got_latest_version = this->store->get_latest_data_version(key, lastest_v, data_v);
+                    //got_latest_version = true;
                     //this->store->get(key);
                 }else
                     got_latest_version = this->store->get_latest_version(key, lastest_v);

@@ -273,13 +273,12 @@ bool kv_store_leveldb::put(const kv_store_key<std::string>& key, const std::stri
 
         }else{
             kv_store_value value;
-            kv_store_value_f value_f;
             kv_store_version_data vd = {key.version, bytes};  
 
             std::unique_ptr<std::string> value_obj = this->get(key.key);
             if(value_obj == nullptr){
                 
-                value_f.add(vd);
+                value.add(vd);
 
             }else{
                 
@@ -287,31 +286,26 @@ bool kv_store_leveldb::put(const kv_store_key<std::string>& key, const std::stri
 
                 if(value.f_type == FileType::FILE){
 
-                    value_f = deserialize_from_string<kv_store_value_f>(value.serialized_v_type);
-
                     int cout_concurrent = 0;
                     
-                    for(int i = 0; i < value_f.vdata.size(); i++){
-                        kVersionComp vcomp = comp_version(key.version, value_f.vdata.at(i).version);
+                    for(int i = 0; i < value.vdata.size(); i++){
+                        kVersionComp vcomp = comp_version(key.version, value.vdata.at(i).version);
                         if(vcomp == kVersionComp::Bigger){
-                            value_f.vdata.at(i) = vd;
+                            value.vdata.at(i) = vd;
                             break;
                         }
                         else if(vcomp == kVersionComp::Concurrent)
                             cout_concurrent++;  
                     }
 
-                    if(cout_concurrent == value_f.vdata.size())
-                        value_f.add(vd);
+                    if(cout_concurrent == value.vdata.size())
+                        value.add(vd);
                 }else{
                     return false;
                 }
             }
 
-            std::string value_f_serialized = serialize_to_string<kv_store_value_f>(value_f);
-
             value.f_type = key.f_type;
-            value.serialized_v_type = value_f_serialized;
 
             std::string value_serialized = serialize_to_string<kv_store_value>(value);
 
@@ -341,14 +335,13 @@ bool kv_store_leveldb::put_with_merge(const kv_store_key<std::string>& key, cons
 
     if(this->slice == k_slice){
         kv_store_value value;
-    
-        kv_store_value_d value_d;
+
         kv_store_version_data vd = {key.version, bytes};  
 
         std::unique_ptr<std::string> value_obj = this->get(key.key);
         if(value_obj == nullptr){
 
-            value_d.vdata = vd;
+            value.add(vd);
 
         }else{
 
@@ -356,24 +349,22 @@ bool kv_store_leveldb::put_with_merge(const kv_store_key<std::string>& key, cons
 
             if(value.f_type == FileType::DIRECTORY){
 
-                value_d = deserialize_from_string<kv_store_value_d>(value.serialized_v_type);
-
-                kVersionComp vcomp = comp_version(key.version, value_d.vdata.version);
+                kVersionComp vcomp = comp_version(key.version, value.vdata.at(0).version);
                 if(vcomp == kVersionComp::Concurrent){
                     std::string merged_data;
 
-                    if(key.version.client_id <= value_d.vdata.version.client_id){
-                        merged_data = this->merge_function(bytes, value_d.vdata.data);
+                    if(key.version.client_id <= value.vdata.at(0).version.client_id){
+                        merged_data = this->merge_function(bytes, value.vdata.at(0).data);
                     }else{
-                        merged_data = this->merge_function(value_d.vdata.data, bytes);
+                        merged_data = this->merge_function(value.vdata.at(0).data, bytes);
                     }
 
-                    value_d.vdata.version = merge_kv(value_d.vdata.version, key.version);
-                    value_d.vdata.data = merged_data;
+                    value.vdata.at(0).version = merge_kv(value.vdata.at(0).version, key.version);
+                    value.vdata.at(0).data = merged_data;
                     
                 }else if(vcomp == kVersionComp::Bigger) {
                     
-                    value_d.vdata = vd;
+                    value.vdata.at(0) = vd;
                 }else{
                     return true; //Se for lower ou igual skip
                 }
@@ -382,10 +373,7 @@ bool kv_store_leveldb::put_with_merge(const kv_store_key<std::string>& key, cons
             }
         }
 
-        std::string value_d_serialized = serialize_to_string<kv_store_value_d>(value_d);
-
         value.f_type = key.f_type;
-        value.serialized_v_type = value_d_serialized;
 
         std::string value_serialized = serialize_to_string<kv_store_value>(value);
 
@@ -423,64 +411,51 @@ bool kv_store_leveldb::remove(const kv_store_key<std::string>& key) {
         std::string value_serialized;
         
         if(key.f_type == FileType::DIRECTORY){
-
-            kv_store_value_d value_d;
             
             if(value_obj == nullptr){
                 
-                value_d.vdata = vd;
+                value.add(vd);
             
             }else{
                 
                 value = deserialize_from_string<kv_store_value>(*value_obj);
-
-                value_d = deserialize_from_string<kv_store_value_d>(value.serialized_v_type);
                 
-                kVersionComp vcomp = comp_version(key.version, value_d.vdata.version);
+                kVersionComp vcomp = comp_version(key.version, value.vdata.at(0).version);
                 if(vcomp == kVersionComp::Bigger){
-                    value_d.vdata.version = key.version;
+                    value.vdata.at(0).version = key.version;
 
                 }
                 else if(vcomp == kVersionComp::Concurrent)
-                    value_d.vdata.version = merge_kv(value_d.vdata.version, key.version);
+                    value.vdata.at(0).version = merge_kv(value.vdata.at(0).version, key.version);
             }
-
-            value_serialized = serialize_to_string<kv_store_value_d>(value_d);
             
         }else{
-            kv_store_value_f value_f;
-
             if(value_obj == nullptr){
             
-                value_f.add(vd);
+                value.add(vd);
 
             }else{
                 
                 value = deserialize_from_string<kv_store_value>(*value_obj);
 
-                value_f = deserialize_from_string<kv_store_value_f>(value.serialized_v_type);
-
                 int cout_concurrent = 0;
                 
-                for(int i = 0; i < value_f.vdata.size(); i++){
-                    kVersionComp vcomp = comp_version(key.version, value_f.vdata.at(i).version);
+                for(int i = 0; i < value.vdata.size(); i++){
+                    kVersionComp vcomp = comp_version(key.version, value.vdata.at(i).version);
                     if(vcomp == kVersionComp::Bigger){
-                        value_f.vdata.at(i) = vd;
+                        value.vdata.at(i) = vd;
                         break;
                     }
                     else if(vcomp == kVersionComp::Concurrent)
                         cout_concurrent++;  
                 }
 
-                if(cout_concurrent == value_f.vdata.size())
-                    value_f.add(vd);
+                if(cout_concurrent == value.vdata.size())
+                    value.add(vd);
             }
-
-            value_serialized = serialize_to_string<kv_store_value_f>(value_f);
         }
 
         value.f_type = key.f_type;
-        value.serialized_v_type = value_serialized;
 
         std::string to_insert = serialize_to_string<kv_store_value>(value);
 
@@ -511,17 +486,12 @@ bool kv_store_leveldb::remove_from_main_db(const kv_store_key<std::string>& key)
 
         if(data != nullptr){
             kv_store_value value;
-            std::string value_serialized;
 
             if(key.f_type == FileType::DIRECTORY){
-
-                kv_store_value_d value_d;
                 
                 value = deserialize_from_string<kv_store_value>(*data);
-
-                value_d = deserialize_from_string<kv_store_value_d>(value.serialized_v_type);
                 
-                kVersionComp vcomp = comp_version(key.version, value_d.vdata.version);
+                kVersionComp vcomp = comp_version(key.version, value.vdata.at(0).version);
                 if(vcomp == kVersionComp::Lower || vcomp == kVersionComp::Equal ){
                     full_remove = true;
                 }else{
@@ -529,26 +499,21 @@ bool kv_store_leveldb::remove_from_main_db(const kv_store_key<std::string>& key)
                 }
 
             }else{
-
-                kv_store_value_f value_f;
                     
                 value = deserialize_from_string<kv_store_value>(*data);
-
-                value_f = deserialize_from_string<kv_store_value_f>(value.serialized_v_type);
                 
-                for(auto it = value_f.vdata.begin(); it != value_f.vdata.end();){
+                for(auto it = value.vdata.begin(); it != value.vdata.end();){
                     kVersionComp vcomp = comp_version(key.version, it->version);
                     if(vcomp == kVersionComp::Lower || vcomp == kVersionComp::Equal){
-                        it = value_f.vdata.erase(it);
+                        it = value.vdata.erase(it);
                     }else{
                         ++it;
                     }
                 }
 
-                if(value_f.vdata.empty()){
+                if(value.vdata.empty()){
                     full_remove = true;
                 }else{
-                    value.serialized_v_type = serialize_to_string<kv_store_value_f>(value_f);
 
                     std::string to_insert = serialize_to_string<kv_store_value>(value);
 
@@ -624,20 +589,15 @@ bool kv_store_leveldb::verify_if_version_exists_db(const kv_store_key<std::strin
         value = deserialize_from_string<kv_store_value>(*value_obj);
 
         if(value.f_type == FileType::DIRECTORY){
-            kv_store_value_d value_d;
-            value_d = deserialize_from_string<kv_store_value_d>(value.serialized_v_type);
 
-            kVersionComp compv = comp_version(key.version, value_d.vdata.version);
+            kVersionComp compv = comp_version(key.version, value.vdata.at(0).version);
             if(compv == kVersionComp::Equal || compv == kVersionComp::Bigger)
                 return true;
             
         }else{
 
-            kv_store_value_f value_f;
-            value_f = deserialize_from_string<kv_store_value_f>(value.serialized_v_type);
-
-            for(int i = 0; i < value_f.vdata.size(); i++){
-                kVersionComp compv = comp_version(key.version, value_f.vdata.at(i).version);
+            for(int i = 0; i < value.vdata.size(); i++){
+                kVersionComp compv = comp_version(key.version, value.vdata.at(i).version);
                 if(compv == kVersionComp::Equal || compv == kVersionComp::Bigger)
                     return true;
             }
@@ -681,20 +641,14 @@ std::unique_ptr<std::string> kv_store_leveldb::get_data(const kv_store_key<std::
         value = deserialize_from_string<kv_store_value>(*value_obj);
 
         if(value.f_type == FileType::DIRECTORY){
-            kv_store_value_d value_d;
 
-            value_d = deserialize_from_string<kv_store_value_d>(value.serialized_v_type);
-
-            if(value_d.vdata.version == key.version){
-                return std::make_unique<std::string>(value_d.vdata.data);
+            if(value.vdata.at(0).version == key.version){
+                return std::make_unique<std::string>(value.vdata.at(0).data);
             }
             
         }else{
-            kv_store_value_f value_f;
-            
-            value_f = deserialize_from_string<kv_store_value_f>(value.serialized_v_type);
 
-            for(auto& val: value_f.vdata){
+            for(auto& val: value.vdata){
                 if(val.version == key.version){
                     return std::make_unique<std::string>(val.data);
                 }
@@ -713,7 +667,6 @@ std::unique_ptr<std::string> kv_store_leveldb::get_data(const kv_store_key<std::
     Returns false if key does not exists.
 */
 bool kv_store_leveldb::get_latest_data_version(const std::string& key, std::vector<kv_store_version>& last_versions, std::vector<std::unique_ptr<std::string>>& last_data){
-    kv_store_value_f value;
     std::vector<kv_store_version> v_version;
 
     std::unique_ptr<std::string> value_obj = get(key);
@@ -726,16 +679,12 @@ bool kv_store_leveldb::get_latest_data_version(const std::string& key, std::vect
 
         if(value.f_type == FileType::DIRECTORY){
 
-            kv_store_value_d value_d;
-            value_d = deserialize_from_string<kv_store_value_d>(value.serialized_v_type);
-            last_versions.push_back(value_d.vdata.version);
-            last_data.push_back(std::make_unique<std::string>(value_d.vdata.data));
+            last_versions.push_back(value.vdata.at(0).version);
+            last_data.push_back(std::make_unique<std::string>(value.vdata.at(0).data));
         
         }else{
-            kv_store_value_f value_f;
-            value_f = deserialize_from_string<kv_store_value_f>(value.serialized_v_type);
 
-            for(auto& val: value_f.vdata){
+            for(auto& val: value.vdata){
                 last_versions.push_back(val.version);
                 last_data.push_back(std::make_unique<std::string>(val.data));
             }
@@ -765,16 +714,12 @@ bool kv_store_leveldb::get_latest_version_db(const std::string& key, std::vector
         value = deserialize_from_string<kv_store_value>(*value_obj);
 
         if(value.f_type == FileType::DIRECTORY){
-            kv_store_value_d value_d;
-            value_d = deserialize_from_string<kv_store_value_d>(value.serialized_v_type);
 
-            last_versions.push_back(value_d.vdata.version);
+            last_versions.push_back(value.vdata.at(0).version);
             
         }else{
-            kv_store_value_f value_f;
-            value_f = deserialize_from_string<kv_store_value_f>(value.serialized_v_type);
 
-            for(auto& val: value_f.vdata){
+            for(auto& val: value.vdata){
                 last_versions.push_back(val.version);
             }
         }
@@ -828,26 +773,19 @@ bool kv_store_leveldb::put_metadata_child(const kv_store_key<std::string>& key, 
             
             if(value.f_type == FileType::DIRECTORY){
                 
-                kv_store_value_d value_d;
-                value_d = deserialize_from_string<kv_store_value_d>(value.serialized_v_type);
-
-                kVersionComp comp_v = comp_version(key.version, value_d.vdata.version);
+                kVersionComp comp_v = comp_version(key.version, value.vdata.at(0).version);
                 if(comp_v == kVersionComp::Lower || comp_v == kVersionComp::Equal)
                     return true;
                 else{
-                    metadata met = deserialize_from_string<metadata>(value_d.vdata.data);
+                    metadata met = deserialize_from_string<metadata>(value.vdata.at(0).data);
 
                     if(is_create) met.childs.add_child(child_path, is_dir);
                     else met.childs.remove_child(child_path, is_dir);
                     
                     std::string bytes = serialize_to_string<metadata>(met);
 
-                    value_d.vdata.data = bytes;
-                    value_d.vdata.version = merge_kv(value_d.vdata.version, key.version);
-
-                    std::string updated_value = serialize_to_string<kv_store_value_d>(value_d);
-
-                    value.serialized_v_type = updated_value;
+                    value.vdata.at(0).data = bytes;
+                    value.vdata.at(0).version = merge_kv(value.vdata.at(0).version, key.version);
 
                     std::string to_update = serialize_to_string<kv_store_value>(value);
 
@@ -875,7 +813,6 @@ bool kv_store_leveldb::put_metadata_stat(const kv_store_key<std::string>& key, c
 
     if(this->slice == k_slice){
         kv_store_value value;        
-        kv_store_value_d value_d;
 
         metadata_attr met_attr = deserialize_from_string<metadata_attr>(bytes);
         metadata new_met(met_attr);
@@ -884,11 +821,12 @@ bool kv_store_leveldb::put_metadata_stat(const kv_store_key<std::string>& key, c
         if(value_obj == nullptr){
     
             std::string met_data = serialize_to_string<metadata>(new_met);
-
-            value_d.vdata = {key.version, met_data};
-            std::string value_d_serial = serialize_to_string<kv_store_value_d>(value_d);
-
+            
+            kv_store_version_data vd = {key.version, met_data};
+            
+            value.add(vd);
             value.f_type = FileType::DIRECTORY;
+            
             std::string value_serial = serialize_to_string<kv_store_value>(value);
             
            leveldb::Status s = db->Put(leveldb::WriteOptions(), key.key, value_serial);
@@ -900,22 +838,16 @@ bool kv_store_leveldb::put_metadata_stat(const kv_store_key<std::string>& key, c
         else{
             value = deserialize_from_string<kv_store_value>(*value_obj);
 
-            value_d = deserialize_from_string<kv_store_value_d>(value.serialized_v_type);
-
-            kVersionComp comp_v = comp_version(key.version, value_d.vdata.version);
+            kVersionComp comp_v = comp_version(key.version, value.vdata.at(0).version);
             if(comp_v == kVersionComp::Lower || comp_v == kVersionComp::Equal){
                 return true;
             }else{
-                metadata met = deserialize_from_string<metadata>(value_d.vdata.data);
+                metadata met = deserialize_from_string<metadata>(value.vdata.at(0).data);
 
                 std::string new_metadata = metadata::merge_attr(new_met, met);
 
-                value_d.vdata.data = new_metadata;
-                value_d.vdata.version = merge_kv(value_d.vdata.version, key.version);
-
-                std::string serial_value_d = serialize_to_string<kv_store_value_d>(value_d);
-
-                value.serialized_v_type = serial_value_d;
+                value.vdata.at(0).data = new_metadata;
+                value.vdata.at(0).version = merge_kv(value.vdata.at(0).version, key.version);
 
                 std::string updated_value = serialize_to_string<kv_store_value>(value);
 
@@ -1053,20 +985,17 @@ std::unordered_map<kv_store_key<std::string>, size_t> kv_store_leveldb::get_keys
 
         if(value.f_type == FileType::DIRECTORY){
             
-            kv_store_value_d value_d = deserialize_from_string<kv_store_value_d>(value.serialized_v_type);
+            size_t v_size = value.vdata.at(0).data.size();
 
-            size_t v_size = value_d.vdata.data.size();
-
-            kv_store_key<std::string> st_key = {key, value_d.vdata.version, value.f_type, false};
+            kv_store_key<std::string> st_key = {key, value.vdata.at(0).version, value.f_type, false};
 
             keys.insert(std::make_pair(st_key, v_size));
 
             i++;
         
         }else{
-            kv_store_value_f value_f = deserialize_from_string<kv_store_value_f>(value.serialized_v_type);
 
-            for(auto& dv: value_f.vdata){
+            for(auto& dv: value.vdata){
                 if(i < anti_entropy_num_keys){
 
                     size_t v_size = dv.data.size();
@@ -1125,20 +1054,17 @@ std::unordered_set<kv_store_key<std::string>> kv_store_leveldb::get_deleted_keys
 
         if(value.f_type == FileType::DIRECTORY){
             
-            kv_store_value_d value_d = deserialize_from_string<kv_store_value_d>(value.serialized_v_type);
+            size_t v_size = value.vdata.at(0).data.size();
 
-            size_t v_size = value_d.vdata.data.size();
-
-            kv_store_key<std::string> st_key = {key, value_d.vdata.version, value.f_type, false};
+            kv_store_key<std::string> st_key = {key, value.vdata.at(0).version, value.f_type, false};
 
             deleted_keys.insert(st_key);
 
             i++;
         
         }else{
-            kv_store_value_f value_f = deserialize_from_string<kv_store_value_f>(value.serialized_v_type);
-
-            for(auto& dv: value_f.vdata){
+        
+            for(auto& dv: value.vdata){
                 if(i < anti_entropy_num_deleted_keys){
 
                     size_t v_size = dv.data.size();
