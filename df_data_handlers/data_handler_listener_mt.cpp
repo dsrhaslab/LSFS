@@ -38,6 +38,7 @@ public:
                 //std::cout << "Received get metadata message from client " << std::endl;
                 data_handler->process_get_metadata_message(msg);
             }else if(msg.has_anti_entropy_msg()){
+                std::cout << "Received anti-entropy msg " << std::endl;
                 data_handler->process_anti_entropy_message(msg);
             }else if(msg.has_anti_entropy_get_msg()){
                 data_handler->process_anti_entropy_get_message(msg);
@@ -49,8 +50,6 @@ public:
                 data_handler->process_anti_entropy_get_metadata_reply_message(msg);
             // }else if(msg.has_recover_request_msg()){
             //     data_handler->process_recover_request_msg(msg);
-            }else if(msg.has_dummy_msg()){
-                data_handler->process_dummy_message(msg);
             }
 
         }

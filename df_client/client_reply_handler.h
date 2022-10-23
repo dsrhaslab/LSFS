@@ -46,10 +46,6 @@ protected:
     std::mutex delete_global_mutex;
     std::unordered_map<kv_store_key<std::string>, std::unique_ptr<std::pair<std::mutex, std::condition_variable>>> delete_mutexes;
 
-    std::mutex dummy_mutex;
-    std::map<std::string, std::unique_ptr<std::pair<std::mutex, std::condition_variable>>> dummy_mutexes;
-    std::unordered_map<std::string, std::set<long>> dummy_replies;
-
 
 private: 
 
@@ -88,10 +84,6 @@ public:
     void process_put_reply_msg(const proto::put_reply_message &message);
     void process_delete_reply_msg(const proto::delete_reply_message &msg);
     void process_get_latest_version_reply_msg(const proto::get_latest_version_reply_message &message);
-
-    void process_dummy_msg(const proto::dummy &msg);
-    bool wait_for_dummy(const std::string& key);
-    void register_dummy(const std::string& key);
 
     virtual void operator ()() = 0;
     virtual void stop() = 0;

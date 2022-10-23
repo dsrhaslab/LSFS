@@ -25,7 +25,8 @@ void anti_entropy::send_peer_keys(std::vector<peer_data>& target_peers, proto::k
             int res = sendto(this->sender_socket, buf_data, buf_size, 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
             if(res == -1){
-                spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
+                spdlog::error("Oh dear, something went wrong with send()! %s\n", strerror(errno));
+                std::cout << "Oh dear, something went wrong with send()!" << std::endl;
             }
         }catch(...){
             spdlog::error("==================== Não consegui enviar =================");
@@ -59,7 +60,7 @@ int anti_entropy::send_recover_request(peer_data& target_peer){
         int res = sendto(this->sender_socket, buf_data, buf_size, 0, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
 
         if(res == -1){
-            spdlog::error("Oh dear, something went wrong with read()! %s\n", strerror(errno));
+            spdlog::error("Oh dear, something went wrong with send! %s\n", strerror(errno));
             return -1;
         }
     }catch(...){
@@ -181,75 +182,98 @@ void anti_entropy::wait_while_recovering(){
 
 void anti_entropy::phase_operating(){
     std::vector<peer_data> slice_view = pss_ptr->get_slice_local_view();
-
+    
     try {
-        proto::kv_message message;
-        message.set_forwarded_within_group(false);
-        auto *message_content = new proto::anti_entropy_message();
-        message_content->set_ip(this->ip);
-        message_content->set_port(this->kv_port);
-        message_content->set_id(this->id);
-        //Add random keys to propagate
-        for (auto &[key_comp, size] : this->store->get_keys()) {
+        std::unordered_map<kv_store_key<std::string>, size_t> main_keys = this->store->get_keys();
+        auto it_main = main_keys.begin();
+        std::unordered_set<kv_store_key<std::string>> deleted_keys = this->store->get_deleted_keys();
+        auto it_deleted = deleted_keys.begin();
 
-            proto::kv_store* store = message_content->add_store_keys();
-            proto::kv_store_key* kv_key = new proto::kv_store_key();
-            kv_key->set_key(key_comp.key);
+        while(it_main != main_keys.end() || it_deleted != deleted_keys.end()){
 
-            proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
+            int total_size = 60096;
+            
+            proto::kv_message message;
+            message.set_forwarded_within_group(false);
+            auto *message_content = new proto::anti_entropy_message();
+            message_content->set_ip(this->ip);
+            message_content->set_port(this->kv_port);
+            message_content->set_id(this->id);
+            
+            while(total_size >= 4096 && it_main != main_keys.end()){
 
-            for(auto pair : key_comp.version.vv){
+                auto& key_comp = it_main->first;
+                auto& size = it_main->second;
 
-                proto::kv_store_version *kv_version = kv_key_version->add_version();
-                kv_version->set_client_id(pair.first);
-                kv_version->set_clock(pair.second);
+                proto::kv_store* store = message_content->add_store_keys();
+                proto::kv_store_key* kv_key = new proto::kv_store_key();
+                kv_key->set_key(key_comp.key);
+
+                proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
+
+                for(auto pair : key_comp.version.vv){
+
+                    proto::kv_store_version *kv_version = kv_key_version->add_version();
+                    kv_version->set_client_id(pair.first);
+                    kv_version->set_clock(pair.second);
+                }
+
+                kv_key_version->set_client_id(key_comp.version.client_id);
+
+                kv_key->set_allocated_key_version(kv_key_version);
+                store->set_allocated_key(kv_key);
+                store->set_is_deleted(false);
+                if(key_comp.f_type == FileType::DIRECTORY) 
+                    store->set_type(proto::FileType::DIRECTORY);
+                else 
+                    store->set_type(proto::FileType::FILE);
+                store->set_data_size(size);
+
+                size_t aproximated_size = store->ByteSizeLong();
+                total_size -= aproximated_size;
+
+                ++it_main;
             }
 
-            kv_key_version->set_client_id(key_comp.version.client_id);
+            while(total_size >= 0 && it_deleted != deleted_keys.end()){
+                
+                proto::kv_store* store_del = message_content->add_store_keys();
+                proto::kv_store_key *deleted_kv_key = new proto::kv_store_key();
+                deleted_kv_key->set_key(it_deleted->key);
 
-            kv_key->set_allocated_key_version(kv_key_version);
-            store->set_allocated_key(kv_key);
-            store->set_is_deleted(false);
-            if(key_comp.f_type == FileType::DIRECTORY) 
-                store->set_type(proto::FileType::DIRECTORY);
-            else 
-                store->set_type(proto::FileType::FILE);
-            store->set_data_size(size);
+                proto::kv_store_key_version* deleted_kv_key_version = new proto::kv_store_key_version();
 
-        }
-        //Add random deleted keys to propagate
-        for (auto &deleted_key : this->store->get_deleted_keys()) {
+                for(auto pair : it_deleted->version.vv){
 
-            proto::kv_store* store_del = message_content->add_store_keys();
-            proto::kv_store_key *deleted_kv_key = new proto::kv_store_key();
-            deleted_kv_key->set_key(deleted_key.key);
+                    proto::kv_store_version *deleted_kv_version = deleted_kv_key_version->add_version();
+                    deleted_kv_version->set_client_id(pair.first);
+                    deleted_kv_version->set_clock(pair.second);
+                }
 
-            proto::kv_store_key_version* deleted_kv_key_version = new proto::kv_store_key_version();
+                deleted_kv_key_version->set_client_id(it_deleted->version.client_id);
 
-            for(auto pair : deleted_key.version.vv){
+                deleted_kv_key->set_allocated_key_version(deleted_kv_key_version);
+                store_del->set_allocated_key(deleted_kv_key);
+                store_del->set_is_deleted(true);
+                if(it_deleted->f_type == FileType::DIRECTORY) 
+                    store_del->set_type(proto::FileType::DIRECTORY);
+                else 
+                    store_del->set_type(proto::FileType::FILE);
+                
+                size_t aproximated_size = store_del->ByteSizeLong();
+                total_size -= aproximated_size;
 
-                proto::kv_store_version *deleted_kv_version = deleted_kv_key_version->add_version();
-                deleted_kv_version->set_client_id(pair.first);
-                deleted_kv_version->set_clock(pair.second);
+                ++it_deleted;
             }
+            
+            message.set_allocated_anti_entropy_msg(message_content);
 
-            deleted_kv_key_version->set_client_id(deleted_key.version.client_id);
-
-            deleted_kv_key->set_allocated_key_version(deleted_kv_key_version);
-            store_del->set_allocated_key(deleted_kv_key);
-            store_del->set_is_deleted(true);
-            if(deleted_key.f_type == FileType::DIRECTORY) 
-                store_del->set_type(proto::FileType::DIRECTORY);
-            else 
-                store_del->set_type(proto::FileType::FILE);
-
+            this->send_peer_keys(slice_view, message);
         }
-
-        message.set_allocated_anti_entropy_msg(message_content);
-
-        this->send_peer_keys(slice_view, message);
+    
     }catch (std::exception& e){
         // Unable to get Keys -> Do nothing
+        e.what();
     }
 }
 

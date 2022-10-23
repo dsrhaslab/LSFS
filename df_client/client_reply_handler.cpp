@@ -576,65 +576,60 @@ std::unique_ptr<std::string> client_reply_handler::wait_for_get_latest_until(con
             if(status == std::cv_status::timeout) timeout_happened = true;
         }
         if(it->second.count.size() >= wait_for){      
-            //std::cout << "Recebi todas as respostas que queria" << std::endl;
-            // if we already have the majority of replies, as we still hold the locks
-            // we can remove the entries for the key
+            //if we already have the majority of replies, as we still hold the locks
+            //we can remove the entries for the key
             
-            // auto& map_keys = it->second.keys;
-            // auto& map_del_keys = it->second.deleted_keys;
+            auto& map_keys = it->second.keys;
+            auto& map_del_keys = it->second.deleted_keys;
 
-            // std::vector<kv_store_version> max_vv;
+            std::vector<kv_store_version> max_vv;
 
-            // for(auto& kv : map_keys){
-            //     bool deleted = false;
-            //     for(auto& kv_del : map_del_keys){
-            //         kVersionComp comp_del = comp_version(kv.first.version, kv_del.first.version);
+            for(auto& kv : map_keys){
+                bool deleted = false;
+                for(auto& kv_del : map_del_keys){
+                    kVersionComp comp_del = comp_version(kv.first.version, kv_del.first.version);
                     
-            //         if(comp_del == kVersionComp::Lower || comp_del == kVersionComp::Equal){
-            //             deleted = true;
-            //             break;
-            //         }
-            //     }
-            //     if(!deleted){
-            //         int cout_concurrent = 0;
-            //         for(int i = 0; i < max_vv.size(); i++){
-            //             kVersionComp comp_max = comp_version(kv.first.version, max_vv.at(i));
-            //             if(comp_max == kVersionComp::Bigger){
-            //                 max_vv.at(i) = kv.first.version;
-            //                 break;
-            //             } else if(comp_max == kVersionComp::Concurrent)
-            //                 cout_concurrent++;
-            //         }
-            //         if(cout_concurrent == max_vv.size())
-            //             max_vv.push_back(kv.first.version);
-            //     }
-            // }
+                    if(comp_del == kVersionComp::Lower || comp_del == kVersionComp::Equal){
+                        deleted = true;
+                        break;
+                    }
+                }
+                if(!deleted){
+                    int cout_concurrent = 0;
+                    for(int i = 0; i < max_vv.size(); i++){
+                        kVersionComp comp_max = comp_version(kv.first.version, max_vv.at(i));
+                        if(comp_max == kVersionComp::Bigger){
+                            max_vv.at(i) = kv.first.version;
+                            break;
+                        } else if(comp_max == kVersionComp::Concurrent)
+                            cout_concurrent++;
+                    }
+                    if(cout_concurrent == max_vv.size())
+                        max_vv.push_back(kv.first.version);
+                }
+            }
 
-            // kv_store_version last_v;
-            // if(max_vv.size() > 1)
-            //     last_v = choose_latest_version(max_vv);
-            // else if(max_vv.size() == 1)
-            //     last_v = max_vv.front();
+            kv_store_version last_v;
+            if(max_vv.size() > 1)
+                last_v = choose_latest_version(max_vv);
+            else if(max_vv.size() == 1)
+                last_v = max_vv.front();
             
-            // if(!max_vv.empty()){
-            //     auto it = map_keys.find({key, last_v});
-            //     if(it != map_keys.end()){
-            //         res = std::move(it->second);
-            //         *get_res = Response::Ok;
-            //     }else{
-            //         *get_res = Response::NoData;
-            //     }
-            // }else if(!it->second.deleted_keys.empty()){
-            //     *get_res = Response::Deleted;
-            // }else{
-            //     it->second.count--;
-            //     lock_key.unlock();
-            //     throw TimeoutException();
-            // }
-
-            *get_res = Response::Ok;
-            res = std::make_unique<std::string>("");
-            
+            if(!max_vv.empty()){
+                auto it = map_keys.find({key, last_v});
+                if(it != map_keys.end()){
+                    res = std::move(it->second);
+                    *get_res = Response::Ok;
+                }else{
+                    *get_res = Response::NoData;
+                }
+            }else if(!it->second.deleted_keys.empty()){
+                *get_res = Response::Deleted;
+            }else{
+                it->second.count.clear();
+                lock_key.unlock();
+                throw TimeoutException();
+            }            
 
             // unlock key mutex because we have to get locks in order
             lock_key.unlock();
@@ -983,8 +978,6 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
         std::unique_lock<std::mutex> reqid_lock(sync_pair->first);
         lock.unlock(); //free global get lock
 
-        if(!msg.skip()){
-
         for(auto k : msg.last_v()){
             kv_store_version kv;
             for (auto c : k.version()){
@@ -1000,18 +993,17 @@ void client_reply_handler::process_get_latest_version_reply_msg(const proto::get
             
             it->second.keys.insert(std::make_pair(st_key, std::move(data)));
         }
+
+       for(auto k : msg.last_deleted_v()){
+            kv_store_version kv_del;
+            for (auto c : k.version()){
+                kv_del.vv.emplace(c.client_id(), c.clock());
+            }
+            kv_del.client_id = k.client_id();
+
+            kv_store_key<std::string> st_del_key = {msg.key(), kv_del, FileType::FILE, true};
+            it->second.deleted_keys.insert(std::make_pair(st_del_key, nullptr));
         }
-
-    //    for(auto k : msg.last_deleted_v()){
-    //         kv_store_version kv_del;
-    //         for (auto c : k.version()){
-    //             kv_del.vv.emplace(c.client_id(), c.clock());
-    //         }
-    //         kv_del.client_id = k.client_id();
-
-    //         kv_store_key<std::string> st_del_key = {msg.key(), kv_del, FileType::FILE, true};
-    //         it->second.deleted_keys.insert(std::make_pair(st_del_key, nullptr));
-    //     }
 
         long replier_id = msg.id();
         it->second.count.emplace(replier_id);
@@ -1091,101 +1083,4 @@ void client_reply_handler::process_delete_reply_msg(const proto::delete_reply_me
     }else{
         spdlog::debug("DELETE REPLY IGNORED - NON EXISTENT KEY");
     }
-}
-
-
-
-
-
-void client_reply_handler::process_dummy_msg(const proto::dummy &msg) {
-   const std::string& key = msg.key();
-
-    std::unique_lock<std::mutex> lock(this->dummy_mutex);
-
-    auto it = this->dummy_replies.find(key);
-    if(it != this->dummy_replies.end()){
-        
-        auto& sync_pair = this->dummy_mutexes.find(key)->second;
-        std::unique_lock<std::mutex> key_lock(sync_pair->first);
-
-        lock.unlock(); //free global put lock
-
-        it->second.emplace(1);
-        sync_pair->second.notify_all();
-        key_lock.unlock();
-    }else{
-        spdlog::debug("DELETE REPLY IGNORED - NON EXISTENT KEY");
-    }
-   
-}
-
-
-
-bool client_reply_handler::wait_for_dummy(const std::string& key){
-    bool succeed = false;
-
-    std::unique_lock<std::mutex> lock(this->dummy_mutex);
-
-    bool timeout_happened = false;
-    bool waited = false;
-
-    auto it = this->dummy_replies.find(key);
-    if(it != this->dummy_replies.end()) {
-        // if key exists, lock key
-        auto &sync_pair = this->dummy_mutexes.find(key)->second;
-        std::unique_lock<std::mutex> lock_key(sync_pair->first);
-
-        if (it->second.size() < 1) {
-            // if we still don't have the number of needed replies
-
-            // unlock global put lock
-            lock.unlock();
-            //unlock for key notify -> it performs automatic lock of the key
-            std::cv_status status = sync_pair->second.wait_for(lock_key, std::chrono::seconds(this->wait_timeout));
-            if(status == std::cv_status::timeout) timeout_happened = true;
-            // unlock key mutex, because we must get locks in the same order
-            lock_key.unlock();
-            lock.lock();
-            lock_key.lock();
-        }
-
-        succeed = it->second.size() >= 1;
-        if (succeed) {
-
-            // if put has already been successfully performed, since we have all locks
-            // we can remove the key entries
-            this->dummy_replies.erase(it);
-            // We don't need to awake threads that can be strapped on cond variable
-            // since it's certain that a single thread is able to wait for a same key
-            auto it_key = this->dummy_mutexes.find(key);
-            // It's strictly needes to free key lock as if we don't, when leaving scope it will
-            // try to perform a release on a non-existent mutex (SIGSEV)
-            lock_key.unlock();
-            this->dummy_mutexes.erase(it_key);
-        }
-    }
-
-    lock.unlock();
-
-    if(!succeed && timeout_happened)
-        throw TimeoutException();
-
-    return succeed;
-}
-
-void client_reply_handler::register_dummy(const std::string& key) {
-    std::unique_lock<std::mutex> lock(this->dummy_mutex);
-
-    auto it = this->dummy_replies.find(key);
-    if(it == this->dummy_replies.end()){
-        // key does not exist
-        std::set<long> temp;
-        this->dummy_replies.emplace(key, std::move(temp));
-        auto sync_pair = std::make_unique<std::pair<std::mutex, std::condition_variable>>();
-        this->dummy_mutexes.emplace(std::move(key), std::move(sync_pair));
-    }else{
-        throw ConcurrentWritesSameKeyException();
-    }
-
-    lock.unlock();
 }

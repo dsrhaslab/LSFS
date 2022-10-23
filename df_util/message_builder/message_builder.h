@@ -20,7 +20,7 @@ void build_get_message(proto::kv_message* msg, std::string& ip, int kv_port, lon
 void build_get_reply_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id, std::unique_ptr<std::string> data, const std::string& key, const kv_store_version& version, bool is_deleted = false);
 
 void build_get_latest_version_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id, const std::string& key, bool get_data = false);
-void build_get_latest_version_reply_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id, const std::string& key, const std::vector<kv_store_version>& vversion, bool bring_data, const std::vector<std::unique_ptr<std::string>>& vdata, const std::vector<kv_store_version>& vdel_version, bool skip = false);
+void build_get_latest_version_reply_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& req_id, const std::string& key, const std::vector<kv_store_version>& vversion, bool bring_data, const std::vector<std::unique_ptr<std::string>>& vdata, const std::vector<kv_store_version>& vdel_version);
 
 void build_put_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& key, const kv_store_version& version, FileType::FileType f_type, const char* data, size_t size, bool extra_reply);
 void build_put_reply_message(proto::kv_message* msg, std::string& ip, int kv_port, long id, const std::string& key, const kv_store_version& version, FileType::FileType f_type);
