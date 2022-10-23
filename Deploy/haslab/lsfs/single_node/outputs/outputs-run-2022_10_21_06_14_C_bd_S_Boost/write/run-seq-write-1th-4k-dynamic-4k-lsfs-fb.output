@@ -1,0 +1,48 @@
+
+Run: #1,wl_name:seq-write-1th-4k-dynamic-4k,wl_path:shared_dir/workloads-filebench/write-data-micro/seq-write-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.002: fileset-1 populated: 1 files, avg. dir. width = 1, avg. dir. depth = -nan, 0 leafdirs, 1024.000MB total size
+0.002: Removing fileset-1 tree (if exists)
+0.004: Pre-allocating directories in fileset-1 tree
+0.010: Pre-allocating files in fileset-1 tree
+0.010: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+0.010: Population and pre-allocation of filesets completed
+0.948: Attempting to create fileset more than once, ignoring
+0.949: Starting 1 process-1 instances
+2.383: Running...
+902.438: Run took 900 seconds...
+902.477: Per-Operation Breakdown
+finish-1             0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close-1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+write-1              7798201ops     8664ops/s  33.8mb/s    0.114ms/op [0.083ms - 60.371ms]
+create-1             1ops        0ops/s   0.0mb/s   13.753ms/op [13.753ms - 13.753ms]
+902.477: IO Summary: 7798202 ops 8664.144 ops/s 0/8664 rd/wr  33.8mb/s 0.114ms/op
+902.477: Shutting down processes
+
+Run: #2,wl_name:seq-write-1th-4k-dynamic-4k,wl_path:shared_dir/workloads-filebench/write-data-micro/seq-write-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.018: Populating and pre-allocating filesets
+0.019: fileset-1 populated: 1 files, avg. dir. width = 1, avg. dir. depth = -nan, 0 leafdirs, 1024.000MB total size
+0.020: Removing fileset-1 tree (if exists)
+0.034: Pre-allocating directories in fileset-1 tree
+0.043: Pre-allocating files in fileset-1 tree
+0.043: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+0.043: Population and pre-allocation of filesets completed
+0.759: Attempting to create fileset more than once, ignoring
+0.759: Starting 1 process-1 instances
+2.193: Running...
+902.248: Run took 900 seconds...
+902.262: Per-Operation Breakdown
+finish-1             0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close-1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+write-1              7955950ops     8839ops/s  34.5mb/s    0.112ms/op [0.082ms - 21.228ms]
+create-1             1ops        0ops/s   0.0mb/s   13.930ms/op [13.930ms - 13.930ms]
+902.262: IO Summary: 7955951 ops 8839.411 ops/s 0/8839 rd/wr  34.5mb/s 0.112ms/op
+902.262: Shutting down processes
