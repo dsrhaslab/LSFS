@@ -110,6 +110,9 @@ int lsfs_impl::_readdir(
             }
         }
 
+        std::cout << "Request to cache: " << state->request_cache << " Request to peer: " << state->request_peer <<std::endl;
+
+
     }catch(EmptyViewException& e){
         e.what();
         errno = EAGAIN; //resource unavailable  

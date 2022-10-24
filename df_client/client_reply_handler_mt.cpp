@@ -38,9 +38,6 @@ public:
 
                 const proto::delete_reply_message &msg = message.delete_reply_msg();
                 reply_handler->process_delete_reply_msg(msg);
-            }else if (message.has_dummy_msg()){
-                const proto::dummy &msg = message.dummy_msg();
-                reply_handler->process_dummy_msg(msg);
             }
         }
         catch (const char *e) {

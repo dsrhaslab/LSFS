@@ -14,6 +14,9 @@ lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_re
         dir_cache_map_mutex.reserve(max_directories_in_cache);
     }
 
+    request_cache = 0;
+    request_peer = 0;
+
 }
 
 /*
@@ -128,13 +131,15 @@ size_t lsfs_state::read_fixed_size_blocks_to_buffer(char *buf, size_t size, size
     
     df_client->get_latest_batch(keys, data_strs);
 
-    // for(const std::shared_ptr<std::string>& data_blk: data_strs){
-    //     size_t blk_write_size = std::min((data_blk->size()), (size - read_off));
-    //     data_blk->copy(&buf[read_off], blk_write_size);
-    //     read_off += blk_write_size;
-    // }
+    for(const std::shared_ptr<std::string>& data_blk: data_strs){
+        if(data_blk != nullptr){
+            size_t blk_write_size = std::min((data_blk->size()), (size - read_off));
+            data_blk->copy(&buf[read_off], blk_write_size);
+            read_off += blk_write_size;
+        }
+    }
 
-    return size;
+    return read_off;
 }
 
 /*
@@ -203,18 +208,17 @@ int lsfs_state::put_file_metadata(metadata& met, const std::string& path, const 
 */
 int lsfs_state::put_dir_metadata_child(const std::string& path, const std::string& child_path, bool is_create, bool is_dir){
 
-    // //Can be removed get latest_version
-    // client_reply_handler::Response response = client_reply_handler::Response::Init;
-    // std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(path, &response);
+    client_reply_handler::Response response = client_reply_handler::Response::Init;
+    std::unique_ptr<kv_store_version> last_v = df_client->get_latest_version(path, &response);
     
     kv_store_version version; 
-    //if(last_v != nullptr){
-    //    version = *last_v;  
-    df_client->put_child(path, version, child_path, is_create, is_dir);
-    // }else{
-    //     errno = ENOENT;
-    //     return -1;
-    // }    
+    if(last_v != nullptr){
+       version = *last_v;  
+        df_client->put_child(path, version, child_path, is_create, is_dir);
+    }else{
+        errno = ENOENT;
+        return -1;
+    }    
     return 0;  
 }
 

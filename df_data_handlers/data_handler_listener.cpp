@@ -198,12 +198,10 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
             try {
                 if(get_data){
                     got_latest_version = this->store->get_latest_data_version(key, lastest_v, data_v);
-                    //got_latest_version = true;
-                    //this->store->get(key);
                 }else
                     got_latest_version = this->store->get_latest_version(key, lastest_v);
 
-                //got_latest_deleted_version = this->store->get_latest_deleted_version(key, latest_del_v);
+                got_latest_deleted_version = this->store->get_latest_deleted_version(key, latest_del_v);
 
                 // when the peer was supposed to have a key but it doesn't, replies with key version -1
                 // to prevent for the client to have to wait for a timeout if a certain key does not exist.
@@ -227,7 +225,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
             if(!request_already_replied || achance <= this->chance){
                 proto::kv_message reply_message;
 
-                build_get_latest_version_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, lastest_v, get_data, data_v, latest_del_v, true);
+                build_get_latest_version_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, lastest_v, get_data, data_v, latest_del_v);
 
                 this->reply_client(reply_message, sender_ip, sender_port);
 
@@ -339,53 +337,6 @@ void data_handler_listener::process_put_message(proto::kv_message &msg) {
         } else {
             forward_decider(msg, key);
         }
-    }
-}
-
-
-void data_handler_listener::process_dummy_message(proto::kv_message &msg) {
-    const auto& message = msg.dummy_msg();
-    const std::string& sender_ip = message.ip();
-    const int sender_port = message.port();
-    const std::string& key = message.key();
-    bool is_write = message.is_write();
-    const std::string& data = message.data();
- 
-    bool stored = false;
-    std::unique_ptr<std::string> dat(nullptr);
-    try {
-        if(is_write){
-            stored = this->store->put_dummy(key, data);
-        }else{
-            dat = this->store->get(key);
-            if(dat == nullptr){
-                std::cout << "No data" << std::endl;
-            }else{
-                stored = true;
-                }
-        }
-
-
-        
-    }catch(std::exception& e){
-        stored = false;
-    }
-
-    if(stored) {
-
-        float achance = random_float(0.0, 1.0);
-
-            proto::kv_message reply_message;
-
-                auto* message_content = new proto::dummy();
-
-            message_content->set_key(key);
-            message_content->set_is_write(is_write);
-
-            reply_message.set_allocated_dummy_msg(message_content);
-
-            this->reply_client(reply_message, sender_ip, sender_port);
-
     }
 }
 
@@ -829,7 +780,6 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
                 }
             }
         }else{
-            std::cout << "Not responding to client" << std::endl;
             // if i don't have the content of the message -> forward it
             int obj_slice = this->store->get_slice_for_key(key);
             std::vector<peer_data> slice_peers = this->pss_ptr->have_peer_from_slice(obj_slice);
@@ -872,7 +822,7 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
             version.client_id = key.key_version().client_id();
             
             FileType::FileType f_type;
-            if(sk.type() == proto::FileType::DIRECTORY) 
+            if(sk.type() == proto::FileType::DIRECTORY)
                 f_type = FileType::DIRECTORY;
             else 
                 f_type = FileType::FILE;
@@ -893,7 +843,6 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
         for (auto &[key_comp, size]: keys_to_request) {
             
             if(key_comp.f_type == FileType::DIRECTORY && size > BLK_SIZE){
-
                     
                 if(this->store->get_incomplete_blks(key_comp, size, tmp_blks_to_request)){
                      
@@ -945,7 +894,6 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
             req_id.reserve(50);
             req_id.append("intern").append(to_string(this->id)).append(":").append(to_string(this->get_anti_entropy_req_count()));
 
-            //merge = false because this is deleted key, merge is irrelevant
             build_anti_entropy_get_message(&get_msg, this->ip, this->kv_port, this->id, req_id, deleted_key.key, deleted_key.version, deleted_key.f_type, true);
             
             this->reply_client(get_msg, message.ip(), message.port());

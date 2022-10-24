@@ -116,8 +116,6 @@ public:
     inline void get_metadata_batch(const std::vector<kv_store_key<std::string>> &keys, std::vector<std::shared_ptr<std::string>> &data_strs, client_reply_handler::Response* response, int max_timeout){
         return get_metadata_batch(keys, data_strs, response, max_timeout, nr_gets_required);
     }
-
-    void dummy_msg(const std::string& file, const std::string& key, bool is_write);
     
 private:
     long inc_and_get_request_count();

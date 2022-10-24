@@ -60,7 +60,6 @@ message get_latest_version_reply_message {
   string key = 5;
   repeated kv_store_key_version_w_data last_v = 6;
   repeated kv_store_key_version last_deleted_v = 7;
-  bool skip = 8;
 }
 
 message get_message {

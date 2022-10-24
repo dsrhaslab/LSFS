@@ -67,6 +67,9 @@ public:
 
     int direct_io;
 
+    long request_cache;
+    long request_peer;
+
     
 
 public:
