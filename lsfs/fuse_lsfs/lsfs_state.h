@@ -66,10 +66,6 @@ public:
     int cache_max_nr_requests_timeout;
 
     int direct_io;
-
-    long request_cache;
-    long request_peer;
-
     
 
 public:

@@ -30,7 +30,6 @@ int lsfs_impl::_getattr(
         
         if(!got_metadata && state->use_cache){
             got_metadata = state->get_metadata_if_dir_cached(path, stbuf);
-            if(got_metadata) state->request_cache++;
         }
 
         if(!got_metadata){
@@ -38,8 +37,6 @@ int lsfs_impl::_getattr(
                 std::unique_ptr<metadata_attr> met_attr = state->get_metadata_stat(path);
                 if(met_attr == nullptr)
                     return -errno;
-                
-                state->request_peer++;
 
                 // copy metadata received to struct stat
                 memcpy(stbuf, &met_attr->stbuf, sizeof(struct stat));

@@ -1,11 +1,11 @@
 
-set $WORKLOAD_PATH=/test_filesystem/InnerFolder
+set $WORKLOAD_PATH=test_filesystem/InnerFolder
 set $NR_THREADS=1
 set $WORKLOAD_RUNTIME=900
 
 set $NR_FILES=1
 set $MEAN_DIR_WIDTH=1
-set $IO_SIZE=4k
+set $IO_SIZE=128k
 set $FILE_SIZE=1g
 set $NR_ITERATIONS=312500000
 
