@@ -176,30 +176,18 @@ void client::put(const std::string& key, const kv_store_version& version, FileTy
             }
         }
     }
-
-    //If put was completed but client did not receive the reply - last check before error
-    if(!succeed){
-        client_reply_handler::Response response = client_reply_handler::Response::Init;
-        get(key, new_version, &response, wait_for, true);
-        if(response == client_reply_handler::Response::Ok){
-            succeed = true;
-        }
-    }
     
     if(!succeed){
         throw TimeoutException();
     }
 }
 
-//TODO - otimizacao keys sem ser const e alterar a versao para a nova versao por endereco
-void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
+void client::put_batch(std::vector<kv_store_key<std::string>> &keys,
                        const std::vector<const char *> &datas, const std::vector<size_t> &sizes, int wait_for) {
 
     long nr_writes = keys.size();
     std::vector<bool> completed(nr_writes, false);
     
-    std::vector<kv_store_key<std::string>> keys_w_new_versions;
-
     //register all the keys and send first put
     for(size_t i = 0; i < keys.size(); i++){
         
@@ -208,17 +196,13 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
         kv_store_version new_version = add_vv(std::make_pair(this->id, n_clock), keys[i].version);
         new_version.client_id = this->id;
 
-        kv_store_key<std::string> comp_key = {keys[i].key, new_version, keys[i].f_type, false};
-        keys_w_new_versions.push_back(comp_key);
+        keys[i].version = new_version;
     
-        this->handler->register_put(comp_key); // throw const char* (concurrent writes over the same key)
-    }
+        this->handler->register_put(keys[i]); // throw const char* (concurrent writes over the same key)
 
-    for(size_t i = 0; i < keys_w_new_versions.size(); i++){
         std::vector<peer_data> peers = this->lb->get_n_peers(keys[i].key, this->max_nodes_to_send_put_request); //throw exception
-        this->send_put(peers, keys_w_new_versions[i].key, keys_w_new_versions[i].version, keys_w_new_versions[i].f_type, datas[i], sizes[i]);
+        this->send_put(peers, keys[i].key, keys[i].version, keys[i].f_type, datas[i], sizes[i]);
     }
-
 
     long curr_timeouts = 0;
     bool all_completed = false;
@@ -228,21 +212,19 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
         auto wait_until = std::chrono::system_clock::now() + std::chrono::seconds(this->wait_timeout);
         for(size_t i = 0; i < completed.size(); i++){
             if(!completed[i]){
-                std::string key = keys_w_new_versions[i].key;
-                kv_store_version k_version = keys_w_new_versions[i].version;
                 try{
-                    completed[i] = this->handler->wait_for_put_until(keys_w_new_versions[i], wait_for, wait_until);
+                    completed[i] = this->handler->wait_for_put_until(keys[i], wait_for, wait_until);
                 }catch(TimeoutException& e){
-                    std::cout << "Timeout key Put_batch: " << key << std::endl;
+                    std::cout << "Timeout key Put_batch: " << keys[i].key << std::endl;
                     loop_timeout = true;
                     
                     std::vector<peer_data> peers;
                     if (curr_timeouts + 1 <= 2){
-                        peers = this->lb->get_n_peers(key, this->max_nodes_to_send_put_request); //throw exception
+                        peers = this->lb->get_n_peers(keys[i].key, this->max_nodes_to_send_put_request); //throw exception
                     }else{
                         peers = this->lb->get_n_random_peers(this->max_nodes_to_send_put_request); //throw exception
                     }
-                    this->send_put(peers, key, k_version, keys_w_new_versions[i].f_type, datas[i], sizes[i], true);
+                    this->send_put(peers, keys[i].key, keys[i].version, keys[i].f_type, datas[i], sizes[i], true);
                 }
             }
         }
@@ -256,26 +238,10 @@ void client::put_batch(const std::vector<kv_store_key<std::string>> &keys,
     std::vector<kv_store_key<std::string>> erasing_keys;
     for(size_t i = 0; i < completed.size(); i++){
         if(!completed[i]){
-            erasing_keys.push_back(keys_w_new_versions[i]);
+            erasing_keys.push_back(keys[i]);
         }
     }
     this->handler->clear_put_keys_entries(erasing_keys);
-
-    //If put was completed but client did not receive the reply - last check before error
-    if(!all_completed){
-        for(size_t i = 0; i < completed.size(); i++){
-            if(!completed[i]){
-                std::string key = keys_w_new_versions[i].key;
-                kv_store_version k_version = keys_w_new_versions[i].version;
-                client_reply_handler::Response response = client_reply_handler::Response::Init;
-                get(key, k_version, &response, wait_for, true);
-                if(response == client_reply_handler::Response::Ok){
-                    completed[i] = true;
-                }
-            }
-        }
-        all_completed = std::find(completed.begin(), completed.end(), false) == completed.end();
-    }  
 
     if(!all_completed){
         throw TimeoutException();
@@ -312,15 +278,6 @@ void client::del(const std::string& key, const kv_store_version& version, FileTy
             }catch(TimeoutException& e){
                 curr_timeouts++;
             }
-        }
-    }
-
-    //If put was completed but client did not receive the reply - last check before error
-    if(!succeed){
-        client_reply_handler::Response response = client_reply_handler::Response::Init;
-        get(key, version, &response, wait_for, true);
-        if(response == client_reply_handler::Response::Deleted){
-            succeed = true;
         }
     }
 
@@ -385,13 +342,7 @@ void client::get_latest_batch(const std::vector<std::string> &keys, std::vector<
         
         this->handler->register_get_data(req_ids[i]);
 
-        // std::vector<peer_data> peers = this->lb->get_n_peers(keys[i], this->max_nodes_to_send_get_request); //throw exception (empty view)
-        // this->send_get_latest_version(peers, keys[i], req_ids[i], true);
-    }
-
-
-    for(size_t i = 0; i < keys.size(); i++){
-        std::vector<peer_data> peers = this->lb->get_n_peers(keys[i], this->max_nodes_to_send_put_request); //throw exception
+        std::vector<peer_data> peers = this->lb->get_n_peers(keys[i], this->max_nodes_to_send_get_request); //throw exception (empty view)
         this->send_get_latest_version(peers, keys[i], req_ids[i], true);
     }
     
@@ -636,15 +587,6 @@ void client::put_child(const std::string& key, const kv_store_version& version, 
                 std::cout << "Timeout key Put_child: " << key << std::endl;
                 curr_timeouts++;
             }
-        }
-    }
-
-    //If put was completed but client did not receive the reply - last check before error
-    if(!succeed){
-        client_reply_handler::Response response = client_reply_handler::Response::Init;
-        get(key, new_version, &response, wait_for, true);
-        if(response == client_reply_handler::Response::Ok){
-            succeed = true;
         }
     }
 

@@ -102,7 +102,6 @@ public:
 
     void print_store(long id) override;
     bool clean_db() override;
-
     bool put_dummy(const std::string& key, const std::string& bytes) override;
  
 };
@@ -1435,7 +1434,6 @@ bool kv_store_leveldb::put_dummy(const std::string& key, const std::string& byte
     }
     return false;
 }
-
 
 
 

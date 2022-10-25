@@ -310,8 +310,6 @@ int lsfs_impl::_write(
         struct fuse_file_info *fi
 )
 {
-    //std::cout << "### SysCall: _write" << std::endl;
-
     (void)path;
     int result;
 
@@ -347,6 +345,7 @@ int lsfs_impl::_write(
 
         try {
             if (off_blk != 0) {
+                std::cout << "Middle of blk" << std::endl;
                 //middle of block -> i doubt ever happen
                 size_t off_ini_blk = nr_b_blks * BLK_SIZE;
                 if (offset <= current_size) {

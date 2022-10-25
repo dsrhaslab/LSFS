@@ -14,9 +14,6 @@ lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_re
         dir_cache_map_mutex.reserve(max_directories_in_cache);
     }
 
-    request_cache = 0;
-    request_peer = 0;
-
 }
 
 /*
@@ -26,8 +23,7 @@ lsfs_state::lsfs_state(std::shared_ptr<client> df_client, size_t max_parallel_re
     Return 0 if ok, -1 otherwise.
 */
 int lsfs_state::put_fixed_size_blocks_from_buffer_limited_paralelization(const char *buf, size_t size,
-                                                                         size_t block_size, const char *base_path, size_t current_blk, const kv_store_version& version) {
-
+                                                                         size_t block_size, const char *base_path, size_t current_blk, const kv_store_version& version) {                                                                      
     size_t write_off = 0;
     while(write_off < size){
         size_t write_size = std::min(this->max_parallel_write_size, size - write_off);
@@ -49,7 +45,7 @@ int lsfs_state::put_fixed_size_blocks_from_buffer_limited_paralelization(const c
     Return 0.
 */
 int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, size_t block_size, const char* base_path, size_t current_blk, const kv_store_version& version){
-    int return_value;
+    
     size_t read_off = 0;
     size_t nr_blocks = (size / block_size) + (size % block_size == 0 ? 0 : 1);
     // array for the keys
@@ -81,9 +77,7 @@ int lsfs_state::put_fixed_size_blocks_from_buffer(const char* buf, size_t size, 
 
     df_client->put_batch(keys, buffers, sizes);
 
-    return_value = 0;
-
-    return return_value;
+    return 0;
 
 }
 
