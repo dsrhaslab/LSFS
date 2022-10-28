@@ -60,14 +60,14 @@ LOCAL_DSTAT_OUTPUT_PATH=dstat_outputs
 #       replication_max=3
 #
 
-#PEERS_CONFIG=("1_1_2" "2_1_1" "2_2_3")
-PEERS_CONFIG=("2_2_3")
+PEERS_CONFIG=("1_1_2" "2_1_1" "2_2_3")
+#PEERS_CONFIG=("2_2_3")
 #PEERS_CONFIG=("50_3_5")
 
 RUNTIME_PER_WORKLOAD=900 #seconds
 NR_OF_ITERATIONS_PER_WORKLOAD=3
 
-WORKLOAD_VAR_IO_SIZE=("4k" "128k")
+WORKLOAD_VAR_IO_SIZE=("4k" "64k" "128k")
 WORKLOAD_VAR_PARALELIZATION_LIMIT=("4k")
 WORKLOAD_VAR_LB_TYPE=("smart" "dynamic")
 WORKLOAD_VAR_CACHE=("cache_on" "cache_off");
@@ -260,6 +260,8 @@ for CONFIG_P in ${PEERS_CONFIG[@]}; do
                     
                     ansible-playbook deploy/5_shutdown_pods.yml -i deploy/hosts -v
 
+                    ansible-playbook deploy/clean_playbooks/clean_peer_db.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY" -i deploy/hosts -v
+
                     sleep 300
                                         
                 done
@@ -269,8 +271,6 @@ for CONFIG_P in ${PEERS_CONFIG[@]}; do
         done
         
     done
-
-    ansible-playbook deploy/clean_playbooks/clean_peer_db.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY" -i deploy/hosts -v
 
     sleep 300
 #------------------------------------------
