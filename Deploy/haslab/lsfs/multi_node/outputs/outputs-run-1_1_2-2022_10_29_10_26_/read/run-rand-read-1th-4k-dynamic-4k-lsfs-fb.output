@@ -1,0 +1,72 @@
+
+Run: #1,wl_name:rand-read-1th-4k-dynamic-4k,wl_path:shared_dir/workloads-filebench/read-data-micro/rand-read-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.003: fileset-1 populated: 1 files, avg. dir. width = 1, avg. dir. depth = -nan, 0 leafdirs, 1024.000MB total size
+0.004: Removing fileset-1 tree (if exists)
+0.044: Pre-allocating directories in fileset-1 tree
+0.074: Pre-allocating files in fileset-1 tree
+81.688: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+81.688: Population and pre-allocation of filesets completed
+82.901: Attempting to create fileset more than once, ignoring
+82.901: Starting 1 process-1 instances
+84.464: Running...
+984.543: Run took 900 seconds...
+984.543: Per-Operation Breakdown
+finish-1             0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close-1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read-1               1566127ops     1740ops/s   6.8mb/s    0.571ms/op [0.169ms - 22.389ms]
+open-1               1ops        0ops/s   0.0mb/s    9.078ms/op [9.078ms - 9.078ms]
+984.543: IO Summary: 1566128 ops 1739.991 ops/s 1740/0 rd/wr   6.8mb/s 0.571ms/op
+984.543: Shutting down processes
+
+Run: #2,wl_name:rand-read-1th-4k-dynamic-4k,wl_path:shared_dir/workloads-filebench/read-data-micro/rand-read-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.002: fileset-1 populated: 1 files, avg. dir. width = 1, avg. dir. depth = -nan, 0 leafdirs, 1024.000MB total size
+0.003: Removing fileset-1 tree (if exists)
+0.044: Pre-allocating directories in fileset-1 tree
+0.072: Pre-allocating files in fileset-1 tree
+83.152: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+83.152: Population and pre-allocation of filesets completed
+83.476: Attempting to create fileset more than once, ignoring
+83.476: Starting 1 process-1 instances
+85.662: Running...
+985.741: Run took 900 seconds...
+985.741: Per-Operation Breakdown
+finish-1             0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close-1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read-1               1772581ops     1969ops/s   7.7mb/s    0.505ms/op [0.168ms - 19.968ms]
+open-1               1ops        0ops/s   0.0mb/s   10.093ms/op [10.093ms - 10.093ms]
+985.741: IO Summary: 1772582 ops 1969.364 ops/s 1969/0 rd/wr   7.7mb/s 0.505ms/op
+985.741: Shutting down processes
+
+Run: #3,wl_name:rand-read-1th-4k-dynamic-4k,wl_path:shared_dir/workloads-filebench/read-data-micro/rand-read-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.003: fileset-1 populated: 1 files, avg. dir. width = 1, avg. dir. depth = -nan, 0 leafdirs, 1024.000MB total size
+0.004: Removing fileset-1 tree (if exists)
+0.118: Pre-allocating directories in fileset-1 tree
+0.147: Pre-allocating files in fileset-1 tree
+78.333: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+78.333: Population and pre-allocation of filesets completed
+78.630: Attempting to create fileset more than once, ignoring
+78.631: Starting 1 process-1 instances
+80.418: Running...
+980.498: Run took 900 seconds...
+980.498: Per-Operation Breakdown
+finish-1             0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close-1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+read-1               1698207ops     1887ops/s   7.4mb/s    0.527ms/op [0.169ms - 19.585ms]
+open-1               1ops        0ops/s   0.0mb/s   10.033ms/op [10.033ms - 10.033ms]
+980.498: IO Summary: 1698208 ops 1886.730 ops/s 1887/0 rd/wr   7.4mb/s 0.527ms/op
+980.498: Shutting down processes
