@@ -194,7 +194,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
         // It only make sense to query for the last known version of the key
         // to peers that belong to the same slice of the key
         
-        //if(this->store->get_slice_for_key(key) == this->store->get_slice()){
+        if(this->store->get_slice_for_key(key) == this->store->get_slice()){
             try {
                 if(get_data){
                     got_latest_version = this->store->get_latest_data_version(key, lastest_v, data_v);
@@ -216,7 +216,7 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
                 //LevelDBException
                 e.what();
             }
-        //}
+        }
 
         if(got_latest_version || got_latest_deleted_version){
             
