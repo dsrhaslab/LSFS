@@ -9,3 +9,6 @@
         key: "{{item}}" 
       with_file:
         - ~/.ssh/id_rsa.pub
+
+
+## Use --ask-pass flag since ssh keys are still not in machines 

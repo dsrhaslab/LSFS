@@ -4,10 +4,10 @@
   become: yes
 
   tasks:
-    #- name: System update
-    #  apt: 
-    #    upgrade: yes
-    #    update_cache: yes
+    # - name: System update
+    #   apt: 
+    #     upgrade: yes
+    #     update_cache: yes
 
     - name: Installing pre-requirements
       apt: 
@@ -51,37 +51,37 @@
 
 
 
-#  # Play2 - Kubernets setup installation
-# - name: Kubernetes setup
-#   hosts: all
-#   become: yes
+ # Play2 - Kubernets setup installation
+- name: Kubernetes setup
+  hosts: all
+  become: yes
 
-#   tasks:
-#     - name: Add apt_key
-#       apt_key: 
-#         url: https://packages.cloud.google.com/apt/doc/apt-key.gpg 
+  tasks:
+    - name: Add apt_key
+      apt_key: 
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg 
 
-#     - name: Add k8s repository
-#       apt_repository:
-#         repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+    - name: Add k8s repository
+      apt_repository:
+        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
 
-#     - name: k8s lists
-#       shell: | 
-#               ####### ALT:
-#               cat << EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
-#               deb https://apt.kubernetes.io/ kubernetes-xenial main
-#               EOF
+    - name: k8s lists
+      shell: | 
+              ####### ALT:
+              cat << EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
+              deb https://apt.kubernetes.io/ kubernetes-xenial main
+              EOF
 
-#     - name: Install k8s
-#       shell: | 
-#               sudo apt-get update
-#               sudo apt-get install -y kubeadm kubelet kubectl
-#               sudo apt-mark hold kubeadm kubelet kubectl
+    - name: Install k8s
+      shell: | 
+              sudo apt-get update
+              sudo apt-get install -y kubeadm kubelet kubectl
+              sudo apt-mark hold kubeadm kubelet kubectl
 
-#     - name: Disable swap
-#       shell: |
-#                sudo swapoff -a
-#                sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+    - name: Disable swap
+      shell: |
+               sudo swapoff -a
+               sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 
  # Play3 - Install ansible k8s pre-requirements
@@ -100,53 +100,70 @@
               sudo pip install openshift pyyaml kubernetes kubernetes-validate
 
 
-#  # Play4 - Kubernets master initialization
-# - name: Kubernetes init master
-#   hosts: masters
 
-#   tasks:
+ # Play4 - Kubernets master initialization
+ 
+ # For more informations regarding calico CNI visit this link:
+ #   https://projectcalico.docs.tigera.io/getting-started/kubernetes/quickstart
 
-#     - name: Init master kubeadm
-#       shell: |
-#               sudo kubeadm init --pod-network-cidr=10.244.0.0/16
-#       register: workers_join_cluster
-      
-#     - name: Debug init master node
-#       debug:
-#         var: workers_join_cluster
-#         verbosity: 2
+- name: Kubernetes init cluster
+  hosts: masters
 
-#     - name: Create a directory for the cluster
-#       shell: |
-#               mkdir -p .kube
-#               sudo cp -i /etc/kubernetes/admin.conf .kube/config
-#               sudo chown $(id -u):$(id -g) .kube/config
+  tasks:
 
-#     - name: Check Nodes
-#       shell: | 
-#               kubectl get nodes
-#       register: nodes_result
+    - name: Init cluster
+      shell: |
+              sudo kubeadm init --pod-network-cidr=10.244.0.0/16
 
-#     - name: Debug kubectl Nodes
-#       debug:
-#         var: nodes_result
-#         verbosity: 2 
 
-#     - name: Deploy Pod Network to Cluster
-#       shell: | 
-#               kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-#               kubectl get pods --all-namespaces
+    - name: Create a directory for the cluster
+      shell: |
+              mkdir -p .kube
+              sudo cp -i /etc/kubernetes/admin.conf .kube/config
+              sudo chown $(id -u):$(id -g) .kube/config
 
-#     - name: Check if Schedulerand Controller-panel if Healthy
-#       shell: | 
-#               kubectl get cs
-#       register: cs_result
+    - name: Generate join token
+      shell: |
+              sudo kubeadm token create --print-join-command
+      register: cluster_join_cmd
 
-#     - name: Debug kubectl cs
-#       debug:
-#         var: cs_result
-#         verbosity: 2 
+
+    - name: Run join command in workers
+      shell: |
+              sudo {{ cluster_join_cmd.stdout }}
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['workers'] }}"
+
     
+    - name: Wait until all worker nodes join
+      shell: |
+              kubectl wait --for=condition=Ready nodes --all --timeout=100s
+
+
+    - name: Put custom-resources config in host home directory
+      copy:
+        src: custom-resources.yaml
+        dest: "/home/{{ ansible_user }}/custom-resources.yaml"
+
+
+    - name: Deploy Pod Network to Cluster (CNI - Calico)
+      shell: | 
+              kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.3/manifests/tigera-operator.yaml
+              kubectl create -f custom-resources.yaml
+
+
+    - name: Wait unitl all system and calico pods are ready/running
+      shell: | 
+              kubectl wait --for=condition=Ready pods --all-namespaces --all --timeout=600s
+      register: cs_result
+ 
+      ## After this calico still isnt ready, wait a few seconds
+
+    - name: Allow master to run pods
+      shell: | 
+              kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master-
+    
+
  # Play5 - Install necessary packages
 - name: Installing packages
   hosts: all

@@ -34,7 +34,7 @@
     tasks:
       - name: Pause for 1 minutes before client enters
         pause:
-          seconds: 30
+          seconds: 60
 
 
   - name: Creation of client Pods

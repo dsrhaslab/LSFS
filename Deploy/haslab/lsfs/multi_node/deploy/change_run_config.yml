@@ -21,6 +21,11 @@
         shell: | 
                 sed -i "/refresh_cache_time.*/c\      refresh_cache_time: {{ cache_refresh }}" {{ remote_dir }}/conf.yaml
 
+      - name: Replacing anti_entropy interval
+        shell: | 
+                sed -i "/interval_sec.*/c\      interval_sec: {{ entropy_interval }}" {{ remote_dir }}/conf.yaml
+        when: entropy_interval is defined
+
 
       - name: Replacing limit paralelization
         shell: | 

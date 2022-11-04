@@ -9,12 +9,13 @@
                 kubectl exec -n lsfs peer{{ item }} -- bash /{{ container_com_directory }}/dstat/init_dstat.sh /{{ container_com_directory }}/metrics run-{{ wl_name }}-lsfs-peer{{ item }}.dstat.csv
         with_items:
           - "{{ range(1, nr_peers | int + 1) | list }}"
+        when: dstat_peer_config is defined
         
 
       - name: Start dstat in client pods
         shell: | 
                 kubectl exec -n lsfs client1 -- bash /{{ container_com_directory }}/dstat/init_dstat.sh /{{ container_com_directory }}/metrics run-{{ wl_name }}-lsfs-client1.dstat.csv
-        
+        when: dstat_client_config is defined
 
       - name: Start filebench workload on clients
         shell: | 
@@ -34,11 +35,13 @@
                 kubectl exec -n lsfs peer{{ item }} -- bash /{{ container_com_directory }}/dstat/stop_dstat.sh &> /dev/null
         with_items:
           - "{{ range(1, nr_peers | int + 1) | list }}"
+        when: dstat_peer_config is defined
 
 
       - name: Stop dstat in clients
         shell: | 
                 kubectl exec -n lsfs client1 -- bash /{{ container_com_directory }}/dstat/stop_dstat.sh &> /dev/null
+        when: dstat_client_config is defined
 
 
   # Play - Collecting filebench output
@@ -67,6 +70,7 @@
             fail_on_missing: no
           with_items:
             - "{{ range(1, nr_peers | int + 1) | list }}"
+          when: dstat_peer_config is defined
 
         - name: Copy client dstat output to local
           fetch:
@@ -74,3 +78,4 @@
             dest: ../{{ dstat_path }}/
             flat: yes
             fail_on_missing: no
+          when: dstat_client_config is defined

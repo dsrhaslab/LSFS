@@ -1,0 +1,12 @@
+
+Run: #1,wl_name:delete-1th-cache_on-1000,wl_path:shared_dir/workloads-filebench/metadata-micro/delete-1th.f,fs:lsfs
+
+
+
+Run: #2,wl_name:delete-1th-cache_on-1000,wl_path:shared_dir/workloads-filebench/metadata-micro/delete-1th.f,fs:lsfs
+
+
+
+Run: #3,wl_name:delete-1th-cache_on-1000,wl_path:shared_dir/workloads-filebench/metadata-micro/delete-1th.f,fs:lsfs
+
+
