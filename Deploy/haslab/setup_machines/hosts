@@ -1,5 +1,5 @@
 [masters]
-master1 ansible_host=cloud135
+master1 ansible_host=cloud139
 
 [workers]
 worker1 ansible_host=cloud111

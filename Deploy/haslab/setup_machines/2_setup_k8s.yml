@@ -13,3 +13,13 @@
         kind: Namespace
         state: present
 
+
+- name: Create base Directory
+  hosts: all
+
+  tasks:
+  
+    - name: Create lsfs directory
+      file:
+          path: "/home/{{ hosts_user }}/lsfs"
+          state: directory

@@ -803,7 +803,7 @@ long data_handler_listener::get_anti_entropy_req_count(){
 
 void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg) {
     const proto::anti_entropy_message& message = msg.anti_entropy_msg();
-    std::cout << "################### Got Anti-Entropy.... "<< std::endl;
+    //std::cout << "################### Got Anti-Entropy.... "<< std::endl;
     try {
         
         //Normal keys - which keys do i really need
@@ -835,10 +835,10 @@ void data_handler_listener::process_anti_entropy_message(proto::kv_message &msg)
             }
         }
         this->store->remove_from_map_existent_keys(keys_to_request);
-        std::cout << "################### Only need " << keys_to_request.size() << " normal keys." << std::endl;
+        //std::cout << "################### Only need " << keys_to_request.size() << " normal keys." << std::endl;
 
         this->store->remove_from_set_existent_deleted_keys(deleted_keys_to_request);
-        std::cout << "################### Only need " << deleted_keys_to_request.size() << " deleted keys." << std::endl;
+        //std::cout << "################### Only need " << deleted_keys_to_request.size() << " deleted keys." << std::endl;
 
         for (auto &[key_comp, size]: keys_to_request) {
             
@@ -940,7 +940,7 @@ void data_handler_listener::process_anti_entropy_get_message(proto::kv_message& 
 
                 build_anti_entropy_get_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, version, f_type, is_deleted, std::move(data));
 
-                std::cout << "################### Sending Get Reply Anti-entropy Message" << std::endl;
+                //std::cout << "################### Sending Get Reply Anti-entropy Message" << std::endl;
 
                 this->reply_client(reply_message, sender_ip, sender_port);
             }else{
@@ -1001,7 +1001,7 @@ void data_handler_listener::process_anti_entropy_get_metadata_message(proto::kv_
 
                 build_anti_entropy_get_metadata_reply_message(&reply_message, this->ip, this->kv_port, this->id, req_id, key, version, f_type, is_deleted, std::move(data));
 
-                std::cout << "################### Sending Get Metadata Reply Anti-entropy Message" << std::endl;
+                //std::cout << "################### Sending Get Metadata Reply Anti-entropy Message" << std::endl;
 
                 this->reply_client(reply_message, sender_ip, sender_port);
             }else{
@@ -1018,7 +1018,7 @@ void data_handler_listener::process_anti_entropy_get_reply_message(proto::kv_mes
     const proto::anti_entropy_get_reply_message& message = msg.anti_entropy_get_reply_msg();
     const std::string& key = message.key().key();
     
-    std::cout << "################### Got Reply Message for key: " << key << std::endl;
+    //std::cout << "################### Got Reply Message for key: " << key << std::endl;
 
     kv_store_version version;
     for (auto c : message.key().key_version().version())
@@ -1035,12 +1035,12 @@ void data_handler_listener::process_anti_entropy_get_reply_message(proto::kv_mes
 
     bool is_deleted = message.is_deleted();
 
-    std::cout << "################### Is key deleted:  "<< is_deleted << std::endl;
+    //std::cout << "################### Is key deleted:  "<< is_deleted << std::endl;
     
     kv_store_key<std::string> key_comp = {key, version, f_type, is_deleted};
     
     if(!is_deleted && !this->store->have_seen(key_comp)) {
-        std::cout << "################### Entered normal key zone" << std::endl;
+        //std::cout << "################### Entered normal key zone" << std::endl;
         try {
            
             bool stored = this->store->put(key_comp, data);
@@ -1048,7 +1048,7 @@ void data_handler_listener::process_anti_entropy_get_reply_message(proto::kv_mes
         } catch(std::exception& e){}
     }
     else if(is_deleted && !this->store->have_seen_deleted(key_comp)) {
-        std::cout << "################### Entered deleted key zone" << std::endl;
+        //std::cout << "################### Entered deleted key zone" << std::endl;
         try {
             bool stored = this->store->remove(key_comp);
         } catch(std::exception& e){}
@@ -1060,7 +1060,7 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
     const proto::anti_entropy_get_metadata_reply_message& message = msg.anti_entropy_get_met_reply_msg();
     const std::string& key = message.key().key();
     
-    std::cout << "################### Got Reply Message for Metadata key: " << key << std::endl;
+    //std::cout << "################### Got Reply Message for Metadata key: " << key << std::endl;
 
     kv_store_version version;
     for (auto c : message.key().key_version().version())
@@ -1080,7 +1080,7 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
     kv_store_key<std::string> key_comp = {key, version, f_type, is_deleted};
     
     if(!this->store->have_seen(key_comp) || !this->store->have_seen_deleted(key_comp)) {
-        std::cout << "################### Trying to incorporate blk" << std::endl;
+        //std::cout << "################### Trying to incorporate blk" << std::endl;
         try {
             std::string base_path;
             int res_1 = get_base_path(key, &base_path);
@@ -1097,7 +1097,7 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
                 if(size % BLK_SIZE > 0) NR_BLKS = NR_BLKS + 1;
                 bool have_all = this->store->check_if_have_all_blks_and_put_metadata(base_path, key_comp, NR_BLKS);
                 if(have_all){
-                    std::cout << "################### Have all the blks, incorporate in normal db" << std::endl;
+                    //std::cout << "################### Have all the blks, incorporate in normal db" << std::endl;
                     this->store->delete_metadata_from_tmp_anti_entropy(base_path, key_comp, NR_BLKS);
                 }
             }

@@ -14,7 +14,11 @@ spec:
       encapsulation: VXLANCrossSubnet
       natOutgoing: Enabled
       nodeSelector: all()
-
+    # Only needed if interface does not match default interface, in that case specify nertwork interface.
+    # Use ifconfig to know more.
+    nodeAddressAutodetectionV4:
+      firstFound: False
+      interface: enp1s0
 ---
 
 # This section configures the Calico API server.

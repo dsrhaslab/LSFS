@@ -10,7 +10,7 @@ set $MEAN_APPEND_SIZE=16k
 
 # ------------------------------------------------------#
 
-define fileset name=bigfileset,path=$WORKLOAD_PATH,size=$FILE_SIZE,entries=$NR_FILES,dirwidth=$MEAN_DIR_WIDTH,prealloc=80
+define fileset name=bigfileset,path=$WORKLOAD_PATH,size=$FILE_SIZE,entries=$NR_FILES,dirwidth=$MEAN_DIR_WIDTH,prealloc=80,reuse
 
 define process name=filereader,instances=1
 {

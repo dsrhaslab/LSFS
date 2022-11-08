@@ -7,14 +7,14 @@ std::shared_ptr<peer> g_peer_impl;
 peer::peer(long id, std::string ip, std::string boot_ip, int kv_port, int pss_port, int recover_port, double position, long pss_boot_time, int pss_view_size, int pss_sleep_interval, int pss_gossip_size, bool view_logger_enabled,
         int logging_interval, int anti_entropy_interval, std::string logging_dir, std::string database_dir, int rep_max, int rep_min, int max_age, bool local_message, int local_interval,
         float reply_chance, bool smart, bool mt_data_handler, std::shared_ptr<spdlog::logger> logger, long seen_log_garbage_at, long request_log_garbage_at, long anti_entropy_log_garbage_at, bool recover_database, 
-        int anti_entropy_max_keys_to_send_percentage)
+        int anti_entropy_max_keys_to_send_percentage, int anti_entropy_total_packet_size_percentage)
     :   id(id), ip(ip), data_port(data_port), position(position),rep_min(rep_min), rep_max(rep_max), max_age(max_age), local_message(local_message), logger(logger),
         view_logger_enabled(view_logger_enabled), local_interval(local_interval), reply_chance(reply_chance),
         store(std::make_shared<kv_store_leveldb>(merge_metadata, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at, anti_entropy_max_keys_to_send_percentage)),
         group_c(ip, kv_port, pss_port, recover_port, id, position, rep_min, rep_max, max_age, local_message, local_interval, this->store, logger),
         cyclon(boot_ip.c_str(), ip, kv_port, pss_port, recover_port, id, position,pss_boot_time, pss_view_size, pss_sleep_interval, pss_gossip_size, &(this->group_c)),
         listener(&(this->cyclon)),
-        anti_ent(ip, kv_port, recover_port, id, position, &(this->cyclon), &(this->group_c),this->store, anti_entropy_interval, recover_database),
+        anti_ent(ip, kv_port, recover_port, id, position, &(this->cyclon), &(this->group_c),this->store, anti_entropy_interval, recover_database, anti_entropy_total_packet_size_percentage),
         v_logger(id, &(this->cyclon), &(this->anti_ent), logging_interval, logging_dir)
         
 {
@@ -215,7 +215,8 @@ int main(int argc, char* argv []){
     int warmup_interval = peer_c["warmup_interval"].as<int>();
     bool restart_database_after_warmup = peer_c["restart_database_after_warmup"].as<bool>();
 
-    int anti_entropy_interval = anti_entropy["interval_sec"].as<int>();
+    int anti_entropy_interval = anti_entropy["dissemination_interval_sec"].as<int>();
+    int anti_entropy_total_packet_size_percentage = anti_entropy["dissemination_total_packet_size_percentage"].as<int>();
     int anti_entropy_max_keys_to_send_percentage = anti_entropy["max_keys_to_send_percentage"].as<int>();
 
     std::string ip;
@@ -268,7 +269,7 @@ int main(int argc, char* argv []){
 
     g_peer_impl = std::make_shared<peer>(id, ip, boot_ip, kv_port, pss_port, recover_port, pos, boot_time,view_size,sleep_interval,gossip_size, view_logger_enabled, logging_interval, anti_entropy_interval, logging_dir,
             database_dir, rep_max, rep_min, max_age, local_message, local_interval, reply_chance, smart, mt_data_handler, logger, seen_log_garbage_at, request_log_garbage_at, anti_entropy_log_garbage_at, recover_database,
-            anti_entropy_max_keys_to_send_percentage);
+            anti_entropy_max_keys_to_send_percentage, anti_entropy_total_packet_size_percentage);
     g_peer_impl->start(warmup_interval, restart_database_after_warmup);
     g_peer_impl->join();
 }

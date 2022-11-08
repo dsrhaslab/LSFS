@@ -3,7 +3,7 @@ main_confs:
   peer:
     log_level: off
     mt_data_handler: true
-    warmup_interval: 20
+    warmup_interval: 120
     restart_database_after_warmup: true
     reply_chance: 1
     smart_message_forward: true
@@ -17,8 +17,8 @@ main_confs:
       max_keys_to_send_percentage: 20
 
   group_construction:
-    rep_max: 1
-    rep_min: 1
+    rep_max: 5
+    rep_min: 3
     max_age: 30
 
   pss:
