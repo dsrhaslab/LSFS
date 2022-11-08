@@ -1,53 +1,59 @@
- # Play1 - Docker setup installation
-- name: Docker setup
-  hosts: all
-  become: yes
+#  # Play1 - Docker setup installation
+# - name: Docker setup
+#   hosts: all
+#   become: yes
 
-  tasks:
-    #- name: System update
-    #  apt: 
-    #    upgrade: yes
-    #    update_cache: yes
+#   tasks:
+#     - name: System update
+#       apt: 
+#         upgrade: yes
+#         update_cache: yes
 
-    - name: Installing pre-requirements
-      apt: 
-        pkg: 
-          - ca-certificates 
-          - curl 
-          - gnupg 
-          - lsb-release
-        state: latest
+#     - name: Installing pre-requirements
+#       apt: 
+#         pkg: 
+#           - ca-certificates 
+#           - curl 
+#           - gnupg 
+#           - lsb-release
+#         state: latest
 
-    - name: Add docker signing key
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
+#     - name: Add docker signing key
+#       apt_key:
+#         url: https://download.docker.com/linux/ubuntu/gpg
+#         state: present
 
-    - name: Add docker repository
-      apt_repository:
-        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
-        state: present
+#     - name: Add docker repository
+#       apt_repository:
+#         repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+#         state: present
 
-    - name: Install docker
-      apt:
-        name: 
-          - docker
-          - docker.io
-          - docker-compose
-          - docker-registry
-        state: latest
-        update_cache: true
+#     # - name: Add docker repository
+#     #   shell: | 
+#     #           echo \
+#     #           "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+#     #           $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-    - name: Change docker cgroup
-      become_method: sudo
-      become_flags: 'su -c'
-      shell: |
-              echo '{"exec-opts": ["native.cgroupdriver=systemd"]}' > /etc/docker/daemon.json
+#     - name: Install docker
+#       apt:
+#         name: 
+#           - docker
+#           - docker.io
+#           - docker-compose
+#           - docker-registry
+#         state: latest
+#         update_cache: true
 
-    - name: Restart docker daemon
-      systemd:
-        name: docker
-        state: restarted
+#     - name: Change docker cgroup
+#       become_method: sudo
+#       become_flags: 'su -c'
+#       shell: |
+#               echo '{"exec-opts": ["native.cgroupdriver=systemd"]}' > /etc/docker/daemon.json
+
+#     - name: Restart docker daemon
+#       systemd:
+#         name: docker
+#         state: restarted
 
 
 
@@ -84,69 +90,84 @@
 #                sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 
- # Play3 - Install ansible k8s pre-requirements
-- name: Installing pre-requirements
-  hosts: masters
-  become: yes
+#  # Play3 - Install ansible k8s pre-requirements
+# - name: Installing pre-requirements
+#   hosts: masters
+#   become: yes
 
-  tasks:
+#   tasks:
 
-    - name: Install Python
-      shell: |
-              sudo apt install -y python3-pip
+#     - name: Install Python
+#       shell: |
+#               sudo apt install -y python3-pip
 
-    - name: Install required Python modules
-      shell: |
-              sudo pip install openshift pyyaml kubernetes kubernetes-validate
+#     - name: Install required Python modules
+#       shell: |
+#               sudo pip install openshift pyyaml kubernetes kubernetes-validate
 
 
-#  # Play4 - Kubernets master initialization
-# - name: Kubernetes init master
+
+ # Play4 - Kubernets master initialization
+ 
+ # For more informations regarding calico CNI visit this link:
+ #   https://projectcalico.docs.tigera.io/getting-started/kubernetes/quickstart
+
+# - name: Kubernetes init cluster
 #   hosts: masters
 
 #   tasks:
 
-#     - name: Init master kubeadm
-#       shell: |
-#               sudo kubeadm init --pod-network-cidr=10.244.0.0/16
-#       register: workers_join_cluster
-      
-#     - name: Debug init master node
-#       debug:
-#         var: workers_join_cluster
-#         verbosity: 2
+    # - name: Init cluster
+    #   shell: |
+    #           sudo kubeadm init --pod-network-cidr=10.244.0.0/16
 
-#     - name: Create a directory for the cluster
-#       shell: |
-#               mkdir -p .kube
-#               sudo cp -i /etc/kubernetes/admin.conf .kube/config
-#               sudo chown $(id -u):$(id -g) .kube/config
 
-#     - name: Check Nodes
-#       shell: | 
-#               kubectl get nodes
-#       register: nodes_result
+    # - name: Create a directory for the cluster
+    #   shell: |
+    #           mkdir -p .kube
+    #           sudo cp -i /etc/kubernetes/admin.conf .kube/config
+    #           sudo chown $(id -u):$(id -g) .kube/config
 
-#     - name: Debug kubectl Nodes
-#       debug:
-#         var: nodes_result
-#         verbosity: 2 
+    # - name: Generate join token
+    #   shell: |
+    #           sudo kubeadm token create --print-join-command
+    #   register: cluster_join_cmd
 
-#     - name: Deploy Pod Network to Cluster
-#       shell: | 
-#               kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-#               kubectl get pods --all-namespaces
 
-#     - name: Check if Schedulerand Controller-panel if Healthy
-#       shell: | 
-#               kubectl get cs
-#       register: cs_result
+    # - name: Run join command in workers
+    #   shell: |
+    #           sudo {{ cluster_join_cmd.stdout }}
+    #   delegate_to: "{{ item }}"
+    #   with_items: "{{ groups['workers'] }}"
 
-#     - name: Debug kubectl cs
-#       debug:
-#         var: cs_result
-#         verbosity: 2 
+  
+
+    # - name: Put custom-resources config in host home directory
+    #   copy:
+    #     src: custom-resources.yaml
+    #     dest: "/home/{{ ansible_user }}/custom-resources.yaml"
+
+
+    # - name: Deploy Pod Network to Cluster (CNI - Calico)
+    #   shell: | 
+    #           kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.3/manifests/tigera-operator.yaml
+    #           kubectl create -f custom-resources.yaml
+
+
+    # - name: Wait unitl all system and calico pods are ready/running
+    #   shell: | 
+    #           kubectl wait --for=condition=Ready pods --all-namespaces --all --timeout=600s
+    #   register: cs_result
+ 
+      ## After this calico still isnt ready, wait a few seconds
+
+    # - name: Allow master to run pods
+    #   shell: | 
+    #           kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master-
+
     
+    
+
  # Play5 - Install necessary packages
 - name: Installing packages
   hosts: all

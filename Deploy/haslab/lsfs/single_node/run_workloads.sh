@@ -77,82 +77,80 @@ ansible-playbook deploy/1_setup_deploy.yml -e "remote_com_directory=$REMOTE_COM_
 
 sleep 60
 
-WORKLOAD_TYPE=write
+
 OUTPUT_PATH="outputs-run-$(date +"%Y_%m_%d_%I_%M_%p")"
-
-LOAD_BALANCER=dynamic
-USE_CACHE=False
-CACHE_REFRESH=1000
-
-mkdir -p $LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE
 
 mkdir -p $LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$LOCAL_DSTAT_OUTPUT_PATH
 
 for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
 
-    for WL_PATH in $(find $LOCAL_WORKLOADS_WRITE_PATH -maxdepth 2 -type f -printf "%p\n"); do
+    # WORKLOAD_TYPE=write
 
-        wl_file=$(basename $WL_PATH)
-        wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
-        wl_remote_path=$REMOTE_WORKLOADS_WRITE_PATH/$wl_file
-        wl_container_path=$CONTAINER_WORKLOADS_WRITE_PATH/$wl_file
+    # LOAD_BALANCER=dynamic
+    # USE_CACHE=False
+    # CACHE_REFRESH=1000
 
-        for WL_CONF_IO in ${WORKLOAD_VAR_IO_SIZE[@]}; do
+    # mkdir -p $LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE
 
-            if [ "$WL_CONF_IO" = "4k" ]; then
-                NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT=("4k")
-            else
-                NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT=( ${WORKLOAD_VAR_PARALELIZATION_LIMIT[@]} )
-            fi
+    # for WL_PATH in $(find $LOCAL_WORKLOADS_WRITE_PATH -maxdepth 2 -type f -printf "%p\n"); do
 
-            for WL_CONF_PARAL_LIMIT in ${NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT[@]}; do
+    #     wl_file=$(basename $WL_PATH)
+    #     wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
+    #     wl_remote_path=$REMOTE_WORKLOADS_WRITE_PATH/$wl_file
+    #     wl_container_path=$CONTAINER_WORKLOADS_WRITE_PATH/$wl_file
 
-                ansible-playbook deploy/change_run_config.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY load_balancer=$LOAD_BALANCER use_cache=$USE_CACHE cache_refresh=$CACHE_REFRESH paralelization=$WL_CONF_PARAL_LIMIT wl_conf_io=$WL_CONF_IO wl_path=$wl_remote_path" -i $ANSIBLE_HOSTS_PATH -v
+    #     for WL_CONF_IO in ${WORKLOAD_VAR_IO_SIZE[@]}; do
+
+    #         if [ "$WL_CONF_IO" = "4k" ]; then
+    #             NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT=("4k")
+    #         else
+    #             NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT=( ${WORKLOAD_VAR_PARALELIZATION_LIMIT[@]} )
+    #         fi
+
+    #         for WL_CONF_PARAL_LIMIT in ${NEW_WORKLOAD_VAR_PARALELIZATION_LIMIT[@]}; do
+
+    #             ansible-playbook deploy/change_run_config.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY load_balancer=$LOAD_BALANCER use_cache=$USE_CACHE cache_refresh=$CACHE_REFRESH paralelization=$WL_CONF_PARAL_LIMIT wl_conf_io=$WL_CONF_IO wl_path=$wl_remote_path" -i $ANSIBLE_HOSTS_PATH -v
             
-                WL_CONF_NAME="$wl_name-$WL_CONF_IO-$LOAD_BALANCER-$WL_CONF_PARAL_LIMIT"
+    #             WL_CONF_NAME="$wl_name-$WL_CONF_IO-$LOAD_BALANCER-$WL_CONF_PARAL_LIMIT"
 
-                OUTPUT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE/run-$WL_CONF_NAME-lsfs-fb.output
-                DSTAT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$LOCAL_DSTAT_OUTPUT_PATH/run-$WL_CONF_NAME-lsfs
+    #             OUTPUT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE/run-$WL_CONF_NAME-lsfs-fb.output
+    #             DSTAT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$LOCAL_DSTAT_OUTPUT_PATH/run-$WL_CONF_NAME-lsfs
 
-                mkdir -p $DSTAT_FILE_PATH
+    #             mkdir -p $DSTAT_FILE_PATH
         
-                touch $OUTPUT_FILE_PATH
+    #             touch $OUTPUT_FILE_PATH
 
-                sleep 300
+    #             sleep 300
 
-                ansible-playbook deploy/2_container_deploy.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY image_name=$IMAGE_NAME" -i $ANSIBLE_HOSTS_PATH -v
+    #             ansible-playbook deploy/2_container_deploy.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY image_name=$IMAGE_NAME" -i $ANSIBLE_HOSTS_PATH -v
 
-                sleep 60
+    #             sleep 60
 
-                echo -e "\nRun: #$RUN_ITER,wl_name:$WL_CONF_NAME,wl_path:$wl_container_path,fs:lsfs\n\n" >> $OUTPUT_FILE_PATH
+    #             echo -e "\nRun: #$RUN_ITER,wl_name:$WL_CONF_NAME,wl_path:$wl_container_path,fs:lsfs\n\n" >> $OUTPUT_FILE_PATH
 
-                ansible-playbook deploy/3_run_workload.yml -e "container_com_directory=$CONTAINER_COM_DIRECTORY remote_com_directory=$REMOTE_COM_DIRECTORY wl_name=$WL_CONF_NAME wl_path=$wl_container_path output_path=$OUTPUT_FILE_PATH dstat_path=$DSTAT_FILE_PATH" -i $ANSIBLE_HOSTS_PATH -v
+    #             ansible-playbook deploy/3_run_workload.yml -e "container_com_directory=$CONTAINER_COM_DIRECTORY remote_com_directory=$REMOTE_COM_DIRECTORY wl_name=$WL_CONF_NAME wl_path=$wl_container_path output_path=$OUTPUT_FILE_PATH dstat_path=$DSTAT_FILE_PATH" -i $ANSIBLE_HOSTS_PATH -v
 
-                ansible-playbook deploy/4_shutdown_container.yml -i $ANSIBLE_HOSTS_PATH -v
+    #             ansible-playbook deploy/4_shutdown_container.yml -i $ANSIBLE_HOSTS_PATH -v
 
-                ansible-playbook deploy/clean_peer_db.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY" -i $ANSIBLE_HOSTS_PATH -v
+    #             ansible-playbook deploy/clean_peer_db.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY" -i $ANSIBLE_HOSTS_PATH -v
                             
-            done
+    #         done
             
-        done
+    #     done
 
-    done
-
-done
+    # done
 
 #------------------------------------------
 
 # Run read workloads
 
-WORKLOAD_TYPE=read
+    WORKLOAD_TYPE=read
 
-LOAD_BALANCER=dynamic
-USE_CACHE=False
-CACHE_REFRESH=1000
+    LOAD_BALANCER=dynamic
+    USE_CACHE=False
+    CACHE_REFRESH=1000
 
-mkdir -p $LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE
-
-for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
+    mkdir -p $LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE
 
     for WL_PATH in $(find $LOCAL_WORKLOADS_READ_PATH -maxdepth 2 -type f -printf "%p\n"); do
 
@@ -160,6 +158,7 @@ for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
         wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
         wl_remote_path=$REMOTE_WORKLOADS_READ_PATH/$wl_file
         wl_container_path=$CONTAINER_WORKLOADS_READ_PATH/$wl_file
+        if [ "$wl_name" = "rand-read-1th" ]; then
 
         for WL_CONF_IO in ${WORKLOAD_VAR_IO_SIZE[@]}; do
 
@@ -200,77 +199,75 @@ for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
                         
         done
 
-    done
+        fi
 
-done
+    done
 
 #------------------------------------------
 
 # Run metadata workloads
 
-WORKLOAD_TYPE=metadata
+    # WORKLOAD_TYPE=metadata
 
-LOAD_BALANCER=dynamic
+    # LOAD_BALANCER=dynamic
 
-WL_CONF_PARAL_LIMIT="4k"
-WL_CONF_IO="4k"
+    # WL_CONF_PARAL_LIMIT="4k"
+    # WL_CONF_IO="4k"
 
-mkdir -p $LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE
+    # mkdir -p $LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE
 
-for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
+    # for WL_PATH in $(find $LOCAL_WORKLOADS_METADATA_PATH -maxdepth 2 -type f -printf "%p\n"); do
 
-    for WL_PATH in $(find $LOCAL_WORKLOADS_METADATA_PATH -maxdepth 2 -type f -printf "%p\n"); do
+    #     wl_file=$(basename $WL_PATH)
+    #     wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
+    #     wl_remote_path=$REMOTE_WORKLOADS_METADATA_PATH/$wl_file
+    #     wl_container_path=$CONTAINER_WORKLOADS_METADATA_PATH/$wl_file
 
-        wl_file=$(basename $WL_PATH)
-        wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
-        wl_remote_path=$REMOTE_WORKLOADS_METADATA_PATH/$wl_file
-        wl_container_path=$CONTAINER_WORKLOADS_METADATA_PATH/$wl_file
+    #     for CACHE_CONF in ${WORKLOAD_VAR_CACHE[@]}; do
 
-        for CACHE_CONF in ${WORKLOAD_VAR_CACHE[@]}; do
+    #         if [ "$CACHE_CONF" = "cache_off" ]; then
+    #             NEW_CACHE_REFRESH=("1000")
+    #             USE_CACHE=False
+    #         else
+    #             NEW_CACHE_REFRESH=( ${WORKLOAD_VAR_CACHE_REFRESH_TIME[@]} )
+    #             USE_CACHE=true
+    #         fi
 
-            if [ "$CACHE_CONF" = "cache_off" ]; then
-                NEW_CACHE_REFRESH=("1000")
-                USE_CACHE=False
-            else
-                NEW_CACHE_REFRESH=( ${WORKLOAD_VAR_CACHE_REFRESH_TIME[@]} )
-                USE_CACHE=true
-            fi
+    #         for REFRESH_CONF in ${NEW_CACHE_REFRESH[@]}; do
 
-            for REFRESH_CONF in ${NEW_CACHE_REFRESH[@]}; do
-
-                ansible-playbook deploy/change_run_config.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY load_balancer=$LOAD_BALANCER use_cache=$USE_CACHE cache_refresh=$REFRESH_CONF paralelization=$WL_CONF_PARAL_LIMIT wl_conf_io=$WL_CONF_IO wl_path=$wl_remote_path" -i $ANSIBLE_HOSTS_PATH -v
+    #             ansible-playbook deploy/change_run_config.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY load_balancer=$LOAD_BALANCER use_cache=$USE_CACHE cache_refresh=$REFRESH_CONF paralelization=$WL_CONF_PARAL_LIMIT wl_conf_io=$WL_CONF_IO wl_path=$wl_remote_path" -i $ANSIBLE_HOSTS_PATH -v
             
-                if [ "$USE_CACHE" = "False" ]; then
-                    WL_CONF_NAME="$wl_name-$CACHE_CONF"
-                else 
-                    WL_CONF_NAME="$wl_name-$CACHE_CONF-$REFRESH_CONF"
-                fi
+    #             if [ "$USE_CACHE" = "False" ]; then
+    #                 WL_CONF_NAME="$wl_name-$CACHE_CONF"
+    #             else 
+    #                 WL_CONF_NAME="$wl_name-$CACHE_CONF-$REFRESH_CONF"
+    #             fi
 
-                OUTPUT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE/run-$WL_CONF_NAME-lsfs-fb.output
-                DSTAT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$LOCAL_DSTAT_OUTPUT_PATH/run-$WL_CONF_NAME-lsfs
+    #             OUTPUT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE/run-$WL_CONF_NAME-lsfs-fb.output
+    #             DSTAT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$LOCAL_DSTAT_OUTPUT_PATH/run-$WL_CONF_NAME-lsfs
 
-                mkdir -p $DSTAT_FILE_PATH
+    #             mkdir -p $DSTAT_FILE_PATH
 
-                touch $OUTPUT_FILE_PATH
+    #             touch $OUTPUT_FILE_PATH
 
-                sleep 300
+    #             sleep 300
 
-                ansible-playbook deploy/2_container_deploy.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY image_name=$IMAGE_NAME" -i $ANSIBLE_HOSTS_PATH -v
+    #             ansible-playbook deploy/2_container_deploy.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY image_name=$IMAGE_NAME" -i $ANSIBLE_HOSTS_PATH -v
 
-                sleep 60
+    #             sleep 60
 
-                echo -e "\nRun: #$RUN_ITER,wl_name:$WL_CONF_NAME,wl_path:$wl_container_path,fs:lsfs\n\n" >> $OUTPUT_FILE_PATH
+    #             echo -e "\nRun: #$RUN_ITER,wl_name:$WL_CONF_NAME,wl_path:$wl_container_path,fs:lsfs\n\n" >> $OUTPUT_FILE_PATH
 
-                ansible-playbook deploy/3_run_workload.yml -e "container_com_directory=$CONTAINER_COM_DIRECTORY remote_com_directory=$REMOTE_COM_DIRECTORY wl_name=$WL_CONF_NAME wl_path=$wl_container_path output_path=$OUTPUT_FILE_PATH dstat_path=$DSTAT_FILE_PATH" -i $ANSIBLE_HOSTS_PATH -v
+    #             ansible-playbook deploy/3_run_workload.yml -e "container_com_directory=$CONTAINER_COM_DIRECTORY remote_com_directory=$REMOTE_COM_DIRECTORY wl_name=$WL_CONF_NAME wl_path=$wl_container_path output_path=$OUTPUT_FILE_PATH dstat_path=$DSTAT_FILE_PATH" -i $ANSIBLE_HOSTS_PATH -v
             
-                ansible-playbook deploy/4_shutdown_container.yml -i $ANSIBLE_HOSTS_PATH -v
+    #             ansible-playbook deploy/4_shutdown_container.yml -i $ANSIBLE_HOSTS_PATH -v
 
-                ansible-playbook deploy/clean_peer_db.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY" -i $ANSIBLE_HOSTS_PATH -v
+    #             ansible-playbook deploy/clean_peer_db.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY" -i $ANSIBLE_HOSTS_PATH -v
                                     
-            done
+    #         done
         
-        done
+    #     done
 
-    done
+    # done
     
 done

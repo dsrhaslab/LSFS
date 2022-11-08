@@ -11,6 +11,8 @@ spec:
     image: brancc0cdocker/lsfs-bootstrapper
     command: ["./build/bootstrapper_exe"]
     args: ["/shared_dir/conf.yaml"]
+    ports: 
+    - containerPort: 12345
     volumeMounts:
     - mountPath: /shared_dir
       name: mount-volume
@@ -18,6 +20,4 @@ spec:
   - hostPath:
       path: {{ mount_dir }}
     name: mount-volume
-  ports: 
-    - containerPort: 12345
-  nodeName: cloud112
+  nodeName: cloud139

@@ -1,9 +1,11 @@
 #include "anti_entropy.h"
 
 anti_entropy::anti_entropy(std::string ip, int kv_port, int recover_port, long id, double pos, pss *pss_ptr, group_construction* group_c,
-        std::shared_ptr<kv_store<std::string>> store, long sleep_interval, bool recover_database): ip(std::move(ip)), kv_port(kv_port), recover_port(recover_port), id(id), pos(pos),
+        std::shared_ptr<kv_store<std::string>> store, long sleep_interval, bool recover_database, int total_packet_size_percentage):
+        ip(std::move(ip)), kv_port(kv_port), recover_port(recover_port), id(id), pos(pos),
         store(std::move(store)), sleep_interval(sleep_interval), sender_socket(socket(PF_INET, SOCK_DGRAM, 0)),
-        phase(anti_entropy::Phase::Starting), pss_ptr(pss_ptr), group_c(group_c), recover_database(recover_database)
+        phase(anti_entropy::Phase::Starting), pss_ptr(pss_ptr), group_c(group_c), recover_database(recover_database),
+        total_packet_size_percentage(total_packet_size_percentage)
 {}
 
 void anti_entropy::send_peer_keys(std::vector<peer_data>& target_peers, proto::kv_message &msg){
@@ -189,9 +191,22 @@ void anti_entropy::phase_operating(){
         std::unordered_set<kv_store_key<std::string>> deleted_keys = this->store->get_deleted_keys();
         auto it_deleted = deleted_keys.begin();
 
+        int total_keys_to_send = deleted_keys.size() + main_keys.size();
+        float percentage_of_deleted_keys_to_send = 0;
+        float percentage_of_main_keys_to_send = 0;
+
+        if(!deleted_keys.empty()) percentage_of_deleted_keys_to_send = (deleted_keys.size() * 100) / total_keys_to_send;
+        if(!main_keys.empty()) percentage_of_main_keys_to_send = (main_keys.size() * 100) / total_keys_to_send;
+
+
         while(it_main != main_keys.end() || it_deleted != deleted_keys.end()){
 
-            int total_size = 60096;
+            int total_size = (64507 * total_packet_size_percentage)/ 100; //Percentage of udp packet max size 
+
+            if(total_size > 64507) total_size = 64507; //this number is lower than the max to be able to store the other parameters of the message.
+
+            int main_keys_size_to_send = total_size - ((percentage_of_main_keys_to_send * total_size) / 100);
+            int deleted_keys_size_to_send = total_size - ((percentage_of_deleted_keys_to_send * total_size) / 100);
             
             proto::kv_message message;
             message.set_forwarded_within_group(false);
@@ -200,7 +215,7 @@ void anti_entropy::phase_operating(){
             message_content->set_port(this->kv_port);
             message_content->set_id(this->id);
             
-            while(total_size >= 4096 && it_main != main_keys.end()){
+            while(total_size >= main_keys_size_to_send && it_main != main_keys.end()){
 
                 auto& key_comp = it_main->first;
                 auto& size = it_main->second;

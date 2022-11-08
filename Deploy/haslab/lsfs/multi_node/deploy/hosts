@@ -1,8 +1,11 @@
 [masters]
-master1 ansible_host=cloud112
+master1 ansible_host=cloud139
 
 [workers]
 worker1 ansible_host=cloud111
+worker2 ansible_host=cloud112
+worker3 ansible_host=cloud120
+worker4 ansible_host=cloud127
 
 
 [all:vars]

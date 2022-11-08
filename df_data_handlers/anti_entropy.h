@@ -39,13 +39,14 @@ private:
     long id;
     double pos;
     bool recover_database;
+    int total_packet_size_percentage;
 
     std::mutex phase_mutex;
     std::condition_variable phase_cv;
     Phase phase;
 
 public:
-    anti_entropy(std::string ip, int kv_port, int recover_port, long id, double pos, pss *pss_ptr, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, long sleep_interval, bool recover_database);
+    anti_entropy(std::string ip, int kv_port, int recover_port, long id, double pos, pss *pss_ptr, group_construction* group_c, std::shared_ptr<kv_store<std::string>> store, long sleep_interval, bool recover_database, int total_packet_size_percentage);
     void operator()();
     void stop_thread();
     void wait_while_recovering();

@@ -11,6 +11,9 @@ spec:
     image: brancc0cdocker/lsfs-client
     command: ["./build/lsfs_exe"]
     args: ["{{ bootstrapper_ip }}", "{{ item }}", "/shared_dir/conf.yaml", "client{{ item }}", "/test_filesystem/InnerFolder", "/test_filesystem/InnerFolder2"]
+    ports: 
+    - containerPort: 12357
+    - containerPort: 12358
     securityContext:                                                                                      
       privileged: true
     volumeMounts:
@@ -21,7 +24,4 @@ spec:
   - hostPath:
       path: {{ mount_dir }}
     name: mount-volume
-  ports: 
-    - containerPort: 12357
-    - containerPort: 12358
-  nodeName: cloud112
+  nodeName: cloud139
