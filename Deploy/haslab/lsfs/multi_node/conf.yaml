@@ -13,8 +13,9 @@ main_confs:
     database:
       base_path: /shared_dir/
     anti_entropy:
-      interval_sec: 3660
-      max_keys_to_send_percentage: 20
+      dissemination_interval_sec: 3600
+      dissemination_total_packet_size_percentage: 10 # 4k = 7%-6%
+      max_keys_to_send_percentage: 50
 
   group_construction:
     rep_max: 5

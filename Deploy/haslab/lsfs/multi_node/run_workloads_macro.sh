@@ -71,8 +71,8 @@ NR_OF_ITERATIONS_PER_WORKLOAD=3
 
 WORKLOAD_VAR_IO_SIZE=("4k")
 WORKLOAD_VAR_PARALELIZATION_LIMIT=("4k")
-WORKLOAD_VAR_LB_TYPE=("smart" "dynamic")
-#WORKLOAD_VAR_LB_TYPE=("dynamic")
+#WORKLOAD_VAR_LB_TYPE=("smart" "dynamic")
+WORKLOAD_VAR_LB_TYPE=("dynamic")
 WORKLOAD_VAR_CACHE=("cache_on" "cache_off");
 WORKLOAD_VAR_CACHE_REFRESH_TIME=("1000")
 WORKLOAD_VAR_ANTI_ENTROPY_INTERVAL=("30" "60" "300")
@@ -153,35 +153,35 @@ for CONFIG_P in ${PEERS_CONFIG[@]}; do
         wl_remote_path=$REMOTE_WORKLOADS_MACRO_PATH/$wl_file
         wl_container_path=$CONTAINER_WORKLOADS_MACRO_PATH/$wl_file
 
-        # for LB_TYPE in ${WORKLOAD_VAR_LB_TYPE[@]}; do
+        for LB_TYPE in ${WORKLOAD_VAR_LB_TYPE[@]}; do
 
-        #         ansible-playbook deploy/change_run_config.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY load_balancer=$LB_TYPE nr_puts_req=$NR_PUTS_REQUIRED nr_gets_req=$NR_GETS_REQUIRED nr_gets_vrs_req=$NR_GETS_VERSION_REQUIRED use_cache=$USE_CACHE cache_refresh=$CACHE_REFRESH paralelization=$WL_CONF_PARAL_LIMIT wl_conf_io=$WL_CONF_IO wl_path=$wl_remote_path" -i deploy/hosts -v
+                ansible-playbook deploy/change_run_config.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY load_balancer=$LB_TYPE nr_puts_req=$NR_PUTS_REQUIRED nr_gets_req=$NR_GETS_REQUIRED nr_gets_vrs_req=$NR_GETS_VERSION_REQUIRED use_cache=$USE_CACHE cache_refresh=$CACHE_REFRESH paralelization=$WL_CONF_PARAL_LIMIT wl_conf_io=$WL_CONF_IO wl_path=$wl_remote_path" -i deploy/hosts -v
                 
-        #         WL_CONF_NAME="$wl_name-$LB_TYPE"
+                WL_CONF_NAME="$wl_name-$LB_TYPE"
 
-        #         OUTPUT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE/run-$WL_CONF_NAME-lsfs-fb.output
-        #         DSTAT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$LOCAL_DSTAT_OUTPUT_PATH/run-$WL_CONF_NAME-lsfs
+                OUTPUT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE/run-$WL_CONF_NAME-lsfs-fb.output
+                DSTAT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$LOCAL_DSTAT_OUTPUT_PATH/run-$WL_CONF_NAME-lsfs
 
-        #         mkdir -p $DSTAT_FILE_PATH
+                mkdir -p $DSTAT_FILE_PATH
     
-        #         touch $OUTPUT_FILE_PATH
+                touch $OUTPUT_FILE_PATH
 
-        #         sleep 300
+                sleep 600
 
-        #         ansible-playbook deploy/2_pod_deploy.yml -e "nr_peers=$NR_PEERS remote_com_directory=$REMOTE_COM_DIRECTORY" -i deploy/hosts -v
+                ansible-playbook deploy/2_pod_deploy.yml -e "nr_peers=$NR_PEERS remote_com_directory=$REMOTE_COM_DIRECTORY" -i deploy/hosts -v
 
-        #         #Wait for client stabilization
-        #         sleep 100
+                #Wait for client stabilization
+                sleep 100
 
-        #         echo -e "\nRun: #$RUN_ITER,wl_name:$WL_CONF_NAME,wl_path:$wl_container_path,fs:lsfs\n\n" >> $OUTPUT_FILE_PATH
+                echo -e "\nRun: #$RUN_ITER,wl_name:$WL_CONF_NAME,wl_path:$wl_container_path,fs:lsfs\n\n" >> $OUTPUT_FILE_PATH
 
-        #         ansible-playbook deploy/4_run_workload.yml -e "nr_peers=$NR_PEERS container_com_directory=$CONTAINER_COM_DIRECTORY remote_com_directory=$REMOTE_COM_DIRECTORY wl_name=$WL_CONF_NAME wl_path=$wl_container_path output_path=$OUTPUT_FILE_PATH dstat_path=$DSTAT_FILE_PATH" -i deploy/hosts -v
+                ansible-playbook deploy/4_run_workload.yml -e "nr_peers=$NR_PEERS container_com_directory=$CONTAINER_COM_DIRECTORY remote_com_directory=$REMOTE_COM_DIRECTORY wl_name=$WL_CONF_NAME wl_path=$wl_container_path output_path=$OUTPUT_FILE_PATH dstat_path=$DSTAT_FILE_PATH" -i deploy/hosts -v
                 
-        #         ansible-playbook deploy/5_shutdown_pods.yml -i deploy/hosts -v
+                ansible-playbook deploy/5_shutdown_pods.yml -i deploy/hosts -v
                 
-        #         ansible-playbook deploy/clean_playbooks/clean_peer_db.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY" -i deploy/hosts -v
+                ansible-playbook deploy/clean_playbooks/clean_peer_db.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY" -i deploy/hosts -v
         
-        # done
+        done
 
 
         WORKLOAD_TYPE=macro
@@ -190,9 +190,9 @@ for CONFIG_P in ${PEERS_CONFIG[@]}; do
         USE_CACHE=true
         CACHE_REFRESH=1000
 
-        NR_PUTS_REQUIRED=3
+        NR_PUTS_REQUIRED=1
         NR_GETS_REQUIRED=1
-        NR_GETS_VERSION_REQUIRED=1
+        NR_GETS_VERSION_REQUIRED=3
 
         WL_CONF_PARAL_LIMIT=4k
         WL_CONF_IO=1m #macro workloads
@@ -219,7 +219,7 @@ for CONFIG_P in ${PEERS_CONFIG[@]}; do
     
                 touch $OUTPUT_FILE_PATH
 
-                sleep 300
+                sleep 600
 
                 ansible-playbook deploy/2_pod_deploy.yml -e "nr_peers=$NR_PEERS remote_com_directory=$REMOTE_COM_DIRECTORY" -i deploy/hosts -v
 
