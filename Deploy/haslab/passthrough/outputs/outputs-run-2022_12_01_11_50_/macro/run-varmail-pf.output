@@ -1,0 +1,96 @@
+
+Run: #1,wl_name:varmail,wl_path:workloads-filebench/macro/varmail.f,fs:passthrough
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.087: Populating and pre-allocating filesets
+0.090: bigfileset populated: 1000 files, avg. dir. width = 1000000, avg. dir. depth = 0.5, 0 leafdirs, 14.959MB total size
+0.090: Removing bigfileset tree (if exists)
+0.096: Pre-allocating directories in bigfileset tree
+0.097: Pre-allocating files in bigfileset tree
+0.171: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+0.171: Population and pre-allocation of filesets completed
+0.171: Starting 1 filereader instances
+1.176: Running...
+601.225: Run took 600 seconds...
+601.226: Per-Operation Breakdown
+closefile4           365696ops      609ops/s   0.0mb/s    0.005ms/op [0.001ms - 0.058ms]
+readfile4            365696ops      609ops/s   9.5mb/s    0.170ms/op [0.034ms - 9.673ms]
+openfile4            365696ops      609ops/s   0.0mb/s    0.176ms/op [0.026ms - 10.623ms]
+closefile3           365696ops      609ops/s   0.0mb/s    0.006ms/op [0.001ms - 0.156ms]
+fsyncfile3           365696ops      609ops/s   0.0mb/s    0.039ms/op [0.004ms - 5.811ms]
+appendfilerand3      365696ops      609ops/s   4.8mb/s    0.114ms/op [0.023ms - 9.597ms]
+readfile3            365696ops      609ops/s   4.8mb/s    0.166ms/op [0.023ms - 6.828ms]
+openfile3            365696ops      609ops/s   0.0mb/s    0.174ms/op [0.026ms - 11.202ms]
+closefile2           365696ops      609ops/s   0.0mb/s    0.006ms/op [0.001ms - 0.074ms]
+fsyncfile2           365696ops      609ops/s   0.0mb/s    0.038ms/op [0.005ms - 2.251ms]
+appendfilerand2      365696ops      609ops/s   4.8mb/s    0.119ms/op [0.021ms - 7.133ms]
+createfile2          365697ops      609ops/s   0.0mb/s    0.351ms/op [0.058ms - 12.420ms]
+deletefile1          365697ops      609ops/s   0.0mb/s    0.222ms/op [0.035ms - 11.475ms]
+601.226: IO Summary: 4754050 ops 7922.771 ops/s 1219/1219 rd/wr  23.8mb/s 0.122ms/op
+601.226: Shutting down processes
+
+Run: #2,wl_name:varmail,wl_path:workloads-filebench/macro/varmail.f,fs:passthrough
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.068: Populating and pre-allocating filesets
+0.071: bigfileset populated: 1000 files, avg. dir. width = 1000000, avg. dir. depth = 0.5, 0 leafdirs, 14.959MB total size
+0.071: Removing bigfileset tree (if exists)
+0.078: Pre-allocating directories in bigfileset tree
+0.079: Pre-allocating files in bigfileset tree
+0.131: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+0.131: Population and pre-allocation of filesets completed
+0.131: Starting 1 filereader instances
+1.136: Running...
+601.184: Run took 600 seconds...
+601.184: Per-Operation Breakdown
+closefile4           393901ops      656ops/s   0.0mb/s    0.005ms/op [0.001ms - 0.059ms]
+readfile4            393901ops      656ops/s  10.3mb/s    0.159ms/op [0.033ms - 11.570ms]
+openfile4            393901ops      656ops/s   0.0mb/s    0.160ms/op [0.025ms - 7.071ms]
+closefile3           393901ops      656ops/s   0.0mb/s    0.005ms/op [0.001ms - 0.053ms]
+fsyncfile3           393901ops      656ops/s   0.0mb/s    0.035ms/op [0.004ms - 9.537ms]
+appendfilerand3      393901ops      656ops/s   5.1mb/s    0.106ms/op [0.001ms - 11.255ms]
+readfile3            393901ops      656ops/s   5.1mb/s    0.155ms/op [0.026ms - 8.052ms]
+openfile3            393901ops      656ops/s   0.0mb/s    0.158ms/op [0.026ms - 7.659ms]
+closefile2           393901ops      656ops/s   0.0mb/s    0.006ms/op [0.001ms - 0.328ms]
+fsyncfile2           393901ops      656ops/s   0.0mb/s    0.035ms/op [0.005ms - 4.018ms]
+appendfilerand2      393901ops      656ops/s   5.1mb/s    0.109ms/op [0.017ms - 12.619ms]
+createfile2          393901ops      656ops/s   0.0mb/s    0.326ms/op [0.059ms - 11.566ms]
+deletefile1          393901ops      656ops/s   0.0mb/s    0.206ms/op [0.034ms - 9.982ms]
+601.184: IO Summary: 5120713 ops 8533.837 ops/s 1313/1313 rd/wr  25.7mb/s 0.113ms/op
+601.184: Shutting down processes
+
+Run: #3,wl_name:varmail,wl_path:workloads-filebench/macro/varmail.f,fs:passthrough
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.061: Populating and pre-allocating filesets
+0.064: bigfileset populated: 1000 files, avg. dir. width = 1000000, avg. dir. depth = 0.5, 0 leafdirs, 14.959MB total size
+0.064: Removing bigfileset tree (if exists)
+0.070: Pre-allocating directories in bigfileset tree
+0.071: Pre-allocating files in bigfileset tree
+0.127: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+0.127: Population and pre-allocation of filesets completed
+0.127: Starting 1 filereader instances
+1.132: Running...
+601.180: Run took 600 seconds...
+601.180: Per-Operation Breakdown
+closefile4           347725ops      579ops/s   0.0mb/s    0.005ms/op [0.001ms - 0.147ms]
+readfile4            347725ops      579ops/s   9.1mb/s    0.176ms/op [0.034ms - 9.705ms]
+openfile4            347725ops      579ops/s   0.0mb/s    0.185ms/op [0.025ms - 8.248ms]
+closefile3           347725ops      579ops/s   0.0mb/s    0.006ms/op [0.001ms - 0.133ms]
+fsyncfile3           347725ops      579ops/s   0.0mb/s    0.043ms/op [0.004ms - 8.382ms]
+appendfilerand3      347725ops      579ops/s   4.5mb/s    0.120ms/op [0.016ms - 10.204ms]
+readfile3            347725ops      579ops/s   4.5mb/s    0.173ms/op [0.027ms - 9.177ms]
+openfile3            347725ops      579ops/s   0.0mb/s    0.182ms/op [0.026ms - 7.781ms]
+closefile2           347726ops      579ops/s   0.0mb/s    0.006ms/op [0.001ms - 0.069ms]
+fsyncfile2           347726ops      579ops/s   0.0mb/s    0.041ms/op [0.005ms - 3.733ms]
+appendfilerand2      347726ops      579ops/s   4.5mb/s    0.126ms/op [0.017ms - 11.068ms]
+createfile2          347726ops      579ops/s   0.0mb/s    0.372ms/op [0.058ms - 10.217ms]
+deletefile1          347726ops      579ops/s   0.0mb/s    0.234ms/op [0.034ms - 11.749ms]
+601.180: IO Summary: 4520430 ops 7533.449 ops/s 1159/1159 rd/wr  22.7mb/s 0.128ms/op
+601.180: Shutting down processes

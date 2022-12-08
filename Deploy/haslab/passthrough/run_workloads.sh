@@ -11,14 +11,14 @@ REMOTE_WORKLOADS_PATH=workloads-filebench
 REMOTE_WORKLOADS_READ_PATH=$REMOTE_WORKLOADS_PATH/read-data-micro
 REMOTE_WORKLOADS_WRITE_PATH=$REMOTE_WORKLOADS_PATH/write-data-micro
 REMOTE_WORKLOADS_METADATA_PATH=$REMOTE_WORKLOADS_PATH/metadata-micro
-
+REMOTE_WORKLOADS_MACRO_PATH=$REMOTE_WORKLOADS_PATH/macro
 # Workloads LOCAL variables
 
 LOCAL_WORKLOADS_PATH=workloads-filebench
 LOCAL_WORKLOADS_READ_PATH=$LOCAL_WORKLOADS_PATH/read-data-micro
 LOCAL_WORKLOADS_WRITE_PATH=$LOCAL_WORKLOADS_PATH/write-data-micro
 LOCAL_WORKLOADS_METADATA_PATH=$LOCAL_WORKLOADS_PATH/metadata-micro
-
+LOCAL_WORKLOADS_MACRO_PATH=$LOCAL_WORKLOADS_PATH/macro
 #------------------------------------------
 
 # Output variables
@@ -92,7 +92,7 @@ done
 
 sleep 300
 
-#------------------------------------------
+# #------------------------------------------
 
 # Run read workloads
 
@@ -131,8 +131,8 @@ for WL_PATH in $(find $LOCAL_WORKLOADS_READ_PATH -maxdepth 2 -type f -printf "%p
 
 done
 
-sleep 300
-#------------------------------------------
+# sleep 300
+# #------------------------------------------
 
 # Run metadata workloads
 
@@ -168,3 +168,39 @@ for WL_PATH in $(find $LOCAL_WORKLOADS_METADATA_PATH -maxdepth 2 -type f -printf
     done
 
 done
+
+#------------------------------------------
+
+# Run macro workloads
+
+# WORKLOAD_TYPE=macro
+
+# mkdir -p $LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE
+
+# for WL_PATH in $(find $LOCAL_WORKLOADS_MACRO_PATH -maxdepth 2 -type f -printf "%p\n"); do
+
+#     wl_file=$(basename $WL_PATH)
+#     wl_name=$(echo $wl_file | cut -f 1 -d '.') #removes .f
+#     wl_remote_path=$REMOTE_WORKLOADS_MACRO_PATH/$wl_file
+
+#     WL_CONF_NAME="$wl_name"
+
+#     OUTPUT_FILE_PATH=$LOCAL_OUTPUT_PATH/$OUTPUT_PATH/$WORKLOAD_TYPE/run-$WL_CONF_NAME-pf.output
+    
+#     touch $OUTPUT_FILE_PATH
+
+#     for ((RUN_ITER=1; RUN_ITER<=NR_OF_ITERATIONS_PER_WORKLOAD; RUN_ITER++)); do
+
+#         ansible-playbook deploy/2_container_deploy.yml -i deploy/hosts -v
+
+#         echo -e "\nRun: #$RUN_ITER,wl_name:$WL_CONF_NAME,wl_path:$wl_remote_path,fs:passthrough\n\n" >> $OUTPUT_FILE_PATH
+
+#         ansible-playbook deploy/3_run_workload.yml -e "wl_path=$wl_remote_path output_path=$OUTPUT_FILE_PATH" -i deploy/hosts -v
+    
+#         ansible-playbook deploy/4_shutdown_container.yml -i deploy/hosts -v
+
+#         sleep 300   
+#     done
+
+# done
+

@@ -1,0 +1,63 @@
+
+Run: #1,wl_name:stat-1th-cache_on-1000,wl_path:shared_dir/workloads-filebench/metadata-micro/stat-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.022: fileset1 populated: 75000 files, avg. dir. width = 250, avg. dir. depth = 2.0, 0 leafdirs, 292.969MB total size
+0.023: Removing fileset1 tree (if exists)
+0.025: Pre-allocating directories in fileset1 tree
+1.656: Pre-allocating files in fileset1 tree
+416.230: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+416.230: Population and pre-allocation of filesets completed
+416.325: Attempting to create fileset more than once, ignoring
+416.325: Starting 1 process1 instances
+417.339: Running...
+1317.396: Run took 900 seconds...
+1317.396: Per-Operation Breakdown
+stat1                1029990ops     1144ops/s   0.0mb/s    0.871ms/op [0.393ms - 4006.836ms]
+1317.396: IO Summary: 1029990 ops 1144.362 ops/s 0/0 rd/wr   0.0mb/s 0.871ms/op
+1317.396: Shutting down processes
+
+Run: #2,wl_name:stat-1th-cache_on-1000,wl_path:shared_dir/workloads-filebench/metadata-micro/stat-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.022: fileset1 populated: 75000 files, avg. dir. width = 250, avg. dir. depth = 2.0, 0 leafdirs, 292.969MB total size
+0.023: Removing fileset1 tree (if exists)
+0.025: Pre-allocating directories in fileset1 tree
+1.823: Pre-allocating files in fileset1 tree
+462.938: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+462.938: Population and pre-allocation of filesets completed
+463.023: Attempting to create fileset more than once, ignoring
+463.024: Starting 1 process1 instances
+464.037: Running...
+1364.100: Run took 900 seconds...
+1364.100: Per-Operation Breakdown
+stat1                845276ops      939ops/s   0.0mb/s    1.062ms/op [0.400ms - 2259.208ms]
+1364.100: IO Summary: 845276 ops 939.130 ops/s 0/0 rd/wr   0.0mb/s 1.062ms/op
+1364.100: Shutting down processes
+
+Run: #3,wl_name:stat-1th-cache_on-1000,wl_path:shared_dir/workloads-filebench/metadata-micro/stat-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.022: fileset1 populated: 75000 files, avg. dir. width = 250, avg. dir. depth = 2.0, 0 leafdirs, 292.969MB total size
+0.023: Removing fileset1 tree (if exists)
+0.031: Pre-allocating directories in fileset1 tree
+1.830: Pre-allocating files in fileset1 tree
+451.108: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+451.108: Population and pre-allocation of filesets completed
+451.202: Attempting to create fileset more than once, ignoring
+451.202: Starting 1 process1 instances
+452.217: Running...
+1352.272: Run took 900 seconds...
+1352.272: Per-Operation Breakdown
+stat1                945442ops     1050ops/s   0.0mb/s    0.950ms/op [0.397ms - 2784.171ms]
+1352.272: IO Summary: 945442 ops 1050.426 ops/s 0/0 rd/wr   0.0mb/s 0.950ms/op
+1352.272: Shutting down processes
