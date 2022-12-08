@@ -71,6 +71,7 @@ module "gke" {
   create_service_account = false
   regional               = false
   logging_service        = "none"
+  monitoring_service     = "none"
   region                 = var.region
   zones                  = var.zones
   network                = module.vpc.network_name
