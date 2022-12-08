@@ -70,6 +70,12 @@ for test_output_file in os.listdir(results_folder):
                 config = parts[3]+"-"+parts[4]
             else: 
                 config = parts[3]
+        elif workload in macro:
+            if parts[2] == "anti_entropy":
+                config = parts[2]+"-"+parts[3]
+            else: 
+                config = parts[2]
+        
 
     results_file_fd = open(results_folder+"/"+test_output_file, "r")
     result_lines = results_file_fd.readlines()

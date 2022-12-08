@@ -88,7 +88,7 @@ def import_dstat_from_file(path, labelname):
         axs[1,1].plot(v_time_list, v_read_list, '-.', label = labelname, color="grey")
         axs[2,0].plot(v_time_list, v_cach_list, '-.', label = labelname, color="grey")
         axs[2,1].plot(v_time_list, v_free_list, '-.', label = labelname, color="grey")
-    elif labelname == "client":
+    elif labelname == "client1":
         axs[0,0].plot(v_time_list, v_usr_list, '-', label = labelname, color="black")
         axs[0,1].plot(v_time_list, v_used_list, '-', label = labelname, color="black")
         axs[1,0].plot(v_time_list, v_writ_list, '-', label = labelname, color="black")
@@ -153,11 +153,11 @@ for path in os.listdir(arg_dstat_folder):
     if re.search(".*{}.*peer2.*.csv".format(arg_workload), path):
         import_dstat_from_file("%s/%s" % (arg_dstat_folder, path), "peer2")
     if re.search(".*{}.*client.*.csv".format(arg_workload), path):
-        import_dstat_from_file("%s/%s" % (arg_dstat_folder, path), "client")
+        import_dstat_from_file("%s/%s" % (arg_dstat_folder, path), "client1")
     else:
         import_dstat_from_file("%s/%s" % (arg_dstat_folder, path), "single node")
 
 fig.suptitle("Workload: %s" % arg_workload)
 fig.set_size_inches(20, 20)
-#fig.savefig(arg_dstat_folder + "-peer.png", dpi=200)
+fig.savefig(arg_dstat_folder + "graph.png", dpi=200)
 plt.show()
