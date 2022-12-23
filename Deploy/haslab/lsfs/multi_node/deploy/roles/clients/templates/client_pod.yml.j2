@@ -18,9 +18,15 @@ spec:
       privileged: true
     volumeMounts:
     - mountPath: /shared_dir
+      name: shared-volume
+      mountPropagation: Bidirectional
+    - mountPath: /test_filesystem
       name: mount-volume
       mountPropagation: Bidirectional
   volumes:
+  - hostPath:
+      path: {{ shared_dir }}
+    name: shared-volume
   - hostPath:
       path: {{ mount_dir }}
     name: mount-volume

@@ -58,7 +58,6 @@ build/*
 
 #Deploy virtualenv
 Deploy/.virtualenvs/*
-Deploy/gcp/*
 
 # Capnp auto-generated files
 *.capnp.*
@@ -66,11 +65,8 @@ Deploy/gcp/*
 # Protobuf auto-generated files
 *.pb.*
 
+# Terraform
+terraform.tfvars
 .terraform*
 terraform.tfstate
 terraform.tfstate.backup
-terraform.tfvars
-
-
-leveldbKeys.py
-clock_u*

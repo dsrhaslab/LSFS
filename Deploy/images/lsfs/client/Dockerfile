@@ -26,6 +26,26 @@ RUN cd / && mkdir test_filesystem/ && mkdir test_filesystem/InnerFolder/ && mkdi
 
 RUN apt install vim -y 
 
+
 EXPOSE 12365
 EXPOSE 12366
 EXPOSE 12367
+
+
+# ## Tensorflow tests need dependencies
+
+# RUN apt install python3-pip -y
+
+# RUN cd && mkdir aux && cd aux && export TMPDIR=$(pwd) && \
+# 	pip install tensorflow
+
+# RUN cd / && git clone https://github.com/dsrhaslab/monarch.git
+	
+# RUN cd /monarch/tensorflow/models/official-models-2.1.0/official/ && \
+#  	pip3 install --user -r requirements.txt
+
+# RUN sed -i '36{s/^/#/}' /monarch/tensorflow/models/official-models-2.1.0/official/vision/image_classification/imagenet_preprocessing.py && \
+# 	sed -i '146,155{s/^/#/}' /monarch/tensorflow/models/official-models-2.1.0/official/vision/image_classification/imagenet_preprocessing.py && \
+# 	sed -i '287{s/^/#/}' /monarch/tensorflow/models/official-models-2.1.0/official/vision/image_classification/imagenet_preprocessing.py && \
+# 	sed -i '286{s/^..#/  /}' /monarch/tensorflow/models/official-models-2.1.0/official/vision/image_classification/imagenet_preprocessing.py && \
+#	sed -i "s/'train':.*$/'train': 896772,/" /monarch/tensorflow/models/official-models-2.1.0/official/vision/image_classification/imagenet_preprocessing.py

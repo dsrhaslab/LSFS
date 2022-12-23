@@ -5,16 +5,22 @@ import os
 import re
 import matplotlib.pyplot as plt
 
+print(sys.argv)
+
 if len(sys.argv) != 3:
-    print("error: run ./dstatgraph.py <folder> <arg_workload>")
+    print("error: run python3 graphdraw.py <arg_workload> <folder1> <folder2> .. ")
     sys.exit(-1)
 
-arg_dstat_folder = sys.argv[1]
-arg_workload = sys.argv[2]
+arg_dstat_folders = []
+for i in range(2, len(sys.argv)):
+    arg_dstat_folders.append(sys.argv[i])
 
-if not os.path.exists(arg_dstat_folder):
-    print("error: folder '%s' does not exist!" % arg_dstat_folder)
-    sys.exit(-1)
+arg_workload = sys.argv[1]
+
+for val in arg_dstat_folders:
+    if not os.path.exists(val):
+        print("error: folder '%s' does not exist!" % val)
+        sys.exit(-1)
 
 valid_workloads = ["varmail", "rand-read", "fileserver", "seq-read", "rand-write", "seq-write", "create", "delete", "stat", "webserver"]
 
@@ -89,12 +95,12 @@ def import_dstat_from_file(path, labelname):
         axs[2,0].plot(v_time_list, v_cach_list, '-.', label = labelname, color="grey")
         axs[2,1].plot(v_time_list, v_free_list, '-.', label = labelname, color="grey")
     elif labelname == "client1":
-        axs[0,0].plot(v_time_list, v_usr_list, '-', label = labelname, color="black")
-        axs[0,1].plot(v_time_list, v_used_list, '-', label = labelname, color="black")
-        axs[1,0].plot(v_time_list, v_writ_list, '-', label = labelname, color="black")
-        axs[1,1].plot(v_time_list, v_read_list, '-', label = labelname, color="black")
-        axs[2,0].plot(v_time_list, v_cach_list, '-', label = labelname, color="black")
-        axs[2,1].plot(v_time_list, v_free_list, '-', label = labelname, color="black")
+        axs[0,0].plot(v_time_list, v_usr_list, '-', label = "Client", color="black")
+        axs[0,1].plot(v_time_list, v_used_list, '-', label = "Client", color="black")
+        axs[1,0].plot(v_time_list, v_writ_list, '-', label = "Client", color="black")
+        axs[1,1].plot(v_time_list, v_read_list, '-', label = "Client", color="black")
+        axs[2,0].plot(v_time_list, v_cach_list, '-', label = "Client", color="black")
+        axs[2,1].plot(v_time_list, v_free_list, '-', label = "Client", color="black")
     else:
         axs[0,0].plot(v_time_list, v_usr_list, '-', label = labelname, color="green")
         axs[0,1].plot(v_time_list, v_used_list, '-', label = labelname, color="green")
@@ -147,17 +153,18 @@ def import_dstat_from_file(path, labelname):
     axs[2,1].set_xlabel("Time (s)")
     axs[2,1].legend()
 
-for path in os.listdir(arg_dstat_folder):
-    if re.search(".*{}.*peer1.*.csv".format(arg_workload), path):
-        import_dstat_from_file("%s/%s" % (arg_dstat_folder, path), "peer1")
-    if re.search(".*{}.*peer2.*.csv".format(arg_workload), path):
-        import_dstat_from_file("%s/%s" % (arg_dstat_folder, path), "peer2")
-    if re.search(".*{}.*client.*.csv".format(arg_workload), path):
-        import_dstat_from_file("%s/%s" % (arg_dstat_folder, path), "client1")
-    else:
-        import_dstat_from_file("%s/%s" % (arg_dstat_folder, path), "single node")
+for val in arg_dstat_folders:
+    for path in os.listdir(val):
+        if re.search(".*{}.*peer1.*.csv".format(arg_workload), path):
+            import_dstat_from_file("%s/%s" % (val, path), "peer1")
+        elif re.search(".*{}.*peer2.*.csv".format(arg_workload), path):
+            import_dstat_from_file("%s/%s" % (val, path), "peer2")
+        elif re.search(".*{}.*client.*.csv".format(arg_workload), path):
+            import_dstat_from_file("%s/%s" % (val, path), "client1")
+        else:
+            import_dstat_from_file("%s/%s" % (val, path), "single node")
 
 fig.suptitle("Workload: %s" % arg_workload)
 fig.set_size_inches(20, 20)
-fig.savefig(arg_dstat_folder + "graph.png", dpi=200)
+#fig.savefig(arg_dstat_folder + "graph.png", dpi=200)
 plt.show()

@@ -1,0 +1,9 @@
+[master]
+%{ for name, ip in master_obj ~}
+${name} ${ip}
+%{ endfor}
+
+[worker]
+%{ for name, ip in worker_obj ~}
+${name} ${ip}
+%{ endfor}

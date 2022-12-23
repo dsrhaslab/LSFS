@@ -18,8 +18,8 @@ main_confs:
       max_keys_to_send_percentage: 50
 
   group_construction:
-    rep_max: 5
-    rep_min: 3
+    rep_max: 1
+    rep_min: 1
     max_age: 30
 
   pss:
@@ -58,4 +58,4 @@ main_confs:
       refresh_cache_time: 1000 #milliseconds
       max_directories_in_cache: 1000
       max_nr_requests_timeout: 5
-    direct_io: 1
+    direct_io: 0
