@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bootstrapper
+  namespace: lsfs
+  labels:
+    lsfs: bootstrapper
+spec:
+  nodeName: client1
+  containers:
+  - name: bootstrapper-container
+    image: brancc0cdocker/lsfs-bootstrapper
+    command: ["./build/bootstrapper_exe"]
+    args: ["/shared_dir/conf.yaml"]
+    ports: 
+    - containerPort: 12345
+    volumeMounts:
+    - mountPath: /shared_dir
+      name: shared-volume
+  volumes:
+  - hostPath:
+      path: {{ shared_dir }}
+    name: shared-volume

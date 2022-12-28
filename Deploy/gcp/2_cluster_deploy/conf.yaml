@@ -1,0 +1,61 @@
+main_confs:
+  use_localhost: False
+  peer:
+    log_level: off
+    mt_data_handler: true
+    warmup_interval: 120
+    restart_database_after_warmup: true
+    reply_chance: 1
+    smart_message_forward: true
+    seen_log_garbage_at: 1000
+    request_log_garbage_at: 1000
+    anti_entropy_log_garbage_at: 1000
+    database:
+      base_path: /shared_dir/
+    anti_entropy:
+      dissemination_interval_sec: 3600
+      dissemination_total_packet_size_percentage: 10 # 4k = 7%-6%
+      max_keys_to_send_percentage: 50
+
+  group_construction:
+    rep_max: 1
+    rep_min: 1
+    max_age: 30
+
+  pss:
+    view_size: 8
+    gossip_size: 7
+    message_passing_interval_sec: 10
+    local_message: true
+    local_interval_sec: 8 
+
+  log:
+    view_logger_enabled: false
+    log_interval_sec: 5 
+    logging_dir: logging/
+
+  client:
+    log_level: off
+    base_path: /shared_dir/
+    max_nodes_to_send_get_request: 3
+    max_nodes_to_send_put_request: 3
+    nr_puts_required: 1
+    nr_gets_required: 1
+    nr_gets_version_required: 1
+    client_wait_timeout: 3
+    max_nr_requests_timeouts: 100
+    limit_write_paralelization_to: 32k
+    limit_read_paralelization_to: 32k
+    mt_client_handler: true
+    nr_client_handler_ths: 3
+    load_balancer:
+      type: smart
+      lb_interval: 5
+      smart_load_balancer_group_knowledge: 3
+      smart_max_view_age: 50
+    cache:
+      use_cache: true
+      refresh_cache_time: 1000 #milliseconds
+      max_directories_in_cache: 10000000
+      max_nr_requests_timeout: 5
+    direct_io: 0

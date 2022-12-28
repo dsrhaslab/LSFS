@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "client{{ item }}"
+  namespace: lsfs
+  labels:
+    lsfs: client
+spec:
+  nodeName: client{{ item }}
+  containers:
+  - name: client-container
+    image: brancc0cdocker/lsfs-client
+    command: ["./build/lsfs_exe"]
+    args: ["{{ bootstrapper_ip }}", "{{ item }}", "/shared_dir/conf.yaml", "client{{ item }}", "/test_filesystem/InnerFolder", "/test_filesystem/InnerFolder2"]
+    ports: 
+    - containerPort: 12357
+    - containerPort: 12358
+    securityContext:                                                                                      
+      privileged: true
+    volumeMounts:
+    - mountPath: /shared_dir
+      name: shared-volume
+      mountPropagation: Bidirectional
+    - mountPath: /test_filesystem
+      name: mount-volume
+      mountPropagation: Bidirectional
+  volumes:
+  - hostPath:
+      path: {{ shared_dir }}
+    name: shared-volume
+  - hostPath:
+      path: {{ mount_dir }}
+    name: mount-volume

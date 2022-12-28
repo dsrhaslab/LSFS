@@ -1,0 +1,131 @@
+  - name: Create base Directory
+    hosts: all
+    become: yes
+
+    vars: 
+        remote_dir: /home/{{ ansible_user }}/{{ remote_com_directory }}
+
+    tasks:
+    
+      - name: Create lsfs directory
+        file:
+            path: "/home/{{ hosts_user }}/lsfs"
+            state: directory 
+
+      - name: Creates shared dir
+        file:
+          path: "{{ remote_dir }}"
+          state: directory
+
+      - name: Creates mount dir
+        file:
+          path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}"
+          state: directory
+
+      - name: Creates mount inner dir
+        file:
+          path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}/InnerFolder"
+          state: directory
+      
+      - name: Creates mount inner backend dir
+        file:
+          path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}/InnerFolder2"
+          state: directory
+      
+      - name: Creates database dir
+        file:
+          path: "{{ remote_dir }}/levelDB"
+          state: directory
+
+      - name: Put Config File in Shared (Volume) directory
+        copy:
+          src: conf.yaml
+          dest: "{{ remote_dir }}/conf.yaml"
+
+      - name: Creates dstat scripts dir
+        file:
+          path: "{{ remote_dir }}/dstat"
+          state: directory
+
+      - name: Put dstat scripts in Shared (Volume) directory
+        copy:
+          src: ../../haslab/dstat/
+          dest: "{{ remote_dir }}/dstat/"
+
+
+
+  - name: Setup Tensorflow necessary files
+    hosts: clients
+    become: yes
+
+    tasks:
+    
+      - name: Copy and execute setup tensorflow script
+        script: tensorflow_setup.sh
+
+      - name: Put train file in client machine
+        copy:
+          src: train.sh
+          dest: "/home/{{ ansible_user }}/train.sh"
+
+
+  - name: Define group of peer
+    hosts: localhost
+
+    tasks: 
+
+      - name: Execute python peer-group script 
+        shell: |
+                python3 associate_peer2group.py {{ nr_peers }} {{ nr_groups }}
+        register: peer_group_res
+      
+      - name: Save var in localhost
+        set_fact:
+            peer_group: "{{ peer_group_res.stdout_lines }}"
+        delegate_to: localhost
+        delegate_facts: true
+
+
+  - name: Copy database files to peers
+    hosts: peers
+    become: yes
+    strategy: free
+
+    vars: 
+        remote_dir: /home/{{ ansible_user }}/{{ remote_com_directory }}
+
+    tasks:
+
+      - name: Copy service_account to peers 
+        copy:
+          src: "~/.gcp/largescale22-0457fb54d2ed.json"
+          dest: "/gcpsc2.json"
+
+      - command: "hostname"
+        register: target_peer
+      
+
+      - name: Populate peers with respective db
+        vars: 
+          data: "{{ item.split(' ') }}"
+        gcp_storage_object:
+          action: download
+          bucket: imagenet_lsfs-db
+          src: "{{ data.1 }}.zip"
+          dest: "/{{ remote_dir }}/levelDB/{{ data.1 }}.zip"
+          project: "{{ project_id }}"
+          auth_kind: serviceaccount
+          service_account_file: "/gcpsc2.json"
+        when: target_peer.stdout == data.0
+        with_items:
+          - "{{ hostvars['localhost']['peer_group'] }}"
+
+
+      - name: Unzip file
+        shell: | 
+                cd /{{ remote_dir }}/levelDB && sudo unzip * 
+      
+      - name: Remove zip file
+        shell: | 
+                sudo rm /{{ remote_dir }}/levelDB/*.zip
+

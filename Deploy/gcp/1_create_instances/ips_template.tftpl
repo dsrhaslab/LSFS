@@ -1,0 +1,21 @@
+[masters]
+%{ for name, ip in master_obj ~}
+${name} ansible_host=${ip}
+%{ endfor}
+
+[clients]
+%{ for name, ip in worker_obj_clients ~}
+${name} ansible_host=${ip}
+%{ endfor}
+
+[peers]
+%{ for name, ip in worker_obj_peers ~}
+${name} ansible_host=${ip}
+%{ endfor}
+
+[workers:children]
+clients
+peers
+
+[all:vars]
+ansible_user="{{ hosts_user }}"
