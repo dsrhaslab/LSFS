@@ -1,0 +1,16 @@
+[masters]
+
+
+[clients]
+client1 ansible_host=34.69.28.146
+
+
+[peers]
+
+
+[workers:children]
+clients
+peers
+
+[all:vars]
+ansible_user="{{ hosts_user }}"

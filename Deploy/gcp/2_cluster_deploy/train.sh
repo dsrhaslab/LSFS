@@ -3,7 +3,7 @@
 # Change these variables
 # ======================================================================================
 REPO="monarch"
-USER="/home/gsd"
+USER="/home/brancojse"
 WORKSPACE=${USER}/$REPO
 
 SCRIPT_DIR="${WORKSPACE}/tensorflow/models/official-models-2.1.0/official/vision/image_classification"
@@ -11,10 +11,11 @@ CHECKPOINTING_DIR="/tmp/checkpointing"
 # ======================================================================================
 
 # Default values
-DATASET_DIR="${USER}/lsfs/test_filesystem/InnerFolder/100g_tfrecords"
-BATCH_SIZE=128
-EPOCHS=1
-NUM_GPUS=0
+# DATASET_DIR="${USER}/lsfs/test_filesystem/InnerFolder/100g_tfrecords"
+DATASET_DIR="${USER}/external/100g_tfrecords"
+BATCH_SIZE=64
+EPOCHS=3
+NUM_GPUS=1
 
 DATE="$(date +%Y_%m_%d-%H_%M)"
 RUN_NAME="lenet-bs$BATCH_SIZE-ep$EPOCHS-$DATE"

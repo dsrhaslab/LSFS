@@ -18,6 +18,10 @@ resource "google_compute_instance" "instance" {
     }
   }
 
+  attached_disk {
+      source = var.attached_disk_name
+  }
+
   network_interface {
     network = var.network
     subnetwork = var.subnetwork

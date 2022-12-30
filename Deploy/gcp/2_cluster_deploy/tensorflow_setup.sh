@@ -1,10 +1,10 @@
 #! /bin/bash
 
 # Change tmp dir (sometimes tensorflow cant be installed because insufficient memory in tmp dir)
-mkdir aux
-cd aux
-export TMPDIR=$(pwd)
-cd
+# mkdir aux
+# cd aux
+# export TMPDIR=$(pwd)
+# cd
  
 # Install tensorflow
 pip install tensorflow
@@ -17,6 +17,7 @@ cd monarch/tensorflow/models/official-models-2.1.0/official/
 pip3 install --user -r requirements.txt
 
 ## Comment some lines not to use "pastor" tool
+sed -i '36{s/^/#/}' vision/image_classification/imagenet_preprocessing.py
 sed -i '146,155{s/^/#/}' vision/image_classification/imagenet_preprocessing.py
 sed -i '287{s/^/#/}' vision/image_classification/imagenet_preprocessing.py
 sed -i '286{s/^..#/  /}' vision/image_classification/imagenet_preprocessing.py

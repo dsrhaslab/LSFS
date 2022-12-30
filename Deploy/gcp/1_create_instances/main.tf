@@ -113,18 +113,20 @@ module "client_instances" {
   instance_count = var.client_node_count
   instance = {
     name      = "client" 
-    type      = "n1-standard-2"
+    type      = "n1-standard-4"
     tags      = ["ssh"]
     boot_disk   = {
-      image     = "ubuntu-os-cloud/ubuntu-2004-lts"
-      size      = 15
+      image     = "deeplearning-platform-release/common-cu113-ubuntu-2004"
+      size      = 50
       type      = "pd-ssd"
     }
-    # gpu = {
-    #   count = 1
-    #   type = "nvidia-tesla-t4"
-    # }
+    gpu = {
+      count = 1
+      type = "nvidia-tesla-t4"
+    }
   }
+
+  attached_disk_name = "disk-imagenet"
   
   
   network     = module.vpc.network_name

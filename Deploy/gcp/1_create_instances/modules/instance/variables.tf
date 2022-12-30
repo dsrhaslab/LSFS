@@ -46,6 +46,12 @@ variable "label" {
   description = "Instance label"
 }
 
+variable "attached_disk_name" {
+  type        = string
+  description = "Instance attached disk"
+  default = ""
+}
+
 variable "instance" {
   type = object({
     name = string
