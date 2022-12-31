@@ -76,8 +76,8 @@ public:
     virtual void delete_metadata_from_tmp_anti_entropy(const std::string& base_path, const kv_store_key<T>& key, size_t blk_num) = 0;
     virtual bool get_incomplete_blks(const kv_store_key<T>& key, size_t new_size, std::vector<size_t>& tmp_blks_to_request) = 0;
     
-    // virtual void send_keys_gt(tcp_client_server_connection::tcp_client_connection& connection,
-    //                           void(*action)(tcp_client_server_connection::tcp_client_connection& connection, const std::string&, std::map<long, long>&, long, bool, FileType::FileType, const char* data, size_t data_size)) = 0;
+    virtual void send_keys_gt(tcp_client_server_connection::tcp_client_connection& connection,
+                              void(*action)(tcp_client_server_connection::tcp_client_connection& connection, const std::string&, std::map<long, long>&, long, bool, FileType::FileType, const char* data, size_t data_size)) = 0;
 
     virtual void print_store(long id) = 0;
     virtual bool clean_db() = 0;

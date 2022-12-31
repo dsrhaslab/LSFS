@@ -27,9 +27,8 @@ lsfs_impl::lsfs_impl(const std::string& boot_ip, const std::string& ip, int kv_p
         size_t max_parallel_read_size_bytes = convert_string_size_to_num_bytes(max_parallel_read_size);
         state = std::make_unique<lsfs_state>(df_client, max_parallel_read_size_bytes, max_parallel_write_size_bytes, use_cache, refresh_cache_time, max_directories_in_cache, max_nr_requests_timeout, cache_max_nr_requests_timeout, direct_io);
 
-
-        if(use_cache){
-            cache_maintainer_thr = std::thread([](){
+        if(use_cache && refresh_cache_time > 0){
+        cache_maintainer_thr = std::thread([](){
                 while(true){
                     state->refresh_dir_cache();
                     std::this_thread::sleep_for(std::chrono::milliseconds(state->refresh_cache_time)); 

@@ -1107,95 +1107,95 @@ void data_handler_listener::process_anti_entropy_get_metadata_reply_message(prot
 
 
 
-// void data_handler_listener::process_recover_request_msg(proto::kv_message& msg) {
-//     const proto::recover_request_message& message = msg.recover_request_msg();
-//     const std::string& sender_ip = message.ip();
-//     int sender_recover_port = message.recover_port();
-//     int nr_slices = message.nr_slices();
-//     int slice = message.slice();
+void data_handler_listener::process_recover_request_msg(proto::kv_message& msg) {
+    const proto::recover_request_message& message = msg.recover_request_msg();
+    const std::string& sender_ip = message.ip();
+    int sender_recover_port = message.recover_port();
+    int nr_slices = message.nr_slices();
+    int slice = message.slice();
 
-//     if(this->group_c_ptr->get_my_group() != slice ||
-//        this->group_c_ptr->get_nr_groups() != nr_slices ||
-//        !this->group_c_ptr->has_recovered())
-//     {
-//         return;
-//     }
+    if(this->group_c_ptr->get_my_group() != slice ||
+       this->group_c_ptr->get_nr_groups() != nr_slices ||
+       !this->group_c_ptr->has_recovered())
+    {
+        return;
+    }
 
-//     try {
-//         tcp_client_server_connection::tcp_client_connection connection(sender_ip.c_str(), sender_recover_port);
+    try {
+        tcp_client_server_connection::tcp_client_connection connection(sender_ip.c_str(), sender_recover_port);
+        // Se antes o peer mandar por ex um offset a partir do qual quer as restantes chaves (não existe isto com a leveldb)
+        // char rcv_buf[65500];
 
-//         char rcv_buf[65500];
+        // int bytes_rcv = connection.recv_msg(rcv_buf); //throw exception
 
-//         int bytes_rcv = connection.recv_msg(rcv_buf); //throw exception
+        // proto::kv_message kv_message_rcv;
+        // kv_message_rcv.ParseFromArray(rcv_buf, bytes_rcv);
 
-//         proto::kv_message kv_message_rcv;
-//         kv_message_rcv.ParseFromArray(rcv_buf, bytes_rcv);
-
-//         // For Each Key greater than offset send to peer
-//         this->store->send_keys_gt(connection,
-//                                     [](tcp_client_server_connection::tcp_client_connection& connection, const std::string& key,
-//                                         std::map<long, long>& version, long client_id, bool is_deleted, FileType::FileType f_type, const char* data, size_t data_size){
-//                                         proto::kv_message kv_message;
-//                                         kv_message.set_forwarded_within_group(false);
-//                                         auto* message_content = new proto::recover_data_message();
+        // For Each Key greater than offset send to peer
+        this->store->send_keys_gt(connection,
+                                    [](tcp_client_server_connection::tcp_client_connection& connection, const std::string& key,
+                                        std::map<long, long>& version, long client_id, bool is_deleted, FileType::FileType f_type, const char* data, size_t data_size){
+                                        proto::kv_message kv_message;
+                                        kv_message.set_forwarded_within_group(false);
+                                        auto* message_content = new proto::recover_data_message();
                                         
-//                                         proto::kv_store* store = new proto::kv_store();
-//                                         proto::kv_store_key* kv_key = new proto::kv_store_key();
-//                                         kv_key->set_key(key);
-//                                         proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
+                                        proto::kv_store* store = new proto::kv_store();
+                                        proto::kv_store_key* kv_key = new proto::kv_store_key();
+                                        kv_key->set_key(key);
+                                        proto::kv_store_key_version* kv_key_version = new proto::kv_store_key_version();
 
-//                                         for(auto const c: version){
-//                                             proto::kv_store_version *kv_version = kv_key_version->add_version();
-//                                             kv_version->set_client_id(c.first);
-//                                             kv_version->set_clock(c.second);
-//                                         }
+                                        for(auto const c: version){
+                                            proto::kv_store_version *kv_version = kv_key_version->add_version();
+                                            kv_version->set_client_id(c.first);
+                                            kv_version->set_clock(c.second);
+                                        }
 
-//                                         kv_key_version->set_client_id(client_id);
+                                        kv_key_version->set_client_id(client_id);
 
-//                                         kv_key->set_allocated_key_version(kv_key_version);
+                                        kv_key->set_allocated_key_version(kv_key_version);
 
-//                                         store->set_is_deleted(is_deleted);
-//                                         if(f_type == FileType::DIRECTORY)
-//                                         store->set_type(proto::FileType::DIRECTORY);
-//                                         else 
-//                                         store->set_type(proto::FileType::FILE);
+                                        store->set_is_deleted(is_deleted);
+                                        if(f_type == FileType::DIRECTORY)
+                                        store->set_type(proto::FileType::DIRECTORY);
+                                        else 
+                                        store->set_type(proto::FileType::FILE);
 
-//                                         store->set_allocated_key(kv_key);
+                                        store->set_allocated_key(kv_key);
 
-//                                         message_content->set_allocated_store_keys(store);
+                                        message_content->set_allocated_store_keys(store);
 
-//                                         message_content->set_data(data, data_size);
-//                                         kv_message.set_allocated_recover_data_msg(message_content);
+                                        message_content->set_data(data, data_size);
+                                        kv_message.set_allocated_recover_data_msg(message_content);
 
-//                                         std::string buf;
-//                                         kv_message.SerializeToString(&buf);
+                                        std::string buf;
+                                        kv_message.SerializeToString(&buf);
 
-//                                         try {
-//                                             connection.send_msg(buf.data(), buf.size());
-//                                         }catch(std::exception& e){
-//                                             std::cerr << "Exception: " << e.what() << std::endl;
-//                                         }
-//                                     });
+                                        try {
+                                            connection.send_msg(buf.data(), buf.size());
+                                        }catch(std::exception& e){
+                                            std::cerr << "Exception: " << e.what() << std::endl;
+                                        }
+                                    });
 
-//         // Send Recover Done Message
-//         proto::kv_message kv_message;
-//         kv_message.set_forwarded_within_group(false);
-//         auto* message_content = new proto::recover_termination_message();
-//         kv_message.set_allocated_recover_termination_msg(message_content);
-//         std::string buf;
-//         kv_message.SerializeToString(&buf);
+        // Send Recover Done Message
+        proto::kv_message kv_message;
+        kv_message.set_forwarded_within_group(false);
+        auto* message_content = new proto::recover_termination_message();
+        kv_message.set_allocated_recover_termination_msg(message_content);
+        std::string buf;
+        kv_message.SerializeToString(&buf);
 
-//         try {
-//             connection.send_msg(buf.data(), buf.size());
-//         }catch(std::exception& e){
-//             std::cerr << "Exception: " << e.what() << " " << strerror(errno) << std::endl;
-//         }
-//         connection.wait_for_remote_end_to_close_socket();
+        try {
+            connection.send_msg(buf.data(), buf.size());
+        }catch(std::exception& e){
+            std::cerr << "Exception: " << e.what() << " " << strerror(errno) << std::endl;
+        }
+        connection.wait_for_remote_end_to_close_socket();
 
-//     }catch(const char* e){
-//         std::cerr << "Exception: " << e << std::endl;
-//     }catch(std::exception& e){
-//         std::cerr << "Exception: " << e.what() << std::endl;
-//     }
-// }
+    }catch(const char* e){
+        std::cerr << "Exception: " << e << std::endl;
+    }catch(std::exception& e){
+        std::cerr << "Exception: " << e.what() << std::endl;
+    }
+}
 

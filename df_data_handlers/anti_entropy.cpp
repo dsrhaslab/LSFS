@@ -283,7 +283,7 @@ void anti_entropy::phase_operating(){
             
             message.set_allocated_anti_entropy_msg(message_content);
 
-            this->send_peer_keys(slice_view, message);
+            // this->send_peer_keys(slice_view, message);
         }
     
     }catch (std::exception& e){
