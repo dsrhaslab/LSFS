@@ -1,0 +1,75 @@
+
+Run: #1,wl_name:create-1th-cache_off,wl_path:shared_dir/workloads-filebench/metadata-micro/create-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.023: fileset-1 populated: 75000 files, avg. dir. width = 250, avg. dir. depth = 2.0, 0 leafdirs, 292.969MB total size
+0.025: Removing fileset-1 tree (if exists)
+0.029: Pre-allocating directories in fileset-1 tree
+6.790: Pre-allocating files in fileset-1 tree
+6.887: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+6.887: Population and pre-allocation of filesets completed
+6.928: Attempting to create fileset more than once, ignoring
+6.928: Starting 1 process-1 instances
+7.942: Running...
+908.025: Run took 900 seconds...
+908.025: Per-Operation Breakdown
+finishoncount-1      0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+createwriteclose-1.closefile-1 29632ops       33ops/s   0.0mb/s    4.671ms/op [1.127ms - 24.483ms]
+createwriteclose-1.write-1 29632ops       33ops/s   0.1mb/s    1.113ms/op [0.245ms - 11.305ms]
+createwriteclose-1.createfile-1 29632ops       33ops/s   0.0mb/s   24.576ms/op [5.057ms - 44.435ms]
+createwriteclose-1   0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+908.025: IO Summary: 88896 ops 98.764 ops/s 0/33 rd/wr   0.1mb/s 10.120ms/op
+908.025: Shutting down processes
+
+Run: #2,wl_name:create-1th-cache_off,wl_path:shared_dir/workloads-filebench/metadata-micro/create-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.022: fileset-1 populated: 75000 files, avg. dir. width = 250, avg. dir. depth = 2.0, 0 leafdirs, 292.969MB total size
+0.024: Removing fileset-1 tree (if exists)
+0.029: Pre-allocating directories in fileset-1 tree
+6.717: Pre-allocating files in fileset-1 tree
+6.802: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+6.802: Population and pre-allocation of filesets completed
+6.853: Attempting to create fileset more than once, ignoring
+6.854: Starting 1 process-1 instances
+7.867: Running...
+907.944: Run took 900 seconds...
+907.944: Per-Operation Breakdown
+finishoncount-1      0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+createwriteclose-1.closefile-1 31369ops       35ops/s   0.0mb/s    4.588ms/op [0.851ms - 20.278ms]
+createwriteclose-1.write-1 31369ops       35ops/s   0.1mb/s    1.083ms/op [0.250ms - 11.911ms]
+createwriteclose-1.createfile-1 31369ops       35ops/s   0.0mb/s   23.009ms/op [4.921ms - 60.626ms]
+createwriteclose-1   0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+907.944: IO Summary: 94107 ops 104.554 ops/s 0/35 rd/wr   0.1mb/s 9.560ms/op
+907.944: Shutting down processes
+
+Run: #3,wl_name:create-1th-cache_off,wl_path:shared_dir/workloads-filebench/metadata-micro/create-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.023: fileset-1 populated: 75000 files, avg. dir. width = 250, avg. dir. depth = 2.0, 0 leafdirs, 292.969MB total size
+0.024: Removing fileset-1 tree (if exists)
+0.031: Pre-allocating directories in fileset-1 tree
+6.856: Pre-allocating files in fileset-1 tree
+6.944: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+6.944: Population and pre-allocation of filesets completed
+6.985: Attempting to create fileset more than once, ignoring
+6.985: Starting 1 process-1 instances
+8.000: Running...
+908.078: Run took 900 seconds...
+908.078: Per-Operation Breakdown
+finishoncount-1      0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+createwriteclose-1.closefile-1 30025ops       33ops/s   0.0mb/s    4.663ms/op [1.203ms - 25.574ms]
+createwriteclose-1.write-1 30025ops       33ops/s   0.1mb/s    1.094ms/op [0.358ms - 11.342ms]
+createwriteclose-1.createfile-1 30025ops       33ops/s   0.0mb/s   24.207ms/op [5.403ms - 41.387ms]
+createwriteclose-1   0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+908.078: IO Summary: 90075 ops 100.075 ops/s 0/33 rd/wr   0.1mb/s 9.988ms/op
+908.078: Shutting down processes

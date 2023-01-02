@@ -1,0 +1,12 @@
+
+Run: #1,wl_name:stat-1th,wl_path:workloads-filebench/metadata-micro/stat-1th.f,fs:passthrough
+
+
+
+Run: #2,wl_name:stat-1th,wl_path:workloads-filebench/metadata-micro/stat-1th.f,fs:passthrough
+
+
+
+Run: #3,wl_name:stat-1th,wl_path:workloads-filebench/metadata-micro/stat-1th.f,fs:passthrough
+
+

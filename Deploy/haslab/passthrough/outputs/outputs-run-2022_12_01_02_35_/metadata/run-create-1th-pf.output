@@ -1,0 +1,54 @@
+
+Run: #1,wl_name:create-1th,wl_path:workloads-filebench/metadata-micro/create-1th.f,fs:passthrough
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.301: fileset-1 populated: 1000000 files, avg. dir. width = 2000, avg. dir. depth = 1.8, 0 leafdirs, 3906.250MB total size
+0.301: Removing fileset-1 tree (if exists)
+0.302: Pre-allocating directories in fileset-1 tree
+0.335: Pre-allocating files in fileset-1 tree
+1.994: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+1.994: Population and pre-allocation of filesets completed
+2.154: Attempting to create fileset more than once, ignoring
+2.155: Starting 1 process-1 instances
+3.164: Running...
+84.170: Run took 81 seconds...
+84.170: Shutting down processes
+
+Run: #2,wl_name:create-1th,wl_path:workloads-filebench/metadata-micro/create-1th.f,fs:passthrough
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.004: Populating and pre-allocating filesets
+0.306: fileset-1 populated: 1000000 files, avg. dir. width = 2000, avg. dir. depth = 1.8, 0 leafdirs, 3906.250MB total size
+0.306: Removing fileset-1 tree (if exists)
+0.310: Pre-allocating directories in fileset-1 tree
+0.342: Pre-allocating files in fileset-1 tree
+2.031: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+2.031: Population and pre-allocation of filesets completed
+2.318: Attempting to create fileset more than once, ignoring
+2.318: Starting 1 process-1 instances
+3.327: Running...
+130.337: Run took 127 seconds...
+130.337: Shutting down processes
+
+Run: #3,wl_name:create-1th,wl_path:workloads-filebench/metadata-micro/create-1th.f,fs:passthrough
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.004: Populating and pre-allocating filesets
+0.307: fileset-1 populated: 1000000 files, avg. dir. width = 2000, avg. dir. depth = 1.8, 0 leafdirs, 3906.250MB total size
+0.308: Removing fileset-1 tree (if exists)
+0.312: Pre-allocating directories in fileset-1 tree
+0.345: Pre-allocating files in fileset-1 tree
+2.025: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+2.025: Population and pre-allocation of filesets completed
+2.282: Attempting to create fileset more than once, ignoring
+2.282: Starting 1 process-1 instances
+3.292: Running...
+156.304: Run took 153 seconds...
+156.304: Shutting down processes

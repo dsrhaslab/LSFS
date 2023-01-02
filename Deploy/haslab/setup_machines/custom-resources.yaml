@@ -18,7 +18,7 @@ spec:
     # Use ifconfig to know more.
     nodeAddressAutodetectionV4:
       firstFound: False
-      interface: enp1s0
+      interface: enp1s0 # <================= Change interface here !!!
 ---
 
 # This section configures the Calico API server.

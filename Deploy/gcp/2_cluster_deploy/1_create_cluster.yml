@@ -1,0 +1,71 @@
+  
+#  Play1 - Kubernets Cluster initialization
+ 
+#  For more informations regarding calico CNI visit this link:
+#    https://projectcalico.docs.tigera.io/getting-started/kubernetes/quickstart
+
+- name: Kubernetes init cluster
+  hosts: masters
+
+  tasks:
+
+    - name: Init cluster
+      shell: |
+              sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+
+
+    - name: Create a directory for the cluster
+      shell: |
+              mkdir -p .kube
+              sudo cp -i /etc/kubernetes/admin.conf .kube/config
+              sudo chown $(id -u):$(id -g) .kube/config
+
+    - name: Generate join token
+      shell: |
+              sudo kubeadm token create --print-join-command
+      register: cluster_join_cmd
+
+
+    - name: Run join command in workers
+      shell: |
+              sudo {{ cluster_join_cmd.stdout }}
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['workers'] }}"
+
+  
+
+    - name: Put custom-resources config in host home directory
+      copy:
+        src: custom-resources.yaml
+        dest: "/home/{{ ansible_user }}/custom-resources.yaml"
+
+
+    - name: Deploy Pod Network to Cluster (CNI - Calico)
+      shell: | 
+              kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.3/manifests/tigera-operator.yaml
+      ignore_errors: yes
+
+    - name: Deploy Pod Network to Cluster (CNI - Calico)
+      shell: | 
+              kubectl create -f custom-resources.yaml
+      ignore_errors: yes
+
+    - name: Wait unitl all system and calico pods are ready/running
+      shell: | 
+              kubectl wait --for=condition=Ready pods --all-namespaces --all --timeout=600s
+      register: cs_result
+  
+  
+  # Play2 - Setting up k8s namespace
+- name: Setting up k8s
+  hosts: masters
+
+  tasks:
+  
+    - name: Create lsfs namespace
+      k8s:
+        kubeconfig: "~/.kube/config"
+        name: lsfs
+        api_version: v1
+        kind: Namespace
+        state: present

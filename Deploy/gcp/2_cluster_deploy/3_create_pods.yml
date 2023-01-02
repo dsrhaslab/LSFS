@@ -1,0 +1,49 @@
+
+  - name: Creation of bootstrapper Pod
+    hosts: masters
+    roles:
+      - { role: bootstrapper, shared_dir: "/home/{{ hosts_user }}/{{ remote_com_directory }}"}
+  
+  - name: Creation of Peer Pods
+    hosts: masters
+    roles:
+      - { role: peers, nr_peers: "{{ nr_peers }}", bootstrapper_ip: "{{ boot_ip }}", shared_dir: "/home/{{ hosts_user }}/{{ remote_com_directory }}"}
+    vars:
+      boot_ip: "{{ hostvars['localhost']['bootstrapper_ip'] }}"
+
+
+  - name: Wait until peers creation
+    hosts: masters
+    tasks:
+      - name: Pause for 1 minutes until all peers are created
+        pause:
+          minutes: 1
+
+
+  - name: Wait for peer estabilizations
+    hosts: masters
+    tasks:
+      - name: Pause for 2 minutes before client enters
+        pause:
+          seconds: 180
+
+
+  - name: Creation of client Pods
+    hosts: masters
+    roles:
+      - { role: clients, nr_clients: 1, bootstrapper_ip: "{{ boot_ip }}", mount_dir: "/home/{{ hosts_user }}/{{ remote_mount_vol_directory }}", shared_dir: "/home/{{ hosts_user }}/{{ remote_com_directory }}" }
+    vars:
+      boot_ip: "{{ hostvars['localhost']['bootstrapper_ip'] }}"
+
+
+
+    # Play4 - Collecting bootstrapper ip
+  - name: Collenting bootstrapper info
+    hosts: localhost
+
+    tasks:
+        
+        - name: Write hosts to file
+          copy: 
+            content: "{{ hostvars['localhost']['bootstrapper_ip'] }}"
+            dest: bootstrapper_host

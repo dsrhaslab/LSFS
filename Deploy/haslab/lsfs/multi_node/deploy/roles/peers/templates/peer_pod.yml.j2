@@ -17,11 +17,11 @@ spec:
           command: ["/bin/bash", "-c","/bin/kill -SIGTERM $(pgrep peer_exe) && tail --pid=$(pgrep peer_exe) -f /dev/null"]
     volumeMounts:
     - mountPath: /shared_dir
-      name: mount-volume
+      name: shared-volume
   volumes:
   - hostPath:
-      path: {{ mount_dir }}
-    name: mount-volume
+      path: {{ shared_dir }}
+    name: shared-volume
   ports: 
   - containerPort: 12355
     containerPort: 12356

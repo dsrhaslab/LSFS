@@ -1,0 +1,52 @@
+
+Run: #1,wl_name:seq-write-1th-128k-smart-16k,wl_path:shared_dir/workloads-filebench/write-data-micro/seq-write-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.003: fileset-1 populated: 1 files, avg. dir. width = 1, avg. dir. depth = -nan, 0 leafdirs, 1024.000MB total size
+0.003: Removing fileset-1 tree (if exists)
+0.006: Pre-allocating directories in fileset-1 tree
+0.012: Pre-allocating files in fileset-1 tree
+0.012: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+0.012: Population and pre-allocation of filesets completed
+0.081: Attempting to create fileset more than once, ignoring
+0.081: Starting 1 process-1 instances
+1.095: Running...
+901.147: Run took 900 seconds...
+901.147: Per-Operation Breakdown
+finish-1             0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close-1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+write-1              226711ops      252ops/s  31.5mb/s    3.968ms/op [2.524ms - 50.705ms]
+create-1             1ops        0ops/s   0.0mb/s    1.009ms/op [1.009ms - 1.009ms]
+901.147: IO Summary: 226712 ops 251.888 ops/s 0/252 rd/wr  31.5mb/s 3.968ms/op
+901.147: Shutting down processes
+
+Run: #2,wl_name:seq-write-1th-128k-smart-16k,wl_path:shared_dir/workloads-filebench/write-data-micro/seq-write-1th.f,fs:lsfs
+
+
+
+Run: #3,wl_name:seq-write-1th-128k-smart-16k,wl_path:shared_dir/workloads-filebench/write-data-micro/seq-write-1th.f,fs:lsfs
+
+
+Filebench Version 1.5-alpha3
+0.000: Allocated 177MB of shared memory
+0.001: Populating and pre-allocating filesets
+0.002: fileset-1 populated: 1 files, avg. dir. width = 1, avg. dir. depth = -nan, 0 leafdirs, 1024.000MB total size
+0.003: Removing fileset-1 tree (if exists)
+0.006: Pre-allocating directories in fileset-1 tree
+0.012: Pre-allocating files in fileset-1 tree
+0.012: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+0.012: Population and pre-allocation of filesets completed
+0.246: Attempting to create fileset more than once, ignoring
+0.246: Starting 1 process-1 instances
+1.259: Running...
+901.310: Run took 900 seconds...
+901.310: Per-Operation Breakdown
+finish-1             0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+close-1              0ops        0ops/s   0.0mb/s    0.000ms/op [0.000ms - 0.000ms]
+write-1              256269ops      285ops/s  35.6mb/s    3.510ms/op [2.370ms - 27.834ms]
+create-1             1ops        0ops/s   0.0mb/s    1.578ms/op [1.578ms - 1.578ms]
+901.310: IO Summary: 256270 ops 284.728 ops/s 0/285 rd/wr  35.6mb/s 3.510ms/op
+901.310: Shutting down processes

@@ -12,6 +12,21 @@
         file:
           path: "{{ remote_dir }}"
           state: directory
+
+      - name: Creates mount dir
+        file:
+          path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}"
+          state: directory
+
+      - name: Creates mount inner dir
+        file:
+          path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}/InnerFolder"
+          state: directory
+      
+      - name: Creates mount inner backend dir
+        file:
+          path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}/InnerFolder2"
+          state: directory
       
       - name: Creates database dir
         file:

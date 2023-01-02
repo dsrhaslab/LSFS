@@ -1,5 +1,5 @@
 [masters]
-master1 ansible_host=cloud122
+master1 ansible_host=cloud112
 
 
 [all:vars]

@@ -26,6 +26,7 @@ RUN cd / && mkdir test_filesystem/ && mkdir test_filesystem/InnerFolder/ && mkdi
 
 RUN apt install vim -y 
 
+
 EXPOSE 12365
 EXPOSE 12366
 EXPOSE 12367

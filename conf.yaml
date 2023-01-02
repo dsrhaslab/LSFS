@@ -1,5 +1,5 @@
 main_confs:
-  use_localhost: False
+  use_localhost: true
   peer:
     log_level: off
     mt_data_handler: true
@@ -13,9 +13,10 @@ main_confs:
     database:
       base_path: /shared_dir/
     anti_entropy:
-      interval_sec: 3660
-      max_keys_to_send_percentage: 20
-      disseminate_latest: False
+      dissemination_interval_sec: 20
+      dissemination_total_packet_size_percentage: 100 # 4k = 7%-6%
+      max_keys_to_send_percentage: 100
+      
 
   group_construction:
     rep_max: 2
@@ -43,7 +44,7 @@ main_confs:
     nr_gets_required: 1
     nr_gets_version_required: 1
     client_wait_timeout: 1
-    max_nr_requests_timeouts: 100
+    max_nr_requests_timeouts: 10
     limit_write_paralelization_to: 4k
     limit_read_paralelization_to: 4k
     mt_client_handler: true
@@ -54,8 +55,8 @@ main_confs:
       smart_load_balancer_group_knowledge: 3
       smart_max_view_age: 50
     cache:
-      use_cache: true
-      refresh_cache_time: 1000 #milliseconds
+      use_cache: False
+      refresh_cache_time: 30000 #milliseconds
       max_directories_in_cache: 1000
       max_nr_requests_timeout: 5
     direct_io: 1

@@ -1,0 +1,20 @@
+
+- name: Get Peers Positions
+  shell: "if [ {{ nr_peers | int }} -gt 1 ]; then step=`bc -l <<< 'scale=6; 1/{{ nr_peers | int - 1 }}'`;for i in `seq 0 ${step} 1`; do echo $i | tr , .; done; else echo 1; fi;"
+  args:
+    executable: /bin/bash
+  register: peer_positions
+
+- debug:
+    msg: "{{ item }}"
+  with_items:
+  - "{{ peer_positions.stdout_lines }}"
+
+- name: Create Peer Pod
+  k8s:
+    kubeconfig: "/home/{{ hosts_user }}/.kube/config"
+    state: present
+    definition: "{{ lookup('template', '{{ role_path }}/templates/peer_pod.yml.j2') }}"
+  with_together:
+    - "{{ range(1, nr_peers | int + 1) | list }}"
+    - "{{ peer_positions.stdout_lines }}"

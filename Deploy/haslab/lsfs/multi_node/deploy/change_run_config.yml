@@ -23,14 +23,14 @@
 
       - name: Replacing anti_entropy interval
         shell: | 
-                sed -i "/interval_sec.*/c\      interval_sec: {{ entropy_interval }}" {{ remote_dir }}/conf.yaml
+                sed -i "/dissemination_interval_sec.*/c\      dissemination_interval_sec: {{ entropy_interval }}" {{ remote_dir }}/conf.yaml
         when: entropy_interval is defined
 
 
       - name: Replacing limit paralelization
         shell: | 
-                sed -i "/limit_write_paralelization_to.*/c\    limit_write_paralelization_to: {{ paralelization }}" {{ remote_dir }}/conf.yaml
-                sed -i "/limit_read_paralelization_to.*/c\    limit_read_paralelization_to: {{ paralelization }}" {{ remote_dir }}/conf.yaml
+                sed -i "/limit_write_paralelization_to.*/c\    limit_write_paralelization_to: {{ paralelization_w }}" {{ remote_dir }}/conf.yaml
+                sed -i "/limit_read_paralelization_to.*/c\    limit_read_paralelization_to: {{ paralelization_r }}" {{ remote_dir }}/conf.yaml
 
 
       - name: Replacing nr requests required

@@ -15,9 +15,9 @@ spec:
     - containerPort: 12345
     volumeMounts:
     - mountPath: /shared_dir
-      name: mount-volume
+      name: shared-volume
   volumes:
   - hostPath:
-      path: {{ mount_dir }}
-    name: mount-volume
+      path: {{ shared_dir }}
+    name: shared-volume
   nodeName: cloud139
