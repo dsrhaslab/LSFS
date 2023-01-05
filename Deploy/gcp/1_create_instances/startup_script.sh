@@ -22,7 +22,7 @@ deb https://apt.kubernetes.io/ kubernetes-xenial main
 EOF
 
 sudo apt-get update
-sudo apt-get install -y kubelet=1.25.3-00 kubeadm=1.25.3-00 kubectl=1.25.3-00
+sudo apt-get install -y kubelet=1.25.3-00 kubeadm=1.25.3-00 kubectl=1.25.3-00 --allow-downgrades --allow-change-held-packages
 sudo apt-mark hold kubelet kubeadm kubectl
 
 sudo swapoff -a
@@ -33,3 +33,6 @@ sudo apt install -y python3-pip
 sudo pip install openshift pyyaml==5.4.1 kubernetes kubernetes-validate google-cloud-storage requests google-auth boto
 
 sudo apt -y install unzip
+
+# sudo rm /etc/containerd/config.toml
+# sudo systemctl restart containerd

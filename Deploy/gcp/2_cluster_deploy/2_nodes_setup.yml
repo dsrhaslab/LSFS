@@ -123,9 +123,9 @@
 
       - name: Unzip file
         shell: | 
-                cd /{{ remote_dir }}/levelDB && sudo unzip * 
+                cd {{ remote_dir }}/levelDB && sudo unzip * 
       
       - name: Remove zip file
         shell: | 
-                sudo rm /{{ remote_dir }}/levelDB/*.zip
+                sudo rm {{ remote_dir }}/levelDB/*.zip
 

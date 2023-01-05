@@ -11,8 +11,8 @@ CHECKPOINTING_DIR="/tmp/checkpointing"
 # ======================================================================================
 
 # Default values
-# DATASET_DIR="${USER}/lsfs/test_filesystem/InnerFolder/100g_tfrecords"
-DATASET_DIR="${USER}/external/100g_tfrecords"
+DATASET_DIR="${USER}/lsfs/test_filesystem/InnerFolder/100g_tfrecords"
+# DATASET_DIR="${USER}/external/100g_tfrecords"
 BATCH_SIZE=64
 EPOCHS=1
 NUM_GPUS=1

@@ -9,13 +9,11 @@
                 kubectl exec -n lsfs peer{{ item }} -- bash /{{ container_com_directory }}/dstat/init_dstat.sh /{{ container_com_directory }}/metrics run-{{ wl_name }}-lsfs-peer{{ item }}.dstat.csv
         with_items:
           - "{{ range(1, nr_peers | int + 1) | list }}"
-        when: dstat_peer_config is defined
         
 
       - name: Start dstat in client pods
         shell: | 
                 kubectl exec -n lsfs client1 -- bash /{{ container_com_directory }}/dstat/init_dstat.sh /{{ container_com_directory }}/metrics run-{{ wl_name }}-lsfs-client1.dstat.csv
-        when: dstat_client_config is defined
 
 
   - name: Start monitoring gpu
@@ -25,6 +23,7 @@
 
       - name: Start Nvidia-smi if Gpu present
         shell:
-          cmd: "nvidia-smi --query-gpu=timestamp,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used --format=csv -l 1 -f nvidia-smi-{{ ansible_date_time.date }}.csv &"
+          cmd: "nvidia-smi --query-gpu=timestamp,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used --format=csv -l 1 -f nvidia-smi-{{ wl_name }}.csv &"
           chdir: "/home/{{ ansible_user }}/{{ remote_com_directory }}/metrics"
-        when: stat_client_gpu is defined
+        async: 2592000               # 60*60*24*30 – 1 month
+        poll: 0

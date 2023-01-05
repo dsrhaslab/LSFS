@@ -9,13 +9,11 @@
                 kubectl exec -n lsfs peer{{ item }} -- bash /{{ container_com_directory }}/dstat/stop_dstat.sh &> /dev/null
         with_items:
           - "{{ range(1, nr_peers | int + 1) | list }}"
-        when: dstat_peer_config is defined
-
+ 
 
       - name: Stop dstat in clients
         shell: | 
                 kubectl exec -n lsfs client1 -- bash /{{ container_com_directory }}/dstat/stop_dstat.sh &> /dev/null
-        when: dstat_client_config is defined
 
   # Play - Stop nvidia stat process
   - name: Stop stat gpu in client
@@ -41,15 +39,29 @@
 
     tasks:
 
-        - name: Copy peers dstat output to local
-          fetch:
-            src: /home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/run-{{ wl_name }}-lsfs-peer{{ item }}.dstat.csv
-            dest: ../{{ dstat_path }}/
-            flat: yes
-            fail_on_missing: no
-          with_items:
-            - "{{ range(1, nr_peers | int + 1) | list }}"
-          when: dstat_peer_config is defined
+        - command: "hostname"
+          register: target_peer
+      
+
+        - name: Copy peers dstat output to bucket
+          gcp_storage_object:
+            action: upload
+            bucket: lsfs_stat_files
+            src: "/home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/run-{{ wl_name }}-lsfs-{{ target_peer.stdout }}.dstat.csv"
+            dest: "{{ wl_name }}/run-{{ wl_name }}-lsfs-{{ target_peer.stdout }}.dstat.csv"
+            project: "{{ project_id }}"
+            auth_kind: serviceaccount
+            service_account_file: "/gcpsc2.json"
+
+        # - name: Copy peers dstat output to local
+        #   fetch:
+        #     src: /home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/run-{{ wl_name }}-lsfs-peer{{ item }}.dstat.csv
+        #     dest: ../{{ dstat_path }}/
+        #     flat: yes
+        #     fail_on_missing: no
+        #   with_items:
+        #     - "{{ range(1, nr_peers | int + 1) | list }}"
+        #   when: dstat_peer_config is defined
 
 
     # Play - Collecting dstat output
@@ -59,18 +71,49 @@
 
     tasks:
 
-        - name: Copy client dstat output to local
-          fetch:
-            src: /home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/run-{{ wl_name }}-lsfs-client1.dstat.csv
-            dest: ../{{ dstat_path }}/
-            flat: yes
-            fail_on_missing: no
-          when: dstat_client_config is defined
+        - name: Copy service_account to clients
+          copy:
+            src: "~/.gcp/largescale22-0457fb54d2ed.json"
+            dest: "/gcpsc2.json"
+
+
+        - command: "hostname"
+          register: target_client
+      
+
+        - name: Copy client dstat output to bucket
+          gcp_storage_object:
+            action: upload
+            bucket: lsfs_stat_files
+            src: "/home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/run-{{ wl_name }}-lsfs-{{ target_client.stdout }}.dstat.csv"
+            dest: "{{ wl_name }}/run-{{ wl_name }}-lsfs-{{ target_client.stdout }}.dstat.csv"
+            project: "{{ project_id }}"
+            auth_kind: serviceaccount
+            service_account_file: "/gcpsc2.json"
+
+
+        - name: Copy client nvidia gpu stat output to bucket
+          gcp_storage_object:
+            action: upload
+            bucket: lsfs_stat_files
+            src: "/home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/nvidia-smi-{{ wl_name }}.csv"
+            dest: "{{ wl_name }}/nvidia-smi-{{ wl_name }}.csv"
+            project: "{{ project_id }}"
+            auth_kind: serviceaccount
+            service_account_file: "/gcpsc2.json"
+
+        # - name: Copy client dstat output to local
+        #   fetch:
+        #     src: /home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/run-{{ wl_name }}-lsfs-client1.dstat.csv
+        #     dest: ../{{ dstat_path }}/
+        #     flat: yes
+        #     fail_on_missing: no
+        #   when: dstat_client_config is defined
         
-        - name: Copy client gpu stat output to local
-          fetch:
-            src: /home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/nvidia-smi*
-            dest: ../{{ gpu_stat_path }}/
-            flat: yes
-            fail_on_missing: no
-          when: stat_client_gpu is defined
+        # - name: Copy client gpu stat output to local
+        #   fetch:
+        #     src: /home/{{ ansible_user }}/{{ remote_com_directory }}/metrics/nvidia-smi*
+        #     dest: ../{{ gpu_stat_path }}/
+        #     flat: yes
+        #     fail_on_missing: no
+        #   when: stat_client_gpu is defined
