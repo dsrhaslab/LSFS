@@ -46,10 +46,16 @@ variable "label" {
   description = "Instance label"
 }
 
-variable "attached_disk_name" {
-  type        = string
-  description = "Instance attached disk"
-  default = ""
+# variable "attached_disk_name" {
+#   type        = string
+#   description = "Instance attached disk"
+#   default = null
+# }
+
+variable "public_ip" {
+  type        = bool
+  description = "Instance use public_ip"
+  default = false
 }
 
 variable "instance" {
@@ -68,4 +74,22 @@ variable "instance" {
     }), {type = "", count = 0})
   })
   description = "Instance object configuration" 
+}
+
+variable "provisioner_file" {
+  type = object({
+    origin = string
+    destination = string
+  })
+  description = "Copy file to instance"
+
+  default = {
+    destination = null
+    origin = null
+  }
+}
+
+variable "instance_user" {
+  type = string
+  description = "Instance user"
 }

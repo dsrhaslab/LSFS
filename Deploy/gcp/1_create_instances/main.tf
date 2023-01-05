@@ -84,7 +84,7 @@ module "peer_instances" {
   instance_count = var.peer_node_count
   instance = {
     name      = "peer" 
-    type      = "e2-small"
+    type      = "g1-small"
     tags      = ["ssh"]
     boot_disk   = {
       image     = "ubuntu-os-cloud/ubuntu-2004-lts"
@@ -97,10 +97,12 @@ module "peer_instances" {
   subnetwork  = module.vpc.subnets_names[0]
 
   ssh_key_metadata = "${var.nodes_user}:${chomp(file(var.ssh_path))}"
-
   label = "peer"
 
   startup_script = file("startup_script.sh")
+
+  instance_user = var.nodes_user
+
 }
 
 
@@ -126,8 +128,7 @@ module "client_instances" {
     }
   }
 
-  attached_disk_name = "disk-imagenet"
-  
+  # attached_disk_name = "disk-imagenet"
   
   network     = module.vpc.network_name
   subnetwork  = module.vpc.subnets_names[0]
@@ -136,6 +137,9 @@ module "client_instances" {
   label = "client"
 
   startup_script = file("startup_script.sh")
+
+  instance_user = var.nodes_user
+
 }
 
 module "master" {
@@ -147,7 +151,7 @@ module "master" {
   instance_count = var.master_count
   instance = {
     name      = "master" 
-    type      = "n1-standard-2"
+    type      = "n1-standard-16"
     tags      = ["ssh"]
     boot_disk   = {
       image     = "ubuntu-os-cloud/ubuntu-2004-lts"
@@ -163,7 +167,47 @@ module "master" {
   label = "master"
 
   startup_script = file("startup_script.sh")
+  
+  instance_user = var.nodes_user
+
 }
+
+
+# module "jump_box" {
+#   source      = "./modules/instance"
+#   project_id  = var.project_id
+#   region      = var.region 
+#   zone        = var.zones[0]
+  
+#   instance_count = 1
+#   instance = {
+#     name      = "jump-box" 
+#     type      = "n1-standard-1"
+#     tags      = ["ssh"]
+#     boot_disk   = {
+#       image     = "ubuntu-os-cloud/ubuntu-2004-lts"
+#       size      = 15
+#       type      = "pd-ssd"
+#     }
+#   }
+  
+#   network     = module.vpc.network_name
+#   subnetwork  = module.vpc.subnets_names[0]
+#   public_ip   = true
+
+#   ssh_key_metadata = "${var.nodes_user}:${chomp(file("~/.ssh/id_rsa.pub"))}"
+#   label = "jumpBox"
+
+#   startup_script = file("jump_box-startup_script.sh")
+
+#   provisioner_file =  {
+#     origin      = "~/id_rsa"
+#     destination = "/home/${var.nodes_user}/.ssh/id_rsa"
+#   }
+
+#   instance_user = var.nodes_user
+
+# }
 
 
 resource "local_file" "instances_obj" {

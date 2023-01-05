@@ -18,15 +18,17 @@ resource "google_compute_instance" "instance" {
     }
   }
 
-  attached_disk {
-      source = var.attached_disk_name
-  }
+  # attached_disk {
+  #     source = var.attached_disk_name
+  # }
 
   network_interface {
     network = var.network
     subnetwork = var.subnetwork
-    access_config {
-      // Ephemeral public IP
+    dynamic "access_config" {
+      for_each = var.public_ip ? [""] : []
+      content {
+      }
     }
   }
 
@@ -47,4 +49,22 @@ resource "google_compute_instance" "instance" {
   }
 
   metadata_startup_script = var.startup_script
+
+}
+
+resource "null_resource" "instanceprov" {
+  count = var.public_ip? 1 : 0
+  
+  connection {
+      type        = "ssh"
+      user        = var.instance_user
+      private_key = "${file("~/.ssh/id_rsa")}"
+      host        = "${google_compute_instance.instance.0.network_interface.0.access_config.0.nat_ip}"
+  }
+
+  provisioner "file" {
+    source      = var.provisioner_file.origin
+    destination = var.provisioner_file.destination
+  }
+
 }

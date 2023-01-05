@@ -1,0 +1,7 @@
+Model: LeNet
+Dataset: ImageNet
+Batch size: 64
+Epochs: 1
+GPUs: 1
+Framework: Tensorflow 
+Dataset:/home/brancojse/external/100g_tfrecords
