@@ -173,41 +173,46 @@ module "master" {
 }
 
 
-# module "jump_box" {
-#   source      = "./modules/instance"
-#   project_id  = var.project_id
-#   region      = var.region 
-#   zone        = var.zones[0]
+module "jump_box" {
+  source      = "./modules/instance"
+  project_id  = var.project_id
+  region      = var.region 
+  zone        = var.zones[0]
   
-#   instance_count = 1
-#   instance = {
-#     name      = "jump-box" 
-#     type      = "n1-standard-1"
-#     tags      = ["ssh"]
-#     boot_disk   = {
-#       image     = "ubuntu-os-cloud/ubuntu-2004-lts"
-#       size      = 15
-#       type      = "pd-ssd"
-#     }
-#   }
+  instance_count = 1
+  instance = {
+    name      = "jump-box" 
+    type      = "n1-standard-1"
+    tags      = ["ssh"]
+    boot_disk   = {
+      image     = "ubuntu-os-cloud/ubuntu-2004-lts"
+      size      = 15
+      type      = "pd-ssd"
+    }
+  }
   
-#   network     = module.vpc.network_name
-#   subnetwork  = module.vpc.subnets_names[0]
-#   public_ip   = true
+  network     = module.vpc.network_name
+  subnetwork  = module.vpc.subnets_names[0]
+  public_ip   = true
 
-#   ssh_key_metadata = "${var.nodes_user}:${chomp(file("~/.ssh/id_rsa.pub"))}"
-#   label = "jumpBox"
+  ssh_key_metadata = "${var.nodes_user}:${chomp(file("~/.ssh/id_rsa.pub"))}"
+  label = "jumpBox"
 
-#   startup_script = file("jump_box-startup_script.sh")
+  startup_script = file("jump_box-startup_script.sh")
 
-#   provisioner_file =  {
-#     origin      = "~/id_rsa"
-#     destination = "/home/${var.nodes_user}/.ssh/id_rsa"
-#   }
+  provisioner_file =  {
+    origin      = "~/id_rsa"
+    destination = "/home/${var.nodes_user}/.ssh/id_rsa"
+  }
 
-#   instance_user = var.nodes_user
+  provisioner_file2 =  {
+    origin      = "~/.gcp/largescale22-0457fb54d2ed.json"
+    destination = "/home/${var.nodes_user}/gcpsc2.json"
+  }
 
-# }
+  instance_user = var.nodes_user
+
+}
 
 
 resource "local_file" "instances_obj" {
