@@ -67,4 +67,9 @@ resource "null_resource" "instanceprov" {
     destination = var.provisioner_file.destination
   }
 
+  provisioner "file" {
+    source      = var.provisioner_file2.origin
+    destination = var.provisioner_file2.destination
+  }
+
 }

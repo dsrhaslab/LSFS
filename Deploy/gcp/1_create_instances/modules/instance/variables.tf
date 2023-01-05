@@ -89,6 +89,19 @@ variable "provisioner_file" {
   }
 }
 
+variable "provisioner_file2" {
+  type = object({
+    origin = string
+    destination = string
+  })
+  description = "Copy file to instance"
+
+  default = {
+    destination = null
+    origin = null
+  }
+}
+
 variable "instance_user" {
   type = string
   description = "Instance user"
