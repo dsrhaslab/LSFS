@@ -53,7 +53,7 @@ resource "google_compute_instance" "instance" {
 }
 
 resource "null_resource" "instanceprov" {
-  count = var.public_ip? 1 : 0
+  count = var.provisioner? 1 : 0
   
   connection {
       type        = "ssh"
@@ -70,6 +70,11 @@ resource "null_resource" "instanceprov" {
   provisioner "file" {
     source      = var.provisioner_file2.origin
     destination = var.provisioner_file2.destination
+  }
+
+  provisioner "file" {
+    content      = var.provisioner_file3.content
+    destination = var.provisioner_file3.destination
   }
 
 }
