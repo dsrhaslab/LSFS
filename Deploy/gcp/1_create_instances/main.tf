@@ -132,6 +132,7 @@ module "client_instances" {
   
   network     = module.vpc.network_name
   subnetwork  = module.vpc.subnets_names[0]
+  public_ip   = true
 
   ssh_key_metadata = "${var.nodes_user}:${chomp(file(var.ssh_path))}"
   label = "client"
@@ -162,6 +163,7 @@ module "master" {
   
   network     = module.vpc.network_name
   subnetwork  = module.vpc.subnets_names[0]
+  public_ip   = true
 
   ssh_key_metadata = "${var.nodes_user}:${chomp(file(var.ssh_path))}"
   label = "master"
@@ -200,6 +202,7 @@ module "jump_box" {
 
   startup_script = file("jump_box-startup_script.sh")
 
+  provisioner = true
   provisioner_file =  {
     origin      = "~/id_rsa"
     destination = "/home/${var.nodes_user}/.ssh/id_rsa"
@@ -208,6 +211,11 @@ module "jump_box" {
   provisioner_file2 =  {
     origin      = "~/.gcp/largescale22-0457fb54d2ed.json"
     destination = "/home/${var.nodes_user}/gcpsc2.json"
+  }
+
+  provisioner_file3 =  {
+    content      = "Host * \n StrictHostKeyChecking no"
+    destination = "/home/${var.nodes_user}/.ssh/config"
   }
 
   instance_user = var.nodes_user
