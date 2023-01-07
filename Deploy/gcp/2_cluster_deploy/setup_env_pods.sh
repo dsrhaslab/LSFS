@@ -27,8 +27,6 @@ WORKLOAD_NAME=$1
 #                            Setup cluster                             ####################################
 ###########################################################################################################
 
-ansible-playbook 0_initiate_machines.yml -i hosts -v
-
 # Async run -> cluster creation can be run simultaneously with node setup (& detatches process)
 ansible-playbook 1_create_cluster.yml -i hosts -v &
 
