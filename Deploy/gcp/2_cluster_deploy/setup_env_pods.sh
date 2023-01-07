@@ -28,9 +28,9 @@ WORKLOAD_NAME=$1
 ###########################################################################################################
 
 # Async run -> cluster creation can be run simultaneously with node setup (& detatches process)
-ansible-playbook 1_create_cluster.yml -i hosts -v &
+ansible-playbook -f 100 1_create_cluster.yml -i hosts -v &
 
-ansible-playbook 2_nodes_setup.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY remote_mount_vol_directory=$REMOTE_MOUNT_VOLUME_DIRECTORY nr_peers=$NR_PEERS nr_groups=$NR_GROUPS project_id=$PROJECT_ID" -i hosts -v
+ansible-playbook -f 100 2_nodes_setup.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY remote_mount_vol_directory=$REMOTE_MOUNT_VOLUME_DIRECTORY nr_peers=$NR_PEERS nr_groups=$NR_GROUPS project_id=$PROJECT_ID" -i hosts -v
 
 sleep 60
 
