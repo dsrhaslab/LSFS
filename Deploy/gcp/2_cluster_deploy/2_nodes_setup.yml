@@ -110,7 +110,7 @@
           data: "{{ item.split(' ') }}"
         gcp_storage_object:
           action: download
-          bucket: imagenet_lsfs-db
+          bucket: imagenet_lsfs
           src: "{{ data.1 }}.zip"
           dest: "/{{ remote_dir }}/levelDB/{{ data.1 }}.zip"
           project: "{{ project_id }}"
