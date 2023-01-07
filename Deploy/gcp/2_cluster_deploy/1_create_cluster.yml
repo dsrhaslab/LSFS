@@ -26,12 +26,27 @@
       register: cluster_join_cmd
 
 
+    - name: Setting Bootstrapper Ip fact
+      set_fact:
+        cluster_join: "{{ cluster_join_cmd.stdout }}"
+      delegate_to: localhost
+      delegate_facts: true
+
+
+- name: Kubernetes init cluster
+  hosts: workers
+
+  tasks:
+
     - name: Run join command in workers
       shell: |
-              sudo {{ cluster_join_cmd.stdout }}
-      delegate_to: "{{ item }}"
-      with_items: "{{ groups['workers'] }}"
+              sudo {{ hostvars['localhost']['cluster_join'] }}
   
+
+- name: Kubernetes init cluster
+  hosts: masters
+
+  tasks:
 
     - name: Put custom-resources config in host home directory
       copy:
