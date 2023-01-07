@@ -31,7 +31,6 @@
               sudo {{ cluster_join_cmd.stdout }}
       delegate_to: "{{ item }}"
       with_items: "{{ groups['workers'] }}"
-
   
 
     - name: Put custom-resources config in host home directory

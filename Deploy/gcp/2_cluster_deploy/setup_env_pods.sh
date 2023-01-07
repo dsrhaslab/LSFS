@@ -36,6 +36,6 @@ sleep 60
 
 ansible-playbook 3_create_pods.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY remote_mount_vol_directory=$REMOTE_MOUNT_VOLUME_DIRECTORY nr_peers=$NR_PEERS" -i hosts -v
 
-# ansible-playbook monitoring/start_monitoring.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY wl_name=test1 nr_peers=$NR_PEERS" -i hosts -v
+# ansible-playbook monitoring/start_monitoring.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY wl_name=$WORKLOAD_NAME nr_peers=$NR_PEERS" -i hosts -v
 
-# ansible-playbook monitoring/stop_monitoring.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY wl_name=test1 project_id=$PROJECT_ID nr_peers=$NR_PEERS" -i hosts -v
+# ansible-playbook monitoring/stop_monitoring.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY wl_name=$WORKLOAD_NAME project_id=$PROJECT_ID nr_peers=$NR_PEERS" -i hosts -v

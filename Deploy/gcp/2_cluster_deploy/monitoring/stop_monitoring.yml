@@ -73,7 +73,7 @@
 
         - name: Copy service_account to clients
           copy:
-            src: "~/.gcp/largescale22-0457fb54d2ed.json"
+            src: "~/gcpsc2.json"
             dest: "/gcpsc2.json"
 
 
