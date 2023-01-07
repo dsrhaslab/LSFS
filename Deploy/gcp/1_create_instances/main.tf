@@ -38,6 +38,25 @@ module "vpc" {
   }
 }
 
+resource "google_compute_router" "router" {
+  name    = "${local.env_name}-${local.env_project_name}-router"
+  region  = var.region
+  network = module.vpc.network_id
+
+  bgp {
+    asn = 64514
+  }
+}
+
+resource "google_compute_router_nat" "nat" {
+  name                               = "${local.env_name}-${local.env_project_name}-router-nat"
+  router                             = google_compute_router.router.name
+  region                             = google_compute_router.router.region
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+}
+
+
 resource "google_compute_firewall" "allow-internal" {
   name    = "${local.env_name}-${local.env_project_name}-fw-allow-internal"
   network = module.vpc.network_name
@@ -87,7 +106,7 @@ module "peer_instances" {
     type      = "g1-small"
     tags      = ["ssh"]
     boot_disk   = {
-      image     = "ubuntu-os-cloud/ubuntu-2004-lts"
+      image     = "${var.project_id}/peer" #"ubuntu-os-cloud/ubuntu-2004-lts"
       size      = 25
       type      = "pd-ssd"
     }
@@ -99,7 +118,7 @@ module "peer_instances" {
   ssh_key_metadata = "${var.nodes_user}:${chomp(file(var.ssh_path))}"
   label = "peer"
 
-  startup_script = file("startup_script.sh")
+  # startup_script = file("startup_script.sh")
 
   instance_user = var.nodes_user
 
@@ -118,7 +137,7 @@ module "client_instances" {
     type      = "n1-standard-4"
     tags      = ["ssh"]
     boot_disk   = {
-      image     = "deeplearning-platform-release/common-cu113-ubuntu-2004"
+      image     = "${var.project_id}/client" #"deeplearning-platform-release/common-cu113-ubuntu-2004"
       size      = 50
       type      = "pd-ssd"
     }
@@ -137,7 +156,7 @@ module "client_instances" {
   ssh_key_metadata = "${var.nodes_user}:${chomp(file(var.ssh_path))}"
   label = "client"
 
-  startup_script = file("startup_script.sh")
+  # startup_script = file("startup_script.sh")
 
   instance_user = var.nodes_user
 
@@ -155,7 +174,7 @@ module "master" {
     type      = "n1-standard-16"
     tags      = ["ssh"]
     boot_disk   = {
-      image     = "ubuntu-os-cloud/ubuntu-2004-lts"
+      image     = "${var.project_id}/master" #"ubuntu-os-cloud/ubuntu-2004-lts"
       size      = 15
       type      = "pd-ssd"
     }
@@ -168,7 +187,7 @@ module "master" {
   ssh_key_metadata = "${var.nodes_user}:${chomp(file(var.ssh_path))}"
   label = "master"
 
-  startup_script = file("startup_script.sh")
+  # startup_script = file("startup_script.sh")
   
   instance_user = var.nodes_user
 
@@ -187,7 +206,7 @@ module "jump_box" {
     type      = "n1-standard-1"
     tags      = ["ssh"]
     boot_disk   = {
-      image     = "ubuntu-os-cloud/ubuntu-2004-lts"
+      image     = "${var.project_id}/jump-box" #"ubuntu-os-cloud/ubuntu-2004-lts"
       size      = 15
       type      = "pd-ssd"
     }
@@ -200,23 +219,23 @@ module "jump_box" {
   ssh_key_metadata = "${var.nodes_user}:${chomp(file("~/.ssh/id_rsa.pub"))}"
   label = "jumpBox"
 
-  startup_script = file("jump_box-startup_script.sh")
+  # startup_script = file("jump_box-startup_script.sh")
 
-  provisioner = true
-  provisioner_file =  {
-    origin      = "~/id_rsa"
-    destination = "/home/${var.nodes_user}/.ssh/id_rsa"
-  }
+  # provisioner = true
+  # provisioner_file =  {
+  #   origin      = "~/id_rsa"
+  #   destination = "/home/${var.nodes_user}/.ssh/id_rsa"
+  # }
 
-  provisioner_file2 =  {
-    origin      = "~/.gcp/largescale22-0457fb54d2ed.json"
-    destination = "/home/${var.nodes_user}/gcpsc2.json"
-  }
+  # provisioner_file2 =  {
+  #   origin      = "~/.gcp/largescale22-0457fb54d2ed.json"
+  #   destination = "/home/${var.nodes_user}/gcpsc2.json"
+  # }
 
-  provisioner_file3 =  {
-    content      = "Host * \n StrictHostKeyChecking no"
-    destination = "/home/${var.nodes_user}/.ssh/config"
-  }
+  # provisioner_file3 =  {
+  #   content      = "Host * \n StrictHostKeyChecking no"
+  #   destination = "/home/${var.nodes_user}/.ssh/config"
+  # }
 
   instance_user = var.nodes_user
 

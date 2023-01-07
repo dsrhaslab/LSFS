@@ -8,4 +8,4 @@ sudo apt -y install ansible
 sudo apt install -y python3-pip
 sudo pip install openshift pyyaml==5.4.1 kubernetes kubernetes-validate google-cloud-storage requests google-auth boto
 
-git clone https://github.com/dsrhaslab/LSFS.git ~
+git clone https://github.com/dsrhaslab/LSFS.git ~/LSFS

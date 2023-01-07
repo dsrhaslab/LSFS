@@ -13,13 +13,13 @@ main_confs:
     database:
       base_path: /shared_dir/
     anti_entropy:
-      dissemination_interval_sec: 20
+      dissemination_interval_sec: 60
       dissemination_total_packet_size_percentage: 10 # 4k = 7%-6%
-      max_keys_to_send_percentage: 50
+      max_keys_to_send_percentage: 10
 
   group_construction:
-    rep_max: 1
-    rep_min: 1
+    rep_max: 30
+    rep_min: 40
     max_age: 30
 
   pss:
@@ -37,8 +37,8 @@ main_confs:
   client:
     log_level: off
     base_path: /shared_dir/
-    max_nodes_to_send_get_request: 3
-    max_nodes_to_send_put_request: 3
+    max_nodes_to_send_get_request: 1
+    max_nodes_to_send_put_request: 1
     nr_puts_required: 1
     nr_gets_required: 1
     nr_gets_version_required: 1
@@ -55,7 +55,7 @@ main_confs:
       smart_max_view_age: 50
     cache:
       use_cache: true
-      refresh_cache_time: 10000 #milliseconds
+      refresh_cache_time: 1000 #milliseconds
       max_directories_in_cache: 1000
       max_nr_requests_timeout: 5
     direct_io: 0
