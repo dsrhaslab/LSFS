@@ -1,8 +1,0 @@
-- name: Initiate nodes
-  hosts: peers
-
-  tasks:
-
-    - name: Copy and execute startup script
-      script: ../1_create_instances/startup_script.sh
-  

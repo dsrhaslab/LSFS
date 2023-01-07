@@ -7,66 +7,66 @@
 
     tasks:
     
-      - name: Create lsfs directory
-        file:
-            path: "/home/{{ hosts_user }}/lsfs"
-            state: directory 
+      # - name: Create lsfs directory
+      #   file:
+      #       path: "/home/{{ hosts_user }}/lsfs"
+      #       state: directory 
 
-      - name: Creates shared dir
-        file:
-          path: "{{ remote_dir }}"
-          state: directory
+      # - name: Creates shared dir
+      #   file:
+      #     path: "{{ remote_dir }}"
+      #     state: directory
 
-      - name: Creates mount dir
-        file:
-          path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}"
-          state: directory
+      # - name: Creates mount dir
+      #   file:
+      #     path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}"
+      #     state: directory
 
-      - name: Creates mount inner dir
-        file:
-          path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}/InnerFolder"
-          state: directory
+      # - name: Creates mount inner dir
+      #   file:
+      #     path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}/InnerFolder"
+      #     state: directory
       
-      - name: Creates mount inner backend dir
-        file:
-          path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}/InnerFolder2"
-          state: directory
+      # - name: Creates mount inner backend dir
+      #   file:
+      #     path: "/home/{{ ansible_user }}/{{ remote_mount_vol_directory }}/InnerFolder2"
+      #     state: directory
       
-      - name: Creates database dir
-        file:
-          path: "{{ remote_dir }}/levelDB"
-          state: directory
+      # - name: Creates database dir
+      #   file:
+      #     path: "{{ remote_dir }}/levelDB"
+      #     state: directory
 
       - name: Put Config File in Shared (Volume) directory
         copy:
           src: conf.yaml
           dest: "{{ remote_dir }}/conf.yaml"
 
-      - name: Creates dstat scripts dir
-        file:
-          path: "{{ remote_dir }}/dstat"
-          state: directory
+      # - name: Creates dstat scripts dir
+      #   file:
+      #     path: "{{ remote_dir }}/dstat"
+      #     state: directory
 
-      - name: Put dstat scripts in Shared (Volume) directory
-        copy:
-          src: ../../haslab/dstat/
-          dest: "{{ remote_dir }}/dstat/"
+      # - name: Put dstat scripts in Shared (Volume) directory
+      #   copy:
+      #     src: ../../haslab/dstat/
+      #     dest: "{{ remote_dir }}/dstat/"
 
 
 
-  - name: Setup Tensorflow necessary files
-    hosts: clients
-    become: yes
+  # - name: Setup Tensorflow necessary files
+  #   hosts: clients
+  #   become: yes
 
-    tasks:
+  #   tasks:
     
-      - name: Copy and execute setup tensorflow script
-        script: tensorflow_setup.sh
+  #     - name: Copy and execute setup tensorflow script
+  #       script: tensorflow_setup.sh
 
-      - name: Put train file in client machine
-        copy:
-          src: train.sh
-          dest: "/home/{{ ansible_user }}/train.sh"
+  #     - name: Put train file in client machine
+  #       copy:
+  #         src: train.sh
+  #         dest: "/home/{{ ansible_user }}/train.sh"
 
 
   - name: Define group of peer
@@ -96,10 +96,10 @@
 
     tasks:
 
-      - name: Copy service_account to peers 
-        copy:
-          src: "~/gcpsc2.json"
-          dest: "/gcpsc2.json"
+      # - name: Copy service_account to peers 
+      #   copy:
+      #     src: "~/gcpsc2.json"
+      #     dest: "/gcpsc2.json"
 
       - command: "hostname"
         register: target_peer
@@ -123,7 +123,7 @@
 
       - name: Unzip file
         shell: | 
-                cd {{ remote_dir }}/levelDB && sudo unzip * 
+                cd {{ remote_dir }}/levelDB && sudo unzip * > /dev/null
       
       - name: Remove zip file
         shell: | 
