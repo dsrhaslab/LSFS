@@ -35,6 +35,7 @@
 
 - name: Kubernetes init cluster
   hosts: workers
+  strategy: free
 
   tasks:
 
