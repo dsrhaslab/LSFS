@@ -65,18 +65,6 @@
               kubectl create -f custom-resources.yaml
       ignore_errors: yes
 
-    - name: Wait unitl all system and calico pods are ready/running
-      shell: | 
-              kubectl wait --for=condition=Ready pods --all-namespaces --all --timeout=600s
-      register: cs_result
-  
-  
-  # Play2 - Setting up k8s namespace
-- name: Setting up k8s
-  hosts: masters
-
-  tasks:
-  
     - name: Create lsfs namespace
       k8s:
         kubeconfig: "~/.kube/config"
@@ -84,3 +72,9 @@
         api_version: v1
         kind: Namespace
         state: present
+
+    - name: Wait unitl all system and calico pods are ready/running
+      shell: | 
+              kubectl wait --for=condition=Ready pods --all-namespaces --all --timeout=600s
+      register: cs_result
+
