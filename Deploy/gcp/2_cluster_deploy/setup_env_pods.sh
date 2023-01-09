@@ -23,20 +23,20 @@ NR_GROUPS=16
 
 WORKLOAD_NAME=$1
 
-FORK_NUMBER=100
+FORK_NUMBER=500
 
 ###########################################################################################################
 #                            Setup cluster                             ####################################
 ###########################################################################################################
 
 # Async run -> cluster creation can be run simultaneously with node setup (& detatches process)
-ansible-playbook -f $FORK_NUMBER 1_create_cluster.yml -i hosts -v &
+ansible-playbook -f $FORK_NUMBER 1_create_cluster.yml -i hosts
 
-ansible-playbook -f $FORK_NUMBER 2_nodes_setup.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY remote_mount_vol_directory=$REMOTE_MOUNT_VOLUME_DIRECTORY nr_peers=$NR_PEERS nr_groups=$NR_GROUPS project_id=$PROJECT_ID" -i hosts -v
+ansible-playbook -f $FORK_NUMBER 2_nodes_setup.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY remote_mount_vol_directory=$REMOTE_MOUNT_VOLUME_DIRECTORY nr_peers=$NR_PEERS nr_groups=$NR_GROUPS project_id=$PROJECT_ID" -i hosts
 
-sleep 60
+# sleep 60
 
-ansible-playbook 3_create_pods.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY remote_mount_vol_directory=$REMOTE_MOUNT_VOLUME_DIRECTORY nr_peers=$NR_PEERS" -i hosts -v
+# ansible-playbook 3_create_pods.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY remote_mount_vol_directory=$REMOTE_MOUNT_VOLUME_DIRECTORY nr_peers=$NR_PEERS" -i hosts
 
 # ansible-playbook monitoring/start_monitoring.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY wl_name=$WORKLOAD_NAME nr_peers=$NR_PEERS" -i hosts -v
 

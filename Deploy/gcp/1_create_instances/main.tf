@@ -203,7 +203,7 @@ module "jump_box" {
   instance_count = 1
   instance = {
     name      = "jump-box" 
-    type      = "n1-standard-4"
+    type      = "n1-standard-8"
     tags      = ["ssh"]
     boot_disk   = {
       image     = "${var.project_id}/jump-box" #"ubuntu-os-cloud/ubuntu-2004-lts"
