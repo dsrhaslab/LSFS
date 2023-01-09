@@ -1,0 +1,16 @@
+  - name: Create base Directory
+    hosts: all
+    become: yes
+
+    vars: 
+        remote_dir: /home/{{ ansible_user }}/{{ remote_com_directory }}
+
+    tasks:
+    
+      - name: Put Config File in Shared (Volume) directory
+        copy:
+          src: conf.yaml
+          dest: "{{ remote_dir }}/conf.yaml"
+
+
+ 

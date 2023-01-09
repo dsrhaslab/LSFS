@@ -37,10 +37,10 @@
       #     path: "{{ remote_dir }}/levelDB"
       #     state: directory
 
-      - name: Put Config File in Shared (Volume) directory
-        copy:
-          src: conf.yaml
-          dest: "{{ remote_dir }}/conf.yaml"
+      # - name: Put Config File in Shared (Volume) directory
+      #   copy:
+      #     src: conf.yaml
+      #     dest: "{{ remote_dir }}/conf.yaml"
 
       # - name: Creates dstat scripts dir
       #   file:
@@ -128,7 +128,6 @@
       
       - name: Remove zip file
         shell: | 
-
                 sudo rm {{ remote_dir }}/levelDB/*.zip
 
 
