@@ -124,8 +124,26 @@
       - name: Unzip file
         shell: | 
                 cd {{ remote_dir }}/levelDB && sudo unzip * > /dev/null
+    
       
       - name: Remove zip file
         shell: | 
+
                 sudo rm {{ remote_dir }}/levelDB/*.zip
+
+
+      - name: List downloaded files in db
+        shell: | 
+                ls {{ remote_dir }}/levelDB/
+        register: files_to_move
+
+
+      - name: Change db names to match peer id
+        vars: 
+          peer_number: "{{ target_peer.stdout | regex_search('peer(.+)', '\\1') | first }}"
+          file_name: "{{ peer_number + '_deleted' if (item | regex_search('.*deleted')) else peer_number + '_tmp_anti_entropy' if (item | regex_search('.*tmp.*')) else peer_number}}"
+        shell: | 
+                mv {{ remote_dir }}/levelDB/{{ item }} {{ remote_dir }}/levelDB/{{ file_name }}
+        with_items: 
+          - "{{ files_to_move.stdout_lines }}"
 
