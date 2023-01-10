@@ -132,12 +132,14 @@ void data_handler_listener::process_get_message(proto::kv_message &msg) {
 
                 // forward to other peers from my slice if is the right slice for the key
                 // trying to speed up quorum
-                int obj_slice = this->store->get_slice_for_key(key);
-                if(this->store->get_slice() == obj_slice){
-                    std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-                    msg.set_forwarded_within_group(true); //forward within group
-                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
-                }
+                
+                // int obj_slice = this->store->get_slice_for_key(key);
+                // if(this->store->get_slice() == obj_slice){
+                //     std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+                //     msg.set_forwarded_within_group(true); //forward within group
+                //     this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                // }
+
             }else{
                 // if the message has already been replied by an element of the group and
                 // the probability is for forward the message, we don't change the content of the message
@@ -229,9 +231,9 @@ void data_handler_listener::process_get_latest_version_msg(proto::kv_message msg
 
                 this->reply_client(reply_message, sender_ip, sender_port);
 
-                std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
-                msg.set_forwarded_within_group(true); 
-                this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                // std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
+                // msg.set_forwarded_within_group(true); 
+                // this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
 
             }else{
                 std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
@@ -554,9 +556,9 @@ void data_handler_listener::process_get_latest_metadata_stat_msg(proto::kv_messa
 
                 this->reply_client(reply_message, sender_ip, sender_port);
 
-                std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
-                msg.set_forwarded_within_group(true); 
-                this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                // std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
+                // msg.set_forwarded_within_group(true); 
+                // this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
 
             }else{
                 std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
@@ -638,9 +640,9 @@ void data_handler_listener::process_get_latest_metadata_size_msg(proto::kv_messa
 
                 this->reply_client(reply_message, sender_ip, sender_port);
 
-                std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
-                msg.set_forwarded_within_group(true); 
-                this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
+                // std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
+                // msg.set_forwarded_within_group(true); 
+                // this->forward_message(slice_peers, const_cast<proto::kv_message &>(msg));
 
             }else{
                 std::vector<peer_data> slice_peers = this->pss_ptr->get_slice_local_view();
@@ -755,12 +757,14 @@ void data_handler_listener::process_get_metadata_message(proto::kv_message &msg)
 
                 // forward to other peers from my slice if is the right slice for the key
                 // trying to speed up quorum
-                int obj_slice = this->store->get_slice_for_key(key);
-                if(this->store->get_slice() == obj_slice){
-                    std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
-                    msg.set_forwarded_within_group(true); //forward within group
-                    this->forward_message(view, const_cast<proto::kv_message &>(msg));
-                }
+                
+                // int obj_slice = this->store->get_slice_for_key(key);
+                // if(this->store->get_slice() == obj_slice){
+                //     std::vector<peer_data> view = this->pss_ptr->get_slice_local_view();
+                //     msg.set_forwarded_within_group(true); //forward within group
+                //     this->forward_message(view, const_cast<proto::kv_message &>(msg));
+                // }
+                
             }else{
                 // if the message has already been replied by an element of the group and
                 // the probability is for forward the message, we don't change the content of the message
