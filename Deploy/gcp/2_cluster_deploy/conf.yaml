@@ -5,7 +5,7 @@ main_confs:
     mt_data_handler: true
     warmup_interval: 120
     restart_database_after_warmup: true
-    reply_chance: 1
+    reply_chance: 0.6
     smart_message_forward: true
     seen_log_garbage_at: 1000
     request_log_garbage_at: 1000

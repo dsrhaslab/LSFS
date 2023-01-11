@@ -63,7 +63,7 @@ LOCAL_DSTAT_OUTPUT_PATH=dstat_outputs
 
 #PEERS_CONFIG=("1_1_2" "2_1_1" "2_2_3")
 #PEERS_CONFIG=("1_1_2")
-PEERS_CONFIG=("16_1_1")
+PEERS_CONFIG=("32_1_1")
 #PEERS_CONFIG=("50_3_5")
 
 RUNTIME_PER_WORKLOAD=900 #seconds
@@ -75,7 +75,7 @@ WORKLOAD_VAR_PARALELIZATION_LIMIT=("8k" "16k")
 WORKLOAD_VAR_LB_TYPE=("smart")
 # WORKLOAD_VAR_CACHE=("cache_on" "cache_off");
 WORKLOAD_VAR_CACHE=("cache_on");
-WORKLOAD_VAR_CACHE_REFRESH_TIME=("10000000")
+WORKLOAD_VAR_CACHE_REFRESH_TIME=("0")
 
 
 ###########################################################################################################
