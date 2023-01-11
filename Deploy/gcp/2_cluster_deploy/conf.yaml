@@ -5,7 +5,7 @@ main_confs:
     mt_data_handler: true
     warmup_interval: 120
     restart_database_after_warmup: true
-    reply_chance: 0.6
+    reply_chance: 1
     smart_message_forward: true
     seen_log_garbage_at: 1000
     request_log_garbage_at: 1000
@@ -18,8 +18,8 @@ main_confs:
       max_keys_to_send_percentage: 10
 
   group_construction:
-    rep_max: 40
-    rep_min: 30
+    rep_max: 25
+    rep_min: 15
     max_age: 30
 
   pss:
