@@ -19,7 +19,7 @@ LOCAL_CONFIG_FILE=conf.yaml
 #------------------------------------------
 NR_PEERS=500
 
-NR_GROUPS=16
+NR_GROUPS=32
 
 WORKLOAD_NAME=$1
 
