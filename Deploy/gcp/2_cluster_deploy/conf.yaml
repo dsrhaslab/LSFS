@@ -18,14 +18,14 @@ main_confs:
       max_keys_to_send_percentage: 10
 
   group_construction:
-    rep_max: 25
-    rep_min: 15
+    rep_max: 20
+    rep_min: 10
     max_age: 30
 
   pss:
     view_size: 20
-    gossip_size: 15
-    message_passing_interval_sec: 10
+    gossip_size: 8
+    message_passing_interval_sec: 30
     local_message: true
     local_interval_sec: 8 
 
@@ -50,7 +50,7 @@ main_confs:
     nr_client_handler_ths: 3
     load_balancer:
       type: smart
-      lb_interval: 5
+      lb_interval: 10
       smart_load_balancer_group_knowledge: 30
       smart_max_view_age: 50
     cache:
