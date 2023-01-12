@@ -8,6 +8,6 @@
 
       - name: Remove db files
         file:
-          path: /home/{{ hosts_user }}/shared_dir/levelDB
+          path: /home/{{ hosts_user }}/lsfs/shared_dir/levelDB
           state: absent
 
