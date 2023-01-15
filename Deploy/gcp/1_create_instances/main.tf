@@ -147,7 +147,7 @@ module "client_instances" {
     }
   }
 
-  # attached_disk_name = "disk-imagenet"
+  attached_disk_name = "disk-imagenet"
   
   network     = module.vpc.network_name
   subnetwork  = module.vpc.subnets_names[0]

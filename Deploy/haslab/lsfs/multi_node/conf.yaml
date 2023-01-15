@@ -25,7 +25,7 @@ main_confs:
   pss:
     view_size: 8
     gossip_size: 7
-    message_passing_interval_sec: 10
+    message_passing_interval_sec: 30
     local_message: true
     local_interval_sec: 8 
 
@@ -42,7 +42,7 @@ main_confs:
     nr_puts_required: 3
     nr_gets_required: 1
     nr_gets_version_required: 1
-    client_wait_timeout: 2
+    client_wait_timeout: 5
     max_nr_requests_timeouts: 100
     limit_write_paralelization_to: 32k
     limit_read_paralelization_to: 32k
@@ -50,12 +50,12 @@ main_confs:
     nr_client_handler_ths: 3
     load_balancer:
       type: dynamic
-      lb_interval: 5
+      lb_interval: 30
       smart_load_balancer_group_knowledge: 3
       smart_max_view_age: 50
     cache:
       use_cache: true
-      refresh_cache_time: 1000 #milliseconds
+      refresh_cache_time: 0 #milliseconds
       max_directories_in_cache: 1000
       max_nr_requests_timeout: 5
     direct_io: 0

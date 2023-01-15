@@ -1,0 +1,19 @@
+# Play - Run workload
+  - name: Zip leveldb files
+    hosts: worker1
+
+    vars: 
+        remote_dir: /home/{{ ansible_user }}/lsfs/shared_dir/levelDB
+
+    tasks:
+
+      - name: Zip all file groups
+        vars:
+          path: "{{ remote_dir }}/{{ item }}"
+        shell: | 
+                sudo zip -r {{ path }}.zip {{ path }}_deleted/ {{ path }} {{ path }}_tmp_anti_entropy/
+                sudo rm -r {{ path }}_deleted/ {{ path }} {{ path }}_tmp_anti_entropy/
+        with_items:
+          - "{{ range(1, nr_groups | int + 1) | list }}"
+
+    

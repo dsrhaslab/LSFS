@@ -46,11 +46,11 @@ variable "label" {
   description = "Instance label"
 }
 
-# variable "attached_disk_name" {
-#   type        = string
-#   description = "Instance attached disk"
-#   default = null
-# }
+variable "attached_disk_name" {
+  type        = string
+  description = "Instance attached disk"
+  default = null
+}
 
 variable "public_ip" {
   type        = bool

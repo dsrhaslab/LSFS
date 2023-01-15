@@ -1,0 +1,34 @@
+
+  - name: Copy database files to peers
+    hosts: peers
+    become: yes
+    strategy: free
+
+    vars: 
+        remote_dir: /home/{{ ansible_user }}/{{ remote_com_directory }}
+
+    tasks:
+
+      - command: "hostname"
+        register: target_peer
+
+      
+      - name: Zip file
+        vars: 
+          peer_id: "{{ target_peer.stdout }}"
+        shell: | 
+                cd {{ remote_dir }}/levelDB && sudo zip -r {{ peer_id }}.zip {{ peer_id }}_deleted/ {{ peer_id }} {{ peer_id }}_tmp_anti_entropy/
+
+
+      - name: Save peer db in bucket
+        vars: 
+            peer_id: "{{ target_peer.stdout }}"
+        gcp_storage_object:
+          action: upload
+          bucket: imagenet_lsfs
+          src: "/{{ remote_dir }}/levelDB/{{ peer_id }}.zip"
+          dest: "/128/{{ peer_id }}.zip"
+          project: "{{ project_id }}"
+          auth_kind: serviceaccount
+          service_account_file: "/gcpsc2.json"
+
