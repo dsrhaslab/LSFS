@@ -18,9 +18,12 @@ resource "google_compute_instance" "instance" {
     }
   }
 
-  # attached_disk {
-  #     source = var.attached_disk_name
-  # }
+  dynamic "attached_disk" {
+    for_each = var.attached_disk_name != null ? [""] : []
+    content {
+      source = var.attached_disk_name
+    }
+  }
 
   network_interface {
     network = var.network
