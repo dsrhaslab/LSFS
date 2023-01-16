@@ -24,10 +24,10 @@ main_confs:
 
   pss:
     view_size: 20
-    gossip_size: 8
+    gossip_size: 15
     message_passing_interval_sec: 30
     local_message: true
-    local_interval_sec: 8 
+    local_interval_sec: 10
 
   log:
     view_logger_enabled: false
@@ -44,7 +44,7 @@ main_confs:
     nr_gets_version_required: 1
     client_wait_timeout: 5
     max_nr_requests_timeouts: 100
-    limit_write_paralelization_to: 96k
+    limit_write_paralelization_to: 64k
     limit_read_paralelization_to: 32k
     mt_client_handler: true
     nr_client_handler_ths: 3
