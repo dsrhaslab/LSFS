@@ -18,16 +18,16 @@ main_confs:
       max_keys_to_send_percentage: 10
 
   group_construction:
-    rep_max: 1
-    rep_min: 1
+    rep_max: 11
+    rep_min: 5
     max_age: 30
 
   pss:
-    view_size: 20
-    gossip_size: 15
+    view_size: 15
+    gossip_size: 8
     message_passing_interval_sec: 30
     local_message: true
-    local_interval_sec: 10
+    local_interval_sec: 30
 
   log:
     view_logger_enabled: false
@@ -47,7 +47,7 @@ main_confs:
     limit_write_paralelization_to: 64k
     limit_read_paralelization_to: 32k
     mt_client_handler: true
-    nr_client_handler_ths: 3
+    nr_client_handler_ths: 7
     load_balancer:
       type: smart
       lb_interval: 10

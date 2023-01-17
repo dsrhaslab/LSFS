@@ -17,9 +17,9 @@ LOCAL_CONFIG_FILE=conf.yaml
 #------------------------------------------
 #               Node Setup
 #------------------------------------------
-NR_PEERS=128
+NR_PEERS=500
 
-NR_GROUPS=128
+NR_GROUPS=64
 
 WORKLOAD_NAME=$1
 

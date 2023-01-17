@@ -103,7 +103,7 @@ module "peer_instances" {
   instance_count = var.peer_node_count
   instance = {
     name      = "peer" 
-    type      = "n1-standard-1"
+    type      = "g1-small"
     tags      = ["ssh"]
     boot_disk   = {
       image     = "${var.project_id}/peer" #"ubuntu-os-cloud/ubuntu-2004-lts"
