@@ -7,5 +7,6 @@ worker2 ansible_host=cloud112
 worker3 ansible_host=cloud120
 worker4 ansible_host=cloud127
 
+
 [all:vars]
 ansible_user="{{ hosts_user }}"
