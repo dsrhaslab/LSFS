@@ -18,8 +18,8 @@ main_confs:
       max_keys_to_send_percentage: 10
 
   group_construction:
-    rep_max: 35
-    rep_min: 25
+    rep_max: 20
+    rep_min: 11
     max_age: 30
 
   pss:
@@ -31,7 +31,7 @@ main_confs:
 
   log:
     view_logger_enabled: false
-    log_interval_sec: 5 
+    log_interval_sec: 5
     logging_dir: logging/
 
   client:
