@@ -23,7 +23,7 @@
 
       - name: Start Nvidia-smi if Gpu present
         shell:
-          cmd: "nvidia-smi --query-gpu=timestamp,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used --format=csv -l 1 -f nvidia-smi-{{ wl_name }}.csv &"
+          cmd: "sudo nvidia-smi --query-gpu=timestamp,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used --format=csv -l 1 -f nvidia-smi-{{ wl_name }}.csv &"
           chdir: "/home/{{ ansible_user }}/{{ remote_com_directory }}/metrics"
         async: 2592000               # 60*60*24*30 – 1 month
         poll: 0

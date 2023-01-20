@@ -44,4 +44,4 @@ ansible-playbook -f $FORK_NUMBER 2_update_config.yml -e "remote_com_directory=$R
 
 # ansible-playbook monitoring/start_monitoring.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY wl_name=$WORKLOAD_NAME nr_peers=$NR_PEERS" -i hosts -v
 
-# ansible-playbook monitoring/stop_monitoring.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY wl_name=$WORKLOAD_NAME project_id=$PROJECT_ID nr_peers=$NR_PEERS" -i hosts -v
+# ansible-playbook -f $FORK_NUMBER monitoring/stop_monitoring.yml -e "remote_com_directory=$REMOTE_COM_DIRECTORY container_com_directory=$CONTAINER_COM_DIRECTORY wl_name=$WORKLOAD_NAME project_id=$PROJECT_ID nr_peers=$NR_PEERS" -i hosts -v

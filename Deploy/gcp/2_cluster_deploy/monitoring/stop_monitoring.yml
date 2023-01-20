@@ -28,7 +28,7 @@
 
       - name: Kill running processes
         ignore_errors: yes
-        shell: "kill {{ item }}"
+        shell: "sudo kill {{ item }}"
         with_items: "{{ running_processes.stdout_lines }}"
 
 
