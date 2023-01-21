@@ -25,7 +25,7 @@ main_confs:
   pss:
     view_size: 8
     gossip_size: 7
-    message_passing_interval_sec: 30
+    message_passing_interval_sec: 15
     local_message: true
     local_interval_sec: 10
 
@@ -50,7 +50,7 @@ main_confs:
     nr_client_handler_ths: 10
     load_balancer:
       type: dynamic
-      lb_interval: 30
+      lb_interval: 5
       smart_load_balancer_group_knowledge: 3
       smart_max_view_age: 50
     cache:
