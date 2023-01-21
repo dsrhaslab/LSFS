@@ -8,11 +8,9 @@
     tasks:
 
       - name: Zip all file groups
-        vars:
-          path: "{{ remote_dir }}/{{ item }}"
         shell: | 
-                sudo zip -r {{ path }}.zip {{ path }}_deleted/ {{ path }} {{ path }}_tmp_anti_entropy/
-                sudo rm -r {{ path }}_deleted/ {{ path }} {{ path }}_tmp_anti_entropy/
+                cd {{ remote_dir }}/ && sudo zip -r {{ item }}.zip {{ item }}_deleted/ {{ item }} {{ item }}_tmp_anti_entropy/
+                cd {{ remote_dir }}/ && sudo rm -r {{ item }}_deleted/ {{ item }} {{ item }}_tmp_anti_entropy/
         with_items:
           - "{{ range(1, nr_groups | int + 1) | list }}"
 
