@@ -14,4 +14,8 @@
         with_items:
           - "{{ range(1, nr_groups | int + 1) | list }}"
 
-    
+
+
+#!/bin/bash
+
+for i in $(seq 1 500); do kubectl patch node peer$i -p '{"spec":{"podCIDR":"10.244.0.0/16"}}'; done

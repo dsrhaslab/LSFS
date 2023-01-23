@@ -18,13 +18,13 @@ main_confs:
       max_keys_to_send_percentage: 10
 
   group_construction:
-    rep_max: 35
-    rep_min: 25
+    rep_max: 11
+    rep_min: 6
     max_age: 30
 
   pss:
     view_size: 20
-    gossip_size: 8
+    gossip_size: 9
     message_passing_interval_sec: 15
     local_message: true
     local_interval_sec: 10
