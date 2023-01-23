@@ -33,10 +33,10 @@
       delegate_facts: true
 
 
-    - name: Deploy Pod Network to Cluster (CNI - Flannel)
-      shell: | 
-              kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-      ignore_errors: yes
+    # - name: Deploy Pod Network to Cluster (CNI - Flannel)
+    #   shell: | 
+    #           kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+    #   ignore_errors: yes
 
 
 - name: Kubernetes init cluster
@@ -55,21 +55,21 @@
 
   tasks:
 
-    # - name: Put custom-resources config in host home directory
-    #   copy:
-    #     src: custom-resources.yaml
-    #     dest: "/home/{{ ansible_user }}/custom-resources.yaml"
+    - name: Put custom-resources config in host home directory
+      copy:
+        src: custom-resources.yaml
+        dest: "/home/{{ ansible_user }}/custom-resources.yaml"
 
 
-    # - name: Deploy Pod Network to Cluster (CNI - Calico)
-    #   shell: | 
-    #           kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.3/manifests/tigera-operator.yaml
-    #   ignore_errors: yes
+    - name: Deploy Pod Network to Cluster (CNI - Calico)
+      shell: | 
+              kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.24.3/manifests/tigera-operator.yaml
+      ignore_errors: yes
 
-    # - name: Deploy Pod Network to Cluster (CNI - Calico)
-    #   shell: | 
-    #           kubectl create -f custom-resources.yaml
-    #   ignore_errors: yes
+    - name: Deploy Pod Network to Cluster (CNI - Calico)
+      shell: | 
+              kubectl create -f custom-resources.yaml
+      ignore_errors: yes
 
     - name: Create lsfs namespace
       k8s:
