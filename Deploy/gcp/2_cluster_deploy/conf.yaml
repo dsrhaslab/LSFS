@@ -50,7 +50,7 @@ main_confs:
     nr_client_handler_ths: 4
     load_balancer:
       type: smart
-      lb_interval: 5
+      lb_interval: 10
       smart_load_balancer_group_knowledge: 30
       smart_max_view_age: 50
     cache:

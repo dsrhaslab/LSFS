@@ -1,0 +1,61 @@
+ 
+  - name: Calculate peers to kill
+    hosts: localhost
+
+    tasks: 
+
+      - name: Execute python script to calculate which peers to reset
+        shell: |
+                python3 peers_2_kill.py {{ nr_peers }} {{ nr_groups }} {{ nr_peers_to_kill }}
+        register: peers_to_kill_res
+      
+      - name: Save var in localhost
+        set_fact:
+            peers_to_kill: "{{ peers_to_kill_res.stdout_lines }}"
+        delegate_to: localhost
+        delegate_facts: true
+
+ 
+ 
+ # Play3 - Shutdown pods
+  - name: Shutdown running pods
+    hosts: masters
+
+    tasks: 
+
+      - name: Delete selected pods 
+        vars: 
+          data: "{{ item.split(' ') }}"
+        shell: | 
+                kubectl delete pods -n lsfs {{ data.0 }}
+        with_items:
+          - "{{ hostvars['localhost']['peers_to_kill'] }}"
+    
+
+  - name: Clean/stop selected instances
+    hosts: localhost
+
+    vars: 
+        remote_dir: /home/{{ ansible_user }}/{{ remote_com_directory }}
+
+    tasks: 
+
+      - name: Clean selected instances database 
+        vars: 
+          data: "{{ item.split(' ') }}" 
+        shell: | 
+                sudo rm -r /{{ remote_dir }}/levelDB/*
+        delegate_to: "{{ data.0 }}"   # {{ hostvars['peer50'].ansible_host }}
+        with_items:
+          - "{{ hostvars['localhost']['peers_to_kill'] }}"
+
+      - name: Reboot selected instances 
+        vars: 
+          data: "{{ item.split(' ') }}" 
+        shell: | 
+                sudo reboot
+        delegate_to: "{{ data.0 }}"   # {{ hostvars['peer50'].ansible_host }}
+        with_items:
+          - "{{ hostvars['localhost']['peers_to_kill'] }}"
+
+  

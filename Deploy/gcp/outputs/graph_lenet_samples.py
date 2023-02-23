@@ -33,9 +33,7 @@ clear_output(arg_file)
 
 sum_of_samples_per_second = sum(data_samples)
 mean_of_samples_per_second = sum_of_samples_per_second/len(data_samples)
-
-   
-# line = "I1230 15:54:33.411908 140461041727296 keras_utils.py:88] BenchmarkMetric: {'global step':13900, 'time_taken': 6.505724,'examples_per_second': 983.749087}"
+print(mean_of_samples_per_second)
 
 fig, ax = plt.subplots()
 
@@ -56,4 +54,4 @@ plt.ylabel('Débito (imagens/s)')
 plt.title('Desempenho Local')
 
 # function to show the plot
-plt.show()
+# plt.show()

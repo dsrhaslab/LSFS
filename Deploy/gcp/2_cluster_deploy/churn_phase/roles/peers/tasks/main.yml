@@ -1,0 +1,12 @@
+
+- name: Create Peer Pod
+  vars: 
+    data: "{{ item.split(' ') }}"
+    peer_name: "{{ data.0 }}"
+    peer_pos: "{{ data.2 }}"
+  k8s:
+    kubeconfig: "/home/{{ hosts_user }}/.kube/config"
+    state: present
+    definition: "{{ lookup('template', '{{ role_path }}/templates/peer_pod.yml.j2') }}"
+  with_items:
+    - "{{ hostvars['localhost']['peers_to_kill'] }}"

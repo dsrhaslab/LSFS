@@ -1,0 +1,83 @@
+2023-01-23 19:55:08.051007: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2023-01-23 19:55:09.082942: W tensorflow/compiler/xla/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libnvinfer.so.7'; dlerror: libnvinfer.so.7: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/local/cuda/lib64:/usr/local/nccl2/lib:/usr/local/cuda/extras/CUPTI/lib64
+2023-01-23 19:55:09.083061: W tensorflow/compiler/xla/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libnvinfer_plugin.so.7'; dlerror: libnvinfer_plugin.so.7: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/local/cuda/lib64:/usr/local/nccl2/lib:/usr/local/cuda/extras/CUPTI/lib64
+2023-01-23 19:55:09.083078: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Cannot dlopen some TensorRT libraries. If you would like to use Nvidia GPU with TensorRT, please make sure the missing libraries mentioned above are installed properly.
+2023-01-23 19:55:11.930988: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-01-23 19:55:11.942458: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-01-23 19:55:11.944371: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-01-23 19:55:11.946908: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2023-01-23 19:55:11.947388: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-01-23 19:55:11.949207: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-01-23 19:55:11.951068: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-01-23 19:55:12.892359: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-01-23 19:55:12.894467: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-01-23 19:55:12.896296: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-01-23 19:55:12.898036: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1613] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 13582 MB memory:  -> device: 0, name: Tesla T4, pci bus id: 0000:00:04.0, compute capability: 7.5
+INFO:tensorflow:Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:GPU:0',)
+I0123 19:55:13.230711 139812802291520 mirrored_strategy.py:374] Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:GPU:0',)
+WARNING:tensorflow:From /opt/conda/lib/python3.7/site-packages/tensorflow/python/autograph/pyct/static_analysis/liveness.py:83: Analyzer.lamba_check (from tensorflow.python.autograph.pyct.static_analysis.liveness) is deprecated and will be removed after 2023-09-23.
+Instructions for updating:
+Lambda fuctions will be no more assumed to be used in the statement where they are used, or at least in the same block. https://github.com/tensorflow/tensorflow/issues/56089
+W0123 19:55:13.274968 139812802291520 deprecation.py:356] From /opt/conda/lib/python3.7/site-packages/tensorflow/python/autograph/pyct/static_analysis/liveness.py:83: Analyzer.lamba_check (from tensorflow.python.autograph.pyct.static_analysis.liveness) is deprecated and will be removed after 2023-09-23.
+Instructions for updating:
+Lambda fuctions will be no more assumed to be used in the statement where they are used, or at least in the same block. https://github.com/tensorflow/tensorflow/issues/56089
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0123 19:55:14.164645 139812802291520 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0123 19:55:14.167540 139812802291520 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0123 19:55:14.169601 139812802291520 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0123 19:55:14.170452 139812802291520 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0123 19:55:14.495747 139812802291520 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0123 19:55:14.498196 139812802291520 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0123 19:55:14.500453 139812802291520 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0123 19:55:14.504150 139812802291520 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0123 19:55:14.506499 139812802291520 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0123 19:55:15.661772 139812802291520 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+2023-01-23 19:55:26.792532: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 765 of 10000
+2023-01-23 19:55:36.886380: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 2241 of 10000
+2023-01-23 19:55:46.901321: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 3029 of 10000
+2023-01-23 19:56:02.289735: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 3074 of 10000
+2023-01-23 19:56:06.779982: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 3740 of 10000
+2023-01-23 19:56:16.874125: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 5361 of 10000
+2023-01-23 19:56:27.209948: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 6194 of 10000
+2023-01-23 19:56:52.372127: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 6212 of 10000
+2023-01-23 19:56:52.372179: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 6213 of 10000
+2023-01-23 19:56:57.700499: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 6234 of 10000
+2023-01-23 19:57:08.018892: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 6283 of 10000
+2023-01-23 19:57:16.782620: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 6811 of 10000
+2023-01-23 19:57:26.794932: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 8410 of 10000
+2023-01-23 19:57:36.820894: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 9485 of 10000
+2023-01-23 19:57:40.931221: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:417] Shuffle buffer filled.
+2023-01-23 19:57:43.017118: I tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:428] Loaded cuDNN version 8200
+I0123 19:58:31.213987 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':100, 'time_taken': 196.892555,'examples_per_second': 32.505038}
+I0123 19:59:22.601949 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':200, 'time_taken': 51.387973,'examples_per_second': 124.542761}
+I0123 20:00:11.808009 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':300, 'time_taken': 49.206088,'examples_per_second': 130.065207}
+I0123 20:03:01.417109 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':400, 'time_taken': 169.609086,'examples_per_second': 37.733828}
+I0123 20:07:14.018806 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':500, 'time_taken': 252.601710,'examples_per_second': 25.336329}
+I0123 20:09:06.331227 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':600, 'time_taken': 112.312406,'examples_per_second': 56.983910}
+I0123 20:11:57.346741 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':700, 'time_taken': 171.015507,'examples_per_second': 37.423507}
+I0123 20:13:35.142096 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':800, 'time_taken': 97.795372,'examples_per_second': 65.442770}
+I0123 20:14:37.089762 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':900, 'time_taken': 61.947672,'examples_per_second': 103.313003}
+I0123 20:16:09.458614 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':1000, 'time_taken': 92.368846,'examples_per_second': 69.287430}
+I0123 20:18:40.710669 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':1100, 'time_taken': 151.252042,'examples_per_second': 42.313478}
+I0123 20:19:28.000914 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':1200, 'time_taken': 47.290265,'examples_per_second': 135.334407}
+I0123 20:20:59.969550 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':1300, 'time_taken': 91.968631,'examples_per_second': 69.588945}
+I0123 20:21:49.001259 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':1400, 'time_taken': 49.031715,'examples_per_second': 130.527762}
+I0123 20:22:39.424158 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':1500, 'time_taken': 50.422894,'examples_per_second': 126.926472}
+I0123 20:24:40.892491 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':1600, 'time_taken': 121.468326,'examples_per_second': 52.688633}
+I0123 20:26:15.085777 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':1700, 'time_taken': 94.193276,'examples_per_second': 67.945402}
+I0123 20:28:09.781792 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':1800, 'time_taken': 114.695997,'examples_per_second': 55.799681}
+I0123 20:29:11.687860 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':1900, 'time_taken': 61.906103,'examples_per_second': 103.382376}
+I0123 20:30:53.549953 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':2000, 'time_taken': 101.862091,'examples_per_second': 62.830047}
+I0123 20:34:23.842899 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':2100, 'time_taken': 210.292932,'examples_per_second': 30.433738}
+I0123 20:36:06.899403 139812802291520 keras_utils.py:88] BenchmarkMetric: {'global step':2200, 'time_taken': 103.056504,'examples_per_second': 62.101854}

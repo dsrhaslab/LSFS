@@ -1,0 +1,60 @@
+  
+#  Play1 - Kubernets Cluster initialization
+
+- name: Kubernetes retrieve join token
+  hosts: masters
+
+  tasks:
+
+    - name: Generate join token
+      shell: |
+              sudo kubeadm token create --print-join-command
+      register: cluster_join_cmd
+
+
+    - name: Setting Join command as fact
+      set_fact:
+        cluster_join: "{{ cluster_join_cmd.stdout }}"
+      delegate_to: localhost
+      delegate_facts: true
+
+
+- name: Kubernetes init cluster in rebooted instances
+  hosts: localhost
+
+  tasks:
+
+    - name: Run join command in workers
+      vars: 
+        data: "{{ item.split(' ') }}"
+      shell: |
+              sudo {{ hostvars['localhost']['cluster_join'] }}
+      delegate_to: "{{ data.0 }}"
+      with_items:
+        - "{{ hostvars['localhost']['peers_to_kill'] }}"
+
+
+
+  
+- name: Creation of Peer Pods
+  hosts: masters
+  roles:
+    - { role: peers, bootstrapper_ip: "{{ boot_ip }}", shared_dir: "/home/{{ hosts_user }}/{{ remote_com_directory }}"}
+  vars:
+    boot_ip: "{{ hostvars['localhost']['bootstrapper_ip'] }}"
+
+
+- name: Wait until peers creation
+  hosts: masters
+  tasks:
+    - name: Pause for 1 minutes until all peers are created
+      pause:
+        minutes: 1
+
+
+- name: Wait for peer estabilizations
+  hosts: masters
+  tasks:
+    - name: Pause for 2 minutes before client enters
+      pause:
+        seconds: 180
