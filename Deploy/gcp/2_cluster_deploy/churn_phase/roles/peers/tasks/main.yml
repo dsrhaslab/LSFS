@@ -9,4 +9,4 @@
     state: present
     definition: "{{ lookup('template', '{{ role_path }}/templates/peer_pod.yml.j2') }}"
   with_items:
-    - "{{ hostvars['localhost']['peers_to_kill'] }}"
+    - "{{ to_kill }}"
