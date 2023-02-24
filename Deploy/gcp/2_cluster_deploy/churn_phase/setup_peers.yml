@@ -23,16 +23,18 @@
 
     tasks: 
 
-      - name: Delete selected pods 
+      - name: Concat peers name to be killed
         vars: 
-          data: "{{ item.split(' ') }}"
-        shell: | 
-                kubectl delete pods -n lsfs {{ data.0 }}
+            data: "{{ item.split(' ') }}"
+        set_fact:
+            to_delete: "{{ to_delete | default('') + ' ' + data.0 }}"
         with_items:
           - "{{ hostvars['localhost']['peers_to_kill'] }}"
-        async: 600  
-        poll: 0 
-    
+
+      - name: Delete selected pods 
+        shell: | 
+                kubectl delete pods -n lsfs {{ to_delete }}
+
 
   - name: Clean/stop selected instances
     hosts: localhost
@@ -60,8 +62,9 @@
         delegate_to: "{{ data.0 }}"   # {{ hostvars['peer50'].ansible_host }}
         with_items:
           - "{{ hostvars['localhost']['peers_to_kill'] }}"
-        async: 600  
-        poll: 0 
+        async: 45
+        poll: 0
+        
 
 
 
@@ -101,30 +104,30 @@
 #         - "{{ hostvars['localhost']['peers_to_kill'] }}"
 
 
-- name: Wait for instances reboot
-  hosts: localhost
-  tasks:
-    - name: Pause for 2 minutes before  instances reboot 
-      pause:
-        seconds: 120
+  - name: Wait for instances reboot
+    hosts: localhost
+    tasks:
+      - name: Pause for 5 minutes before  instances reboot 
+        pause:
+          seconds: 300
 
-  
-- name: Creation of Peer Pods
-  hosts: masters
-  roles:
-    - { role: peers, bootstrapper_ip: "{{ boot_ip }}", to_kill: "{{ peers_to_kill }}", shared_dir: "/home/{{ hosts_user }}/{{ remote_com_directory }}"}
-  vars:
-    boot_ip: "{{ hostvars['localhost']['bootstrapper_ip'] }}"
-    peers_to_kill: "{{ hostvars['localhost']['peers_to_kill'] }}"
+    
+  - name: Creation of Peer Pods
+    hosts: masters
+    roles:
+      - { role: peers, bootstrapper_ip: "{{ boot_ip }}", to_kill: "{{ peers_to_kill }}", shared_dir: "/home/{{ hosts_user }}/{{ remote_com_directory }}"}
+    vars:
+      boot_ip: "{{ lookup('file', '../bootstrapper_host') }}"
+      peers_to_kill: "{{ hostvars['localhost']['peers_to_kill'] }}"
 
 
 
-- name: Wait until peers creation
-  hosts: masters
-  tasks:
-    - name: Pause for 1 minutes until all peers are created
-      pause:
-        minutes: 1
+  - name: Wait until peers creation
+    hosts: masters
+    tasks:
+      - name: Pause for 1 minutes until all peers are created
+        pause:
+          minutes: 1
 
 
 
