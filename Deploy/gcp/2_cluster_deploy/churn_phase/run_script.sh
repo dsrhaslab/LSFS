@@ -32,4 +32,4 @@ FORK_NUMBER=$NR_PEERS
 ###########################################################################################################
 
 # Async run -> cluster creation can be run simultaneously with node setup (& detatches process)
-ansible-playbook setup_clean_peers.yml -e "nr_peers=$NR_PEERS nr_groups=$NR_GROUPS nr_peers_to_kill=$NR_PEERS_TO_KILL remote_com_directory=$REMOTE_COM_DIRECTORY" -i ../hosts
+ansible-playbook setup_peers.yml -e "nr_peers=$NR_PEERS nr_groups=$NR_GROUPS nr_peers_to_kill=$NR_PEERS_TO_KILL remote_com_directory=$REMOTE_COM_DIRECTORY" -i ../hosts -vv
