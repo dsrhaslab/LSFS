@@ -18,8 +18,8 @@ main_confs:
       max_keys_to_send_percentage: 10
 
   group_construction:
-    rep_max: 11
-    rep_min: 6
+    rep_max: 35
+    rep_min: 25
     max_age: 30
 
   pss:
