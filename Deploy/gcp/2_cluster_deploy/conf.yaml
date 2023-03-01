@@ -13,9 +13,9 @@ main_confs:
     database:
       base_path: /shared_dir/
     anti_entropy:
-      dissemination_interval_sec: 3660
+      dissemination_interval_sec: 60
       dissemination_total_packet_size_percentage: 10 # 4k = 7%-6%
-      max_keys_to_send_percentage: 10
+      max_keys_to_send_percentage: 5
 
   group_construction:
     rep_max: 35
@@ -37,7 +37,7 @@ main_confs:
   client:
     log_level: off
     base_path: /shared_dir/
-    max_nodes_to_send_get_request: 1
+    max_nodes_to_send_get_request: 3
     max_nodes_to_send_put_request: 1
     nr_puts_required: 1
     nr_gets_required: 1
@@ -50,7 +50,7 @@ main_confs:
     nr_client_handler_ths: 4
     load_balancer:
       type: smart
-      lb_interval: 10
+      lb_interval: 5
       smart_load_balancer_group_knowledge: 30
       smart_max_view_age: 50
     cache:
