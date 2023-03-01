@@ -107,9 +107,9 @@
   - name: Wait for instances reboot
     hosts: localhost
     tasks:
-      - name: Pause for 5 minutes before  instances reboot 
+      - name: Pause for 10 minutes before  instances reboot 
         pause:
-          seconds: 300
+          seconds: 600
 
     
   - name: Creation of Peer Pods

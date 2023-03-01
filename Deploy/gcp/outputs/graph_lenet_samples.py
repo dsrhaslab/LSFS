@@ -42,8 +42,13 @@ ax.plot(data_time, data_samples, label = "débito")
 
 # plotting the points 
 ax.axhline(y = mean_of_samples_per_second, xmin = 0, xmax = data_time[-1], linestyle = 'dashed', label = "débito médio", color="red")
+ax.axvline(x = 1920, linestyle = 'dashed', color = 'green', label = 'falha 1%')
+ax.axvline(x = 3720, linestyle = 'dashed', color = 'green')
+ax.axvline(x = 5520, linestyle = 'dashed', color = 'green')
+ax.axvline(x = 7320, linestyle = 'dashed', color = 'green')
+
 # ax.margins(tight=True)
-ax.annotate(str(round(mean_of_samples_per_second,1)), xy=(-7,959), color="red")
+ax.annotate(str(round(mean_of_samples_per_second,1)), xy=(9000,97.2), color="red")
 ax.legend()
 # naming the x axis
 plt.xlabel('Tempo (s)')
@@ -54,4 +59,4 @@ plt.ylabel('Débito (imagens/s)')
 plt.title('Desempenho Local')
 
 # function to show the plot
-# plt.show()
+plt.show()
