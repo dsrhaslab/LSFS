@@ -17,11 +17,11 @@ LOCAL_CONFIG_FILE=../conf.yaml
 #------------------------------------------
 #               Node Setup
 #------------------------------------------
-NR_PEERS=10
+NR_PEERS=500
 
 NR_GROUPS=16
 
-NR_PEERS_TO_KILL=3
+NR_PEERS_TO_KILL=15
 
 WORKLOAD_NAME=$1
 
