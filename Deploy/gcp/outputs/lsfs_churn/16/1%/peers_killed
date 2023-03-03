@@ -17,3 +17,5 @@ Iteration_4: ["peer210 7 0.418836", "peer467 15 0.933864", "peer16 1 0.03006", "
 Time_kill: 17h40
 Time_recover: 17h46
 Time_database_recover: 17h51
+
+Error total: 2
