@@ -1,8 +1,9 @@
 # importing the required module
 import matplotlib.pyplot as plt
 import sys
-import os
 import re
+import numpy as np
+from scipy import interpolate
 
 if len(sys.argv) != 3:
     print("error: run python3 graph_lenet_samples.py <input_file> <churn_percentage> .. ")
@@ -41,12 +42,19 @@ print(mean_of_samples_per_second)
 
 fig, ax = plt.subplots()
 
+
+x_new = np.linspace(data_time[0], data_time[-1], 100)
+bspline = interpolate.make_interp_spline(data_time, data_samples)
+y_new = bspline(x_new)
+
 # plotting the points 
-ax.plot(data_time, data_samples, label = "débito")
+ax.plot(x_new, y_new, label = "débito")
+
+# plotting the points 
+# ax.plot(data_time, data_samples, label = "débito")
 
 # plotting the points 
 ax.axhline(y = mean_of_samples_per_second, xmin = 0, xmax = data_time[-1], linestyle = (5, (10, 3)), linewidth=1.5, label = "débito médio", color="slategray")
-ax.annotate(str(round(mean_of_samples_per_second,1)), xy=(8840,97.2), color="slategray")
 
 def churn_lines(fail_data, recover_data):
     i = 0
@@ -81,12 +89,18 @@ graph_title='Desempenho - '
 if churn_percentage == '1':
     churn_lines(fail_data_1, recover_data_1)
     graph_title = graph_title + '1% de falhas'
+    ax.annotate(str(round(mean_of_samples_per_second,1)), xy=(8840,97.2), color="slategray")
+
 elif churn_percentage == '3':
     churn_lines(fail_data_3, recover_data_3)
     graph_title = graph_title + '3% de falhas'
+    ax.annotate(str(round(mean_of_samples_per_second,1)), xy=(9062,99), color="slategray")
+
 elif churn_percentage == '5':
     churn_lines(fail_data_5, recover_data_5)
     graph_title = graph_title + '5% de falhas'
+    ax.annotate(str(round(mean_of_samples_per_second,1)), xy=(8600,93.2), color="slategray")
+
 else:
     print("Invalid Churn Percentage!")
 
