@@ -81,19 +81,19 @@ def import_dstat_from_file(path, labelname):
         seconds_counter = seconds_counter + 1
 
     if labelname == "peer1":
-        axs[0,0].plot(v_time_list, v_usr_list, '--', label = labelname, color="red")
-        axs[0,1].plot(v_time_list, v_used_list, '--', label = labelname, color="red")
-        axs[1,0].plot(v_time_list, v_writ_list, '--', label = labelname, color="red")
-        axs[1,1].plot(v_time_list, v_read_list, '--', label = labelname, color="red")
-        axs[2,0].plot(v_time_list, v_cach_list, '--', label = labelname, color="red")
-        axs[2,1].plot(v_time_list, v_free_list, '--', label = labelname, color="red")
+        axs[0,0].plot(v_time_list, v_usr_list, '-', label = labelname, color="red")
+        axs[0,1].plot(v_time_list, v_used_list, '-', label = labelname, color="red")
+        axs[1,0].plot(v_time_list, v_writ_list, '-', label = labelname, color="red")
+        axs[1,1].plot(v_time_list, v_read_list, '-', label = labelname, color="red")
+        axs[2,0].plot(v_time_list, v_cach_list, '-', label = labelname, color="red")
+        axs[2,1].plot(v_time_list, v_free_list, '-', label = labelname, color="red")
     elif labelname == "peer2":
-        axs[0,0].plot(v_time_list, v_usr_list, '-.', label = labelname, color="grey")
-        axs[0,1].plot(v_time_list, v_used_list, '-.', label = labelname, color="grey")
-        axs[1,0].plot(v_time_list, v_writ_list, '-.', label = labelname, color="grey")
-        axs[1,1].plot(v_time_list, v_read_list, '-.', label = labelname, color="grey")
-        axs[2,0].plot(v_time_list, v_cach_list, '-.', label = labelname, color="grey")
-        axs[2,1].plot(v_time_list, v_free_list, '-.', label = labelname, color="grey")
+        axs[0,0].plot(v_time_list, v_usr_list, '-', label = labelname, color="grey")
+        axs[0,1].plot(v_time_list, v_used_list, '-', label = labelname, color="grey")
+        axs[1,0].plot(v_time_list, v_writ_list, '-', label = labelname, color="grey")
+        axs[1,1].plot(v_time_list, v_read_list, '-', label = labelname, color="grey")
+        axs[2,0].plot(v_time_list, v_cach_list, '-', label = labelname, color="grey")
+        axs[2,1].plot(v_time_list, v_free_list, '-', label = labelname, color="grey")
     elif labelname == "client1":
         axs[0,0].plot(v_time_list, v_usr_list, '-', label = "Client", color="black")
         axs[0,1].plot(v_time_list, v_used_list, '-', label = "Client", color="black")

@@ -1,0 +1,33 @@
+
+#New run
+I0307 11:56:32.228639 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':100, 'time_taken': 125.677516,'examples_per_second': 50.923985}
+I0307 11:57:33.583317 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':200, 'time_taken': 61.354864,'examples_per_second': 104.311208}
+I0307 11:58:28.997296 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':300, 'time_taken': 55.413962,'examples_per_second': 115.494359}
+I0307 11:59:24.660020 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':400, 'time_taken': 55.662734,'examples_per_second': 114.978182}
+I0307 12:00:25.991698 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':500, 'time_taken': 61.331685,'examples_per_second': 104.350631}
+I0307 12:01:31.705789 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':600, 'time_taken': 65.714092,'examples_per_second': 97.391592}
+I0307 12:02:38.023614 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':700, 'time_taken': 66.317741,'examples_per_second': 96.505096}
+I0307 12:03:49.459979 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':800, 'time_taken': 71.436368,'examples_per_second': 89.590221}
+I0307 12:05:20.958115 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':900, 'time_taken': 91.498173,'examples_per_second': 69.946752}
+I0307 12:06:37.082553 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':1000, 'time_taken': 76.124467,'examples_per_second': 84.072839}
+I0307 12:07:47.770632 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':1100, 'time_taken': 70.688080,'examples_per_second': 90.538602}
+I0307 12:08:58.534261 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':1200, 'time_taken': 70.763628,'examples_per_second': 90.441943}
+I0307 12:10:10.785350 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':1300, 'time_taken': 72.251024,'examples_per_second': 88.580060}
+I0307 12:11:21.329958 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':1400, 'time_taken': 70.544668,'examples_per_second': 90.722660}
+I0307 12:12:18.646941 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':1500, 'time_taken': 57.316993,'examples_per_second': 111.659732}
+I0307 12:13:21.625733 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':1600, 'time_taken': 62.978794,'examples_per_second': 101.621508}
+I0307 12:14:22.676647 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':1700, 'time_taken': 61.050871,'examples_per_second': 104.830610}
+I0307 12:15:29.886802 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':1800, 'time_taken': 67.210176,'examples_per_second': 95.223675}
+I0307 12:16:27.476813 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':1900, 'time_taken': 57.590023,'examples_per_second': 111.130361}
+I0307 12:17:43.156038 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':2000, 'time_taken': 75.679233,'examples_per_second': 84.567453}
+I0307 12:18:29.538234 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':2100, 'time_taken': 46.382191,'examples_per_second': 137.983994}
+I0307 12:19:52.878599 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':2200, 'time_taken': 83.340228,'examples_per_second': 76.793646}
+I0307 12:20:57.104089 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':2300, 'time_taken': 64.225629,'examples_per_second': 99.648694}
+I0307 12:22:22.942986 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':2400, 'time_taken': 85.838895,'examples_per_second': 74.558276}
+I0307 12:23:29.899610 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':2500, 'time_taken': 66.956627,'examples_per_second': 95.584265}
+I0307 12:24:30.314834 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':2600, 'time_taken': 60.415224,'examples_per_second': 105.933565}
+I0307 12:25:27.371041 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':2700, 'time_taken': 57.056220,'examples_per_second': 112.170067}
+I0307 12:26:28.355780 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':2800, 'time_taken': 60.984733,'examples_per_second': 104.944299}
+I0307 12:27:36.014978 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':2900, 'time_taken': 67.659188,'examples_per_second': 94.591735}
+I0307 12:28:46.906160 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':3000, 'time_taken': 70.891195,'examples_per_second': 90.279195}
+I0307 12:29:58.419471 140071009638208 keras_utils.py:88] BenchmarkMetric: {'global step':3100, 'time_taken': 71.513305,'examples_per_second': 89.493836}
