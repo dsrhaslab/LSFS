@@ -1,0 +1,29 @@
+{
+    "churn": [
+        {
+            "Iteration": ["peer59 2 0.116232", "peer428 14 0.855708", "peer9 1 0.016032", "peer131 5 0.26052", "peer299 10 0.597192"],
+            "Time_kill": "16h10",
+            "Time_recover": "16h16",
+            "Time_database_recover": "16h22"
+        },
+        {
+            "Iteration": ["peer254 9 0.507012", "peer136 5 0.27054", "peer399 13 0.797592", "peer414 14 0.827652", "peer266 9 0.53106"],
+            "Time_kill": "16h40",
+            "Time_recover": "16h47",
+            "Time_database_recover": "16h54"
+        },
+        {
+            "Iteration": ["peer337 11 0.673344", "peer352 12 0.703404", "peer245 8 0.488976", "peer319 11 0.637272", "peer270 9 0.539076"],
+            "Time_kill": "17h10",
+            "Time_recover": "17h15",
+            "Time_database_recover": "17h21"
+        },
+        {
+            "Iteration": ["peer210 7 0.418836", "peer467 15 0.933864", "peer16 1 0.03006", "peer483 16 0.965928", "peer257 9 0.513024"],
+            "Time_kill": "17h40",
+            "Time_recover": "17h46",
+            "Time_database_recover": "17h51"
+        }
+    ],
+    "Error total": "2"
+}

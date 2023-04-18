@@ -1,0 +1,148 @@
+2023-03-03 10:59:59.579551: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2023-03-03 11:00:00.951696: W tensorflow/compiler/xla/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libnvinfer.so.7'; dlerror: libnvinfer.so.7: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/local/cuda/lib64:/usr/local/nccl2/lib:/usr/local/cuda/extras/CUPTI/lib64
+2023-03-03 11:00:00.951818: W tensorflow/compiler/xla/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libnvinfer_plugin.so.7'; dlerror: libnvinfer_plugin.so.7: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /usr/local/cuda/lib64:/usr/local/nccl2/lib:/usr/local/cuda/extras/CUPTI/lib64
+2023-03-03 11:00:00.951836: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Cannot dlopen some TensorRT libraries. If you would like to use Nvidia GPU with TensorRT, please make sure the missing libraries mentioned above are installed properly.
+2023-03-03 11:00:02.878634: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-03-03 11:00:03.008595: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-03-03 11:00:03.011949: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-03-03 11:00:03.017426: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2023-03-03 11:00:03.018068: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-03-03 11:00:03.021085: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-03-03 11:00:03.024115: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-03-03 11:00:04.265119: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-03-03 11:00:04.267337: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-03-03 11:00:04.269451: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:981] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+2023-03-03 11:00:04.271377: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1613] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 13582 MB memory:  -> device: 0, name: Tesla T4, pci bus id: 0000:00:04.0, compute capability: 7.5
+INFO:tensorflow:Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:GPU:0',)
+I0303 11:00:04.671957 140673783408448 mirrored_strategy.py:374] Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:GPU:0',)
+WARNING:tensorflow:From /opt/conda/lib/python3.7/site-packages/tensorflow/python/autograph/pyct/static_analysis/liveness.py:83: Analyzer.lamba_check (from tensorflow.python.autograph.pyct.static_analysis.liveness) is deprecated and will be removed after 2023-09-23.
+Instructions for updating:
+Lambda fuctions will be no more assumed to be used in the statement where they are used, or at least in the same block. https://github.com/tensorflow/tensorflow/issues/56089
+W0303 11:00:04.729106 140673783408448 deprecation.py:356] From /opt/conda/lib/python3.7/site-packages/tensorflow/python/autograph/pyct/static_analysis/liveness.py:83: Analyzer.lamba_check (from tensorflow.python.autograph.pyct.static_analysis.liveness) is deprecated and will be removed after 2023-09-23.
+Instructions for updating:
+Lambda fuctions will be no more assumed to be used in the statement where they are used, or at least in the same block. https://github.com/tensorflow/tensorflow/issues/56089
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0303 11:00:05.710743 140673783408448 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0303 11:00:05.713779 140673783408448 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0303 11:00:05.715901 140673783408448 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0303 11:00:05.716785 140673783408448 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0303 11:00:06.060199 140673783408448 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0303 11:00:06.062440 140673783408448 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0303 11:00:06.064517 140673783408448 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0303 11:00:06.068279 140673783408448 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0303 11:00:06.070456 140673783408448 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+INFO:tensorflow:Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+I0303 11:00:07.233548 140673783408448 cross_device_ops.py:618] Reduce to /job:localhost/replica:0/task:0/device:CPU:0 then broadcast to ('/job:localhost/replica:0/task:0/device:CPU:0',).
+2023-03-03 11:00:18.430838: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 923 of 10000
+2023-03-03 11:00:28.409603: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 2630 of 10000
+2023-03-03 11:00:38.400854: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 4221 of 10000
+2023-03-03 11:00:48.374949: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 5909 of 10000
+2023-03-03 11:00:58.448523: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 7602 of 10000
+2023-03-03 11:01:09.338309: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 7738 of 10000
+2023-03-03 11:01:18.391931: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 8360 of 10000
+2023-03-03 11:01:28.384636: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:392] Filling up shuffle buffer (this may take a while): 9493 of 10000
+2023-03-03 11:01:31.793208: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:417] Shuffle buffer filled.
+2023-03-03 11:01:33.951494: I tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:428] Loaded cuDNN version 8200
+I0303 11:02:32.014444 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':100, 'time_taken': 146.143888,'examples_per_second': 43.792457}
+I0303 11:03:27.577321 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':200, 'time_taken': 55.563070,'examples_per_second': 115.184421}
+I0303 11:04:20.808077 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':300, 'time_taken': 53.230748,'examples_per_second': 120.231261}
+I0303 11:05:42.865878 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':400, 'time_taken': 82.057828,'examples_per_second': 77.993777}
+I0303 11:06:59.334561 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':500, 'time_taken': 76.468662,'examples_per_second': 83.694416}
+I0303 11:07:57.494091 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':600, 'time_taken': 58.159549,'examples_per_second': 110.042118}
+I0303 11:09:07.711737 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':700, 'time_taken': 70.217626,'examples_per_second': 91.145207}
+I0303 11:10:19.207568 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':800, 'time_taken': 71.495841,'examples_per_second': 89.515697}
+I0303 11:11:58.528241 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':900, 'time_taken': 99.320671,'examples_per_second': 64.437745}
+I0303 11:13:28.997971 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':1000, 'time_taken': 90.469731,'examples_per_second': 70.741893}
+I0303 11:14:52.651141 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':1100, 'time_taken': 83.653170,'examples_per_second': 76.506365}
+I0303 11:16:28.081326 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':1200, 'time_taken': 95.430183,'examples_per_second': 67.064736}
+I0303 11:17:21.527337 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':1300, 'time_taken': 53.445831,'examples_per_second': 119.747412}
+I0303 11:18:39.250363 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':1400, 'time_taken': 77.723202,'examples_per_second': 82.343494}
+I0303 11:20:08.825392 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':1500, 'time_taken': 89.575047,'examples_per_second': 71.448469}
+I0303 11:21:36.661208 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':1600, 'time_taken': 87.835803,'examples_per_second': 72.863227}
+I0303 11:23:11.270748 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':1700, 'time_taken': 94.609524,'examples_per_second': 67.646467}
+I0303 11:25:19.695508 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':1800, 'time_taken': 128.424763,'examples_per_second': 49.834626}
+I0303 11:26:30.596662 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':1900, 'time_taken': 70.901160,'examples_per_second': 90.266506}
+I0303 11:27:27.739597 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':2000, 'time_taken': 57.142941,'examples_per_second': 111.999836}
+I0303 11:28:31.339831 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':2100, 'time_taken': 63.600229,'examples_per_second': 100.628568}
+I0303 11:29:33.996583 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':2200, 'time_taken': 62.656753,'examples_per_second': 102.143818}
+I0303 11:30:31.027570 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':2300, 'time_taken': 57.030995,'examples_per_second': 112.219679}
+I0303 11:31:35.380257 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':2400, 'time_taken': 64.352681,'examples_per_second': 99.451957}
+I0303 11:33:57.395388 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':2500, 'time_taken': 142.015122,'examples_per_second': 45.065623}
+I0303 11:35:44.692070 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':2600, 'time_taken': 107.296698,'examples_per_second': 59.647688}
+I0303 11:36:58.094629 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':2700, 'time_taken': 73.402543,'examples_per_second': 87.190439}
+I0303 11:38:23.564470 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':2800, 'time_taken': 85.469846,'examples_per_second': 74.880210}
+I0303 11:39:34.989023 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':2900, 'time_taken': 71.424533,'examples_per_second': 89.605066}
+I0303 11:40:28.797189 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':3000, 'time_taken': 53.808184,'examples_per_second': 118.941014}
+I0303 11:41:46.343828 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':3100, 'time_taken': 77.546658,'examples_per_second': 82.530958}
+I0303 11:42:49.956723 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':3200, 'time_taken': 63.612878,'examples_per_second': 100.608559}
+I0303 11:44:04.015342 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':3300, 'time_taken': 74.058616,'examples_per_second': 86.418034}
+I0303 11:45:26.656276 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':3400, 'time_taken': 82.640932,'examples_per_second': 77.443464}
+I0303 11:46:25.610868 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':3500, 'time_taken': 58.954607,'examples_per_second': 108.558098}
+I0303 11:47:58.955844 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':3600, 'time_taken': 93.344963,'examples_per_second': 68.562885}
+I0303 11:49:04.548306 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':3700, 'time_taken': 65.592484,'examples_per_second': 97.572154}
+I0303 11:49:55.009866 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':3800, 'time_taken': 50.461551,'examples_per_second': 126.829236}
+I0303 11:51:06.628030 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':3900, 'time_taken': 71.618153,'examples_per_second': 89.362818}
+I0303 11:52:10.564051 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':4000, 'time_taken': 63.935963,'examples_per_second': 100.100159}
+I0303 11:53:20.269477 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':4100, 'time_taken': 69.705501,'examples_per_second': 91.814848}
+I0303 11:54:37.060519 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':4200, 'time_taken': 76.791022,'examples_per_second': 83.343076}
+I0303 11:55:31.341400 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':4300, 'time_taken': 54.280892,'examples_per_second': 117.905211}
+I0303 11:57:41.784072 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':4400, 'time_taken': 130.442659,'examples_per_second': 49.063704}
+I0303 12:00:29.321675 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':4500, 'time_taken': 167.537615,'examples_per_second': 38.200377}
+I0303 12:03:29.667629 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':4600, 'time_taken': 180.345939,'examples_per_second': 35.487353}
+I0303 12:05:27.220585 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':4700, 'time_taken': 117.552961,'examples_per_second': 54.443546}
+I0303 12:06:50.457805 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':4800, 'time_taken': 83.237227,'examples_per_second': 76.888674}
+I0303 12:08:15.772208 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':4900, 'time_taken': 85.314419,'examples_per_second': 75.016628}
+I0303 12:09:23.017320 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':5000, 'time_taken': 67.245110,'examples_per_second': 95.174206}
+I0303 12:10:46.570063 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':5100, 'time_taken': 83.552601,'examples_per_second': 76.598453}
+I0303 12:11:49.034666 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':5200, 'time_taken': 62.464749,'examples_per_second': 102.457788}
+I0303 12:12:54.253664 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':5300, 'time_taken': 65.218970,'examples_per_second': 98.130957}
+I0303 12:14:12.439473 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':5400, 'time_taken': 78.185813,'examples_per_second': 81.856282}
+I0303 12:16:16.427866 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':5500, 'time_taken': 123.988388,'examples_per_second': 51.617737}
+I0303 12:18:54.351303 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':5600, 'time_taken': 157.923447,'examples_per_second': 40.525964}
+I0303 12:20:47.900894 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':5700, 'time_taken': 113.549575,'examples_per_second': 56.363047}
+I0303 12:22:01.299800 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':5800, 'time_taken': 73.398919,'examples_per_second': 87.194745}
+I0303 12:23:11.975636 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':5900, 'time_taken': 70.675852,'examples_per_second': 90.554268}
+I0303 12:24:48.944492 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':6000, 'time_taken': 96.968605,'examples_per_second': 66.000743}
+I0303 12:25:47.775624 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':6100, 'time_taken': 58.831374,'examples_per_second': 108.785493}
+I0303 12:27:06.567803 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':6200, 'time_taken': 78.792191,'examples_per_second': 81.226324}
+I0303 12:27:58.951199 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':6300, 'time_taken': 52.383395,'examples_per_second': 122.176120}
+I0303 12:29:15.617821 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':6400, 'time_taken': 76.666565,'examples_per_second': 83.478372}
+I0303 12:30:45.725104 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':6500, 'time_taken': 90.107325,'examples_per_second': 71.026412}
+I0303 12:32:58.808775 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':6600, 'time_taken': 133.083685,'examples_per_second': 48.090042}
+I0303 12:34:38.873236 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':6700, 'time_taken': 100.064461,'examples_per_second': 63.958772}
+I0303 12:35:47.771662 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':6800, 'time_taken': 68.898427,'examples_per_second': 92.890364}
+I0303 12:36:52.740690 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':6900, 'time_taken': 64.969015,'examples_per_second': 98.508497}
+I0303 12:37:44.707145 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':7000, 'time_taken': 51.966411,'examples_per_second': 123.156476}
+I0303 12:39:22.070274 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':7100, 'time_taken': 97.363175,'examples_per_second': 65.733271}
+I0303 12:41:35.131340 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':7200, 'time_taken': 133.061059,'examples_per_second': 48.098219}
+I0303 12:42:34.207569 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':7300, 'time_taken': 59.076248,'examples_per_second': 108.334571}
+I0303 12:44:03.630246 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':7400, 'time_taken': 89.422533,'examples_per_second': 71.570328}
+I0303 12:45:08.765067 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':7500, 'time_taken': 65.134765,'examples_per_second': 98.257820}
+I0303 12:46:11.173178 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':7600, 'time_taken': 62.408310,'examples_per_second': 102.550445}
+I0303 12:47:20.278797 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':7700, 'time_taken': 69.105620,'examples_per_second': 92.611860}
+I0303 12:48:34.432138 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':7800, 'time_taken': 74.153320,'examples_per_second': 86.307667}
+I0303 12:49:38.960730 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':7900, 'time_taken': 64.528596,'examples_per_second': 99.180834}
+I0303 12:50:41.635738 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':8000, 'time_taken': 62.674943,'examples_per_second': 102.114174}
+I0303 12:51:50.397497 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':8100, 'time_taken': 68.761824,'examples_per_second': 93.074901}
+I0303 12:52:46.437004 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':8200, 'time_taken': 56.039522,'examples_per_second': 114.205115}
+I0303 12:53:57.884620 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':8300, 'time_taken': 71.447605,'examples_per_second': 89.576131}
+I0303 12:55:06.269842 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':8400, 'time_taken': 68.385232,'examples_per_second': 93.587458}
+I0303 12:56:20.164698 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':8500, 'time_taken': 73.894848,'examples_per_second': 86.609556}
+I0303 12:57:23.408745 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':8600, 'time_taken': 63.244040,'examples_per_second': 101.195307}
+I0303 12:58:21.958836 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':8700, 'time_taken': 58.550027,'examples_per_second': 109.308233}
+I0303 12:59:25.112075 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':8800, 'time_taken': 63.153300,'examples_per_second': 101.340706}
+I0303 13:00:27.654900 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':8900, 'time_taken': 62.542811,'examples_per_second': 102.329906}
+I0303 13:02:59.107431 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':9000, 'time_taken': 151.452543,'examples_per_second': 42.257462}
+I0303 13:04:32.396784 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':9100, 'time_taken': 93.289291,'examples_per_second': 68.603801}
+I0303 13:05:42.314509 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':9200, 'time_taken': 69.917809,'examples_per_second': 91.536049}
+I0303 13:09:28.872606 140673783408448 keras_utils.py:88] BenchmarkMetric: {'global step':9300, 'time_taken': 226.558081,'examples_per_second': 28.248827}

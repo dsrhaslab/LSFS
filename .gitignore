@@ -34,8 +34,10 @@
 # Logging
 logging*
 backup/*
-*.json*
 logs*
+
+# VsCode
+.vscode
 
 # Build Directory
 cmake-build-debug/*
